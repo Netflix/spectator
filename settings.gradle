@@ -1,0 +1,6 @@
+include 'spectator-api',
+        'spectator-nflx',
+        'spectator-ext-gc',
+        'spectator-reg-metrics2',
+        'spectator-reg-metrics3',
+        'spectator-reg-servo'
