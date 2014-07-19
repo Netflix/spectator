@@ -29,6 +29,7 @@ function updateForVersion {
   fi
   ./gradlew clean jacocoTestReport build buildDashboard -x checkCompatibility
   
+  # Update the reports: code-coverage, findbugs, etc
   REPORT_DIR=$BUILD_DIR/gh-pages/reports/$VERSION
   find . -type d -name reports | grep '^./spectator-' | while read dir; do
     projectName=$(echo $dir | gsed -r 's#^\./##;s#/.*##')
