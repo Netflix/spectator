@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Preconditions.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">Preconditions.java</span></div><h1>Preconditions.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+/**
+ * Internal convenience methods that help a method or constructor check whether it was invoked
+ * correctly. Please notice that this should be considered an internal implementation detail, and
+ * it is subject to change without notice.
+ */
+public final class Preconditions {
+<span class="nc" id="L24">  private Preconditions() {</span>
+<span class="nc" id="L25">  }</span>
+
+  /**
+   * Ensures the object reference is not null.
+   */
+  public static &lt;T&gt; T checkNotNull(T obj, String name) {
+<span class="fc bfc" id="L31" title="All 2 branches covered.">    if (obj == null) {</span>
+<span class="fc" id="L32">      String msg = String.format(&quot;parameter '%s' cannot be null&quot;, name);</span>
+<span class="fc" id="L33">      throw new NullPointerException(msg);</span>
+    }
+<span class="fc" id="L35">    return obj;</span>
+  }
+
+  /**
+   * Ensures the truth of an expression involving the state of the calling instance.
+   */
+  public static void checkState(boolean expression, String errMsg) {
+<span class="nc bnc" id="L42" title="All 2 branches missed.">    if (!expression) {</span>
+<span class="nc" id="L43">      throw new IllegalStateException(errMsg);</span>
+    }
+<span class="nc" id="L45">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
