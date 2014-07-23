@@ -18,7 +18,9 @@ package com.netflix.spectator.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ServiceLoader;
 
 /**
@@ -40,8 +42,15 @@ public final class Spectator {
     final ServiceLoader<Registry> loader = ServiceLoader.load(Registry.class);
     final Iterator<Registry> registryIterator = loader.iterator();
     if (registryIterator.hasNext()) {
-      Registry r = registryIterator.next();
-      LOGGER.info("using first registry impl found in classpath: {}", r.getClass().getName());
+      StringBuilder desc = new StringBuilder();
+      List<Registry> rs = new ArrayList<>();
+      while (registryIterator.hasNext()) {
+        Registry r = registryIterator.next();
+        desc.append(' ').append(r.getClass().getName());
+        rs.add(r);
+      }
+      Registry r = new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
+      LOGGER.info("using registries found in classpath: {}", desc.toString());
       return r;
     } else {
       LOGGER.warn("no registry impl found in classpath, using default");
