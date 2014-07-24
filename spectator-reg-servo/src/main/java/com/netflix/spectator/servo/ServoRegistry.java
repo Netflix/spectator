@@ -58,51 +58,37 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     return builder.build();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Counter newCounter(Id id) {
+  @Override protected Counter newCounter(Id id) {
     MonitorConfig cfg = toMonitorConfig(id);
     StepCounter counter = new StepCounter(cfg);
     return new ServoCounter(clock(), new ServoId(cfg), counter);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected DistributionSummary newDistributionSummary(Id id) {
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
     MonitorConfig cfg = toMonitorConfig(id);
     BasicDistributionSummary distributionSummary = new BasicDistributionSummary(cfg);
     return new ServoDistributionSummary(clock(), new ServoId(cfg), distributionSummary);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Timer newTimer(Id id) {
+  @Override protected Timer newTimer(Id id) {
     MonitorConfig cfg = toMonitorConfig(id);
     BasicTimer timer = new BasicTimer(cfg, TimeUnit.SECONDS);
     return new ServoTimer(clock(), new ServoId(cfg), timer);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Integer getValue() {
+  @Override public Integer getValue() {
     return 0;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Integer getValue(int pollerIndex) {
+  @Override public Integer getValue(int pollerIndex) {
     return 0;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public MonitorConfig getConfig() {
+  @Override public MonitorConfig getConfig() {
     return config;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public List<Monitor<?>> getMonitors() {
+  @Override public List<Monitor<?>> getMonitors() {
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
       if (meter instanceof ServoMeter) {

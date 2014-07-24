@@ -40,28 +40,20 @@ final class DefaultDistributionSummary implements DistributionSummary {
     totalAmountId = id.withTag("statistic", "totalAmount");
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount) {
+  @Override public void record(long amount) {
     totalAmount.addAndGet(amount);
     count.incrementAndGet();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
     ms.add(new Measurement(countId, now, count.get()));
@@ -69,15 +61,11 @@ final class DefaultDistributionSummary implements DistributionSummary {
     return ms;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return count.get();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalAmount() {
+  @Override public long totalAmount() {
     return totalAmount.get();
   }
 }

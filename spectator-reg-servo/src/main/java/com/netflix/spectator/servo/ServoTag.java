@@ -27,15 +27,11 @@ class ServoTag implements Tag {
     this.tag = tag;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String key() {
+  @Override public String key() {
     return tag.getKey();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String value() {
+  @Override public String value() {
     return tag.getValue();
   }
 }

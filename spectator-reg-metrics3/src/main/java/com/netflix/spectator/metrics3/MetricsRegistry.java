@@ -42,23 +42,17 @@ public class MetricsRegistry extends AbstractRegistry {
     return buf.toString();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Counter newCounter(Id id) {
+  @Override protected Counter newCounter(Id id) {
     final String name = toMetricName(id);
     return new MetricsCounter(clock(), id, impl.meter(name));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected DistributionSummary newDistributionSummary(Id id) {
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
     final String name = toMetricName(id);
     return new MetricsDistributionSummary(clock(), id, impl.histogram(name));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Timer newTimer(Id id) {
+  @Override protected Timer newTimer(Id id) {
     final String name = toMetricName(id);
     return new MetricsTimer(clock(), id, impl.timer(name));
   }

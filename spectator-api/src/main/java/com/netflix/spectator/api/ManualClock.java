@@ -44,15 +44,11 @@ public class ManualClock implements Clock {
     monotonic = new AtomicLong(monotonicInit);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long wallTime() {
+  @Override public long wallTime() {
     return wall.get();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long monotonicTime() {
+  @Override public long monotonicTime() {
     return monotonic.get();
   }
 

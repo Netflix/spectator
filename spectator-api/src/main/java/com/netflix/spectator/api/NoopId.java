@@ -25,33 +25,23 @@ final class NoopId implements Id {
   private NoopId() {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String name() {
+  @Override public String name() {
     return "noop";
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Tag> tags() {
+  @Override public Iterable<Tag> tags() {
     return Collections.emptyList();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(String k, String v) {
+  @Override public Id withTag(String k, String v) {
     return this;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(Tag tag) {
+  @Override public Id withTag(Tag tag) {
     return this;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return name();
   }
 }

@@ -20,9 +20,7 @@ package com.netflix.spectator.api;
  */
 public abstract class DoubleFunction implements ValueFunction {
 
-  /** {@inheritDoc} */
-  @Override
-  public double apply(Object obj) {
+  @Override public double apply(Object obj) {
     return (obj instanceof Number)
       ? apply(((Number) obj).doubleValue())
       : Double.NaN;

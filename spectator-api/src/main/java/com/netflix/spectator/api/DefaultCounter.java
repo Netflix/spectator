@@ -32,41 +32,29 @@ final class DefaultCounter implements Counter {
     this.count = new AtomicLong(0L);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     long now = clock.wallTime();
     long v = count.get();
     return Collections.singleton(new Measurement(id, now, v));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment() {
+  @Override public void increment() {
     count.incrementAndGet();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment(long amount) {
+  @Override public void increment(long amount) {
     count.addAndGet(amount);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return count.get();
   }
 }

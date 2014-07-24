@@ -38,27 +38,19 @@ final class DefaultId implements Id {
     this.tags = tags;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String name() {
+  @Override public String name() {
     return name;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Tag> tags() {
+  @Override public Iterable<Tag> tags() {
     return (tags == TagList.EMPTY) ? Collections.<Tag>emptyList() : tags;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DefaultId withTag(Tag tag) {
+  @Override public DefaultId withTag(Tag tag) {
     return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DefaultId withTag(String key, String value) {
+  @Override public DefaultId withTag(String key, String value) {
     return new DefaultId(name, new TagList(key, value, tags));
   }
 
@@ -93,9 +85,7 @@ final class DefaultId implements Id {
     return new DefaultId(name, TagList.create(ts));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object obj) {
+  @Override public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null || !(obj instanceof DefaultId)) return false;
     DefaultId other = (DefaultId) obj;
@@ -103,15 +93,11 @@ final class DefaultId implements Id {
       && ((tags == null && other.tags == null) || (tags != null && tags.equals(other.tags)));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return name.hashCode() + (tags == null ? 0 : tags.hashCode());
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String toString() {
+  @Override public String toString() {
     StringBuilder buf = new StringBuilder();
     buf.append(name);
     for (Tag t : tags()) {

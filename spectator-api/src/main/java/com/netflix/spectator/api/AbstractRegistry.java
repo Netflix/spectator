@@ -71,21 +71,15 @@ public abstract class AbstractRegistry implements Registry {
    */
   protected abstract Timer newTimer(Id id);
 
-  /** {@inheritDoc} */
-  @Override
-  public final Clock clock() {
+  @Override public final Clock clock() {
     return clock;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Id createId(String name) {
+  @Override public final Id createId(String name) {
     return new DefaultId(name, TagList.EMPTY);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Id createId(String name, Iterable<Tag> tags) {
+  @Override public final Id createId(String name, Iterable<Tag> tags) {
     return new DefaultId(name, TagList.create(tags));
   }
 
@@ -109,9 +103,7 @@ public abstract class AbstractRegistry implements Registry {
     return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : meters.putIfAbsent(id, m);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final void register(Meter meter) {
+  @Override public final void register(Meter meter) {
     Meter m = meters.get(meter.id());
     if (m == null) {
       if (meters.size() >= Config.maxNumberOfMeters()) {
@@ -130,9 +122,7 @@ public abstract class AbstractRegistry implements Registry {
     notifyOfAdd(meter);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Counter counter(Id id) {
+  @Override public final Counter counter(Id id) {
     Meter m = meters.get(id);
     if (m == null) {
       Counter c = newCounter(id);
@@ -149,9 +139,7 @@ public abstract class AbstractRegistry implements Registry {
     return (Counter) m;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final DistributionSummary distributionSummary(Id id) {
+  @Override public final DistributionSummary distributionSummary(Id id) {
     Meter m = meters.get(id);
     if (m == null) {
       DistributionSummary s = newDistributionSummary(id);
@@ -168,9 +156,7 @@ public abstract class AbstractRegistry implements Registry {
     return (DistributionSummary) m;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Timer timer(Id id) {
+  @Override public final Timer timer(Id id) {
     Meter m = meters.get(id);
     if (m == null) {
       Timer t = newTimer(id);
@@ -187,27 +173,19 @@ public abstract class AbstractRegistry implements Registry {
     return (Timer) m;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Meter get(Id id) {
+  @Override public final Meter get(Id id) {
     return meters.get(id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Iterator<Meter> iterator() {
+  @Override public final Iterator<Meter> iterator() {
     return meters.values().iterator();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final void addListener(RegistryListener listener) {
+  @Override public final void addListener(RegistryListener listener) {
     listeners.put(listener, listener);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final void removeListener(RegistryListener listener) {
+  @Override public final void removeListener(RegistryListener listener) {
     listeners.remove(listener);
   }
 

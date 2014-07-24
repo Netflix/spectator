@@ -38,34 +38,24 @@ class MetricsTimer implements Timer {
     this.impl = impl;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
+  @Override public void record(long amount, TimeUnit unit) {
     impl.update(amount, unit);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     return Collections.singleton(new Measurement(id, now, impl.meanRate()));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public <T> T record(Callable<T> f) throws Exception {
+  @Override public <T> T record(Callable<T> f) throws Exception {
     final long s = clock.monotonicTime();
     try {
       return f.call();
@@ -75,9 +65,7 @@ class MetricsTimer implements Timer {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
+  @Override public void record(Runnable f) {
     final long s = clock.monotonicTime();
     try {
       f.run();
@@ -87,15 +75,11 @@ class MetricsTimer implements Timer {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return impl.count();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
+  @Override public long totalTime() {
     return (long) impl.sum();
   }
 }

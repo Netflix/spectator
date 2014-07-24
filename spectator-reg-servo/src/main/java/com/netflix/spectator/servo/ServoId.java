@@ -36,15 +36,11 @@ class ServoId implements Id {
     return config;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String name() {
+  @Override public String name() {
     return config.getName();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Tag> tags() {
+  @Override public Iterable<Tag> tags() {
     return new Iterable<Tag>() {
       public Iterator<Tag> iterator() {
         return new Iterator<Tag>() {
@@ -66,15 +62,11 @@ class ServoId implements Id {
     };
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(String k, String v) {
+  @Override public Id withTag(String k, String v) {
     return new ServoId((new MonitorConfig.Builder(config)).withTag(k, v).build());
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(Tag t) {
+  @Override public Id withTag(Tag t) {
     return withTag(t.key(), t.value());
   }
 }

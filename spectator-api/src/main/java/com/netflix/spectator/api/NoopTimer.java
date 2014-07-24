@@ -24,50 +24,34 @@ enum NoopTimer implements Timer {
   /** Singleton instance. */
   INSTANCE;
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return NoopId.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
+  @Override public void record(long amount, TimeUnit unit) {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public <T> T record(Callable<T> f) throws Exception {
+  @Override public <T> T record(Callable<T> f) throws Exception {
     return f.call();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
+  @Override public void record(Runnable f) {
     f.run();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return 0L;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
+  @Override public long totalTime() {
     return 0L;
   }
 }

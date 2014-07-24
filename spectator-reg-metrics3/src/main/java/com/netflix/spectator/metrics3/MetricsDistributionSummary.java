@@ -40,41 +40,29 @@ class MetricsDistributionSummary implements DistributionSummary {
     this.totalAmount = new AtomicLong(0L);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount) {
+  @Override public void record(long amount) {
     impl.update(amount);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final Snapshot snapshot = impl.getSnapshot();
     return Collections.singleton(new Measurement(id, now, snapshot.getMean()));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return impl.getCount();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalAmount() {
+  @Override public long totalAmount() {
     return totalAmount.get();
   }
 }
