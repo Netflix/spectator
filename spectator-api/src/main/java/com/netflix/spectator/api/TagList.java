@@ -49,21 +49,15 @@ final class TagList implements Iterable<Tag>, Tag {
     this.hc = 31 * (key.hashCode() + value.hashCode() + (next == null ? 23 : next.hashCode()));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String key() {
+  @Override public String key() {
     return key;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String value() {
+  @Override public String value() {
     return value;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterator<Tag> iterator() {
+  @Override public Iterator<Tag> iterator() {
     final TagList root = this;
     return new Iterator<Tag>() {
       private TagList current = root;
@@ -87,9 +81,7 @@ final class TagList implements Iterable<Tag>, Tag {
     };
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object obj) {
+  @Override public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null || !(obj instanceof TagList)) return false;
     TagList other = (TagList) obj;
@@ -105,8 +97,7 @@ final class TagList implements Iterable<Tag>, Tag {
    *
    * {@inheritDoc}
    */
-  @Override
-  public int hashCode() {
+  @Override public int hashCode() {
     return hc;
   }
 

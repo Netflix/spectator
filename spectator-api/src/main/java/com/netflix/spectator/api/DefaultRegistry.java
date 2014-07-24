@@ -28,21 +28,15 @@ public final class DefaultRegistry extends AbstractRegistry {
     super(clock);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Counter newCounter(Id id) {
+  @Override protected Counter newCounter(Id id) {
     return new DefaultCounter(clock(), id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected DistributionSummary newDistributionSummary(Id id) {
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
     return new DefaultDistributionSummary(clock(), id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Timer newTimer(Id id) {
+  @Override protected Timer newTimer(Id id) {
     return new DefaultTimer(clock(), id);
   }
 }

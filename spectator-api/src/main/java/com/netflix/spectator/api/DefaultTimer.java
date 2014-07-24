@@ -42,29 +42,21 @@ final class DefaultTimer implements Timer {
     totalTimeId = id.withTag("statistic", "totalTime");
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
+  @Override public void record(long amount, TimeUnit unit) {
     final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);
     totalTime.addAndGet(nanos);
     count.incrementAndGet();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
     ms.add(new Measurement(countId, now, count.get()));
@@ -72,9 +64,7 @@ final class DefaultTimer implements Timer {
     return ms;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public <T> T record(Callable<T> f) throws Exception {
+  @Override public <T> T record(Callable<T> f) throws Exception {
     final long s = clock.monotonicTime();
     try {
       return f.call();
@@ -84,9 +74,7 @@ final class DefaultTimer implements Timer {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
+  @Override public void record(Runnable f) {
     final long s = clock.monotonicTime();
     try {
       f.run();
@@ -96,15 +84,11 @@ final class DefaultTimer implements Timer {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return count.get();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
+  @Override public long totalTime() {
     return totalTime.get();
   }
 }

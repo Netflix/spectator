@@ -43,29 +43,21 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
     this.durationId = id.withTag("statistic", "duration");
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long start() {
+  @Override public long start() {
     long task = nextTask.getAndIncrement();
     tasks.put(task, clock.monotonicTime());
     return task;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long stop(long task) {
+  @Override public long stop(long task) {
     Long startTime = tasks.get(task);
     if (startTime != null) {
       tasks.remove(task);
@@ -75,16 +67,12 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long duration(long task) {
+  @Override public long duration(long task) {
     Long startTime = tasks.get(task);
     return (startTime != null) ? (clock.monotonicTime() - startTime) : -1L;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long duration() {
+  @Override public long duration() {
     long now = clock.monotonicTime();
     long sum = 0L;
     for (long startTime : tasks.values()) {
@@ -93,15 +81,11 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
     return sum;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public int activeTasks() {
+  @Override public int activeTasks() {
     return tasks.size();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final List<Measurement> ms = new ArrayList<>(2);
     final long now = clock.wallTime();
     final double durationSeconds = duration() / NANOS_PER_SECOND;

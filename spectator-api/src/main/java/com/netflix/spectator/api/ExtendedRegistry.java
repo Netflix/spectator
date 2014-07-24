@@ -44,69 +44,47 @@ public final class ExtendedRegistry implements Registry {
     return impl;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Clock clock() {
+  @Override public Clock clock() {
     return impl.clock();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name) {
+  @Override public Id createId(String name) {
     return impl.createId(name);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name, Iterable<Tag> tags) {
+  @Override public Id createId(String name, Iterable<Tag> tags) {
     return impl.createId(name, tags);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void register(Meter meter) {
+  @Override public void register(Meter meter) {
     impl.register(meter);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Counter counter(Id id) {
+  @Override public Counter counter(Id id) {
     return impl.counter(id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DistributionSummary distributionSummary(Id id) {
+  @Override public DistributionSummary distributionSummary(Id id) {
     return impl.distributionSummary(id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Timer timer(Id id) {
+  @Override public Timer timer(Id id) {
     return impl.timer(id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Meter get(Id id) {
+  @Override public Meter get(Id id) {
     return impl.get(id);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterator<Meter> iterator() {
+  @Override public Iterator<Meter> iterator() {
     return impl.iterator();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void addListener(RegistryListener listener) {
+  @Override public void addListener(RegistryListener listener) {
     impl.addListener(listener);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void removeListener(RegistryListener listener) {
+  @Override public void removeListener(RegistryListener listener) {
     impl.removeListener(listener);
   }
 

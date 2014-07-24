@@ -25,66 +25,44 @@ import java.util.Iterator;
  */
 public final class NoopRegistry implements Registry {
 
-  /** {@inheritDoc} */
-  @Override
-  public Clock clock() {
+  @Override public Clock clock() {
     return Clock.SYSTEM;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name) {
+  @Override public Id createId(String name) {
     return NoopId.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name, Iterable<Tag> tags) {
+  @Override public Id createId(String name, Iterable<Tag> tags) {
     return NoopId.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void register(Meter meter) {
+  @Override public void register(Meter meter) {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Counter counter(Id id) {
+  @Override public Counter counter(Id id) {
     return NoopCounter.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DistributionSummary distributionSummary(Id id) {
+  @Override public DistributionSummary distributionSummary(Id id) {
     return NoopDistributionSummary.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Timer timer(Id id) {
+  @Override public Timer timer(Id id) {
     return NoopTimer.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Meter get(Id id) {
+  @Override public Meter get(Id id) {
     return null;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterator<Meter> iterator() {
+  @Override public Iterator<Meter> iterator() {
     return Collections.<Meter>emptyList().iterator();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void addListener(RegistryListener listener) {
+  @Override public void addListener(RegistryListener listener) {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void removeListener(RegistryListener listener) {
+  @Override public void removeListener(RegistryListener listener) {
   }
 }

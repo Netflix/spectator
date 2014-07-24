@@ -51,12 +51,10 @@ public abstract class AbstractMeter<T> implements Meter {
     this.ref = new WeakReference<>(obj);
   }
 
-  /** {@inheritDoc} */
   @Override public Id id() {
     return this.id;
   }
 
-  /** {@inheritDoc} */
   @Override public boolean hasExpired() {
     return this.ref.get() == null;
   }

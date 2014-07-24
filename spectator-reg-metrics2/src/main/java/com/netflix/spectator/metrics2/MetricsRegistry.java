@@ -49,23 +49,17 @@ public class MetricsRegistry extends AbstractRegistry {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Counter newCounter(Id id) {
+  @Override protected Counter newCounter(Id id) {
     final MetricName name = toMetricName(id);
     return new MetricsCounter(clock(), id, impl.newMeter(name, "calls", TimeUnit.SECONDS));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected DistributionSummary newDistributionSummary(Id id) {
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
     final MetricName name = toMetricName(id);
     return new MetricsDistributionSummary(clock(), id, impl.newHistogram(name, false));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  protected Timer newTimer(Id id) {
+  @Override protected Timer newTimer(Id id) {
     final MetricName name = toMetricName(id);
     return new MetricsTimer(clock(), id, impl.newTimer(name, TimeUnit.SECONDS, TimeUnit.SECONDS));
   }

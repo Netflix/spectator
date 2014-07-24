@@ -53,36 +53,26 @@ class ServoTimer implements Timer, ServoMeter {
     totalTimeId = id.withTag("statistic", "totalTime");
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Monitor<?> monitor() {
+  @Override public Monitor<?> monitor() {
     return impl;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
+  @Override public void record(long amount, TimeUnit unit) {
     final long nanos = unit.toNanos(amount);
     impl.record(amount, unit);
     totalTime.addAndGet(nanos);
     count.incrementAndGet();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
     ms.add(new Measurement(countId, now, count.get()));
@@ -90,9 +80,7 @@ class ServoTimer implements Timer, ServoMeter {
     return ms;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public <T> T record(Callable<T> f) throws Exception {
+  @Override public <T> T record(Callable<T> f) throws Exception {
     final long s = clock.monotonicTime();
     try {
       return f.call();
@@ -102,9 +90,7 @@ class ServoTimer implements Timer, ServoMeter {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
+  @Override public void record(Runnable f) {
     final long s = clock.monotonicTime();
     try {
       f.run();
@@ -114,15 +100,11 @@ class ServoTimer implements Timer, ServoMeter {
     }
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return count.get();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
+  @Override public long totalTime() {
     return totalTime.get();
   }
 }

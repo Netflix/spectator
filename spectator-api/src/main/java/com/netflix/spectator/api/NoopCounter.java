@@ -22,37 +22,25 @@ enum NoopCounter implements Counter {
   /** Singleton instance. */
   INSTANCE;
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return NoopId.INSTANCE;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment() {
+  @Override public void increment() {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment(long amount) {
+  @Override public void increment(long amount) {
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
+  @Override public long count() {
     return 0L;
   }
 }

@@ -42,15 +42,11 @@ class ObjectGauge extends AbstractMeter<Object> implements Gauge {
     this.f = f;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     return Collections.singleton(new Measurement(id, clock.wallTime(), value()));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public double value() {
+  @Override public double value() {
     final Object obj = ref.get();
     return (obj == null) ? Double.NaN : f.apply(obj);
   }

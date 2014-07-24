@@ -34,15 +34,11 @@ class AggrMeter implements Meter {
     this.queue = new ConcurrentLinkedQueue<>();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     Map<Id, Measurement> measurements = new HashMap<>();
     Iterator<Meter> iter = queue.iterator();
     while (iter.hasNext()) {
@@ -64,9 +60,7 @@ class AggrMeter implements Meter {
     return measurements.values();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return queue.isEmpty();
   }
 
