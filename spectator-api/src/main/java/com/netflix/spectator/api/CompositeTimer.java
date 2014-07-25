@@ -18,7 +18,7 @@ package com.netflix.spectator.api;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-/** Timer implementation for the default registry. */
+/** Timer implementation for the composite registry. */
 final class CompositeTimer extends CompositeMeter implements Timer {
 
   private final Clock clock;

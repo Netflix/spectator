@@ -22,7 +22,7 @@ import java.util.Set;
 
 /**
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
- * noop registry. Otherwise activity will be sent to all registries that are part of the composite.
+ * registry. Otherwise activity will be sent to all registries that are part of the composite.
  */
 final class CompositeRegistry implements Registry {
 
