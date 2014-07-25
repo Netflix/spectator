@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -26,6 +27,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @RunWith(JUnit4.class)
 public class ExtendedRegistryTest {
+
+  @Before
+  public void init() {
+    System.setProperty("spectator.api.propagateWarnings", "true");
+    System.setProperty("spectator.api.maxNumberOfMeters", "10000");
+  }
 
   @Test
   public void testCreateIdArray() {
