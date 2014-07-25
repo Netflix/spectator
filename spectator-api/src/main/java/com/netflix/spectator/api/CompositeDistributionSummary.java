@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-/** Distribution summary implementation for the default registry. */
+/** Distribution summary implementation for the composite registry. */
 final class CompositeDistributionSummary extends CompositeMeter implements DistributionSummary {
 
   private final DistributionSummary[] summaries;

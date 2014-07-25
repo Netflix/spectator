@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-/** Counter implementation for the default registry. */
+/** Counter implementation for the composite registry. */
 final class CompositeCounter extends CompositeMeter implements Counter {
 
   private final Counter[] counters;
