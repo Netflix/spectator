@@ -28,19 +28,12 @@ import java.util.concurrent.atomic.AtomicLong;
 class ServoCounter implements Counter, ServoMeter {
 
   private final Clock clock;
-  private final ServoId id;
-  private final com.netflix.servo.monitor.Counter impl;
-
-  // Local count so that we have more flexibility on servo counter impl without changing the
-  // value returned by the {@link #count()} method.
-  private final AtomicLong count;
+  private final com.netflix.servo.monitor.BasicCounter impl;
 
   /** Create a new instance. */
-  ServoCounter(Clock clock, ServoId id, com.netflix.servo.monitor.Counter impl) {
+  ServoCounter(Clock clock, com.netflix.servo.monitor.BasicCounter impl) {
     this.clock = clock;
-    this.id = id;
     this.impl = impl;
-    this.count = new AtomicLong(0L);
   }
 
   @Override public Monitor<?> monitor() {
@@ -48,7 +41,7 @@ class ServoCounter implements Counter, ServoMeter {
   }
 
   @Override public Id id() {
-    return id;
+    return new ServoId(impl.getConfig());
   }
 
   @Override public boolean hasExpired() {
@@ -57,21 +50,19 @@ class ServoCounter implements Counter, ServoMeter {
 
   @Override public Iterable<Measurement> measure() {
     long now = clock.wallTime();
-    long v = count.get();
-    return Collections.singleton(new Measurement(id, now, v));
+    long v = count();
+    return Collections.singleton(new Measurement(id(), now, v));
   }
 
   @Override public void increment() {
     impl.increment();
-    count.incrementAndGet();
   }
 
   @Override public void increment(long amount) {
     impl.increment(amount);
-    count.addAndGet(amount);
   }
 
   @Override public long count() {
-    return count.get();
+    return impl.getValue(0).longValue();
   }
 }
