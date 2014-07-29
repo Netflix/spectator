@@ -6,6 +6,7 @@ buildscript {
   repositories {
     mavenLocal()
     mavenCentral()
+    jcenter()
   }
   apply from: file('gradle/buildscript.gradle'), to: buildscript 
 }
@@ -14,6 +15,7 @@ allprojects {
   apply plugin: 'java'
   apply plugin: 'jacoco'
   apply plugin: 'idea'
+  apply plugin: 'me.champeau.gradle.jmh'
 
   repositories { 
     mavenLocal()
@@ -48,9 +50,18 @@ subprojects {
   }
 
   dependencies {
-    compile 'org.slf4j:slf4j-api:1.7.6'
+    compile 'org.slf4j:slf4j-api:1.7.7'
     testCompile 'junit:junit:4.10'
     testCompile 'nl.jqno.equalsverifier:equalsverifier:1.4.1'
+    jmh 'org.slf4j:slf4j-simple:1.7.7'
+  }
+
+  jmh {
+    warmupIterations = 2
+    iterations = 10
+    fork = 5
+    profilers = ['STACK']
+    include '.*'
   }
 
   jacocoTestReport {
@@ -121,6 +132,7 @@ project(':spectator-reg-servo') {
   dependencies {
     compile project(':spectator-api')
     compile 'com.netflix.servo:servo-core:latest.release'
+    jmh project(':spectator-api')
   }
 }
 
@@ -128,6 +140,7 @@ project(':spectator-reg-metrics2') {
   dependencies {
     compile project(':spectator-api')
     compile 'com.yammer.metrics:metrics-core:2.2.0'
+    jmh project(':spectator-api')
   }
 }
 
@@ -135,5 +148,6 @@ project(':spectator-reg-metrics3') {
   dependencies {
     compile project(':spectator-api')
     compile 'com.codahale.metrics:metrics-core:3.0.2'
+    jmh project(':spectator-api')
   }
 }
