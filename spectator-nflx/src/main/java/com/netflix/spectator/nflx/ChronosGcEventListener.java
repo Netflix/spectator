@@ -70,7 +70,7 @@ public class ChronosGcEventListener implements GcEventListener {
     Map<String, Object> map = new HashMap<>();
     map.put("id", info.getId());
     map.put("startTime", event.getStartTime());
-    map.put("endTime", event.getStartTime() + info.getEndTime());
+    map.put("endTime", event.getStartTime() + info.getDuration());
     map.put("duration", info.getDuration());
     map.put("memoryBeforeGc", info.getMemoryUsageBeforeGc());
     map.put("memoryAfterGc", info.getMemoryUsageAfterGc());
