@@ -162,7 +162,10 @@ public final class GcLogger {
         PROMOTION_RATE.increment(delta);
       }
 
-      if (HelperFunctions.getGcType(name) == GcType.OLD) {
+      // Some GCs such as G1 can reduce the old gen size as part of a minor GC. To track the
+      // live data size we record the value if we see a reduction in the old gen heap size or
+      // after a major GC.
+      if (oldAfter < oldBefore || HelperFunctions.getGcType(name) == GcType.OLD) {
         LIVE_DATA_SIZE.set(oldAfter);
         final long oldMaxAfter = after.get(oldGenPoolName).getMax();
         MAX_DATA_SIZE.set(oldMaxAfter);
