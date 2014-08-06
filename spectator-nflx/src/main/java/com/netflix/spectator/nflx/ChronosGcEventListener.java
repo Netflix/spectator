@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Listener that sends GC events to a chronos backend.
@@ -59,6 +60,11 @@ public class ChronosGcEventListener implements GcEventListener {
 
   private final RestClient client = RestClientFactory.getClient("chronos_gc");
 
+  // Keep track of the previous end time to provide additional context for chronos visualization
+  // without needing to find the previous event. Stored as atomic long as there is no guarantee
+  // that the listener won't receive events from multiple threads.
+  private final AtomicLong previousEndTime = new AtomicLong(-1L);
+
   private String getenv(String k) {
     String v = System.getenv(k);
     return (v == null || v.length() == 0) ? "unknown" : v;
@@ -71,6 +77,7 @@ public class ChronosGcEventListener implements GcEventListener {
     map.put("id", info.getId());
     map.put("startTime", event.getStartTime());
     map.put("endTime", event.getStartTime() + info.getDuration());
+    map.put("previousEndTime", previousEndTime.get());
     map.put("duration", info.getDuration());
     map.put("memoryBeforeGc", info.getMemoryUsageBeforeGc());
     map.put("memoryAfterGc", info.getMemoryUsageAfterGc());
@@ -94,6 +101,26 @@ public class ChronosGcEventListener implements GcEventListener {
     return map;
   }
 
+  private void sendToChronos(final byte[] json) {
+    executor.submit(new Runnable() {
+      public void run() {
+        HttpRequest request = new HttpRequest.Builder()
+          .verb(HttpRequest.Verb.POST)
+          .uri(URI.create("/api/v2/event"))
+          .header("Content-Type", "application/json")
+          .entity(json)
+          .build();
+        try (HttpResponse response = client.executeWithLoadBalancer(request)) {
+          if (response.getStatus() != 200) {
+            logger.warn("failed to send GC event to chronos (status={})", response.getStatus());
+          }
+        } catch (Exception e) {
+          logger.warn("failed to send GC event to chronos", e);
+        }
+      }
+    });
+  }
+
   @Override
   public void onComplete(final GcEvent event) {
     if (!ENABLED.get()) {
@@ -102,26 +129,12 @@ public class ChronosGcEventListener implements GcEventListener {
 
     try {
       final byte[] json = mapper.writeValueAsBytes(toEventMap(event));
-      executor.submit(new Runnable() {
-        public void run() {
-          HttpRequest request = new HttpRequest.Builder()
-            .verb(HttpRequest.Verb.POST)
-            .uri(URI.create("/api/v2/event"))
-            .header("Content-Type", "application/json")
-            .entity(json)
-            .build();
-          try (HttpResponse response = client.executeWithLoadBalancer(request)) {
-            if (response.getStatus() != 200) {
-              logger.warn("failed to send GC event to chronos (status={})", response.getStatus());
-            }
-          } catch (Exception e) {
-            logger.warn("failed to send GC event to chronos", e);
-          }
-        }
-      });
+      sendToChronos(json);
     } catch (IOException e) {
       logger.warn("failed to send GC event to chronos", e);
     }
+
+    previousEndTime.set(event.getStartTime() + event.getInfo().getGcInfo().getDuration());
   }
 
   /** Shutdown the executor used to send data to chronos. */
