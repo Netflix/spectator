@@ -22,7 +22,6 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicLong;
 
 /** Counter implementation for the servo registry. */
 class ServoCounter implements Counter, ServoMeter {
