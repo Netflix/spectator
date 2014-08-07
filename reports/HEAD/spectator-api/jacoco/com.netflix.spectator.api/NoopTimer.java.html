@@ -24,51 +24,35 @@ import java.util.concurrent.TimeUnit;
   /** Singleton instance. */
 <span class="fc" id="L25">  INSTANCE;</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
-<span class="fc" id="L30">    return NoopId.INSTANCE;</span>
+  @Override public Id id() {
+<span class="fc" id="L28">    return NoopId.INSTANCE;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
-<span class="fc" id="L36">    return false;</span>
+  @Override public boolean hasExpired() {
+<span class="fc" id="L32">    return false;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
-<span class="fc" id="L42">  }</span>
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L36">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L47">    return Collections.emptyList();</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L39">    return Collections.emptyList();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
-<span class="nc" id="L53">    return f.call();</span>
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="nc" id="L43">    return f.call();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
-<span class="nc" id="L59">    f.run();</span>
-<span class="nc" id="L60">  }</span>
+  @Override public void record(Runnable f) {
+<span class="nc" id="L47">    f.run();</span>
+<span class="nc" id="L48">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
-<span class="fc" id="L65">    return 0L;</span>
+  @Override public long count() {
+<span class="fc" id="L51">    return 0L;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
-<span class="fc" id="L71">    return 0L;</span>
+  @Override public long totalTime() {
+<span class="fc" id="L55">    return 0L;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

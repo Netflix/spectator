@@ -51,14 +51,12 @@ public abstract class AbstractMeter&lt;T&gt; implements Meter {
 <span class="fc" id="L51">    this.ref = new WeakReference&lt;&gt;(obj);</span>
 <span class="fc" id="L52">  }</span>
 
-  /** {@inheritDoc} */
   @Override public Id id() {
-<span class="fc" id="L56">    return this.id;</span>
+<span class="fc" id="L55">    return this.id;</span>
   }
 
-  /** {@inheritDoc} */
   @Override public boolean hasExpired() {
-<span class="fc bfc" id="L61" title="All 2 branches covered.">    return this.ref.get() == null;</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">    return this.ref.get() == null;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

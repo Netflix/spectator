@@ -42,70 +42,54 @@ final class DefaultTimer implements Timer {
 <span class="fc" id="L42">    totalTimeId = id.withTag(&quot;statistic&quot;, &quot;totalTime&quot;);</span>
 <span class="fc" id="L43">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
-<span class="fc" id="L48">    return id;</span>
+  @Override public Id id() {
+<span class="fc" id="L46">    return id;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
-<span class="nc" id="L54">    return false;</span>
+  @Override public boolean hasExpired() {
+<span class="nc" id="L50">    return false;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(long amount, TimeUnit unit) {
-<span class="fc" id="L60">    final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);</span>
-<span class="fc" id="L61">    totalTime.addAndGet(nanos);</span>
-<span class="fc" id="L62">    count.incrementAndGet();</span>
-<span class="fc" id="L63">  }</span>
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L54">    final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);</span>
+<span class="fc" id="L55">    totalTime.addAndGet(nanos);</span>
+<span class="fc" id="L56">    count.incrementAndGet();</span>
+<span class="fc" id="L57">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L68">    final long now = clock.wallTime();</span>
-<span class="fc" id="L69">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(2);</span>
-<span class="fc" id="L70">    ms.add(new Measurement(countId, now, count.get()));</span>
-<span class="fc" id="L71">    ms.add(new Measurement(totalTimeId, now, totalTime.get()));</span>
-<span class="fc" id="L72">    return ms;</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L60">    final long now = clock.wallTime();</span>
+<span class="fc" id="L61">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(2);</span>
+<span class="fc" id="L62">    ms.add(new Measurement(countId, now, count.get()));</span>
+<span class="fc" id="L63">    ms.add(new Measurement(totalTimeId, now, totalTime.get()));</span>
+<span class="fc" id="L64">    return ms;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="fc" id="L68">    final long s = clock.monotonicTime();</span>
+    try {
+<span class="fc" id="L70">      return f.call();</span>
+    } finally {
+<span class="fc" id="L72">      final long e = clock.monotonicTime();</span>
+<span class="fc" id="L73">      record(e - s, TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L74">    }</span>
+  }
+
+  @Override public void record(Runnable f) {
 <span class="fc" id="L78">    final long s = clock.monotonicTime();</span>
     try {
-<span class="fc" id="L80">      return f.call();</span>
+<span class="fc" id="L80">      f.run();</span>
     } finally {
 <span class="fc" id="L82">      final long e = clock.monotonicTime();</span>
 <span class="fc" id="L83">      record(e - s, TimeUnit.NANOSECONDS);</span>
 <span class="fc" id="L84">    }</span>
+<span class="fc" id="L85">  }</span>
+
+  @Override public long count() {
+<span class="fc" id="L88">    return count.get();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void record(Runnable f) {
-<span class="fc" id="L90">    final long s = clock.monotonicTime();</span>
-    try {
-<span class="fc" id="L92">      f.run();</span>
-    } finally {
-<span class="fc" id="L94">      final long e = clock.monotonicTime();</span>
-<span class="fc" id="L95">      record(e - s, TimeUnit.NANOSECONDS);</span>
-<span class="fc" id="L96">    }</span>
-<span class="fc" id="L97">  }</span>
-
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
-<span class="fc" id="L102">    return count.get();</span>
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public long totalTime() {
-<span class="fc" id="L108">    return totalTime.get();</span>
+  @Override public long totalTime() {
+<span class="fc" id="L92">    return totalTime.get();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

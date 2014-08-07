@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="5.6">
-<file name="/Users/brharrington/stash/spectator-github/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsCounter.java">
+<file name="/Users/brharrington/stash/spectator-brh/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsCounter.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-github/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsDistributionSummary.java">
+<file name="/Users/brharrington/stash/spectator-brh/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsDistributionSummary.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-github/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsRegistry.java">
+<file name="/Users/brharrington/stash/spectator-brh/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsRegistry.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-github/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsTimer.java">
+<file name="/Users/brharrington/stash/spectator-brh/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsTimer.java">
 </file>
 </checkstyle>

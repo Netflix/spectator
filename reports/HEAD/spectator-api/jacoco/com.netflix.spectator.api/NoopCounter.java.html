@@ -22,38 +22,26 @@ import java.util.Collections;
   /** Singleton instance. */
 <span class="fc" id="L23">  INSTANCE;</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
-<span class="fc" id="L28">    return NoopId.INSTANCE;</span>
+  @Override public Id id() {
+<span class="fc" id="L26">    return NoopId.INSTANCE;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
-<span class="fc" id="L34">    return false;</span>
+  @Override public boolean hasExpired() {
+<span class="fc" id="L30">    return false;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment() {
-<span class="fc" id="L40">  }</span>
+  @Override public void increment() {
+<span class="fc" id="L34">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment(long amount) {
-<span class="fc" id="L45">  }</span>
+  @Override public void increment(long amount) {
+<span class="fc" id="L37">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L50">    return Collections.emptyList();</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L40">    return Collections.emptyList();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
-<span class="fc" id="L56">    return 0L;</span>
+  @Override public long count() {
+<span class="fc" id="L44">    return 0L;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

@@ -42,17 +42,13 @@ class ObjectGauge extends AbstractMeter&lt;Object&gt; implements Gauge {
 <span class="fc" id="L42">    this.f = f;</span>
 <span class="fc" id="L43">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L48">    return Collections.singleton(new Measurement(id, clock.wallTime(), value()));</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L46">    return Collections.singleton(new Measurement(id, clock.wallTime(), value()));</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public double value() {
-<span class="fc" id="L54">    final Object obj = ref.get();</span>
-<span class="fc bfc" id="L55" title="All 2 branches covered.">    return (obj == null) ? Double.NaN : f.apply(obj);</span>
+  @Override public double value() {
+<span class="fc" id="L50">    final Object obj = ref.get();</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">    return (obj == null) ? Double.NaN : f.apply(obj);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

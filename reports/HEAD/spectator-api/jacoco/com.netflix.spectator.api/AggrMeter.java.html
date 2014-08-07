@@ -34,45 +34,39 @@ class AggrMeter implements Meter {
 <span class="fc" id="L34">    this.queue = new ConcurrentLinkedQueue&lt;&gt;();</span>
 <span class="fc" id="L35">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
-<span class="fc" id="L40">    return id;</span>
+  @Override public Id id() {
+<span class="fc" id="L38">    return id;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L46">    Map&lt;Id, Measurement&gt; measurements = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L47">    Iterator&lt;Meter&gt; iter = queue.iterator();</span>
-<span class="fc bfc" id="L48" title="All 2 branches covered.">    while (iter.hasNext()) {</span>
-<span class="fc" id="L49">      Meter meter = iter.next();</span>
-<span class="pc bpc" id="L50" title="1 of 2 branches missed.">      if (meter.hasExpired()) {</span>
-<span class="nc" id="L51">        iter.remove();</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L42">    Map&lt;Id, Measurement&gt; measurements = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L43">    Iterator&lt;Meter&gt; iter = queue.iterator();</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">    while (iter.hasNext()) {</span>
+<span class="fc" id="L45">      Meter meter = iter.next();</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">      if (meter.hasExpired()) {</span>
+<span class="nc" id="L47">        iter.remove();</span>
       } else {
-<span class="fc bfc" id="L53" title="All 2 branches covered.">        for (Measurement m : meter.measure()) {</span>
-<span class="fc" id="L54">          Measurement prev = measurements.get(m.id());</span>
-<span class="fc bfc" id="L55" title="All 2 branches covered.">          if (prev == null) {</span>
-<span class="fc" id="L56">            measurements.put(m.id(), m);</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        for (Measurement m : meter.measure()) {</span>
+<span class="fc" id="L50">          Measurement prev = measurements.get(m.id());</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">          if (prev == null) {</span>
+<span class="fc" id="L52">            measurements.put(m.id(), m);</span>
           } else {
-<span class="fc" id="L58">            double v = prev.value() + m.value();</span>
-<span class="fc" id="L59">            measurements.put(prev.id(), new Measurement(prev.id(), prev.timestamp(), v));</span>
+<span class="fc" id="L54">            double v = prev.value() + m.value();</span>
+<span class="fc" id="L55">            measurements.put(prev.id(), new Measurement(prev.id(), prev.timestamp(), v));</span>
           }
-<span class="fc" id="L61">        }</span>
+<span class="fc" id="L57">        }</span>
       }
-<span class="fc" id="L63">    }</span>
-<span class="fc" id="L64">    return measurements.values();</span>
+<span class="fc" id="L59">    }</span>
+<span class="fc" id="L60">    return measurements.values();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
-<span class="nc" id="L70">    return queue.isEmpty();</span>
+  @Override public boolean hasExpired() {
+<span class="nc" id="L64">    return queue.isEmpty();</span>
   }
 
   /** Adds a meter to the set included in the aggregate. */
   void add(Meter m) {
-<span class="fc" id="L75">    queue.add(m);</span>
-<span class="fc" id="L76">  }</span>
+<span class="fc" id="L69">    queue.add(m);</span>
+<span class="fc" id="L70">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

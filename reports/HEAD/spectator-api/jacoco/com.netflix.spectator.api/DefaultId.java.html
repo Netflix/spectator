@@ -38,28 +38,20 @@ final class DefaultId implements Id {
 <span class="fc" id="L38">    this.tags = tags;</span>
 <span class="fc" id="L39">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public String name() {
-<span class="fc" id="L44">    return name;</span>
+  @Override public String name() {
+<span class="fc" id="L42">    return name;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Tag&gt; tags() {
-<span class="fc bfc" id="L50" title="All 2 branches covered.">    return (tags == TagList.EMPTY) ? Collections.&lt;Tag&gt;emptyList() : tags;</span>
+  @Override public Iterable&lt;Tag&gt; tags() {
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    return (tags == TagList.EMPTY) ? Collections.&lt;Tag&gt;emptyList() : tags;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DefaultId withTag(Tag tag) {
-<span class="nc" id="L56">    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));</span>
+  @Override public DefaultId withTag(Tag tag) {
+<span class="nc" id="L50">    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DefaultId withTag(String key, String value) {
-<span class="fc" id="L62">    return new DefaultId(name, new TagList(key, value, tags));</span>
+  @Override public DefaultId withTag(String key, String value) {
+<span class="fc" id="L54">    return new DefaultId(name, new TagList(key, value, tags));</span>
   }
 
   /**
@@ -67,7 +59,7 @@ final class DefaultId implements Id {
    * is found the last entry in the list with a given key will be used.
    */
   public DefaultId normalize() {
-<span class="fc" id="L70">    return rollup(EMPTY, false);</span>
+<span class="fc" id="L62">    return rollup(EMPTY, false);</span>
   }
 
   /**
@@ -84,40 +76,34 @@ final class DefaultId implements Id {
    *     New identifier after applying the rollup.
    */
   public DefaultId rollup(Set&lt;String&gt; keys, boolean keep) {
-<span class="fc" id="L87">    Map&lt;String, String&gt; ts = new TreeMap&lt;&gt;();</span>
-<span class="fc bfc" id="L88" title="All 2 branches covered.">    for (Tag t : tags) {</span>
-<span class="fc bfc" id="L89" title="All 2 branches covered.">      if (keys.contains(t.key()) == keep) {</span>
-<span class="fc" id="L90">        ts.put(t.key(), t.value());</span>
+<span class="fc" id="L79">    Map&lt;String, String&gt; ts = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    for (Tag t : tags) {</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">      if (keys.contains(t.key()) == keep) {</span>
+<span class="fc" id="L82">        ts.put(t.key(), t.value());</span>
       }
-<span class="fc" id="L92">    }</span>
-<span class="fc" id="L93">    return new DefaultId(name, TagList.create(ts));</span>
+<span class="fc" id="L84">    }</span>
+<span class="fc" id="L85">    return new DefaultId(name, TagList.create(ts));</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object obj) {
-<span class="fc bfc" id="L99" title="All 2 branches covered.">    if (this == obj) return true;</span>
-<span class="fc bfc" id="L100" title="All 4 branches covered.">    if (obj == null || !(obj instanceof DefaultId)) return false;</span>
-<span class="fc" id="L101">    DefaultId other = (DefaultId) obj;</span>
-<span class="pc bpc" id="L102" title="2 of 10 branches missed.">    return name.equals(other.name)</span>
+  @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L90" title="All 4 branches covered.">    if (obj == null || !(obj instanceof DefaultId)) return false;</span>
+<span class="fc" id="L91">    DefaultId other = (DefaultId) obj;</span>
+<span class="pc bpc" id="L92" title="2 of 10 branches missed.">    return name.equals(other.name)</span>
       &amp;&amp; ((tags == null &amp;&amp; other.tags == null) || (tags != null &amp;&amp; tags.equals(other.tags)));
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-<span class="fc bfc" id="L109" title="All 2 branches covered.">    return name.hashCode() + (tags == null ? 0 : tags.hashCode());</span>
+  @Override public int hashCode() {
+<span class="fc bfc" id="L97" title="All 2 branches covered.">    return name.hashCode() + (tags == null ? 0 : tags.hashCode());</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String toString() {
-<span class="fc" id="L115">    StringBuilder buf = new StringBuilder();</span>
-<span class="fc" id="L116">    buf.append(name);</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">    for (Tag t : tags()) {</span>
-<span class="fc" id="L118">      buf.append(&quot;:&quot;).append(t.key()).append(&quot;=&quot;).append(t.value());</span>
-<span class="fc" id="L119">    }</span>
-<span class="fc" id="L120">    return buf.toString();</span>
+  @Override public String toString() {
+<span class="fc" id="L101">    StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L102">    buf.append(name);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    for (Tag t : tags()) {</span>
+<span class="fc" id="L104">      buf.append(&quot;:&quot;).append(t.key()).append(&quot;=&quot;).append(t.value());</span>
+<span class="fc" id="L105">    }</span>
+<span class="fc" id="L106">    return buf.toString();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

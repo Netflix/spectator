@@ -49,51 +49,43 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
 <span class="fc bfc" id="L49" title="All 2 branches covered.">    this.hc = 31 * (key.hashCode() + value.hashCode() + (next == null ? 23 : next.hashCode()));</span>
 <span class="fc" id="L50">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public String key() {
-<span class="fc" id="L55">    return key;</span>
+  @Override public String key() {
+<span class="fc" id="L53">    return key;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String value() {
-<span class="fc" id="L61">    return value;</span>
+  @Override public String value() {
+<span class="fc" id="L57">    return value;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterator&lt;Tag&gt; iterator() {
-<span class="fc" id="L67">    final TagList root = this;</span>
-<span class="fc" id="L68">    return new Iterator&lt;Tag&gt;() {</span>
-<span class="fc" id="L69">      private TagList current = root;</span>
+  @Override public Iterator&lt;Tag&gt; iterator() {
+<span class="fc" id="L61">    final TagList root = this;</span>
+<span class="fc" id="L62">    return new Iterator&lt;Tag&gt;() {</span>
+<span class="fc" id="L63">      private TagList current = root;</span>
 
       public boolean hasNext() {
-<span class="fc bfc" id="L72" title="All 2 branches covered.">        return current != null;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        return current != null;</span>
       }
 
       public Tag next() {
-<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (current == null) {</span>
-<span class="nc" id="L77">          throw new NoSuchElementException();</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        if (current == null) {</span>
+<span class="nc" id="L71">          throw new NoSuchElementException();</span>
         }
-<span class="fc" id="L79">        Tag tmp = current;</span>
-<span class="fc" id="L80">        current = current.next;</span>
-<span class="fc" id="L81">        return tmp;</span>
+<span class="fc" id="L73">        Tag tmp = current;</span>
+<span class="fc" id="L74">        current = current.next;</span>
+<span class="fc" id="L75">        return tmp;</span>
       }
 
       public void remove() {
-<span class="nc" id="L85">        throw new UnsupportedOperationException();</span>
+<span class="nc" id="L79">        throw new UnsupportedOperationException();</span>
       }
     };
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object obj) {
-<span class="fc bfc" id="L93" title="All 2 branches covered.">    if (this == obj) return true;</span>
-<span class="fc bfc" id="L94" title="All 4 branches covered.">    if (obj == null || !(obj instanceof TagList)) return false;</span>
-<span class="fc" id="L95">    TagList other = (TagList) obj;</span>
-<span class="pc bpc" id="L96" title="1 of 10 branches missed.">    return key.equals(other.key) &amp;&amp; value.equals(other.value)</span>
+  @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L86" title="All 4 branches covered.">    if (obj == null || !(obj instanceof TagList)) return false;</span>
+<span class="fc" id="L87">    TagList other = (TagList) obj;</span>
+<span class="pc bpc" id="L88" title="1 of 10 branches missed.">    return key.equals(other.key) &amp;&amp; value.equals(other.value)</span>
       &amp;&amp; (next == other.next || (next != null &amp;&amp; next.equals(other.next)));
   }
 
@@ -105,9 +97,8 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    *
    * {@inheritDoc}
    */
-  @Override
-  public int hashCode() {
-<span class="fc" id="L110">    return hc;</span>
+  @Override public int hashCode() {
+<span class="fc" id="L101">    return hc;</span>
   }
 
   /**
@@ -119,14 +110,14 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    *     New tag list with a copy of the data.
    */
   public static TagList create(Iterable&lt;Tag&gt; tags) {
-<span class="fc bfc" id="L122" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
-<span class="fc" id="L123">      return (TagList) tags;</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
+<span class="fc" id="L114">      return (TagList) tags;</span>
     } else {
-<span class="fc" id="L125">      TagList head = null;</span>
-<span class="fc bfc" id="L126" title="All 2 branches covered.">      for (Tag t : tags) {</span>
-<span class="fc" id="L127">        head = new TagList(t.key(), t.value(), head);</span>
-<span class="fc" id="L128">      }</span>
-<span class="fc" id="L129">      return head;</span>
+<span class="fc" id="L116">      TagList head = null;</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">      for (Tag t : tags) {</span>
+<span class="fc" id="L118">        head = new TagList(t.key(), t.value(), head);</span>
+<span class="fc" id="L119">      }</span>
+<span class="fc" id="L120">      return head;</span>
     }
   }
 
@@ -139,14 +130,14 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    *     New tag list with a copy of the data.
    */
   public static TagList create(Map&lt;String, String&gt; tags) {
-<span class="fc" id="L142">    TagList head = null;</span>
-<span class="fc bfc" id="L143" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
-<span class="fc" id="L144">      head = new TagList(t.getKey(), t.getValue(), head);</span>
-<span class="fc" id="L145">    }</span>
-<span class="fc" id="L146">    return head;</span>
+<span class="fc" id="L133">    TagList head = null;</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
+<span class="fc" id="L135">      head = new TagList(t.getKey(), t.getValue(), head);</span>
+<span class="fc" id="L136">    }</span>
+<span class="fc" id="L137">    return head;</span>
   }
 
   /** Empty tag list. */
-<span class="fc" id="L150">  static final TagList EMPTY = null;</span>
+<span class="fc" id="L141">  static final TagList EMPTY = null;</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

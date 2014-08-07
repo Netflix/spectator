@@ -25,34 +25,24 @@ final class NoopId implements Id {
 <span class="fc" id="L25">  private NoopId() {</span>
 <span class="fc" id="L26">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public String name() {
-<span class="fc" id="L31">    return &quot;noop&quot;;</span>
+  @Override public String name() {
+<span class="fc" id="L29">    return &quot;noop&quot;;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Tag&gt; tags() {
-<span class="fc" id="L37">    return Collections.emptyList();</span>
+  @Override public Iterable&lt;Tag&gt; tags() {
+<span class="fc" id="L33">    return Collections.emptyList();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(String k, String v) {
-<span class="fc" id="L43">    return this;</span>
+  @Override public Id withTag(String k, String v) {
+<span class="fc" id="L37">    return this;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id withTag(Tag tag) {
-<span class="fc" id="L49">    return this;</span>
+  @Override public Id withTag(Tag tag) {
+<span class="fc" id="L41">    return this;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public String toString() {
-<span class="fc" id="L55">    return name();</span>
+  @Override public String toString() {
+<span class="fc" id="L45">    return name();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

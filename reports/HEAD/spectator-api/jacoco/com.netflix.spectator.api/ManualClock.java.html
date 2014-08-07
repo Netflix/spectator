@@ -44,26 +44,22 @@ public class ManualClock implements Clock {
 <span class="fc" id="L44">    monotonic = new AtomicLong(monotonicInit);</span>
 <span class="fc" id="L45">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public long wallTime() {
-<span class="fc" id="L50">    return wall.get();</span>
+  @Override public long wallTime() {
+<span class="fc" id="L48">    return wall.get();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public long monotonicTime() {
-<span class="fc" id="L56">    return monotonic.get();</span>
+  @Override public long monotonicTime() {
+<span class="fc" id="L52">    return monotonic.get();</span>
   }
 
   /** Set the wall time to the value {@code t}. */
   public void setWallTime(long t) {
-<span class="fc" id="L61">    wall.set(t);</span>
-<span class="fc" id="L62">  }</span>
+<span class="fc" id="L57">    wall.set(t);</span>
+<span class="fc" id="L58">  }</span>
 
   /** Set the monotonic time to the value {@code t}. */
   public void setMonotonicTime(long t) {
-<span class="fc" id="L66">    monotonic.set(t);</span>
-<span class="fc" id="L67">  }</span>
+<span class="fc" id="L62">    monotonic.set(t);</span>
+<span class="fc" id="L63">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

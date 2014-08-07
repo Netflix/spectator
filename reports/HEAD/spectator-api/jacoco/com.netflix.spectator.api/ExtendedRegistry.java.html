@@ -44,84 +44,62 @@ public final class ExtendedRegistry implements Registry {
 <span class="nc" id="L44">    return impl;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Clock clock() {
-<span class="fc" id="L50">    return impl.clock();</span>
+  @Override public Clock clock() {
+<span class="fc" id="L48">    return impl.clock();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name) {
-<span class="fc" id="L56">    return impl.createId(name);</span>
+  @Override public Id createId(String name) {
+<span class="fc" id="L52">    return impl.createId(name);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Id createId(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L62">    return impl.createId(name, tags);</span>
+  @Override public Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L56">    return impl.createId(name, tags);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void register(Meter meter) {
-<span class="nc" id="L68">    impl.register(meter);</span>
-<span class="nc" id="L69">  }</span>
+  @Override public void register(Meter meter) {
+<span class="nc" id="L60">    impl.register(meter);</span>
+<span class="nc" id="L61">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Counter counter(Id id) {
-<span class="nc" id="L74">    return impl.counter(id);</span>
+  @Override public Counter counter(Id id) {
+<span class="nc" id="L64">    return impl.counter(id);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public DistributionSummary distributionSummary(Id id) {
-<span class="nc" id="L80">    return impl.distributionSummary(id);</span>
+  @Override public DistributionSummary distributionSummary(Id id) {
+<span class="nc" id="L68">    return impl.distributionSummary(id);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Timer timer(Id id) {
-<span class="nc" id="L86">    return impl.timer(id);</span>
+  @Override public Timer timer(Id id) {
+<span class="nc" id="L72">    return impl.timer(id);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Meter get(Id id) {
-<span class="fc" id="L92">    return impl.get(id);</span>
+  @Override public Meter get(Id id) {
+<span class="fc" id="L76">    return impl.get(id);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterator&lt;Meter&gt; iterator() {
-<span class="nc" id="L98">    return impl.iterator();</span>
+  @Override public Iterator&lt;Meter&gt; iterator() {
+<span class="nc" id="L80">    return impl.iterator();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void addListener(RegistryListener listener) {
-<span class="nc" id="L104">    impl.addListener(listener);</span>
-<span class="nc" id="L105">  }</span>
+  @Override public void addListener(RegistryListener listener) {
+<span class="nc" id="L84">    impl.addListener(listener);</span>
+<span class="nc" id="L85">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public void removeListener(RegistryListener listener) {
-<span class="nc" id="L110">    impl.removeListener(listener);</span>
-<span class="nc" id="L111">  }</span>
+  @Override public void removeListener(RegistryListener listener) {
+<span class="nc" id="L88">    impl.removeListener(listener);</span>
+<span class="nc" id="L89">  }</span>
 
   /////////////////////////////////////////////////////////////////
   // Additional helper methods below
 
   private Iterable&lt;Tag&gt; toIterable(String[] tags) {
-<span class="fc bfc" id="L117" title="All 2 branches covered.">    if (tags.length % 2 == 1) {</span>
-<span class="fc" id="L118">      throw new IllegalArgumentException(&quot;size must be even, it is a set of key=value pairs&quot;);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    if (tags.length % 2 == 1) {</span>
+<span class="fc" id="L96">      throw new IllegalArgumentException(&quot;size must be even, it is a set of key=value pairs&quot;);</span>
     }
-<span class="fc" id="L120">    TagList ts = TagList.EMPTY;</span>
-<span class="fc bfc" id="L121" title="All 2 branches covered.">    for (int i = 0; i &lt; tags.length; i += 2) {</span>
-<span class="fc" id="L122">      ts = new TagList(tags[i], tags[i + 1], ts);</span>
+<span class="fc" id="L98">    TagList ts = TagList.EMPTY;</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">    for (int i = 0; i &lt; tags.length; i += 2) {</span>
+<span class="fc" id="L100">      ts = new TagList(tags[i], tags[i + 1], ts);</span>
     }
-<span class="fc" id="L124">    return ts;</span>
+<span class="fc" id="L102">    return ts;</span>
   }
 
   /**
@@ -135,7 +113,7 @@ public final class ExtendedRegistry implements Registry {
    *     Identifier for a meter.
    */
   public Id createId(String name, String... tags) {
-<span class="fc" id="L138">    return impl.createId(name, toIterable(tags));</span>
+<span class="fc" id="L116">    return impl.createId(name, toIterable(tags));</span>
   }
 
   /**
@@ -147,7 +125,7 @@ public final class ExtendedRegistry implements Registry {
    *     Counter instance with the corresponding id.
    */
   public Counter counter(String name) {
-<span class="fc" id="L150">    return impl.counter(impl.createId(name));</span>
+<span class="fc" id="L128">    return impl.counter(impl.createId(name));</span>
   }
 
   /**
@@ -161,7 +139,7 @@ public final class ExtendedRegistry implements Registry {
    *     Counter instance with the corresponding id.
    */
   public Counter counter(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L164">    return impl.counter(impl.createId(name, tags));</span>
+<span class="fc" id="L142">    return impl.counter(impl.createId(name, tags));</span>
   }
 
   /**
@@ -175,7 +153,7 @@ public final class ExtendedRegistry implements Registry {
    *     Counter instance with the corresponding id.
    */
   public Counter counter(String name, String... tags) {
-<span class="fc" id="L178">    return impl.counter(impl.createId(name, toIterable(tags)));</span>
+<span class="fc" id="L156">    return impl.counter(impl.createId(name, toIterable(tags)));</span>
   }
 
   /**
@@ -187,7 +165,7 @@ public final class ExtendedRegistry implements Registry {
    *     Summary instance with the corresponding id.
    */
   public DistributionSummary distributionSummary(String name) {
-<span class="fc" id="L190">    return impl.distributionSummary(impl.createId(name));</span>
+<span class="fc" id="L168">    return impl.distributionSummary(impl.createId(name));</span>
   }
 
   /**
@@ -201,7 +179,7 @@ public final class ExtendedRegistry implements Registry {
    *     Summary instance with the corresponding id.
    */
   public DistributionSummary distributionSummary(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L204">    return impl.distributionSummary(impl.createId(name, tags));</span>
+<span class="fc" id="L182">    return impl.distributionSummary(impl.createId(name, tags));</span>
   }
 
   /**
@@ -215,7 +193,7 @@ public final class ExtendedRegistry implements Registry {
    *     Summary instance with the corresponding id.
    */
   public DistributionSummary distributionSummary(String name, String... tags) {
-<span class="fc" id="L218">    return impl.distributionSummary(impl.createId(name, toIterable(tags)));</span>
+<span class="fc" id="L196">    return impl.distributionSummary(impl.createId(name, toIterable(tags)));</span>
   }
 
   /**
@@ -227,7 +205,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public Timer timer(String name) {
-<span class="fc" id="L230">    return impl.timer(impl.createId(name));</span>
+<span class="fc" id="L208">    return impl.timer(impl.createId(name));</span>
   }
 
   /**
@@ -241,7 +219,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public Timer timer(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L244">    return impl.timer(impl.createId(name, tags));</span>
+<span class="fc" id="L222">    return impl.timer(impl.createId(name, tags));</span>
   }
 
   /**
@@ -255,7 +233,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public Timer timer(String name, String... tags) {
-<span class="fc" id="L258">    return impl.timer(impl.createId(name, toIterable(tags)));</span>
+<span class="fc" id="L236">    return impl.timer(impl.createId(name, toIterable(tags)));</span>
   }
 
   /**
@@ -267,9 +245,9 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public LongTaskTimer longTaskTimer(Id id) {
-<span class="fc" id="L270">    LongTaskTimer taskTimer = new DefaultLongTaskTimer(clock(), id);</span>
-<span class="fc" id="L271">    impl.register(taskTimer); // the AggrMeter has the right semantics for these type of timers</span>
-<span class="fc" id="L272">    return taskTimer;</span>
+<span class="fc" id="L248">    LongTaskTimer taskTimer = new DefaultLongTaskTimer(clock(), id);</span>
+<span class="fc" id="L249">    impl.register(taskTimer); // the AggrMeter has the right semantics for these type of timers</span>
+<span class="fc" id="L250">    return taskTimer;</span>
   }
 
   /**
@@ -281,7 +259,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public LongTaskTimer longTaskTimer(String name) {
-<span class="nc" id="L284">    return longTaskTimer(createId(name));</span>
+<span class="nc" id="L262">    return longTaskTimer(createId(name));</span>
   }
 
   /**
@@ -295,7 +273,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public LongTaskTimer longTaskTimer(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L298">    return longTaskTimer(createId(name, tags));</span>
+<span class="fc" id="L276">    return longTaskTimer(createId(name, tags));</span>
   }
 
   /**
@@ -309,7 +287,7 @@ public final class ExtendedRegistry implements Registry {
    *     Timer instance with the corresponding id.
    */
   public LongTaskTimer longTaskTimer(String name, String... tags) {
-<span class="fc" id="L312">    return longTaskTimer(createId(name, toIterable(tags)));</span>
+<span class="fc" id="L290">    return longTaskTimer(createId(name, toIterable(tags)));</span>
   }
 
   /**
@@ -326,7 +304,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Number&gt; T gauge(Id id, T number) {
-<span class="fc" id="L329">    return gauge(id, number, Functions.IDENTITY);</span>
+<span class="fc" id="L307">    return gauge(id, number, Functions.IDENTITY);</span>
   }
 
   /**
@@ -342,7 +320,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Number&gt; T gauge(String name, T number) {
-<span class="fc" id="L345">    return gauge(impl.createId(name), number);</span>
+<span class="fc" id="L323">    return gauge(impl.createId(name), number);</span>
   }
 
   /**
@@ -360,7 +338,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Number&gt; T gauge(String name, Iterable&lt;Tag&gt; tags, T number) {
-<span class="fc" id="L363">    return gauge(impl.createId(name, tags), number);</span>
+<span class="fc" id="L341">    return gauge(impl.createId(name, tags), number);</span>
   }
 
   /**
@@ -379,8 +357,8 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T&gt; T gauge(Id id, T obj, ValueFunction f) {
-<span class="fc" id="L382">    impl.register(new ObjectGauge(clock(), id, obj, f));</span>
-<span class="fc" id="L383">    return obj;</span>
+<span class="fc" id="L360">    impl.register(new ObjectGauge(clock(), id, obj, f));</span>
+<span class="fc" id="L361">    return obj;</span>
   }
 
   /**
@@ -398,7 +376,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T&gt; T gauge(String name, T obj, ValueFunction f) {
-<span class="fc" id="L401">    return gauge(impl.createId(name), obj, f);</span>
+<span class="fc" id="L379">    return gauge(impl.createId(name), obj, f);</span>
   }
 
   /**
@@ -417,7 +395,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(Id id, T collection) {
-<span class="fc" id="L420">    return gauge(id, collection, Functions.COLLECTION_SIZE);</span>
+<span class="fc" id="L398">    return gauge(id, collection, Functions.COLLECTION_SIZE);</span>
   }
 
   /**
@@ -436,7 +414,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(String name, T collection) {
-<span class="fc" id="L439">    return collectionSize(impl.createId(name), collection);</span>
+<span class="fc" id="L417">    return collectionSize(impl.createId(name), collection);</span>
   }
 
   /**
@@ -455,7 +433,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(Id id, T collection) {
-<span class="fc" id="L458">    return gauge(id, collection, Functions.MAP_SIZE);</span>
+<span class="fc" id="L436">    return gauge(id, collection, Functions.MAP_SIZE);</span>
   }
 
   /**
@@ -474,7 +452,7 @@ public final class ExtendedRegistry implements Registry {
    *     statement.
    */
   public &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(String name, T collection) {
-<span class="fc" id="L477">    return mapSize(impl.createId(name), collection);</span>
+<span class="fc" id="L455">    return mapSize(impl.createId(name), collection);</span>
   }
 
   /**
@@ -492,23 +470,23 @@ public final class ExtendedRegistry implements Registry {
    */
   public void methodValue(Id id, Object obj, String method) {
     try {
-<span class="fc" id="L495">      final Method m = getMethod(obj.getClass(), method);</span>
+<span class="fc" id="L473">      final Method m = getMethod(obj.getClass(), method);</span>
       try {
         // Make sure we can cast the response to a Number
-<span class="fc" id="L498">        final Number n = (Number) m.invoke(obj);</span>
-<span class="fc" id="L499">        LOGGER.debug(&quot;registering gauge {}, using method [{}], with initial value {}&quot;, id, m, n);</span>
-<span class="fc" id="L500">        gauge(id, obj, Functions.invokeMethod(m));</span>
-<span class="fc" id="L501">      } catch (Exception e) {</span>
-<span class="fc" id="L502">        final String msg = &quot;exception thrown invoking method [&quot; + m</span>
+<span class="fc" id="L476">        final Number n = (Number) m.invoke(obj);</span>
+<span class="fc" id="L477">        LOGGER.debug(&quot;registering gauge {}, using method [{}], with initial value {}&quot;, id, m, n);</span>
+<span class="fc" id="L478">        gauge(id, obj, Functions.invokeMethod(m));</span>
+<span class="fc" id="L479">      } catch (Exception e) {</span>
+<span class="fc" id="L480">        final String msg = &quot;exception thrown invoking method [&quot; + m</span>
           + &quot;], skipping registration of gauge &quot; + id;
-<span class="fc" id="L504">        Throwables.propagate(msg, e);</span>
-<span class="fc" id="L505">      }</span>
-<span class="fc" id="L506">    } catch (NoSuchMethodException e) {</span>
-<span class="fc" id="L507">      final String mname = obj.getClass().getName() + &quot;.&quot; + method;</span>
-<span class="fc" id="L508">      final String msg = &quot;invalid method [&quot; + mname + &quot;], skipping registration of gauge &quot; + id;</span>
-<span class="fc" id="L509">      Throwables.propagate(msg, e);</span>
-<span class="fc" id="L510">    }</span>
-<span class="fc" id="L511">  }</span>
+<span class="fc" id="L482">        Throwables.propagate(msg, e);</span>
+<span class="fc" id="L483">      }</span>
+<span class="fc" id="L484">    } catch (NoSuchMethodException e) {</span>
+<span class="fc" id="L485">      final String mname = obj.getClass().getName() + &quot;.&quot; + method;</span>
+<span class="fc" id="L486">      final String msg = &quot;invalid method [&quot; + mname + &quot;], skipping registration of gauge &quot; + id;</span>
+<span class="fc" id="L487">      Throwables.propagate(msg, e);</span>
+<span class="fc" id="L488">    }</span>
+<span class="fc" id="L489">  }</span>
 
   /**
    * Register a gauge that reports the return value of invoking the method on the object. The
@@ -524,27 +502,27 @@ public final class ExtendedRegistry implements Registry {
    *     Name of the method to invoke on the object.
    */
   public void methodValue(String name, Object obj, String method) {
-<span class="fc" id="L527">    methodValue(impl.createId(name), obj, method);</span>
-<span class="fc" id="L528">  }</span>
+<span class="fc" id="L505">    methodValue(impl.createId(name), obj, method);</span>
+<span class="fc" id="L506">  }</span>
 
   /** Search for a method in the class and all superclasses. */
   Method getMethod(Class&lt;?&gt; cls, String name) throws NoSuchMethodException {
-<span class="fc" id="L532">    NoSuchMethodException firstExc = null;</span>
-<span class="fc bfc" id="L533" title="All 2 branches covered.">    for (Class&lt;?&gt; c = cls; c != null; c = c.getSuperclass()) {</span>
+<span class="fc" id="L510">    NoSuchMethodException firstExc = null;</span>
+<span class="fc bfc" id="L511" title="All 2 branches covered.">    for (Class&lt;?&gt; c = cls; c != null; c = c.getSuperclass()) {</span>
       try {
-<span class="fc" id="L535">        return c.getDeclaredMethod(name);</span>
-<span class="fc" id="L536">      } catch (NoSuchMethodException e) {</span>
-<span class="fc bfc" id="L537" title="All 2 branches covered.">        if (firstExc == null) {</span>
-<span class="fc" id="L538">          firstExc = e;</span>
+<span class="fc" id="L513">        return c.getDeclaredMethod(name);</span>
+<span class="fc" id="L514">      } catch (NoSuchMethodException e) {</span>
+<span class="fc bfc" id="L515" title="All 2 branches covered.">        if (firstExc == null) {</span>
+<span class="fc" id="L516">          firstExc = e;</span>
         }
       }
     }
-<span class="fc" id="L542">    throw firstExc;</span>
+<span class="fc" id="L520">    throw firstExc;</span>
   }
 
   @Override
   public String toString() {
-<span class="nc" id="L547">    return &quot;ExtendedRegistry(impl=&quot; + impl + ')';</span>
+<span class="nc" id="L525">    return &quot;ExtendedRegistry(impl=&quot; + impl + ')';</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

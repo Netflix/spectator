@@ -32,42 +32,30 @@ final class DefaultCounter implements Counter {
 <span class="fc" id="L32">    this.count = new AtomicLong(0L);</span>
 <span class="fc" id="L33">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public Id id() {
-<span class="fc" id="L38">    return id;</span>
+  @Override public Id id() {
+<span class="fc" id="L36">    return id;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean hasExpired() {
-<span class="fc" id="L44">    return false;</span>
+  @Override public boolean hasExpired() {
+<span class="fc" id="L40">    return false;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public Iterable&lt;Measurement&gt; measure() {
-<span class="fc" id="L50">    long now = clock.wallTime();</span>
-<span class="fc" id="L51">    long v = count.get();</span>
-<span class="fc" id="L52">    return Collections.singleton(new Measurement(id, now, v));</span>
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L44">    long now = clock.wallTime();</span>
+<span class="fc" id="L45">    long v = count.get();</span>
+<span class="fc" id="L46">    return Collections.singleton(new Measurement(id, now, v));</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment() {
-<span class="fc" id="L58">    count.incrementAndGet();</span>
-<span class="fc" id="L59">  }</span>
+  @Override public void increment() {
+<span class="fc" id="L50">    count.incrementAndGet();</span>
+<span class="fc" id="L51">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public void increment(long amount) {
-<span class="fc" id="L64">    count.addAndGet(amount);</span>
-<span class="fc" id="L65">  }</span>
+  @Override public void increment(long amount) {
+<span class="fc" id="L54">    count.addAndGet(amount);</span>
+<span class="fc" id="L55">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public long count() {
-<span class="fc" id="L70">    return count.get();</span>
+  @Override public long count() {
+<span class="fc" id="L58">    return count.get();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

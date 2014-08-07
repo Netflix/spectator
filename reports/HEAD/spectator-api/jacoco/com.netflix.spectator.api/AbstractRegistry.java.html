@@ -71,150 +71,128 @@ public abstract class AbstractRegistry implements Registry {
    */
   protected abstract Timer newTimer(Id id);
 
-  /** {@inheritDoc} */
-  @Override
-  public final Clock clock() {
-<span class="fc" id="L77">    return clock;</span>
+  @Override public final Clock clock() {
+<span class="fc" id="L75">    return clock;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Id createId(String name) {
-<span class="fc" id="L83">    return new DefaultId(name, TagList.EMPTY);</span>
+  @Override public final Id createId(String name) {
+<span class="fc" id="L79">    return new DefaultId(name, TagList.EMPTY);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Id createId(String name, Iterable&lt;Tag&gt; tags) {
-<span class="fc" id="L89">    return new DefaultId(name, TagList.create(tags));</span>
+  @Override public final Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L83">    return new DefaultId(name, TagList.create(tags));</span>
   }
 
   private void logTypeError(Id id, Class&lt;?&gt; desired, Class&lt;?&gt; found) {
-<span class="fc" id="L93">    final String dtype = desired.getName();</span>
-<span class="fc" id="L94">    final String ftype = found.getName();</span>
-<span class="fc" id="L95">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
+<span class="fc" id="L87">    final String dtype = desired.getName();</span>
+<span class="fc" id="L88">    final String ftype = found.getName();</span>
+<span class="fc" id="L89">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
       id, dtype, ftype);
-<span class="fc" id="L97">    Throwables.propagate(new IllegalStateException(msg));</span>
-<span class="fc" id="L98">  }</span>
+<span class="fc" id="L91">    Throwables.propagate(new IllegalStateException(msg));</span>
+<span class="fc" id="L92">  }</span>
 
   private void addToAggr(Meter aggr, Meter meter) {
-<span class="fc bfc" id="L101" title="All 2 branches covered.">    if (aggr instanceof AggrMeter) {</span>
-<span class="fc" id="L102">      ((AggrMeter) aggr).add(meter);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    if (aggr instanceof AggrMeter) {</span>
+<span class="fc" id="L96">      ((AggrMeter) aggr).add(meter);</span>
     } else {
-<span class="fc" id="L104">      logTypeError(meter.id(), meter.getClass(), aggr.getClass());</span>
+<span class="fc" id="L98">      logTypeError(meter.id(), meter.getClass(), aggr.getClass());</span>
     }
-<span class="fc" id="L106">  }</span>
+<span class="fc" id="L100">  }</span>
 
   private Meter putIfAbsent(Id id, Meter m, Meter fallback) {
-<span class="fc bfc" id="L109" title="All 2 branches covered.">    return (meters.size() &gt;= Config.maxNumberOfMeters()) ? fallback : meters.putIfAbsent(id, m);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    return (meters.size() &gt;= Config.maxNumberOfMeters()) ? fallback : meters.putIfAbsent(id, m);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final void register(Meter meter) {
-<span class="fc" id="L115">    Meter m = meters.get(meter.id());</span>
-<span class="fc bfc" id="L116" title="All 2 branches covered.">    if (m == null) {</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">      if (meters.size() &gt;= Config.maxNumberOfMeters()) {</span>
-<span class="fc" id="L118">        return;</span>
+  @Override public final void register(Meter meter) {
+<span class="fc" id="L107">    Meter m = meters.get(meter.id());</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">    if (m == null) {</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">      if (meters.size() &gt;= Config.maxNumberOfMeters()) {</span>
+<span class="fc" id="L110">        return;</span>
       }
-<span class="fc" id="L120">      AggrMeter aggr = new AggrMeter(meter.id());</span>
-<span class="fc" id="L121">      m = meters.putIfAbsent(meter.id(), aggr);</span>
-<span class="pc bpc" id="L122" title="1 of 2 branches missed.">      if (m == null) {</span>
-<span class="fc" id="L123">        aggr.add(meter);</span>
+<span class="fc" id="L112">      AggrMeter aggr = new AggrMeter(meter.id());</span>
+<span class="fc" id="L113">      m = meters.putIfAbsent(meter.id(), aggr);</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">      if (m == null) {</span>
+<span class="fc" id="L115">        aggr.add(meter);</span>
       } else {
-<span class="nc" id="L125">        addToAggr(m, meter);</span>
+<span class="nc" id="L117">        addToAggr(m, meter);</span>
       }
-<span class="fc" id="L127">    } else {</span>
-<span class="fc" id="L128">      addToAggr(m, meter);</span>
+<span class="fc" id="L119">    } else {</span>
+<span class="fc" id="L120">      addToAggr(m, meter);</span>
     }
-<span class="fc" id="L130">    notifyOfAdd(meter);</span>
-<span class="fc" id="L131">  }</span>
+<span class="fc" id="L122">    notifyOfAdd(meter);</span>
+<span class="fc" id="L123">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public final Counter counter(Id id) {
-<span class="fc" id="L136">    Meter m = meters.get(id);</span>
-<span class="fc bfc" id="L137" title="All 2 branches covered.">    if (m == null) {</span>
-<span class="fc" id="L138">      Counter c = newCounter(id);</span>
-<span class="fc" id="L139">      m = putIfAbsent(id, c, NoopCounter.INSTANCE);</span>
-<span class="fc bfc" id="L140" title="All 2 branches covered.">      if (m == null) {</span>
-<span class="fc" id="L141">        m = c;</span>
-<span class="fc" id="L142">        notifyOfAdd(m);</span>
+  @Override public final Counter counter(Id id) {
+<span class="fc" id="L126">    Meter m = meters.get(id);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">    if (m == null) {</span>
+<span class="fc" id="L128">      Counter c = newCounter(id);</span>
+<span class="fc" id="L129">      m = putIfAbsent(id, c, NoopCounter.INSTANCE);</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">      if (m == null) {</span>
+<span class="fc" id="L131">        m = c;</span>
+<span class="fc" id="L132">        notifyOfAdd(m);</span>
       }
     }
-<span class="fc bfc" id="L145" title="All 2 branches covered.">    if (!(m instanceof Counter)) {</span>
-<span class="fc" id="L146">      logTypeError(id, Counter.class, m.getClass());</span>
-<span class="fc" id="L147">      m = NoopCounter.INSTANCE;</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">    if (!(m instanceof Counter)) {</span>
+<span class="fc" id="L136">      logTypeError(id, Counter.class, m.getClass());</span>
+<span class="fc" id="L137">      m = NoopCounter.INSTANCE;</span>
     }
-<span class="fc" id="L149">    return (Counter) m;</span>
+<span class="fc" id="L139">    return (Counter) m;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final DistributionSummary distributionSummary(Id id) {
-<span class="fc" id="L155">    Meter m = meters.get(id);</span>
-<span class="fc bfc" id="L156" title="All 2 branches covered.">    if (m == null) {</span>
-<span class="fc" id="L157">      DistributionSummary s = newDistributionSummary(id);</span>
-<span class="fc" id="L158">      m = putIfAbsent(id, s, NoopDistributionSummary.INSTANCE);</span>
-<span class="fc bfc" id="L159" title="All 2 branches covered.">      if (m == null) {</span>
-<span class="fc" id="L160">        m = s;</span>
-<span class="fc" id="L161">        notifyOfAdd(m);</span>
+  @Override public final DistributionSummary distributionSummary(Id id) {
+<span class="fc" id="L143">    Meter m = meters.get(id);</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">    if (m == null) {</span>
+<span class="fc" id="L145">      DistributionSummary s = newDistributionSummary(id);</span>
+<span class="fc" id="L146">      m = putIfAbsent(id, s, NoopDistributionSummary.INSTANCE);</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">      if (m == null) {</span>
+<span class="fc" id="L148">        m = s;</span>
+<span class="fc" id="L149">        notifyOfAdd(m);</span>
       }
     }
-<span class="fc bfc" id="L164" title="All 2 branches covered.">    if (!(m instanceof DistributionSummary)) {</span>
-<span class="fc" id="L165">      logTypeError(id, DistributionSummary.class, m.getClass());</span>
-<span class="fc" id="L166">      m = NoopDistributionSummary.INSTANCE;</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">    if (!(m instanceof DistributionSummary)) {</span>
+<span class="fc" id="L153">      logTypeError(id, DistributionSummary.class, m.getClass());</span>
+<span class="fc" id="L154">      m = NoopDistributionSummary.INSTANCE;</span>
     }
-<span class="fc" id="L168">    return (DistributionSummary) m;</span>
+<span class="fc" id="L156">    return (DistributionSummary) m;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Timer timer(Id id) {
-<span class="fc" id="L174">    Meter m = meters.get(id);</span>
-<span class="fc bfc" id="L175" title="All 2 branches covered.">    if (m == null) {</span>
-<span class="fc" id="L176">      Timer t = newTimer(id);</span>
-<span class="fc" id="L177">      m = putIfAbsent(id, t, NoopTimer.INSTANCE);</span>
-<span class="fc bfc" id="L178" title="All 2 branches covered.">      if (m == null) {</span>
-<span class="fc" id="L179">        m = t;</span>
-<span class="fc" id="L180">        notifyOfAdd(m);</span>
+  @Override public final Timer timer(Id id) {
+<span class="fc" id="L160">    Meter m = meters.get(id);</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">    if (m == null) {</span>
+<span class="fc" id="L162">      Timer t = newTimer(id);</span>
+<span class="fc" id="L163">      m = putIfAbsent(id, t, NoopTimer.INSTANCE);</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">      if (m == null) {</span>
+<span class="fc" id="L165">        m = t;</span>
+<span class="fc" id="L166">        notifyOfAdd(m);</span>
       }
     }
-<span class="fc bfc" id="L183" title="All 2 branches covered.">    if (!(m instanceof Timer)) {</span>
-<span class="fc" id="L184">      logTypeError(id, Timer.class, m.getClass());</span>
-<span class="fc" id="L185">      m = NoopTimer.INSTANCE;</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">    if (!(m instanceof Timer)) {</span>
+<span class="fc" id="L170">      logTypeError(id, Timer.class, m.getClass());</span>
+<span class="fc" id="L171">      m = NoopTimer.INSTANCE;</span>
     }
-<span class="fc" id="L187">    return (Timer) m;</span>
+<span class="fc" id="L173">    return (Timer) m;</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Meter get(Id id) {
-<span class="fc" id="L193">    return meters.get(id);</span>
+  @Override public final Meter get(Id id) {
+<span class="fc" id="L177">    return meters.get(id);</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final Iterator&lt;Meter&gt; iterator() {
-<span class="fc" id="L199">    return meters.values().iterator();</span>
+  @Override public final Iterator&lt;Meter&gt; iterator() {
+<span class="fc" id="L181">    return meters.values().iterator();</span>
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public final void addListener(RegistryListener listener) {
-<span class="fc" id="L205">    listeners.put(listener, listener);</span>
-<span class="fc" id="L206">  }</span>
+  @Override public final void addListener(RegistryListener listener) {
+<span class="fc" id="L185">    listeners.put(listener, listener);</span>
+<span class="fc" id="L186">  }</span>
 
-  /** {@inheritDoc} */
-  @Override
-  public final void removeListener(RegistryListener listener) {
-<span class="fc" id="L211">    listeners.remove(listener);</span>
-<span class="fc" id="L212">  }</span>
+  @Override public final void removeListener(RegistryListener listener) {
+<span class="fc" id="L189">    listeners.remove(listener);</span>
+<span class="fc" id="L190">  }</span>
 
   private void notifyOfAdd(Meter meter) {
-<span class="fc bfc" id="L215" title="All 2 branches covered.">    for (RegistryListener listener : listeners.values()) {</span>
-<span class="fc" id="L216">      listener.onAdd(meter);</span>
-<span class="fc" id="L217">    }</span>
-<span class="fc" id="L218">  }</span>
+<span class="fc bfc" id="L193" title="All 2 branches covered.">    for (RegistryListener listener : listeners.values()) {</span>
+<span class="fc" id="L194">      listener.onAdd(meter);</span>
+<span class="fc" id="L195">    }</span>
+<span class="fc" id="L196">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
