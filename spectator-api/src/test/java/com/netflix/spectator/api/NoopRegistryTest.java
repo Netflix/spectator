@@ -105,22 +105,4 @@ public class NoopRegistryTest {
       Assert.fail("should be empty, but found " + m.id());
     }
   }
-
-  @Test
-  public void testListener() {
-    RegistryListener listener = new RegistryListener() {
-      public void onAdd(Meter m) {
-        Assert.fail("shouldn't notify listeners");
-      }
-    };
-
-    Registry r = new NoopRegistry();
-    r.counter(r.createId("pre"));
-    r.addListener(listener);
-    r.counter(r.createId("foo"));
-    r.timer(r.createId("bar"));
-    r.distributionSummary(r.createId("baz"));
-    r.removeListener(listener);
-    r.counter(r.createId("post"));
-  }
 }
