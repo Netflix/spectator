@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 
 import java.util.Collections;
+import java.util.List;
 
 /** Counter implementation for the servo registry. */
 class ServoCounter implements Counter, ServoMeter {
@@ -35,8 +36,8 @@ class ServoCounter implements Counter, ServoMeter {
     this.impl = impl;
   }
 
-  @Override public Monitor<?> monitor() {
-    return impl;
+  @Override public void addMonitors(List<Monitor<?>> monitors) {
+    monitors.add(impl);
   }
 
   @Override public Id id() {

@@ -23,7 +23,6 @@ import com.netflix.spectator.api.Timer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /** Registry that maps spectator types to servo. */
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
@@ -50,7 +49,8 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     DefaultMonitorRegistry.getInstance().register(this);
   }
 
-  private MonitorConfig toMonitorConfig(Id id) {
+  /** Converts a spectator id into a MonitorConfig that can be used by servo. */
+  MonitorConfig toMonitorConfig(Id id) {
     MonitorConfig.Builder builder = new MonitorConfig.Builder(id.name());
     for (Tag t : id.tags()) {
       builder.withTag(t.key(), t.value());
@@ -65,15 +65,11 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    MonitorConfig cfg = toMonitorConfig(id);
-    BasicDistributionSummary distributionSummary = new BasicDistributionSummary(cfg);
-    return new ServoDistributionSummary(clock(), new ServoId(cfg), distributionSummary);
+    return new ServoDistributionSummary(this, id);
   }
 
   @Override protected Timer newTimer(Id id) {
-    MonitorConfig cfg = toMonitorConfig(id);
-    BasicTimer timer = new BasicTimer(cfg, TimeUnit.SECONDS);
-    return new ServoTimer(clock(), new ServoId(cfg), timer);
+    return new ServoTimer(this, id);
   }
 
   @Override public Integer getValue() {
@@ -92,7 +88,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
       if (meter instanceof ServoMeter) {
-        monitors.add(((ServoMeter) meter).monitor());
+        ((ServoMeter) meter).addMonitors(monitors);
       } else {
         for (Measurement m : meter.measure()) {
           monitors.add(new NumberGauge(toMonitorConfig(m.id()), m.value()));

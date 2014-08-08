@@ -17,7 +17,6 @@ package com.netflix.spectator.perf;
 
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Spectator;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
@@ -26,8 +25,6 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-
-import java.util.concurrent.atomic.AtomicLong;
 
 @State(Scope.Thread)
 public class Counters {

@@ -17,8 +17,10 @@ package com.netflix.spectator.servo;
 
 import com.netflix.servo.monitor.Monitor;
 
+import java.util.List;
+
 /** Meter that can return a servo monitor. */
 interface ServoMeter {
   /** Returns the monitor corresponding to this meter. */
-  Monitor<?> monitor();
+  void addMonitors(List<Monitor<?>> monitors);
 }

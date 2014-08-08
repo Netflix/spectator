@@ -113,7 +113,7 @@ final class CompositeRegistry implements Registry {
     if (registries.length == 0) {
       return Collections.<Meter>emptyList().iterator();
     } else {
-      final Set<Id> ids = new HashSet<Id>();
+      final Set<Id> ids = new HashSet<>();
       for (Registry r : registries) {
         for (Meter m : r) ids.add(m.id());
       }
