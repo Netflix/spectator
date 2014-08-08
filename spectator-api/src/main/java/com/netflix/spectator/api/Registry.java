@@ -90,10 +90,4 @@ public interface Registry extends Iterable<Meter> {
 
   /** Iterator for traversing the set of meters in the registry. */
   Iterator<Meter> iterator();
-
-  /** Add a listener that will get notified whenever a meter is added into the registry. */
-  void addListener(RegistryListener listener);
-
-  /** Remove a listener from the registry. */
-  void removeListener(RegistryListener listener);
 }

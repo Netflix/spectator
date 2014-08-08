@@ -26,7 +26,6 @@ public abstract class AbstractRegistry implements Registry {
 
   private final Clock clock;
 
-  private final ConcurrentHashMap<RegistryListener, RegistryListener> listeners;
   private final ConcurrentHashMap<Id, Meter> meters;
 
   /**
@@ -37,7 +36,6 @@ public abstract class AbstractRegistry implements Registry {
    */
   public AbstractRegistry(Clock clock) {
     this.clock = clock;
-    listeners = new ConcurrentHashMap<>();
     meters = new ConcurrentHashMap<>();
   }
 
@@ -119,7 +117,6 @@ public abstract class AbstractRegistry implements Registry {
     } else {
       addToAggr(m, meter);
     }
-    notifyOfAdd(meter);
   }
 
   @Override public final Counter counter(Id id) {
@@ -129,7 +126,6 @@ public abstract class AbstractRegistry implements Registry {
       m = putIfAbsent(id, c, NoopCounter.INSTANCE);
       if (m == null) {
         m = c;
-        notifyOfAdd(m);
       }
     }
     if (!(m instanceof Counter)) {
@@ -146,7 +142,6 @@ public abstract class AbstractRegistry implements Registry {
       m = putIfAbsent(id, s, NoopDistributionSummary.INSTANCE);
       if (m == null) {
         m = s;
-        notifyOfAdd(m);
       }
     }
     if (!(m instanceof DistributionSummary)) {
@@ -163,7 +158,6 @@ public abstract class AbstractRegistry implements Registry {
       m = putIfAbsent(id, t, NoopTimer.INSTANCE);
       if (m == null) {
         m = t;
-        notifyOfAdd(m);
       }
     }
     if (!(m instanceof Timer)) {
@@ -179,19 +173,5 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Iterator<Meter> iterator() {
     return meters.values().iterator();
-  }
-
-  @Override public final void addListener(RegistryListener listener) {
-    listeners.put(listener, listener);
-  }
-
-  @Override public final void removeListener(RegistryListener listener) {
-    listeners.remove(listener);
-  }
-
-  private void notifyOfAdd(Meter meter) {
-    for (RegistryListener listener : listeners.values()) {
-      listener.onAdd(meter);
-    }
   }
 }

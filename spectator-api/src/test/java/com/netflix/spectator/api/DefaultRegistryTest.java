@@ -187,25 +187,29 @@ public class DefaultRegistryTest {
     Assert.assertNotSame(r.distributionSummary(r.createId("c1")), NoopDistributionSummary.INSTANCE);
   }
 
+  private double sum(Registry r) {
+    double sum = 0.0;
+    for (Meter m : r) {
+      for (Measurement v : m.measure()) {
+        sum += v.value();
+      }
+    }
+    return sum;
+  }
+
   @Test
   public void testMaxLimitExceededRegister() {
-    final AtomicInteger count = new AtomicInteger(0);
-    RegistryListener listener = new RegistryListener() {
-      public void onAdd(Meter m) {
-        count.incrementAndGet();
-      }
-    };
-
     System.setProperty("spectator.api.maxNumberOfMeters", "1");
-    Registry r = new DefaultRegistry(clock);
-    r.addListener(listener);
-    Assert.assertEquals(count.get(), 0);
-    r.register(new DefaultCounter(clock, r.createId("c1")));
-    Assert.assertEquals(count.get(), 1);
-    r.register(new DefaultCounter(clock, r.createId("c2")));
-    Assert.assertEquals(count.get(), 1);
-    r.register(new DefaultCounter(clock, r.createId("c1")));
-    Assert.assertEquals(count.get(), 2);
+    final AtomicInteger one = new AtomicInteger(1);
+    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry(clock));
+
+    Assert.assertEquals(sum(r), 0.0, 1e-12);
+    r.gauge(r.createId("c1"), one);
+    Assert.assertEquals(sum(r), 1.0, 1e-12);
+    r.gauge(r.createId("c2"), one);
+    Assert.assertEquals(sum(r), 1.0, 1e-12);
+    r.gauge(r.createId("c1"), one);
+    Assert.assertEquals(sum(r), 2.0, 1e-12);
   }
 
   @Test
@@ -236,32 +240,5 @@ public class DefaultRegistryTest {
       expected.remove(m.id());
     }
     Assert.assertTrue(expected.isEmpty());
-  }
-
-  @Test
-  public void testListener() {
-    final Set<Id> seen = new HashSet<>();
-    RegistryListener listener = new RegistryListener() {
-      public void onAdd(Meter m) {
-        Assert.assertTrue(!seen.contains(m.id()));
-        seen.add(m.id());
-      }
-    };
-
-    Registry r = new DefaultRegistry(clock);
-    r.counter(r.createId("pre"));
-    r.addListener(listener);
-    r.counter(r.createId("foo"));
-    r.timer(r.createId("bar"));
-    r.distributionSummary(r.createId("baz"));
-    r.removeListener(listener);
-    r.counter(r.createId("post"));
-
-    Set<Id> expected = new HashSet<>();
-    expected.add(r.createId("foo"));
-    expected.add(r.createId("bar"));
-    expected.add(r.createId("baz"));
-
-    Assert.assertEquals(expected, seen);
   }
 }

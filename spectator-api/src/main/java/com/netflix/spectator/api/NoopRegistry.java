@@ -59,10 +59,4 @@ public final class NoopRegistry implements Registry {
   @Override public Iterator<Meter> iterator() {
     return Collections.<Meter>emptyList().iterator();
   }
-
-  @Override public void addListener(RegistryListener listener) {
-  }
-
-  @Override public void removeListener(RegistryListener listener) {
-  }
 }
