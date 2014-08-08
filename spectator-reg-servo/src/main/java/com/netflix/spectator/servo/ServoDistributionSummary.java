@@ -15,8 +15,9 @@
  */
 package com.netflix.spectator.servo;
 
-import com.netflix.servo.monitor.BasicDistributionSummary;
+import com.netflix.servo.monitor.MaxGauge;
 import com.netflix.servo.monitor.Monitor;
+import com.netflix.servo.monitor.StepCounter;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
@@ -30,30 +31,37 @@ import java.util.concurrent.atomic.AtomicLong;
 class ServoDistributionSummary implements DistributionSummary, ServoMeter {
 
   private final Clock clock;
-  private final ServoId id;
-  private final BasicDistributionSummary impl;
+  private final Id id;
 
   // Local count so that we have more flexibility on servo counter impl without changing the
   // value returned by the {@link #count()} method.
   private final AtomicLong count;
   private final AtomicLong totalAmount;
 
-  private final Id countId;
-  private final Id totalAmountId;
+  private final StepCounter servoCount;
+  private final StepCounter servoTotal;
+  private final StepCounter servoTotalOfSquares;
+  private final MaxGauge servoMax;
 
   /** Create a new instance. */
-  ServoDistributionSummary(Clock clock, ServoId id, BasicDistributionSummary impl) {
-    this.clock = clock;
+  ServoDistributionSummary(ServoRegistry r, Id id) {
+    this.clock = r.clock();
     this.id = id;
-    this.impl = impl;
-    this.count = new AtomicLong(0L);
-    this.totalAmount = new AtomicLong(0L);
-    countId = id.withTag("statistic", "count");
-    totalAmountId = id.withTag("statistic", "totalAmount");
+    count = new AtomicLong(0L);
+    totalAmount = new AtomicLong(0L);
+
+    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count)));
+    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalAmount)));
+    servoTotalOfSquares = new StepCounter(
+        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)));
+    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
   }
 
-  @Override public Monitor<?> monitor() {
-    return impl;
+  @Override public void addMonitors(List<Monitor<?>> monitors) {
+    monitors.add(servoCount);
+    monitors.add(servoTotal);
+    monitors.add(servoTotalOfSquares);
+    monitors.add(servoMax);
   }
 
   @Override public Id id() {
@@ -65,16 +73,19 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   }
 
   @Override public void record(long amount) {
-    impl.record(amount);
     totalAmount.addAndGet(amount);
     count.incrementAndGet();
+    servoTotal.increment(amount);
+    servoTotalOfSquares.increment(amount * amount);
+    servoCount.increment();
+    servoMax.update(amount);
   }
 
   @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
-    ms.add(new Measurement(countId, now, count.get()));
-    ms.add(new Measurement(totalAmountId, now, totalAmount.get()));
+    ms.add(new Measurement(id.withTag(Statistic.count), now, count.get()));
+    ms.add(new Measurement(id.withTag(Statistic.totalAmount), now, totalAmount.get()));
     return ms;
   }
 
