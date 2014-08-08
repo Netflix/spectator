@@ -52,7 +52,7 @@ abstract class CompositeMeter implements Meter {
   }
 
   @Override public Iterable<Measurement> measure() {
-    final List<Measurement> ms = new ArrayList<Measurement>();
+    final List<Measurement> ms = new ArrayList<>();
     for (Meter meter : meters()) {
       for (Measurement measurement : meter.measure()) {
         ms.add(measurement);
