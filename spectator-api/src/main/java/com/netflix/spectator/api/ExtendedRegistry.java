@@ -80,14 +80,6 @@ public final class ExtendedRegistry implements Registry {
     return impl.iterator();
   }
 
-  @Override public void addListener(RegistryListener listener) {
-    impl.addListener(listener);
-  }
-
-  @Override public void removeListener(RegistryListener listener) {
-    impl.removeListener(listener);
-  }
-
   /////////////////////////////////////////////////////////////////
   // Additional helper methods below
 

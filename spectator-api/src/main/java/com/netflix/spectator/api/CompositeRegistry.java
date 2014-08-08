@@ -135,10 +135,4 @@ final class CompositeRegistry implements Registry {
       };
     }
   }
-
-  @Override public void addListener(RegistryListener listener) {
-  }
-
-  @Override public void removeListener(RegistryListener listener) {
-  }
 }
