@@ -17,7 +17,9 @@ package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
 import com.netflix.governator.annotations.AutoBindSingleton;
+import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
+import com.netflix.spectator.jvm.Jmx;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,5 +49,7 @@ public final class Plugin {
     } else {
       LOGGER.info("gc logging is not enabled");
     }
+
+    Jmx.registerStandardMXBeans(Spectator.registry());
   }
 }
