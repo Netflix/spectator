@@ -113,6 +113,7 @@ project(':spectator-nflx') {
   dependencies {
     compile project(':spectator-api')
     compile project(':spectator-ext-gc')
+    compile project(':spectator-ext-jvm')
     compile project(':spectator-reg-servo')
     compile 'com.netflix.archaius:archaius-core:latest.release'
     compile 'com.netflix.governator:governator:latest.release'
@@ -123,6 +124,12 @@ project(':spectator-nflx') {
 }
 
 project(':spectator-ext-gc') {
+  dependencies {
+    compile project(':spectator-api')
+  }
+}
+
+project(':spectator-ext-jvm') {
   dependencies {
     compile project(':spectator-api')
   }
