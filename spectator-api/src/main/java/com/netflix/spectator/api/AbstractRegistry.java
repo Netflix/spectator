@@ -55,7 +55,7 @@ public abstract class AbstractRegistry implements Registry {
    * @param id
    *     Identifier used to lookup this meter in the registry.
    * @return
-   *     New counter instance.
+   *     New distribution summary instance.
    */
   protected abstract DistributionSummary newDistributionSummary(Id id);
 
@@ -65,7 +65,7 @@ public abstract class AbstractRegistry implements Registry {
    * @param id
    *     Identifier used to lookup this meter in the registry.
    * @return
-   *     New counter instance.
+   *     New timer instance.
    */
   protected abstract Timer newTimer(Id id);
 
