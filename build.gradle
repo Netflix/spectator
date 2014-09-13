@@ -154,7 +154,7 @@ project(':spectator-reg-metrics2') {
 project(':spectator-reg-metrics3') {
   dependencies {
     compile project(':spectator-api')
-    compile 'com.codahale.metrics:metrics-core:3.0.2'
+    compile 'io.dropwizard.metrics:metrics-core:3.1.0'
     jmh project(':spectator-api')
   }
 }
