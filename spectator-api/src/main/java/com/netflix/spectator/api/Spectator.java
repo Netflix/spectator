@@ -49,7 +49,9 @@ public final class Spectator {
         desc.append(' ').append(r.getClass().getName());
         rs.add(r);
       }
-      Registry r = new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
+      Registry r = (rs.size() == 1)
+          ? rs.get(0)
+          : new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
       LOGGER.info("using registries found in classpath: {}", desc.toString());
       return r;
     } else {
