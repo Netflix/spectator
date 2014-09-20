@@ -21,6 +21,7 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -31,13 +32,51 @@ public class Counters {
 
   private final Counter cached = Spectator.registry().counter("cachedIncrement");
 
+  @Threads(1)
   @Benchmark
-  public void cachedIncrement() {
+  public void cachedIncrement_T1() {
     cached.increment();
   }
 
+  @Threads(1)
   @Benchmark
-  public void lookupIncrement() {
+  public void lookupIncrement_T1() {
+    Spectator.registry().counter("lookupIncrement").increment();
+  }
+
+  @Threads(2)
+  @Benchmark
+  public void cachedIncrement_T2() {
+    cached.increment();
+  }
+
+  @Threads(2)
+  @Benchmark
+  public void lookupIncrement_T2() {
+    Spectator.registry().counter("lookupIncrement").increment();
+  }
+
+  @Threads(4)
+  @Benchmark
+  public void cachedIncrement_T4() {
+    cached.increment();
+  }
+
+  @Threads(4)
+  @Benchmark
+  public void lookupIncrement_T4() {
+    Spectator.registry().counter("lookupIncrement").increment();
+  }
+
+  @Threads(8)
+  @Benchmark
+  public void cachedIncrement_T8() {
+    cached.increment();
+  }
+
+  @Threads(8)
+  @Benchmark
+  public void lookupIncrement_T8() {
     Spectator.registry().counter("lookupIncrement").increment();
   }
 
