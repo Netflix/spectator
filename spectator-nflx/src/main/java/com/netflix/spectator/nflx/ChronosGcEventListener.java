@@ -15,26 +15,30 @@
  */
 package com.netflix.spectator.nflx;
 
-import com.netflix.client.http.HttpRequest;
-import com.netflix.client.http.HttpResponse;
+import com.netflix.client.config.DefaultClientConfigImpl;
 import com.netflix.config.DynamicBooleanProperty;
 import com.netflix.config.DynamicPropertyFactory;
-import com.netflix.niws.client.http.RestClient;
+import com.netflix.ribbon.transport.netty.RibbonTransport;
+import com.netflix.ribbon.transport.netty.http.LoadBalancingHttpClient;
+import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
 import com.netflix.spectator.gc.GcEventListener;
-import com.netflix.spectator.ribbon.RestClientFactory;
 import com.sun.management.GcInfo;
+import io.netty.buffer.ByteBuf;
+import io.reactivex.netty.protocol.http.client.HttpClientRequest;
+import io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.functions.Action0;
+import rx.functions.Action1;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -47,18 +51,13 @@ public class ChronosGcEventListener implements GcEventListener {
 
   private final Logger logger = LoggerFactory.getLogger(getClass());
 
+  private final ExtendedRegistry registry = Spectator.registry();
+  private final Id requestCount = registry.createId("spectator.gc.chronosPost");
+
   private final ObjectMapper mapper = new ObjectMapper();
 
-  private final ExecutorService executor = Executors.newSingleThreadExecutor(
-    new ThreadFactory() {
-      public Thread newThread(Runnable r) {
-        Thread t = new Thread(r, "ChronosGcEventListener");
-        t.setDaemon(true);
-        return t;
-      }
-    });
-
-  private final RestClient client = RestClientFactory.getClient("chronos_gc");
+  private final LoadBalancingHttpClient<ByteBuf, ByteBuf> client = RibbonTransport.newHttpClient(
+          DefaultClientConfigImpl.getClientConfigWithDefaultValues("chronos_gc", "niws.client"));
 
   // Keep track of the previous end time to provide additional context for chronos visualization
   // without needing to find the previous event. Stored as atomic long as there is no guarantee
@@ -102,23 +101,41 @@ public class ChronosGcEventListener implements GcEventListener {
   }
 
   private void sendToChronos(final byte[] json) {
-    executor.submit(new Runnable() {
-      public void run() {
-        HttpRequest request = new HttpRequest.Builder()
-          .verb(HttpRequest.Verb.POST)
-          .uri(URI.create("/api/v2/event"))
-          .header("Content-Type", "application/json")
-          .entity(json)
-          .build();
-        try (HttpResponse response = client.executeWithLoadBalancer(request)) {
-          if (response.getStatus() != 200) {
-            logger.warn("failed to send GC event to chronos (status={})", response.getStatus());
+    final ChronosGcEventListener listener = this;
+    final HttpClientRequest<ByteBuf> request = HttpClientRequest.createPost("/api/v2/event")
+        .withHeader("Content-Type", "application/json")
+        .withContent(json);
+
+    final long start = System.nanoTime();
+    client.submit(request).subscribe(
+        new Action1<HttpClientResponse<ByteBuf>>() {
+          @Override
+          public void call(HttpClientResponse<ByteBuf> response) {
+            final int code = response.getStatus().code();
+            if (code != 200) {
+              logger.warn("failed to send GC event to chronos (status={})", code);
+            }
+            final long latency = System.nanoTime() - start;
+            registry.timer(requestCount.withTag("status", "" + code)).record(latency, TimeUnit.NANOSECONDS);
           }
-        } catch (Exception e) {
-          logger.warn("failed to send GC event to chronos", e);
+        },
+        new Action1<Throwable>() {
+          @Override
+          public void call(Throwable t) {
+            logger.warn("failed to send GC event to chronos", t);
+            final String status = t.getClass().getSimpleName();
+            final long latency = System.nanoTime() - start;
+            registry.timer(requestCount.withTag("status", status)).record(latency, TimeUnit.NANOSECONDS);
+          }
+        },
+        new Action0() {
+          @Override
+          public void call() {
+            // This is here for unit tests so that the completion can be detected reliably.
+            synchronized (listener) { listener.notify(); }
+          }
         }
-      }
-    });
+    );
   }
 
   @Override
@@ -137,8 +154,8 @@ public class ChronosGcEventListener implements GcEventListener {
     previousEndTime.set(event.getStartTime() + event.getInfo().getGcInfo().getDuration());
   }
 
-  /** Shutdown the executor used to send data to chronos. */
+  /** Shutdown the client used to send data to chronos. */
   public void shutdown() {
-    executor.shutdown();
+    client.shutdown();
   }
 }
