@@ -124,9 +124,7 @@ project(':spectator-nflx') {
     compile project(':spectator-reg-servo')
     compile 'com.netflix.archaius:archaius-core:latest.release'
     compile 'com.netflix.governator:governator:latest.release'
-    compile 'com.netflix.ribbon:ribbon-core:0.3.+'
-    compile 'com.netflix.ribbon:ribbon-eureka:0.3.+'
-    compile 'com.netflix.ribbon:ribbon-httpclient:0.3.+'
+    compile 'com.netflix.ribbon:ribbon-transport:2.0-RC9'
   }
 }
 
