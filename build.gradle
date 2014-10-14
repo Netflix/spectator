@@ -140,6 +140,12 @@ project(':spectator-ext-jvm') {
   }
 }
 
+project(':spectator-ext-sandbox') {
+  dependencies {
+    compile project(':spectator-api')
+  }
+}
+
 project(':spectator-reg-servo') {
   dependencies {
     compile project(':spectator-api')
