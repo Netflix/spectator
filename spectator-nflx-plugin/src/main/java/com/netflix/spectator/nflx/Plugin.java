@@ -16,7 +16,6 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
-import com.netflix.governator.annotations.AutoBindSingleton;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
@@ -25,12 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Singleton;
 import java.io.IOException;
 
 /**
  * Plugin for setting up spectator to report correctly into the standard Netflix stack.
  */
-@AutoBindSingleton
+@Singleton
 public final class Plugin {
 
   private static final String CONFIG_FILE = "spectator.properties";
@@ -41,15 +41,19 @@ public final class Plugin {
 
   @PostConstruct
   private void init() throws IOException {
-    ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
-    AbstractConfiguration config = ConfigurationManager.getConfigInstance();
-    if (config.getBoolean("spectator.gc.loggingEnabled")) {
-      GC_LOGGER.start(new ChronosGcEventListener());
-      LOGGER.info("gc logging started");
-    } else {
-      LOGGER.info("gc logging is not enabled");
-    }
+    final boolean enabled = "true".equals(System.getProperty("spectator.nflx.enabled", "true"));
+    if (enabled) {
+      ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
+      AbstractConfiguration config = ConfigurationManager.getConfigInstance();
+      if (config.getBoolean("spectator.gc.loggingEnabled")) {
+        GC_LOGGER.start(new ChronosGcEventListener());
+        LOGGER.info("gc logging started");
+      } else {
+        LOGGER.info("gc logging is not enabled");
+      }
 
-    Jmx.registerStandardMXBeans(Spectator.registry());
+      Jmx.registerStandardMXBeans(Spectator.registry());
+    }
+    System.setProperty("spectator.nflx.initialized", "true");
   }
 }
