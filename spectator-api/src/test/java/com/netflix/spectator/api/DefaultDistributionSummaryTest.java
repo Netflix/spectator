@@ -41,6 +41,22 @@ public class DefaultDistributionSummaryTest {
   }
 
   @Test
+  public void testRecordNegative() {
+    DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
+    t.record(-42);
+    Assert.assertEquals(t.count(), 0L);
+    Assert.assertEquals(t.totalAmount(), 0L);
+  }
+
+  @Test
+  public void testRecordZero() {
+    DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
+    t.record(0);
+    Assert.assertEquals(t.count(), 1L);
+    Assert.assertEquals(t.totalAmount(), 0L);
+  }
+
+  @Test
   public void testMeasure() {
     DistributionSummary t = new DefaultDistributionSummary(clock, new DefaultId("foo"));
     t.record(42);

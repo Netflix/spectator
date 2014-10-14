@@ -44,6 +44,22 @@ public class DefaultTimerTest {
   }
 
   @Test
+  public void testRecordNegative() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    t.record(-42, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(t.count(), 0L);
+    Assert.assertEquals(t.totalTime(), 0L);
+  }
+
+  @Test
+  public void testRecordZero() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    t.record(0, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(t.count(), 1L);
+    Assert.assertEquals(t.totalTime(), 0L);
+  }
+
+  @Test
   public void testRecordCallable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);

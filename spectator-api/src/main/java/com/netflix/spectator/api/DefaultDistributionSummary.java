@@ -49,8 +49,10 @@ final class DefaultDistributionSummary implements DistributionSummary {
   }
 
   @Override public void record(long amount) {
-    totalAmount.addAndGet(amount);
-    count.incrementAndGet();
+    if (amount >= 0) {
+      totalAmount.addAndGet(amount);
+      count.incrementAndGet();
+    }
   }
 
   @Override public Iterable<Measurement> measure() {
