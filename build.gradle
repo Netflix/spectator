@@ -113,6 +113,8 @@ project(':spectator-api') {
 
   build {
     it.dependsOn checkCompatibility
+    it.dependsOn licenseMain
+    it.dependsOn licenseTest
   }
 }
 
