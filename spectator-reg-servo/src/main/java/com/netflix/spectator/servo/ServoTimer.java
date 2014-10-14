@@ -77,13 +77,15 @@ class ServoTimer implements Timer, ServoMeter {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = unit.toNanos(amount);
-    totalTime.addAndGet(nanos);
-    count.incrementAndGet();
-    servoTotal.increment(nanos);
-    servoTotalOfSquares.increment(nanos * nanos);
-    servoCount.increment();
-    servoMax.update(nanos);
+    if (amount >= 0) {
+      final long nanos = unit.toNanos(amount);
+      totalTime.addAndGet(nanos);
+      count.incrementAndGet();
+      servoTotal.increment(nanos);
+      servoTotalOfSquares.increment(nanos * nanos);
+      servoCount.increment();
+      servoMax.update(nanos);
+    }
   }
 
   @Override public Iterable<Measurement> measure() {

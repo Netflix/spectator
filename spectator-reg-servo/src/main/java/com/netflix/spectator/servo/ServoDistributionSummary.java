@@ -73,12 +73,14 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   }
 
   @Override public void record(long amount) {
-    totalAmount.addAndGet(amount);
-    count.incrementAndGet();
-    servoTotal.increment(amount);
-    servoTotalOfSquares.increment(amount * amount);
-    servoCount.increment();
-    servoMax.update(amount);
+    if (amount >= 0) {
+      totalAmount.addAndGet(amount);
+      count.incrementAndGet();
+      servoTotal.increment(amount);
+      servoTotalOfSquares.increment(amount * amount);
+      servoCount.increment();
+      servoMax.update(amount);
+    }
   }
 
   @Override public Iterable<Measurement> measure() {

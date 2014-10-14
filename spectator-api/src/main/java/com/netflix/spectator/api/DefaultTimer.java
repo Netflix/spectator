@@ -51,9 +51,11 @@ final class DefaultTimer implements Timer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);
-    totalTime.addAndGet(nanos);
-    count.incrementAndGet();
+    if (amount >= 0) {
+      final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);
+      totalTime.addAndGet(nanos);
+      count.incrementAndGet();
+    }
   }
 
   @Override public Iterable<Measurement> measure() {
