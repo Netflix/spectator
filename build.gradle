@@ -120,6 +120,12 @@ project(':spectator-api') {
 
 project(':spectator-nflx') {
   dependencies {
+    compile project(':spectator-nflx-plugin')
+  }
+}
+
+project(':spectator-nflx-plugin') {
+  dependencies {
     compile project(':spectator-api')
     compile project(':spectator-ext-gc')
     compile project(':spectator-ext-jvm')
