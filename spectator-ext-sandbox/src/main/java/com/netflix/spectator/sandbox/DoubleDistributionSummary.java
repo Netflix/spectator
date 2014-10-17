@@ -50,7 +50,7 @@ public class DoubleDistributionSummary implements Meter {
   private final Id maxId;
 
   /** Create a new instance. */
-  DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {
+  public DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {
     this.clock = clock;
     this.id = id;
     this.resetFreq = resetFreq;
