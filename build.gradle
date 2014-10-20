@@ -157,7 +157,7 @@ project(':spectator-ext-sandbox') {
 project(':spectator-reg-servo') {
   dependencies {
     compile project(':spectator-api')
-    compile 'com.netflix.servo:servo-core:latest.release'
+    compile 'com.netflix.servo:servo-core:0.7.9'
     jmh project(':spectator-api')
   }
 }

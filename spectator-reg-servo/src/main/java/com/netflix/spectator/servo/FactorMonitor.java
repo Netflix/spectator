@@ -44,6 +44,7 @@ final class FactorMonitor<T extends Number> extends AbstractMonitor<Double>
   }
 
   @Override public Double getValue(int pollerIndex) {
-    return wrapped.getValue(pollerIndex).doubleValue() * factor;
+    final double v = wrapped.getValue(pollerIndex).doubleValue();
+    return v * factor;
   }
 }

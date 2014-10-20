@@ -1,0 +1,193 @@
+/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+/**
+ * Helper functions for working with a sequence of measurements.
+ */
+public final class Utils {
+  private Utils() {
+  }
+
+  /**
+   * Returns the value associated with with a given key or null if no such key is present in the
+   * set of tags.
+   *
+   * @param id
+   *     Identifier with a set of tags to search.
+   * @param k
+   *     Key to search for.
+   * @return
+   *     Value for the key or null if the key is not present.
+   */
+  public static String getTagValue(Id id, String k) {
+    Preconditions.checkNotNull(id, "id");
+    return getTagValue(id.tags(), k);
+  }
+
+  /**
+   * Returns the value associated with with a given key or null if no such key is present in the
+   * set of tags.
+   *
+   * @param tags
+   *     Set of tags to search.
+   * @param k
+   *     Key to search for.
+   * @return
+   *     Value for the key or null if the key is not present.
+   */
+  public static String getTagValue(Iterable<Tag> tags, String k) {
+    Preconditions.checkNotNull(tags, "tags");
+    Preconditions.checkNotNull(k, "key");
+    for (Tag t : tags) {
+      if (k.equals(t.key())) {
+        return t.value();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the first measurement with a given tag value.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param t
+   *     The key and value to search for.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(Iterable<Measurement> ms, Tag t) {
+    return first(ms, t.key(), t.value());
+  }
+
+  /**
+   * Returns the first measurement with a given tag value.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param k
+   *     Key to search for.
+   * @param v
+   *     Value that should be associated with k on the ids.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(final Iterable<Measurement> ms, final String k, final String v) {
+    return first(ms, new Predicate<Measurement>() {
+      @Override public boolean apply(Measurement value) {
+        return v.equals(getTagValue(value.id(), k));
+      }
+    });
+  }
+
+  /**
+   * Returns the first measurement that matches the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param p
+   *     Predicate to use for selecting values.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(Iterable<Measurement> ms, Predicate<Measurement> p) {
+    Iterator<Measurement> it = filter(ms, p).iterator();
+    return it.hasNext() ? it.next() : null;
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param t
+   *     The key and value to search for.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable<Measurement> filter(Iterable<Measurement> ms, Tag t) {
+    return filter(ms, t.key(), t.value());
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param k
+   *     Key to search for.
+   * @param v
+   *     Value that should be associated with k on the ids.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable<Measurement> filter(
+      final Iterable<Measurement> ms, final String k, final String v) {
+    return filter(ms, new Predicate<Measurement>() {
+      @Override public boolean apply(Measurement value) {
+        return v.equals(getTagValue(value.id(), k));
+      }
+    });
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param p
+   *     Predicate to use for selecting values.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable<Measurement> filter(
+      final Iterable<Measurement> ms, final Predicate<Measurement> p) {
+    return new Iterable<Measurement>() {
+      @Override public Iterator<Measurement> iterator() {
+        return new FilteredIterator<>(ms.iterator(), p);
+      }
+    };
+  }
+
+  /**
+   * Returns a list with a copy of the data from the iterable.
+   */
+  public static <T> List<T> toList(Iterable<T> iter) {
+    List<T> buf = new ArrayList<>();
+    for (T v : iter) {
+      buf.add(v);
+    }
+    return buf;
+  }
+
+  /**
+   * Returns a list with the data from the iterator.
+   */
+  public static <T> List<T> toList(Iterator<T> iter) {
+    List<T> buf = new ArrayList<>();
+    while (iter.hasNext()) {
+      buf.add(iter.next());
+    }
+    return buf;
+  }
+}
