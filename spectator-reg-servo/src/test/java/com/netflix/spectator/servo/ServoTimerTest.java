@@ -13,31 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.servo;
 
+import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.math.BigInteger;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
-public class DefaultTimerTest {
+public class ServoTimerTest {
 
   private final ManualClock clock = new ManualClock();
 
+  private Timer newTimer(String name) {
+    final Registry r = new ServoRegistry(clock);
+    return r.timer(r.createId(name));
+  }
+
+  @Before
+  public void before() {
+    clock.setWallTime(0L);
+    clock.setMonotonicTime(0L);
+  }
+
   @Test
   public void testInit() {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     Assert.assertEquals(t.count(), 0L);
     Assert.assertEquals(t.totalTime(), 0L);
   }
 
   @Test
   public void testRecord() {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     t.record(42, TimeUnit.MILLISECONDS);
     Assert.assertEquals(t.count(), 1L);
     Assert.assertEquals(t.totalTime(), 42000000L);
@@ -45,7 +63,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordNegative() {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     t.record(-42, TimeUnit.MILLISECONDS);
     Assert.assertEquals(t.count(), 0L);
     Assert.assertEquals(t.totalTime(), 0L);
@@ -53,7 +71,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordZero() {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     t.record(0, TimeUnit.MILLISECONDS);
     Assert.assertEquals(t.count(), 1L);
     Assert.assertEquals(t.totalTime(), 0L);
@@ -61,7 +79,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordCallable() throws Exception {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
     int v = t.record(new Callable<Integer>() {
       public Integer call() throws Exception {
@@ -76,7 +94,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordCallableException() throws Exception {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
@@ -96,7 +114,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordRunnable() throws Exception {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
     t.record(new Runnable() {
       public void run() {
@@ -109,7 +127,7 @@ public class DefaultTimerTest {
 
   @Test
   public void testRecordRunnableException() throws Exception {
-    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
@@ -129,19 +147,73 @@ public class DefaultTimerTest {
 
   @Test
   public void testMeasure() {
-    Timer t = new DefaultTimer(clock, new DefaultId("foo"));
+    Timer t = newTimer("foo");
     t.record(42, TimeUnit.MILLISECONDS);
-    clock.setWallTime(3712345L);
+    clock.setWallTime(61000L);
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), 3712345L);
-      if (m.id().equals(t.id().withTag("statistic", "count"))) {
-        Assert.assertEquals(m.value(), 1.0, 0.1e-12);
-      } else if (m.id().equals(t.id().withTag("statistic", "totalTime"))) {
-        Assert.assertEquals(m.value(), 42e6, 0.1e-12);
-      } else {
-        Assert.fail("unexpected id: " + m.id());
-      }
+      Assert.assertEquals(m.timestamp(), 61000L);
+      final double count = Utils.first(t.measure(), Statistic.count).value();
+      final double totalTime = Utils.first(t.measure(), Statistic.totalTime).value();
+      Assert.assertEquals(count, 1.0 / 60.0, 0.1e-12);
+      Assert.assertEquals(totalTime, 42e-3 / 60.0, 0.1e-12);
     }
+  }
+
+  @Test
+  public void totalOfSquaresOverflow() {
+    final long seconds = 10;
+    final long nanos = TimeUnit.SECONDS.toNanos(seconds);
+    final BigInteger s = new BigInteger("" + nanos);
+    final BigInteger s2 = s.multiply(s);
+
+    Timer t = newTimer("foo");
+    t.record(seconds, TimeUnit.SECONDS);
+    clock.setWallTime(61000L);
+
+    final double v = Utils.first(t.measure(), Statistic.totalOfSquares).value();
+
+    final double factor = 1e9 * 1e9;
+    Assert.assertEquals(s2.doubleValue() / factor, v, 1e-12);
+  }
+
+  @Test
+  public void totalOfSquaresManySmallValues() {
+    Timer t = newTimer("foo");
+    BigInteger sumOfSq = new BigInteger("0");
+    for (int i = 0; i < 100000; ++i) {
+      final long nanos = i;
+      final BigInteger s = new BigInteger("" + nanos);
+      final BigInteger s2 = s.multiply(s);
+      sumOfSq = sumOfSq.add(s2);
+      t.record(i, TimeUnit.NANOSECONDS);
+    }
+    clock.setWallTime(61000L);
+
+    final double v = Utils.first(t.measure(), Statistic.totalOfSquares).value();
+
+    final double factor = 1e9 * 1e9;
+    Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 1e-12);
+  }
+
+  @Test
+  public void totalOfSquaresManyBigValues() {
+    Timer t = newTimer("foo");
+    BigInteger sumOfSq = new BigInteger("0");
+    for (int i = 0; i < 100000; ++i) {
+      final long nanos = TimeUnit.SECONDS.toNanos(i);
+      final BigInteger s = new BigInteger("" + nanos);
+      final BigInteger s2 = s.multiply(s);
+      sumOfSq = sumOfSq.add(s2);
+      t.record(i, TimeUnit.SECONDS);
+    }
+    clock.setWallTime(61000L);
+
+    final double v = Utils.first(t.measure(), Statistic.totalOfSquares).value();
+
+    // Expected :3.3332833335E14
+    // Actual   :3.3332833334999825E14
+    final double factor = 1e9 * 1e9;
+    Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 2.0);
   }
 
 }

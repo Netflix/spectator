@@ -45,7 +45,6 @@ final class FactorMonitor<T extends Number> extends AbstractMonitor<Double>
 
   @Override public Double getValue(int pollerIndex) {
     final double v = wrapped.getValue(pollerIndex).doubleValue();
-    System.out.printf("%f * %f = %f%n", v, factor, v * factor);
     return v * factor;
   }
 }
