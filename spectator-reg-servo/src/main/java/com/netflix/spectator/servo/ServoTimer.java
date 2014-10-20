@@ -17,10 +17,12 @@ package com.netflix.spectator.servo;
 
 import com.netflix.servo.monitor.MaxGauge;
 import com.netflix.servo.monitor.Monitor;
+import com.netflix.servo.monitor.NumericMonitor;
 import com.netflix.servo.monitor.StepCounter;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 
 import java.util.ArrayList;
@@ -32,6 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Timer implementation for the servo registry. */
 class ServoTimer implements Timer, ServoMeter {
 
+  private static final double CNV_SECONDS = 1.0 / TimeUnit.SECONDS.toNanos(1L);
+  private static final double CNV_SQUARES = CNV_SECONDS * CNV_SECONDS;
+
   private final Clock clock;
   private final Id id;
 
@@ -42,7 +47,7 @@ class ServoTimer implements Timer, ServoMeter {
 
   private final StepCounter servoCount;
   private final StepCounter servoTotal;
-  private final StepCounter servoTotalOfSquares;
+  private final DoubleCounter servoTotalOfSquares;
   private final MaxGauge servoMax;
 
   /** Create a new instance. */
@@ -52,20 +57,21 @@ class ServoTimer implements Timer, ServoMeter {
     count = new AtomicLong(0L);
     totalTime = new AtomicLong(0L);
 
-    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count)));
-    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalTime)));
-    servoTotalOfSquares = new StepCounter(
-        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)));
+    ServoClock sc = new ServoClock(clock);
+    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count)), sc);
+    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalTime)), sc);
+    servoTotalOfSquares = new DoubleCounter(
+        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)), sc);
+
+    // Constructor that takes a clock param is not public
     servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
-    final double cnvSeconds = 1.0 / TimeUnit.SECONDS.toNanos(1L);
-    final double cnvSquares = cnvSeconds * cnvSeconds;
     monitors.add(servoCount);
-    monitors.add(new FactorMonitor<>(servoTotal, cnvSeconds));
-    monitors.add(new FactorMonitor<>(servoTotalOfSquares, cnvSquares));
-    monitors.add(new FactorMonitor<>(servoMax, cnvSeconds));
+    monitors.add(new FactorMonitor<>(servoTotal, CNV_SECONDS));
+    monitors.add(new FactorMonitor<>(servoTotalOfSquares, CNV_SQUARES));
+    monitors.add(new FactorMonitor<>(servoMax, CNV_SECONDS));
   }
 
   @Override public Id id() {
@@ -79,20 +85,31 @@ class ServoTimer implements Timer, ServoMeter {
   @Override public void record(long amount, TimeUnit unit) {
     if (amount >= 0) {
       final long nanos = unit.toNanos(amount);
+      final double nanosSquared = (double) nanos * (double) nanos;
       totalTime.addAndGet(nanos);
       count.incrementAndGet();
       servoTotal.increment(nanos);
-      servoTotalOfSquares.increment(nanos * nanos);
+      servoTotalOfSquares.increment(nanosSquared);
       servoCount.increment();
       servoMax.update(nanos);
     }
   }
 
+  private Measurement newMeasurement(Tag t, long timestamp, Number n) {
+    return new Measurement(id.withTag(t), timestamp, n.doubleValue());
+  }
+
+  private double getValue(NumericMonitor<?> m, double factor) {
+    return m.getValue(0).doubleValue() * factor;
+  }
+
   @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
-    ms.add(new Measurement(id.withTag(Statistic.count), now, count.get()));
-    ms.add(new Measurement(id.withTag(Statistic.totalTime), now, totalTime.get()));
+    ms.add(newMeasurement(Statistic.count, now, servoCount.getValue(0)));
+    ms.add(newMeasurement(Statistic.totalTime, now, getValue(servoTotal, CNV_SECONDS)));
+    ms.add(newMeasurement(Statistic.totalOfSquares, now, getValue(servoTotalOfSquares, CNV_SQUARES)));
+    ms.add(newMeasurement(Statistic.max, now, getValue(servoMax, CNV_SECONDS)));
     return ms;
   }
 
