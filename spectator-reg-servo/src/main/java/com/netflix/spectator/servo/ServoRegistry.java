@@ -60,7 +60,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
 
   @Override protected Counter newCounter(Id id) {
     MonitorConfig cfg = toMonitorConfig(id);
-    BasicCounter counter = new BasicCounter(cfg);
+    StepCounter counter = new StepCounter(cfg, new ServoClock(clock()));
     return new ServoCounter(clock(), counter);
   }
 

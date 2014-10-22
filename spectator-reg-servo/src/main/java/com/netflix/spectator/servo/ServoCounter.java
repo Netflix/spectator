@@ -23,17 +23,20 @@ import com.netflix.spectator.api.Measurement;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Counter implementation for the servo registry. */
 class ServoCounter implements Counter, ServoMeter {
 
   private final Clock clock;
-  private final com.netflix.servo.monitor.BasicCounter impl;
+  private final com.netflix.servo.monitor.StepCounter impl;
+  private final AtomicLong count;
 
   /** Create a new instance. */
-  ServoCounter(Clock clock, com.netflix.servo.monitor.BasicCounter impl) {
+  ServoCounter(Clock clock, com.netflix.servo.monitor.StepCounter impl) {
     this.clock = clock;
     this.impl = impl;
+    this.count = new AtomicLong(0L);
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
@@ -50,19 +53,21 @@ class ServoCounter implements Counter, ServoMeter {
 
   @Override public Iterable<Measurement> measure() {
     long now = clock.wallTime();
-    long v = count();
+    double v = impl.getValue(0).doubleValue();
     return Collections.singleton(new Measurement(id(), now, v));
   }
 
   @Override public void increment() {
     impl.increment();
+    count.incrementAndGet();
   }
 
   @Override public void increment(long amount) {
     impl.increment(amount);
+    count.addAndGet(amount);
   }
 
   @Override public long count() {
-    return impl.getValue(0).longValue();
+    return count.get();
   }
 }
