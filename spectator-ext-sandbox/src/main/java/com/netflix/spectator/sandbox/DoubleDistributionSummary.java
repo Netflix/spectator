@@ -96,11 +96,8 @@ public class DoubleDistributionSummary implements Meter {
 
   /**
    * Create a new instance.
-   *
-   * @deprecated Use DoubleDistributionSummary.get(id). This will be made package private in 0.15.
    */
-  @Deprecated
-  public DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {
+  DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {
     this.clock = clock;
     this.id = id;
     this.resetFreq = resetFreq;
