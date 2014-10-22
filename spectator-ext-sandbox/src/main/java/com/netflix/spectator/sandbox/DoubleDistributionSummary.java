@@ -17,12 +17,16 @@ package com.netflix.spectator.sandbox;
 
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -30,6 +34,48 @@ import java.util.concurrent.atomic.AtomicLong;
  * of just long values.
  */
 public class DoubleDistributionSummary implements Meter {
+
+  private static final ConcurrentHashMap<Id, DoubleDistributionSummary> INSTANCES =
+      new ConcurrentHashMap<>();
+
+  // https://github.com/Netflix/spectator/issues/43
+  private static final long RESET_FREQ = 60000L;
+
+  /**
+   * Get or create a double distribution summary with the specified id.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Distribution summary corresponding to the id.
+   */
+  public static DoubleDistributionSummary get(Id id) {
+    return get(Spectator.registry(), id);
+  }
+
+  /**
+   * Get or create a double distribution summary with the specified id.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Distribution summary corresponding to the id.
+   */
+  static DoubleDistributionSummary get(Registry registry, Id id) {
+    DoubleDistributionSummary instance = INSTANCES.get(id);
+    if (instance == null) {
+      final Clock c = registry.clock();
+      DoubleDistributionSummary tmp = new DoubleDistributionSummary(c, id, RESET_FREQ);
+      instance = INSTANCES.putIfAbsent(id, tmp);
+      if (instance == null) {
+        instance = tmp;
+        registry.register(tmp);
+      }
+    }
+    return instance;
+  }
 
   private static final long ZERO = Double.doubleToLongBits(0.0);
 
@@ -49,7 +95,12 @@ public class DoubleDistributionSummary implements Meter {
   private final Id totalOfSquaresId;
   private final Id maxId;
 
-  /** Create a new instance. */
+  /**
+   * Create a new instance.
+   *
+   * @deprecated Use DoubleDistributionSummary.get(id). This will be made package private in 0.15.
+   */
+  @Deprecated
   public DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {
     this.clock = clock;
     this.id = id;
