@@ -17,7 +17,6 @@ package com.netflix.spectator.sandbox;
 
 
 import com.netflix.spectator.api.Clock;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
