@@ -170,4 +170,12 @@ public class DoubleDistributionSummaryTest {
     }
   }
 
+  @Test
+  public void staticGet() {
+    Id id = registry.createId("foo");
+    DoubleDistributionSummary t = DoubleDistributionSummary.get(registry, id);
+    Assert.assertSame(t, DoubleDistributionSummary.get(registry, id));
+    Assert.assertNotNull(registry.get(id));
+  }
+
 }
