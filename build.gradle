@@ -132,7 +132,17 @@ project(':spectator-nflx-plugin') {
     compile project(':spectator-reg-servo')
     compile 'com.netflix.archaius:archaius-core:latest.release'
     compile 'com.netflix.governator:governator:latest.release'
-    compile 'com.netflix.ribbon:ribbon-transport:2.0-RC9'
+    //compile 'com.netflix.ribbon:ribbon-transport:2.0-RC9'
+    compile 'com.netflix.rxnetty:rx-netty:0.3.14'
+    compile 'com.netflix.rxnetty:rx-netty-contexts:0.3.14'
+    compile 'com.netflix.rxnetty:rx-netty-servo:0.3.14'
+compile 'com.netflix.servo:servo-core:0.7.4'
+        compile 'com.google.guava:guava:14.0.1'
+        compile 'com.netflix.archaius:archaius-core:0.5.12'
+        compile 'com.netflix.netflix-commons:netflix-commons-util:0.1.1'
+compile 'com.netflix.netflix-commons:netflix-statistics:0.1.1'
+compile 'javax.inject:javax.inject:1'
+    compile files('../libs/ribbon-transport-2.0-RC10.jar', '../libs/ribbon-loadbalancer-2.0-RC10.jar', '../libs/ribbon-httpclient-2.0-RC10.jar', '../libs/ribbon-core-2.0-RC10.jar')
   }
 }
 

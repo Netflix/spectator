@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.netflix.client.ClientException;
 import com.netflix.client.config.DefaultClientConfigImpl;
 import com.netflix.config.DynamicBooleanProperty;
 import com.netflix.config.DynamicPropertyFactory;
@@ -123,19 +124,26 @@ public class ChronosGcEventListener implements GcEventListener {
           @Override
           public void call(Throwable t) {
             logger.warn("failed to send GC event to chronos", t);
-            final String status = t.getClass().getSimpleName();
+            final String status = (t instanceof ClientException)
+                ? ((ClientException) t).getErrorType().name()
+                : t.getClass().getSimpleName();
             final long latency = System.nanoTime() - start;
             registry.timer(requestCount.withTag("status", status)).record(latency, TimeUnit.NANOSECONDS);
+            requestCompleted();
           }
         },
         new Action0() {
           @Override
           public void call() {
-            // This is here for unit tests so that the completion can be detected reliably.
-            synchronized (listener) { listener.notify(); }
+            requestCompleted();
           }
         }
     );
+  }
+
+  private synchronized void requestCompleted() {
+    // This is here for unit tests so that the completion can be detected reliably.
+    notify();
   }
 
   @Override
