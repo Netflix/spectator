@@ -26,14 +26,27 @@ final class Config {
   private Config() {
   }
 
+  private static String get(String k) {
+    ConfigMap cfg = Spectator.config();
+    if (cfg == null) {
+      cfg = new SystemConfigMap();
+    }
+    return cfg.get(k);
+  }
+
+  private static String get(String k, String dflt) {
+    final String v = get(k);
+    return (v == null) ? dflt : v;
+  }
+
   /** Should an exception be thrown for warnings? */
   static boolean propagateWarnings() {
-    return Boolean.valueOf(System.getProperty(PREFIX + "propagateWarnings", "false"));
+    return Boolean.valueOf(get(PREFIX + "propagateWarnings", "false"));
   }
 
   /** Class implementing the {@link Registry} interface that should be loaded. */
   static String registryClass() {
-    return System.getProperty(PREFIX + "registryClass", SERVICE_LOADER);
+    return get(PREFIX + "registryClass", SERVICE_LOADER);
   }
 
   /**
@@ -46,7 +59,7 @@ final class Config {
    *     {@link java.lang.Integer#MAX_VALUE}.
    */
   static int maxNumberOfMeters() {
-    final String v = System.getProperty(PREFIX + "maxNumberOfMeters");
+    final String v = get(PREFIX + "maxNumberOfMeters");
     return (v == null) ? Integer.MAX_VALUE : Integer.parseInt(v);
   }
 }

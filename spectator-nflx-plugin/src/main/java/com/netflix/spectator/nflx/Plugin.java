@@ -41,10 +41,10 @@ public final class Plugin {
 
   @PostConstruct
   private void init() throws IOException {
-    final boolean enabled = "true".equals(System.getProperty("spectator.nflx.enabled", "true"));
+    AbstractConfiguration config = ConfigurationManager.getConfigInstance();
+    final boolean enabled = config.getBoolean("spectator.nflx.enabled", true);
     if (enabled) {
       ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
-      AbstractConfiguration config = ConfigurationManager.getConfigInstance();
       if (config.getBoolean("spectator.gc.loggingEnabled")) {
         GC_LOGGER.start(new ChronosGcEventListener());
         LOGGER.info("gc logging started");
