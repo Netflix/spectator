@@ -149,7 +149,6 @@ public class RxHttpTest {
       public void handle(HttpExchange exchange) throws IOException {
         ignore(exchange.getRequestBody());
         if (redirects.get() <= 0) {
-          System.out.println("/relativeRedirect " + statusCode.get());
           statusCounts.incrementAndGet(statusCode.get());
           exchange.getResponseHeaders().add("Location", "/empty");
           exchange.sendResponseHeaders(statusCode.get(), -1L);
