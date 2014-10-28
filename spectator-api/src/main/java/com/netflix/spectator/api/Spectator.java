@@ -31,8 +31,27 @@ public final class Spectator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Spectator.class);
 
+  private static final ConfigMap CONFIG = newConfigMapUsingServiceLoader();
+
   private static final ExtendedRegistry REGISTRY =
     new ExtendedRegistry(newInstance(Config.registryClass()));
+
+  /**
+   * Create a new config map instance using {@link java.util.ServiceLoader}. If no implementations
+   * are found the default will be used.
+   */
+  static ConfigMap newConfigMapUsingServiceLoader() {
+    final ServiceLoader<ConfigMap> loader = ServiceLoader.load(ConfigMap.class);
+    final Iterator<ConfigMap> cfgIterator = loader.iterator();
+    if (cfgIterator.hasNext()) {
+      ConfigMap cfg = cfgIterator.next();
+      LOGGER.info("using config impl found in classpath: {}", cfg.getClass().getName());
+      return cfg;
+    } else {
+      LOGGER.warn("no config impl found in classpath, using default");
+      return new SystemConfigMap();
+    }
+  }
 
   /**
    * Create a new registry instance using {@link java.util.ServiceLoader}. If no implementations
@@ -81,6 +100,13 @@ public final class Spectator {
     return Config.SERVICE_LOADER.equals(name)
       ? newInstanceUsingServiceLoader()
       : newInstanceUsingClassName(name);
+  }
+
+  /**
+   * Return the config implementation being used.
+   */
+  public static ConfigMap config() {
+    return CONFIG;
   }
 
   /**

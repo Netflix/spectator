@@ -18,6 +18,7 @@ package com.netflix.spectator.nflx;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.SystemConfigMap;
 import com.netflix.spectator.gc.GcEvent;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;
@@ -27,7 +28,6 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,8 +36,8 @@ import org.junit.runners.JUnit4;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
@@ -45,7 +45,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray;
 public class ChronosGcEventListenerTest {
 
   private static final String client = "chronos_gc";
-  private static final int retries = 5; // TODO: it seems to be ignoring retry property
+  private static final int retries = 5;
 
   private static HttpServer server;
   private static int port;
@@ -55,27 +55,29 @@ public class ChronosGcEventListenerTest {
 
   @BeforeClass
   public static void startServer() throws Exception {
-    server = HttpServer.create(new InetSocketAddress(0), 0);
+    server = HttpServer.create(new InetSocketAddress(0), 100);
+    server.setExecutor(Executors.newFixedThreadPool(10, new ThreadFactory() {
+      @Override public Thread newThread(Runnable r) {
+        return new Thread(r, "HttpServer");
+      }
+    }));
     port = server.getAddress().getPort();
 
     server.createContext("/api/v2/event", new HttpHandler() {
       @Override
       public void handle(HttpExchange exchange) throws IOException {
         statusCounts.incrementAndGet(statusCode.get());
-        exchange.sendResponseHeaders(statusCode.get(), 0L);
+        exchange.sendResponseHeaders(statusCode.get(), -1L);
         exchange.close();
       }
     });
 
     server.start();
 
-    System.setProperty(client + ".niws.client.MaxAutoRetries", "" + retries);
-    System.setProperty(client + ".niws.client.MaxAutoRetriesNextServer", "0");// + retries);
-    System.setProperty(client + ".niws.client.OkToRetryOnAllOperations", "true");
-    System.setProperty(client + ".niws.client.NIWSServerListClassName",
-        "com.netflix.loadbalancer.ConfigurationBasedServerList");
-    System.setProperty(client + ".niws.client.listOfServers",
-        "localhost:" + port);
+    String uri = "niws://chronos_gc/http://localhost:" + port + "/api/v2/event";
+    System.setProperty("spectator.gc.chronosUri", uri);
+    System.setProperty(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
+    System.setProperty(client + ".niws.client.RetryDelay", "10");
   }
 
   @AfterClass
@@ -99,9 +101,10 @@ public class ChronosGcEventListenerTest {
     GcInfo gcInfo = null;
     for (java.lang.management.GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
       GarbageCollectorMXBean sunMbean = (GarbageCollectorMXBean) mbean;
-      if (sunMbean.getLastGcInfo() != null) {
-        gcInfo = sunMbean.getLastGcInfo();
+      while (sunMbean.getLastGcInfo() == null) {
+        System.gc();
       }
+      gcInfo = sunMbean.getLastGcInfo();
     }
     final GarbageCollectionNotificationInfo info = new GarbageCollectionNotificationInfo(
         "test", "action", "cause", gcInfo);
@@ -114,10 +117,7 @@ public class ChronosGcEventListenerTest {
     long before = reqCount(200);
 
     final ChronosGcEventListener listener = new ChronosGcEventListener();
-    listener.onComplete(newGcEvent());
-    synchronized (listener) {
-      listener.wait(10000);
-    }
+    listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 
     Assert.assertEquals(before + 1, reqCount(200));
@@ -134,10 +134,7 @@ public class ChronosGcEventListenerTest {
     int errorCount = statusCounts.get(status);
 
     final ChronosGcEventListener listener = new ChronosGcEventListener();
-    listener.onComplete(newGcEvent());
-    synchronized (listener) {
-      listener.wait(10000);
-    }
+    listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 
     Assert.assertEquals(errorCount + attempts, statusCounts.get(status));
@@ -152,17 +149,17 @@ public class ChronosGcEventListenerTest {
 
   @Test
   public void serverError() throws Exception {
-    errorTest(500, 1);
+    errorTest(500, retries + 1);
   }
 
   @Test
   public void serverThrottle429() throws Exception {
-    errorTest(429, 1); //retries + 1);
+    errorTest(429, retries + 1);
   }
 
   @Test
   public void serverThrottle503() throws Exception {
-    errorTest(503, retries + 1, "NUMBEROF_RETRIES_NEXTSERVER_EXCEEDED");
+    errorTest(503, retries + 1);
   }
 }
 
