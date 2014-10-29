@@ -299,7 +299,7 @@ public final class RxHttp {
                 if (retryDelay > 0) {
                   resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);
                 }
-              } else if (code >= 500 && code < 600) {
+              } else if (code >= 500) {
                 res.getContent().subscribe();
                 resObs = execute(clientCfg, server, req);
               } else {
