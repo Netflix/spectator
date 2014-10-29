@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.netflix.config.ConfigurationManager;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -67,6 +68,10 @@ public class RxHttpTest {
   private static AtomicIntegerArray statusCounts = new AtomicIntegerArray(600);
 
   private static AtomicInteger redirects = new AtomicInteger(0);
+
+  private static void set(String k, String v) {
+    ConfigurationManager.getConfigInstance().setProperty(k, v);
+  }
 
   private static void ignore(InputStream input) throws IOException {
     try (InputStream in = input) {
@@ -201,9 +206,9 @@ public class RxHttpTest {
 
     server.start();
 
-    System.setProperty(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
-    System.setProperty(client + ".niws.client.RetryDelay", "100");
-    System.setProperty(client + ".niws.client.ReadTimeout", "1000");
+    set(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
+    set(client + ".niws.client.RetryDelay", "100");
+    set(client + ".niws.client.ReadTimeout", "1000");
   }
 
   @AfterClass
@@ -213,10 +218,10 @@ public class RxHttpTest {
 
   @Before
   public void initProps() {
-    System.setProperty(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
-    System.setProperty(client + ".niws.client.RetryDelay", "100");
-    System.setProperty(client + ".niws.client.ConnectTimeout", "1000");
-    System.setProperty(client + ".niws.client.ReadTimeout", "30000");
+    set(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
+    set(client + ".niws.client.RetryDelay", "100");
+    set(client + ".niws.client.ConnectTimeout", "1000");
+    set(client + ".niws.client.ReadTimeout", "30000");
   }
 
   private URI uri(String path) {
@@ -284,6 +289,12 @@ public class RxHttpTest {
   }
 
   @Test
+  public void throttle503NoDelay() throws Exception {
+    set(client + ".niws.client.RetryDelay", "0");
+    codeTest(503, retries + 1);
+  }
+
+  @Test
   public void relativeRedirect() throws Exception {
     int code = 200;
     statusCode.set(code);
@@ -346,7 +357,7 @@ public class RxHttpTest {
 
   @Test
   public void readTimeout() throws Exception {
-    System.setProperty(client + ".niws.client.ReadTimeout", "100");
+    set(client + ".niws.client.ReadTimeout", "100");
     int code = 200;
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
@@ -381,7 +392,7 @@ public class RxHttpTest {
     int serverPort = ss.getLocalPort();
     ss.close();
 
-    System.setProperty(client + ".niws.client.ConnectTimeout", "100");
+    set(client + ".niws.client.ConnectTimeout", "100");
     int code = 200;
     statusCode.set(code);
 
@@ -469,6 +480,64 @@ public class RxHttpTest {
 
     Assert.assertEquals(body, builder.toString());
 
+    assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void postJsonString() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+    RxHttp.postJson(uri("/empty"), "{}").toBlocking().toFuture().get();
+    assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void postForm() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+
+    final StringBuilder builder = new StringBuilder();
+    RxHttp.postForm(uri("/echo?foo=bar&name=John+Doe&pct=%2042%25"))
+        .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<ByteBuf>>() {
+          @Override
+          public Observable<ByteBuf> call(HttpClientResponse<ByteBuf> res) {
+            Assert.assertEquals(200, res.getStatus().code());
+            return res.getContent();
+          }
+        })
+        .toBlocking()
+        .forEach(new Action1<ByteBuf>() {
+          @Override
+          public void call(ByteBuf byteBuf) {
+            builder.append(byteBuf.toString(Charset.defaultCharset()));
+          }
+        });
+
+    assertEquals(expected, statusCounts);
+    Assert.assertEquals("foo=bar&name=John+Doe&pct=%2042%25", builder.toString());
+  }
+
+  @Test
+  public void putJsonString() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+    RxHttp.putJson(uri("/empty"), "{}").toBlocking().toFuture().get();
+    assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void delete() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+    RxHttp.delete(uri("/empty").toString()).toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
 }

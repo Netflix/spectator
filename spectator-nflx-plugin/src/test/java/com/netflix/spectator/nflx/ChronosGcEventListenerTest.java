@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.netflix.config.ConfigurationManager;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
@@ -53,6 +54,10 @@ public class ChronosGcEventListenerTest {
   private static AtomicInteger statusCode = new AtomicInteger(200);
   private static AtomicIntegerArray statusCounts = new AtomicIntegerArray(600);
 
+  private static void set(String k, String v) {
+    ConfigurationManager.getConfigInstance().setProperty(k, v);
+  }
+
   @BeforeClass
   public static void startServer() throws Exception {
     server = HttpServer.create(new InetSocketAddress(0), 100);
@@ -75,9 +80,9 @@ public class ChronosGcEventListenerTest {
     server.start();
 
     String uri = "niws://chronos_gc/http://localhost:" + port + "/api/v2/event";
-    System.setProperty("spectator.gc.chronosUri", uri);
-    System.setProperty(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
-    System.setProperty(client + ".niws.client.RetryDelay", "10");
+    set("spectator.gc.chronosUri", uri);
+    set(client + ".niws.client.MaxAutoRetriesNextServer", "" + retries);
+    set(client + ".niws.client.RetryDelay", "10");
   }
 
   @AfterClass

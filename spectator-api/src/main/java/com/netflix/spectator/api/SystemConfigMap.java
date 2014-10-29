@@ -15,8 +15,6 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.NoSuchElementException;
-
 /**
  * Get configuration settings using {@link System#getProperty(String)}.
  */
