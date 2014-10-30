@@ -126,10 +126,13 @@ public final class RxHttp {
   }
 
   private static void update(HttpLogEntry entry, HttpClientResponse<ByteBuf> res) {
+    int code = res.getStatus().code();
+    boolean canRetry = (code == 429 || code >= 500);
     entry.mark("received-response")
-        .withStatusCode(res.getStatus().code())
+        .withStatusCode(code)
         .withStatusReason(res.getStatus().reasonPhrase())
-        .withResponseContentLength(res.getHeaders().getContentLength(-1));
+        .withResponseContentLength(res.getHeaders().getContentLength(-1))
+        .withCanRetry(canRetry);
 
     for (Map.Entry<String, String> h : res.getHeaders().entries()) {
       entry.withResponseHeader(h.getKey(), h.getValue());
@@ -137,7 +140,8 @@ public final class RxHttp {
   }
 
   private static void update(HttpLogEntry entry, Throwable t) {
-    entry.mark("received-error").withException(t);
+    boolean canRetry = (t instanceof ConnectException || t instanceof ReadTimeoutException);
+    entry.mark("received-error").withException(t).withCanRetry(canRetry);
   }
 
   /**
@@ -428,15 +432,13 @@ public final class RxHttp {
           }
         })
         .doOnError(new Action1<Throwable>() {
-          @Override
-          public void call(Throwable throwable) {
+          @Override public void call(Throwable throwable) {
             update(entry, throwable);
             HttpLogEntry.logClientRequest(LOGGER, entry);
           }
         })
         .doOnTerminate(new Action0() {
-          @Override
-          public void call() {
+          @Override public void call() {
             client.shutdown();
           }
         });

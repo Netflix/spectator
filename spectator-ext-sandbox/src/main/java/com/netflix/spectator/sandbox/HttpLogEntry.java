@@ -125,7 +125,7 @@ public class HttpLogEntry {
     }
 
     // Update stats for the final attempt after retries are exhausted
-    if (entry.maxAttempts < 0 || entry.attempt >= entry.maxAttempts) {
+    if (!entry.canRetry || entry.attempt >= entry.maxAttempts) {
       REGISTRY.timer(COMPLETE.withTags(dimensions.tags()))
           .record(entry.getOverallLatency(), TimeUnit.MILLISECONDS);
     }
@@ -182,6 +182,7 @@ public class HttpLogEntry {
   private String attemptId = requestId;
   private int attempt = 1;
   private int maxAttempts = -1;
+  private boolean canRetry = false;
 
   private Throwable exception = null;
 
@@ -279,6 +280,12 @@ public class HttpLogEntry {
   /** Set the max number of attempts that will be tried. */
   public HttpLogEntry withMaxAttempts(int attempts) {
     this.maxAttempts = attempts;
+    return this;
+  }
+
+  /** Set to true if the error is one that can be retried. */
+  public HttpLogEntry withCanRetry(boolean retry) {
+    this.canRetry = retry;
     return this;
   }
 
