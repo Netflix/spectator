@@ -54,6 +54,11 @@ final class DefaultId implements Id {
     return new DefaultId(name, new TagList(key, value, tags));
   }
 
+  @Override public DefaultId withTags(Iterable<Tag> ts) {
+    TagList tmp = (tags == null) ? TagList.create(ts) : tags.prepend(ts);
+    return new DefaultId(name, tmp);
+  }
+
   /**
    * Returns a new id with the tag list sorted by key and with no duplicate keys. If a duplicate
    * is found the last entry in the list with a given key will be used.
