@@ -533,8 +533,15 @@ public final class RxHttp {
     DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();
     List<InstanceInfo> instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
     Collections.shuffle(instances);
+
+    // If the number of instances is less than the number of attempts, retry multiple times
+    // on previously used servers
+    int numAttempts = clientCfg.numRetries();
+    while (instances.size() < numAttempts) {
+      instances.addAll(instances);
+    }
+
     List<Server> servers = new ArrayList<>();
-    int numAttempts = clientCfg.numRetries() + 1;
     for (int i = 0; i < numAttempts; ++i) {
       InstanceInfo instance = instances.get(i);
       String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
