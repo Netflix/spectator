@@ -41,6 +41,10 @@ final class NoopId implements Id {
     return this;
   }
 
+  @Override public Id withTags(Iterable<Tag> tags) {
+    return this;
+  }
+
   @Override public String toString() {
     return name();
   }

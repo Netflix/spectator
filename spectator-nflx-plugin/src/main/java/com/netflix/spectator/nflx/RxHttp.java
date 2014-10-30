@@ -20,6 +20,7 @@ import com.netflix.discovery.DiscoveryClient;
 import com.netflix.discovery.DiscoveryManager;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.functions.Action0;
+import rx.functions.Action1;
 import rx.functions.Func1;
 
 import java.io.ByteArrayOutputStream;
@@ -50,6 +52,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -88,6 +91,53 @@ public final class RxHttp {
       req.withContent(entity);
     }
     return req;
+  }
+
+  /** Create a log entry for an rxnetty request. */
+  public static HttpLogEntry create(HttpClientRequest<ByteBuf> req) {
+    HttpLogEntry entry = new HttpLogEntry()
+        .withMethod(req.getMethod().name())
+        .withRequestUri(URI.create(req.getUri()))
+        .withRequestContentLength(req.getHeaders().getContentLength(-1));
+
+    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
+      entry.withRequestHeader(h.getKey(), h.getValue());
+    }
+
+    return entry;
+  }
+
+  private static HttpLogEntry create(ClientConfig cfg, HttpClientRequest<ByteBuf> req) {
+    return create(req)
+        .withClientName(cfg.name())
+        .withOriginalUri(cfg.originalUri())
+        .withMaxAttempts(cfg.numRetries() + 1);
+  }
+
+  private static void nextAttempt(HttpLogEntry entry, int attempt, HttpClientRequest<ByteBuf> req) {
+    entry.withAttempt(attempt)
+        .withMethod(req.getMethod().name())
+        .withRequestUri(URI.create(req.getUri()))
+        .withRequestContentLength(req.getHeaders().getContentLength(-1));
+
+    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
+      entry.withRequestHeader(h.getKey(), h.getValue());
+    }
+  }
+
+  private static void update(HttpLogEntry entry, HttpClientResponse<ByteBuf> res) {
+    entry.mark("received-response")
+        .withStatusCode(res.getStatus().code())
+        .withStatusReason(res.getStatus().reasonPhrase())
+        .withResponseContentLength(res.getHeaders().getContentLength(-7));
+
+    for (Map.Entry<String, String> h : res.getHeaders().entries()) {
+      entry.withResponseHeader(h.getKey(), h.getValue());
+    }
+  }
+
+  private static void update(HttpLogEntry entry, Throwable t) {
+    entry.mark("received-error").withException(t);
   }
 
   /**
@@ -272,6 +322,8 @@ public final class RxHttp {
    */
   static Observable<HttpClientResponse<ByteBuf>>
   execute(final ClientConfig clientCfg, final List<Server> servers, final HttpClientRequest<ByteBuf> req) {
+    final HttpLogEntry entry = create(clientCfg, req);
+
     if (servers.isEmpty()) {
       final String msg = "empty server list for client " + clientCfg.name();
       return Observable.error(new IllegalStateException(msg));
@@ -282,12 +334,13 @@ public final class RxHttp {
     }
 
     final long backoffMillis = clientCfg.retryDelay();
-    Observable<HttpClientResponse<ByteBuf>> observable = execute(clientCfg, servers.get(0), req);
+    Observable<HttpClientResponse<ByteBuf>> observable = execute(entry, clientCfg, servers.get(0), req);
     for (int i = 1; i < servers.size(); ++i) {
       final Server server = servers.get(i);
       final long delay = backoffMillis << (i - 1);
+      final int attempt = i + 1;
       observable = observable
-          .switchMap(new Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>>() {
+          .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>>() {
             @Override
             public Observable<HttpClientResponse<ByteBuf>> call(HttpClientResponse<ByteBuf> res) {
               final int code = res.getStatus().code();
@@ -295,13 +348,15 @@ public final class RxHttp {
               if (code == 429 || code == 503) {
                 final long retryDelay = getRetryDelay(res, delay);
                 res.getContent().subscribe();
-                resObs = execute(clientCfg, server, req);
+                entry.withAttempt(attempt);
+                resObs = execute(entry, clientCfg, server, req);
                 if (retryDelay > 0) {
                   resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);
                 }
               } else if (code >= 500) {
                 res.getContent().subscribe();
-                resObs = execute(clientCfg, server, req);
+                entry.withAttempt(attempt);
+                resObs = execute(entry, clientCfg, server, req);
               } else {
                 resObs = Observable.just(res);
               }
@@ -313,7 +368,8 @@ public final class RxHttp {
             public Observable<? extends HttpClientResponse<ByteBuf>> call(Throwable throwable) {
               if (throwable instanceof ConnectException
                   || throwable instanceof ReadTimeoutException) {
-                return execute(clientCfg, server, req);
+                entry.withAttempt(attempt);
+                return execute(entry, clientCfg, server, req);
               }
               return Observable.error(throwable);
             }
@@ -336,7 +392,9 @@ public final class RxHttp {
    *     Observable with the response of the request.
    */
   static Observable<HttpClientResponse<ByteBuf>>
-  execute(ClientConfig clientCfg, Server server, HttpClientRequest<ByteBuf> req) {
+  execute(final HttpLogEntry entry, ClientConfig clientCfg, Server server, HttpClientRequest<ByteBuf> req) {
+    entry.withRemoteAddr(server.host()).withRemotePort(server.port());
+
     HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
         .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)
         .followRedirect(clientCfg.followRedirects())
@@ -360,12 +418,28 @@ public final class RxHttp {
       builder.withSslEngineFactory(DefaultFactories.trustAll());
     }
 
+    entry.mark("start");
     final HttpClient<ByteBuf, ByteBuf> client = builder.build();
-    return client.submit(req).doOnTerminate(new Action0() {
-      @Override public void call() {
-        client.shutdown();
-      }
-    });
+    return client.submit(req)
+        .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
+          @Override public void call(HttpClientResponse<ByteBuf> res) {
+            update(entry, res);
+            HttpLogEntry.logClientRequest(LOGGER, entry);
+          }
+        })
+        .doOnError(new Action1<Throwable>() {
+          @Override
+          public void call(Throwable throwable) {
+            update(entry, throwable);
+            HttpLogEntry.logClientRequest(LOGGER, entry);
+          }
+        })
+        .doOnTerminate(new Action0() {
+          @Override
+          public void call() {
+            client.shutdown();
+          }
+        });
   }
 
   private static long getRetryDelay(HttpClientResponse<ByteBuf> res, long dflt) {
@@ -413,7 +487,7 @@ public final class RxHttp {
         m = NIWS_URI.matcher(uri.toString());
         if (m.matches()) {
           final URI newUri = URI.create(fixPath(uri.getRawPath()));
-          cfg = new ClientConfig(m.group(1), null, newUri);
+          cfg = new ClientConfig(m.group(1), null, uri, newUri);
         } else {
           throw new IllegalArgumentException("invalid niws uri: " + uri);
         }
@@ -421,13 +495,13 @@ public final class RxHttp {
       case "vip":
         m = VIP_URI.matcher(uri.toString());
         if (m.matches()) {
-          cfg = new ClientConfig(m.group(1), m.group(2), uri);
+          cfg = new ClientConfig(m.group(1), m.group(2), uri, uri);
         } else {
           throw new IllegalArgumentException("invalid vip uri: " + uri);
         }
         break;
       default:
-        cfg = new ClientConfig("default", null, uri);
+        cfg = new ClientConfig("default", null, uri, uri);
         break;
     }
     return cfg;
@@ -517,12 +591,14 @@ public final class RxHttp {
 
     private final String name;
     private final String vipAddress;
+    private final URI originalUri;
     private final URI uri;
 
     /** Create a new instance. */
-    ClientConfig(String name, String vipAddress, URI uri) {
+    ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {
       this.name = name;
       this.vipAddress = vipAddress;
+      this.originalUri = originalUri;
       this.uri = uri;
     }
 
@@ -533,6 +609,11 @@ public final class RxHttp {
     /** Name of the client. */
     String name() {
       return name;
+    }
+
+    /** Original URI specified before selecting a specific server. */
+    URI originalUri() {
+      return originalUri;
     }
 
     /** URI for the request. */

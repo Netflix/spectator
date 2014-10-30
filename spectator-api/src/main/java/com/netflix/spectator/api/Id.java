@@ -30,4 +30,7 @@ public interface Id {
 
   /** New id with an additional tag value. */
   Id withTag(Tag t);
+
+  /** New id with additional tag values. */
+  Id withTags(Iterable<Tag> tags);
 }

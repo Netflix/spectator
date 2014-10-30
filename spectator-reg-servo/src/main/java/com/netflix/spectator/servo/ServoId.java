@@ -69,4 +69,12 @@ class ServoId implements Id {
   @Override public Id withTag(Tag t) {
     return withTag(t.key(), t.value());
   }
+
+  @Override public Id withTags(Iterable<Tag> ts) {
+    MonitorConfig.Builder builder = new MonitorConfig.Builder(config);
+    for (Tag t : ts) {
+      builder.withTag(t.key(), t.value());
+    }
+    return new ServoId(builder.build());
+  }
 }

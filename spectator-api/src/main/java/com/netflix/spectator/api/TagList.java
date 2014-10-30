@@ -102,6 +102,22 @@ final class TagList implements Iterable<Tag>, Tag {
   }
 
   /**
+   * Create a new list with the tags prepended to this list.
+   *
+   * @param tags
+   *     A set of tags to prepend.
+   * @return
+   *     New tag list with the tags prepended.
+   */
+  TagList prepend(Iterable<Tag> tags) {
+    TagList head = this;
+    for (Tag t : tags) {
+      head = new TagList(t.key(), t.value(), head);
+    }
+    return head;
+  }
+
+  /**
    * Create a new tag list from the key/value pairs in the iterable.
    *
    * @param tags

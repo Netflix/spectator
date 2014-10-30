@@ -67,7 +67,7 @@ public class DefaultIdTest {
   @Test
   public void testNormalize() {
     DefaultId id12 = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
-    DefaultId id21 = (new DefaultId("foo")).withTag("k2", "v2").withTag("k1", "v1");
+    DefaultId id21 = (new DefaultId("foo")).withTag("k1", "v1").withTags(id12.tags());
     Assert.assertTrue(!id12.equals(id21));
     Assert.assertEquals(id12, id21.normalize());
   }
