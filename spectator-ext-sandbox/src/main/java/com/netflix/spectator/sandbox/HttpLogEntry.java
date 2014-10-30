@@ -140,7 +140,7 @@ public class HttpLogEntry {
     REGISTRY.distributionSummary(RES_HEADER_SIZE.withTags(dimensions.tags()))
         .record(entry.getResponseHeadersLength());
     REGISTRY.distributionSummary(RES_ENTITY_SIZE.withTags(dimensions.tags()))
-        .record(entry.requestContentLength);
+        .record(entry.responseContentLength);
 
     // Write data out to logger if enabled
     if (entry.exception != null || entry.statusCode >= 500) {
