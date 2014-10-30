@@ -159,7 +159,7 @@ public class HttpLogEntry {
   }
 
   /** Generate a new request id. */
-  public static String newId() {
+  private static String newId() {
     return UUID.randomUUID().toString();
   }
 

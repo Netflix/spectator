@@ -129,7 +129,7 @@ public final class RxHttp {
     entry.mark("received-response")
         .withStatusCode(res.getStatus().code())
         .withStatusReason(res.getStatus().reasonPhrase())
-        .withResponseContentLength(res.getHeaders().getContentLength(-7));
+        .withResponseContentLength(res.getHeaders().getContentLength(-1));
 
     for (Map.Entry<String, String> h : res.getHeaders().entries()) {
       entry.withResponseHeader(h.getKey(), h.getValue());
