@@ -21,7 +21,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutException;
+import io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import io.reactivex.netty.protocol.http.client.HttpRedirectException;
 import org.junit.AfterClass;
@@ -538,6 +540,28 @@ public class RxHttpTest {
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
     RxHttp.delete(uri("/empty").toString()).toBlocking().toFuture().get();
+    assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void head() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+    RxHttp.submit(HttpClientRequest.<ByteBuf>create(HttpMethod.HEAD, uri("/empty").toString()))
+        .toBlocking().toFuture().get();
+    assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void postWithCustomHeader() throws Exception {
+    int code = 200;
+    statusCode.set(code);
+    AtomicIntegerArray expected = copy(statusCounts);
+    expected.addAndGet(code, 1);
+    RxHttp.submit(HttpClientRequest.createPost(uri("/empty").toString()).withHeader("k", "v"), "{}")
+        .toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
 }
