@@ -310,6 +310,69 @@ public final class RxHttp {
   }
 
   /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable<HttpClientResponse<ByteBuf>> submit(HttpClientRequest<ByteBuf> req) {
+    return submit(req, (byte[]) null);
+  }
+
+  /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @param entity
+   *     Content data or null if no content is needed for the request body.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable<HttpClientResponse<ByteBuf>>
+  submit(HttpClientRequest<ByteBuf> req, String entity) {
+    return submit(req, (entity == null) ? null : getBytes(entity));
+  }
+
+  /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @param entity
+   *     Content data or null if no content is needed for the request body.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable<HttpClientResponse<ByteBuf>>
+  submit(HttpClientRequest<ByteBuf> req, byte[] entity) {
+    final URI uri = URI.create(req.getUri());
+    final ClientConfig clientCfg = getConfigForUri(uri);
+    final List<Server> servers = getServers(clientCfg);
+    final String reqUri = relative(clientCfg.uri());
+    final HttpClientRequest<ByteBuf> newReq = HttpClientRequest
+        .create(req.getHttpVersion(), req.getMethod(), reqUri);
+    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
+      newReq.withHeader(h.getKey(), h.getValue());
+    }
+    final HttpClientRequest<ByteBuf> finalReq = (entity == null)
+        ? newReq
+        : compress(clientCfg, newReq, entity);
+    return execute(clientCfg, servers, finalReq);
+  }
+
+  /**
    * Execute an HTTP request.
    *
    * @param clientCfg
