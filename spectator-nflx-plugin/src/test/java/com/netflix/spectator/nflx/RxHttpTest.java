@@ -173,7 +173,7 @@ public class RxHttpTest {
     server.createContext("/absoluteRedirect", new HttpHandler() {
       @Override
       public void handle(HttpExchange exchange) throws IOException {
-        String host = "http://" + exchange.getRequestHeaders().getFirst("Host") + ":" + port;
+        String host = "http://" + exchange.getRequestHeaders().getFirst("Host");
         ignore(exchange.getRequestBody());
         if (redirects.get() <= 0) {
           statusCounts.incrementAndGet(302);
