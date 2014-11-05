@@ -46,7 +46,6 @@ public class AutoPluginTest {
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);
     lcMgr.start();
-    Assert.assertEquals("true", System.getProperty("spectator.nflx.initialized"));
     AutoPlugin ap = injector.getInstance(AutoPlugin.class);
     Assert.assertEquals(ap.getPlugin(), injector.getInstance(Plugin.class));
     lcMgr.close();
