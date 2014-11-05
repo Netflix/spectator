@@ -35,6 +35,8 @@ public final class Plugin {
 
   private static final String CONFIG_FILE = "spectator.properties";
 
+  private static final String ENABLED_PROP = "spectator.nflx.enabled";
+
   private static final GcLogger GC_LOGGER = new GcLogger();
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Plugin.class);
@@ -42,7 +44,7 @@ public final class Plugin {
   @PostConstruct
   private void init() throws IOException {
     AbstractConfiguration config = ConfigurationManager.getConfigInstance();
-    final boolean enabled = config.getBoolean("spectator.nflx.enabled", true);
+    final boolean enabled = config.getBoolean(ENABLED_PROP, true);
     if (enabled) {
       ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
       if (config.getBoolean("spectator.gc.loggingEnabled")) {
@@ -53,7 +55,8 @@ public final class Plugin {
       }
 
       Jmx.registerStandardMXBeans(Spectator.registry());
+    } else {
+      LOGGER.debug("plugin not enabled, set " + ENABLED_PROP + "=true to enable");
     }
-    System.setProperty("spectator.nflx.initialized", "true");
   }
 }
