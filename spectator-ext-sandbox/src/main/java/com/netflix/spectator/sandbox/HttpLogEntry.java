@@ -184,6 +184,8 @@ public class HttpLogEntry {
   private int maxAttempts = -1;
   private boolean canRetry = false;
 
+  private int redirect = 0;
+
   private Throwable exception = null;
 
   private int statusCode = -1;
@@ -195,7 +197,7 @@ public class HttpLogEntry {
   private long latency = -1;
   private long originalStart = -1;
 
-  private void resetForRetry() {
+  private void reset(int redir) {
     if (originalStart < 0 && !events.isEmpty()) {
       originalStart = events.get(0).timestamp();
     }
@@ -203,6 +205,7 @@ public class HttpLogEntry {
     requestContentLength = -1;
     remoteAddr = null;
     remotePort = -1;
+    redirect = redir;
     exception = null;
     statusCode = -1;
     responseHeaders.clear();
@@ -273,8 +276,14 @@ public class HttpLogEntry {
   public HttpLogEntry withAttempt(int n) {
     this.attempt = n;
     this.attemptId = newId();
-    resetForRetry();
+    reset(0);
     return this;
+  }
+
+  /** Set the attempt if redirect occurs, should only be used after the initial request. */
+  public HttpLogEntry withRedirect(URI loc) {
+    reset(redirect + 1);
+    return withRequestUri(loc);
   }
 
   /** Set the max number of attempts that will be tried. */
@@ -470,6 +479,7 @@ public class HttpLogEntry {
         .append(responseContentLength).append('\t')
         .append(getRequestHeaders()).append('\t')
         .append(getResponseHeaders()).append('\t')
+        .append(redirect).append('\t')
         .append(attempt).append('\t')
         .append(maxAttempts)
         .toString();

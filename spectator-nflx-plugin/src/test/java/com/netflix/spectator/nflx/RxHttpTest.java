@@ -25,7 +25,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.timeout.ReadTimeoutException;
 import io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import io.reactivex.netty.protocol.http.client.HttpClientResponse;
-import io.reactivex.netty.protocol.http.client.HttpRedirectException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -302,7 +301,8 @@ public class RxHttpTest {
     statusCode.set(code);
     redirects.set(2);
     AtomicIntegerArray expected = copy(statusCounts);
-    expected.addAndGet(302, 1);
+    expected.addAndGet(302, 2);
+    expected.addAndGet(code, 1);
 
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
@@ -322,7 +322,6 @@ public class RxHttpTest {
     );
 
     latch.await();
-    Assert.assertTrue(throwable.get() instanceof HttpRedirectException);
     assertEquals(expected, statusCounts);
   }
 
