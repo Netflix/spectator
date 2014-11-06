@@ -733,7 +733,7 @@ public final class RxHttp {
      * default is to use the ip address and avoid the dns lookup.
      */
     boolean useIpAddress() {
-      return Spectator.config().getBoolean(prop("UseIpAddress"), true);
+      return Spectator.config().getBoolean(prop("UseIpAddress"), false);
     }
 
     /**
