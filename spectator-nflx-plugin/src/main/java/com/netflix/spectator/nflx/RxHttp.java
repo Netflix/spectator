@@ -361,11 +361,7 @@ public final class RxHttp {
     final ClientConfig clientCfg = getConfigForUri(uri);
     final List<Server> servers = getServers(clientCfg);
     final String reqUri = relative(clientCfg.uri());
-    final HttpClientRequest<ByteBuf> newReq = HttpClientRequest
-        .create(req.getHttpVersion(), req.getMethod(), reqUri);
-    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
-      newReq.withHeader(h.getKey(), h.getValue());
-    }
+    final HttpClientRequest<ByteBuf> newReq = copy(req, reqUri);
     final HttpClientRequest<ByteBuf> finalReq = (entity == null)
         ? newReq
         : compress(clientCfg, newReq, entity);
@@ -407,6 +403,7 @@ public final class RxHttp {
       final long delay = backoffMillis << (i - 1);
       final int attempt = i + 1;
       observable = observable
+          .flatMap(new RedirectHandler(entry, clientCfg, server, req))
           .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>>() {
             @Override
             public Observable<HttpClientResponse<ByteBuf>> call(HttpClientResponse<ByteBuf> res) {
@@ -464,7 +461,6 @@ public final class RxHttp {
 
     HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
         .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)
-        .followRedirect(clientCfg.followRedirects())
         .userAgent(clientCfg.userAgent())
         .build();
 
@@ -507,6 +503,19 @@ public final class RxHttp {
         });
   }
 
+  /**
+   * Create a copy of a request object. It can only copy the method, uri, and headers so should
+   * not be used for any request with a content already specified.
+   */
+  static HttpClientRequest<ByteBuf> copy(HttpClientRequest<ByteBuf> req, String uri) {
+    HttpClientRequest<ByteBuf> newReq = HttpClientRequest.create(
+        req.getHttpVersion(), req.getMethod(), uri);
+    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
+      newReq.withHeader(h.getKey(), h.getValue());
+    }
+    return newReq;
+  }
+
   private static long getRetryDelay(HttpClientResponse<ByteBuf> res, long dflt) {
     try {
       if (res.getHeaders().contains(HttpHeaders.Names.RETRY_AFTER)) {
@@ -530,7 +539,8 @@ public final class RxHttp {
     }
   }
 
-  private static String relative(URI uri) {
+  /** Create relative uri string with the path and query. */
+  static String relative(URI uri) {
     String r = uri.getRawPath();
     if (uri.getRawQuery() != null) {
       r += "?" + uri.getRawQuery();
@@ -616,7 +626,11 @@ public final class RxHttp {
     return servers;
   }
 
-  private static int getPort(URI uri) {
+  /**
+   * Return the port taking care of handling defaults for http and https if not explicit in the
+   * uri.
+   */
+  static int getPort(URI uri) {
     final int defaultPort = ("https".equals(uri.getScheme())) ? 443 : 80;
     return (uri.getPort() <= 0) ? defaultPort : uri.getPort();
   }
