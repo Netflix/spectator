@@ -16,6 +16,7 @@ allprojects {
   apply plugin: 'jacoco'
   apply plugin: 'idea'
   apply plugin: 'me.champeau.gradle.jmh'
+  apply plugin: 'com.github.ben-manes.versions'
 
   repositories {
     mavenLocal()
