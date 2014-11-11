@@ -15,6 +15,7 @@ allprojects {
   apply plugin: 'java'
   apply plugin: 'jacoco'
   apply plugin: 'idea'
+  apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
 
@@ -122,6 +123,7 @@ project(':spectator-api') {
 project(':spectator-nflx') {
   dependencies {
     compile project(':spectator-nflx-plugin')
+    compile 'com.netflix.governator:governator:1.2.20'
   }
 }
 
