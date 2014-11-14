@@ -130,9 +130,11 @@ project(':spectator-nflx-plugin') {
     compile project(':spectator-ext-gc')
     compile project(':spectator-ext-jvm')
     compile project(':spectator-reg-servo')
+    compile 'com.google.inject:guice:3.0'
     compile 'com.netflix.archaius:archaius-core:0.6.3'
     compile 'com.netflix.governator:governator:1.2.20'
     compile 'com.netflix.ribbon:ribbon-transport:2.0-RC9'
+    testCompile 'com.netflix.governator:governator:1.2.20'
   }
 }
 
