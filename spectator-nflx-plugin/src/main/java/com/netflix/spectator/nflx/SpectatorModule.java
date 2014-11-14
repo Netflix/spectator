@@ -42,18 +42,15 @@ import com.netflix.spectator.api.Spectator;
  * }
  * </pre>
  *
- * <p><b>Guice</b></p>
- * <pre>
- * Injector injector = Guice.createInjector(new SpectatorModule());
- * ExtendedRegistry registry = injector.getInstance(ExtendedRegistry.class);
- * </pre>
- *
  * <p><b>Governator</b></p>
+ * <p>One of the classes requires an {@link javax.annotation.PostConstruct} block to initialize
+ * so governator should be used to manage the lifecycle as guice doesn't support it directly.</p>
  * <pre>
  * Injector injector = LifecycleInjector.builder()
  *   .withModules(new SpectatorModule())
  *   .build()
  *   .createInjector();
+ * injector.getInstance(LifecycleManager.class).start();
  * </pre>
  */
 public class SpectatorModule extends AbstractModule {
