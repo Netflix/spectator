@@ -113,7 +113,13 @@ public final class GcLogger {
    *     log buffer is updated.
    */
   public synchronized void start(GcEventListener listener) {
-    Preconditions.checkState(notifListener == null, "logger already started");
+    // TODO: this class has a bad mix of static fields used from an instance of the class. For now
+    // this has been changed not to throw to make the dependency injection use-cases work. A
+    // more general refactor of the GcLogger class is needed.
+    if (notifListener != null) {
+      LOGGER.warn("logger already started");
+      return;
+    }
     eventListener = listener;
     notifListener = new GcNotificationListener();
     for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {

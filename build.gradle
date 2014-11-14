@@ -134,6 +134,7 @@ project(':spectator-nflx-plugin') {
     compile project(':spectator-ext-jvm')
     compile project(':spectator-ext-sandbox')
     compile project(':spectator-reg-servo')
+    compile 'com.google.inject:guice:3.0'
     compile 'com.jcraft:jzlib:1.1.3'
     compile 'com.netflix.archaius:archaius-core:0.6.3'
     compile 'com.netflix.eureka:eureka-client:1.1.142'
@@ -141,6 +142,7 @@ project(':spectator-nflx-plugin') {
     compile 'com.netflix.rxnetty:rx-netty-contexts:0.3.18'
     compile 'com.netflix.rxnetty:rx-netty-servo:0.3.18'
     compile 'io.reactivex:rxjava:1.0.0-rc.8'
+    testCompile 'com.netflix.governator:governator:1.2.20'
   }
 }
 
