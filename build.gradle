@@ -12,8 +12,6 @@ buildscript {
 }
 
 allprojects {
-  apply plugin: 'java'
-  apply plugin: 'jacoco'
   apply plugin: 'idea'
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
@@ -22,10 +20,6 @@ allprojects {
   repositories {
     mavenLocal()
     mavenCentral()
-  }
-
-  jacoco {
-    toolVersion = "0.7.1.201405082137"
   }
 }
 
@@ -36,6 +30,9 @@ apply from: file('gradle/license.gradle')
 apply from: file('gradle/release.gradle')
 
 subprojects {
+  apply plugin: 'java'
+  apply plugin: 'jacoco'
+
   group = "com.netflix.${githubProjectName}"
 
   sourceCompatibility = 1.7
@@ -73,6 +70,10 @@ subprojects {
     include '.*'
   }
 
+  jacoco {
+    toolVersion = "0.7.1.201405082137"
+  }
+
   jacocoTestReport {
     additionalSourceDirs = files(sourceSets.main.allJava.srcDirs)
     reports {
@@ -101,16 +102,14 @@ project(':spectator-api') {
   }
 
   task(checkCompatibility, dependsOn: 'jar', type: JavaExec) {
-    // There is probably a better way, but we remove "-SNAPSHOT" from the name if the archive
-    // doesn't exist because release plugin changes the name.
-    main = 'com.googlecode.japi.checker.cli.Main'
-    classpath = files("$projectDir/../codequality/japi-checker-cli-0.2.0-SNAPSHOT.jar")
-    args = [
-      "$projectDir/../codequality/spectator-api-BASELINE.jar",
-      (jar.archivePath.exists())
-        ? jar.archivePath.path
-        : jar.archivePath.path.replace("-SNAPSHOT", "")
-    ]
+    doFirst {
+      main = 'com.googlecode.japi.checker.cli.Main'
+      classpath = files("$projectDir/../codequality/japi-checker-cli-0.2.0-SNAPSHOT.jar")
+      args = [
+        "$projectDir/../codequality/spectator-api-BASELINE.jar",
+        jar.archivePath.path
+      ]
+    }
   }
 
   build {
