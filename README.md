@@ -7,6 +7,11 @@ Simple library for instrumenting code to record dimensional time series.
 
 * Java 7 or higher.
 
+## Documentation
+
+* [Wiki](https://github.com/Netflix/spectator/wiki)
+* [Javadoc](http://netflix.github.io/spectator/javadoc/HEAD/spectator-api/)
+
 ## Dependencies
 
 To instrument your code you need to depend on the api library. This provides the minimal interfaces
