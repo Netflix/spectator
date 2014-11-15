@@ -26,14 +26,27 @@ final class Config {
 <span class="nc" id="L26">  private Config() {</span>
 <span class="nc" id="L27">  }</span>
 
+  private static String get(String k) {
+<span class="fc" id="L30">    ConfigMap cfg = Spectator.config();</span>
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">    if (cfg == null) {</span>
+<span class="nc" id="L32">      cfg = new SystemConfigMap();</span>
+    }
+<span class="fc" id="L34">    return cfg.get(k);</span>
+  }
+
+  private static String get(String k, String dflt) {
+<span class="fc" id="L38">    final String v = get(k);</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">    return (v == null) ? dflt : v;</span>
+  }
+
   /** Should an exception be thrown for warnings? */
   static boolean propagateWarnings() {
-<span class="fc" id="L31">    return Boolean.valueOf(System.getProperty(PREFIX + &quot;propagateWarnings&quot;, &quot;false&quot;));</span>
+<span class="fc" id="L44">    return Boolean.valueOf(get(PREFIX + &quot;propagateWarnings&quot;, &quot;false&quot;));</span>
   }
 
   /** Class implementing the {@link Registry} interface that should be loaded. */
   static String registryClass() {
-<span class="fc" id="L36">    return System.getProperty(PREFIX + &quot;registryClass&quot;, SERVICE_LOADER);</span>
+<span class="fc" id="L49">    return get(PREFIX + &quot;registryClass&quot;, SERVICE_LOADER);</span>
   }
 
   /**
@@ -46,8 +59,8 @@ final class Config {
    *     {@link java.lang.Integer#MAX_VALUE}.
    */
   static int maxNumberOfMeters() {
-<span class="fc" id="L49">    final String v = System.getProperty(PREFIX + &quot;maxNumberOfMeters&quot;);</span>
-<span class="pc bpc" id="L50" title="1 of 2 branches missed.">    return (v == null) ? Integer.MAX_VALUE : Integer.parseInt(v);</span>
+<span class="fc" id="L62">    final String v = get(PREFIX + &quot;maxNumberOfMeters&quot;);</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">    return (v == null) ? Integer.MAX_VALUE : Integer.parseInt(v);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

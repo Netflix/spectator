@@ -7,6 +7,7 @@
 <file name="/Users/brharrington/stash/spectator-brh/spectator-ext-gc/src/main/java/com/netflix/spectator/gc/GcEventListener.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-ext-gc/src/main/java/com/netflix/spectator/gc/GcLogger.java">
+<error line="116" severity="info" message="Comment matches to-do format &apos;TODO&apos;." source="com.puppycrawl.tools.checkstyle.checks.TodoCommentCheck"/>
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-ext-gc/src/main/java/com/netflix/spectator/gc/GcType.java">
 </file>

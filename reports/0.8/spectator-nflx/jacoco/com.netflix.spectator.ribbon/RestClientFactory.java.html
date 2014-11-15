@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>RestClientFactory.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ribbon</a> &gt; <span class="el_source">RestClientFactory.java</span></div><h1>RestClientFactory.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ribbon;
+
+import com.netflix.client.ClientFactory;
+import com.netflix.niws.client.http.RestClient;
+
+/**
+ * Helper for creating a {@link com.netflix.niws.client.http.RestClient} using the spectator
+ * client config implementation.
+ */
+public final class RestClientFactory {
+<span class="nc" id="L26">  private RestClientFactory() {</span>
+<span class="nc" id="L27">  }</span>
+
+  /**
+   * Get or create a {@link com.netflix.niws.client.http.RestClient} with the specified name. The
+   * client will use the {@link com.netflix.spectator.ribbon.RibbonClientConfigImpl} that changes
+   * some of the defaults to make the common cases work easier:
+   *
+   * &lt;ul&gt;
+   *   &lt;li&gt;Namespace for the clients defaults to {@code niws.client} to avoid property name changes
+   *       if switching between internal {@code platform-ipc} and {@code ribbon}.&lt;/li&gt;
+   *   &lt;li&gt;The default server list class is set to {@code DiscoveryEnabledNIWSServerList}.&lt;/li&gt;
+   *   &lt;li&gt;An instrumented RestClient class is returned.&lt;/li&gt;
+   * &lt;/ul&gt;
+   *
+   * @param name
+   *     Name of the client to retrieve.
+   * @return
+   *     Rest client for the specified name.
+   */
+  public static RestClient getClient(String name) {
+<span class="fc" id="L47">    return (RestClient) ClientFactory.getNamedClient(name, RibbonClientConfigImpl.class);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

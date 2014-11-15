@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>RedirectHandler.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">RedirectHandler.java</span></div><h1>RedirectHandler.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.nflx;
+
+import com.netflix.spectator.sandbox.HttpLogEntry;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.reactivex.netty.protocol.http.client.HttpClientRequest;
+import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import rx.Observable;
+import rx.functions.Func1;
+
+import java.net.URI;
+
+/**
+ * Helper for handling redirects.
+ */
+class RedirectHandler implements
+    Func1&lt;HttpClientResponse&lt;ByteBuf&gt;, Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;&gt; {
+
+  private final HttpLogEntry entry;
+  private final HttpClientRequest&lt;ByteBuf&gt; req;
+  private final RxHttp.ClientConfig config;
+  private final RxHttp.Server server;
+
+  private int redirect;
+
+  /**
+   * Create a new instance.
+   *
+   * @param entry
+   *     Log entry to update for each request.
+   * @param config
+   *     Config settings to use, FollowRedirects setting will determine how deep to go before
+   *     giving up.
+   * @param server
+   *     Server for the original request. In the case of relative URI in the Location header this
+   *     is the server that will be used for the redirect.
+   * @param req
+   *     Original request.
+   */
+  RedirectHandler(
+      HttpLogEntry entry,
+      RxHttp.ClientConfig config,
+      RxHttp.Server server,
+<span class="fc" id="L59">      HttpClientRequest&lt;ByteBuf&gt; req) {</span>
+<span class="fc" id="L60">    this.entry = entry;</span>
+<span class="fc" id="L61">    this.config = config;</span>
+<span class="fc" id="L62">    this.server = server;</span>
+<span class="fc" id="L63">    this.req = req;</span>
+<span class="fc" id="L64">  }</span>
+
+  @Override
+  public Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; call(HttpClientResponse&lt;ByteBuf&gt; res) {
+<span class="fc" id="L68">    final int code = res.getStatus().code();</span>
+    Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; resObs;
+<span class="fc bfc" id="L70" title="All 4 branches covered.">    if (code &gt; 300 &amp;&amp; code &lt;= 307) {</span>
+<span class="fc" id="L71">      res.getContent().subscribe();</span>
+<span class="fc" id="L72">      final URI loc = URI.create(res.getHeaders().get(HttpHeaders.Names.LOCATION));</span>
+<span class="fc" id="L73">      entry.withRedirect(loc);</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">      if (loc.isAbsolute()) {</span>
+        // Should we allow redirect from https to http?
+<span class="pc bpc" id="L76" title="2 of 4 branches missed.">        final boolean secure = server.isSecure() || &quot;https&quot;.equals(loc.getScheme());</span>
+<span class="fc" id="L77">        final RxHttp.Server s = new RxHttp.Server(loc.getHost(), RxHttp.getPort(loc), secure);</span>
+<span class="fc" id="L78">        final HttpClientRequest&lt;ByteBuf&gt; redirReq = RxHttp.copy(req, RxHttp.relative(loc));</span>
+<span class="fc" id="L79">        resObs = RxHttp.execute(entry, config, s, redirReq);</span>
+<span class="fc" id="L80">      } else {</span>
+<span class="nc" id="L81">        final HttpClientRequest&lt;ByteBuf&gt; redirReq = RxHttp.copy(req, RxHttp.relative(loc));</span>
+<span class="nc" id="L82">        resObs = RxHttp.execute(entry, config, server, redirReq);</span>
+      }
+
+<span class="fc" id="L85">      ++redirect;</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">      if (redirect &lt; config.followRedirects()) {</span>
+<span class="fc" id="L87">        resObs = resObs.flatMap(this);</span>
+      }
+<span class="fc" id="L89">    } else {</span>
+<span class="fc" id="L90">      resObs = Observable.just(res);</span>
+    }
+<span class="fc" id="L92">    return resObs;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

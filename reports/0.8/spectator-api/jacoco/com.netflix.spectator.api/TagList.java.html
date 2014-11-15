@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TagList.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">TagList.java</span></div><h1>TagList.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+/**
+ * A tag list implemented as a singly linked list. Doesn't automatically dedup keys but supports
+ * a cheap prepend at the call site to allow for inexpensive dynamic ids.
+ */
+final class TagList implements Iterable&lt;Tag&gt;, Tag {
+
+  private final String key;
+  private final String value;
+  private final TagList next;
+  private final int hc;
+
+  /**
+   * Create a new instance with a single pair in the list.
+   */
+  TagList(String key, String value) {
+<span class="fc" id="L39">    this(key, value, EMPTY);</span>
+<span class="fc" id="L40">  }</span>
+
+  /**
+   * Create a new instance with a new tag prepended to the list {@code next}.
+   */
+<span class="fc" id="L45">  TagList(String key, String value, TagList next) {</span>
+<span class="fc" id="L46">    this.key = Preconditions.checkNotNull(key, &quot;key&quot;);</span>
+<span class="fc" id="L47">    this.value = Preconditions.checkNotNull(value, &quot;value&quot;);</span>
+<span class="fc" id="L48">    this.next = next;</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    this.hc = 31 * (key.hashCode() + value.hashCode() + (next == null ? 23 : next.hashCode()));</span>
+<span class="fc" id="L50">  }</span>
+
+  /** {@inheritDoc} */
+  @Override
+  public String key() {
+<span class="fc" id="L55">    return key;</span>
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String value() {
+<span class="fc" id="L61">    return value;</span>
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public Iterator&lt;Tag&gt; iterator() {
+<span class="fc" id="L67">    final TagList root = this;</span>
+<span class="fc" id="L68">    return new Iterator&lt;Tag&gt;() {</span>
+<span class="fc" id="L69">      private TagList current = root;</span>
+
+      public boolean hasNext() {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        return current != null;</span>
+      }
+
+      public Tag next() {
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (current == null) {</span>
+<span class="nc" id="L77">          throw new NoSuchElementException();</span>
+        }
+<span class="fc" id="L79">        Tag tmp = current;</span>
+<span class="fc" id="L80">        current = current.next;</span>
+<span class="fc" id="L81">        return tmp;</span>
+      }
+
+      public void remove() {
+<span class="nc" id="L85">        throw new UnsupportedOperationException();</span>
+      }
+    };
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public boolean equals(Object obj) {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L94" title="All 4 branches covered.">    if (obj == null || !(obj instanceof TagList)) return false;</span>
+<span class="fc" id="L95">    TagList other = (TagList) obj;</span>
+<span class="fc bfc" id="L96" title="All 8 branches covered.">    return key.equals(other.key) &amp;&amp; value.equals(other.value)</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">      &amp;&amp; (next == other.next || (next != null &amp;&amp; next.equals(other.next)));</span>
+  }
+
+  /**
+   * This object is immutable and the hash code is precomputed in the constructor. The id object
+   * is typically created to lookup a Meter based on dynamic dimensions so we assume that it is
+   * highly likely that the hash code method will be called and that it could be in a fairly
+   * high volume execution path.
+   *
+   * {@inheritDoc}
+   */
+  @Override
+  public int hashCode() {
+<span class="fc" id="L110">    return hc;</span>
+  }
+
+  /**
+   * Create a new tag list from the key/value pairs in the iterable.
+   *
+   * @param tags
+   *     Set of key/value pairs.
+   * @return
+   *     New tag list with a copy of the data.
+   */
+  public static TagList create(Iterable&lt;Tag&gt; tags) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
+<span class="fc" id="L123">      return (TagList) tags;</span>
+    } else {
+<span class="fc" id="L125">      TagList head = null;</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">      for (Tag t : tags) {</span>
+<span class="fc" id="L127">        head = new TagList(t.key(), t.value(), head);</span>
+<span class="fc" id="L128">      }</span>
+<span class="fc" id="L129">      return head;</span>
+    }
+  }
+
+  /**
+   * Create a new tag list from the key/value pairs in the map.
+   *
+   * @param tags
+   *     Set of key/value pairs.
+   * @return
+   *     New tag list with a copy of the data.
+   */
+  public static TagList create(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L142">    TagList head = null;</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
+<span class="fc" id="L144">      head = new TagList(t.getKey(), t.getValue(), head);</span>
+<span class="fc" id="L145">    }</span>
+<span class="fc" id="L146">    return head;</span>
+  }
+
+  /** Empty tag list. */
+<span class="fc" id="L150">  static final TagList EMPTY = null;</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

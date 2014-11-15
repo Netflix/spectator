@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>FilteredIterator.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">FilteredIterator.java</span></div><h1>FilteredIterator.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+/**
+ * Wraps an iterator with one that will filter the values using the specified predicate.
+ */
+class FilteredIterator&lt;T&gt; implements Iterator&lt;T&gt; {
+
+  private final Iterator&lt;T&gt; it;
+  private final Predicate&lt;T&gt; p;
+  private T item;
+
+  /**
+   * Create a new instance.
+   *
+   * @param it
+   *     Inner iterator that should be filtered.
+   * @param p
+   *     Predicate for finding matching results.
+   */
+<span class="fc" id="L38">  FilteredIterator(Iterator&lt;T&gt; it, Predicate&lt;T&gt; p) {</span>
+<span class="fc" id="L39">    this.it = it;</span>
+<span class="fc" id="L40">    this.p = p;</span>
+<span class="fc" id="L41">    findNext();</span>
+<span class="fc" id="L42">  }</span>
+
+  private void findNext() {
+<span class="fc bfc" id="L45" title="All 2 branches covered.">    while (it.hasNext()) {</span>
+<span class="fc" id="L46">      item = it.next();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">      if (p.apply(item)) {</span>
+<span class="fc" id="L48">        return;</span>
+      }
+    }
+<span class="fc" id="L51">    item = null;</span>
+<span class="fc" id="L52">  }</span>
+
+  @Override public boolean hasNext() {
+<span class="fc bfc" id="L55" title="All 2 branches covered.">    return item != null;</span>
+  }
+
+  @Override public T next() throws NoSuchElementException {
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">    if (item == null) {</span>
+<span class="nc" id="L60">      throw new NoSuchElementException(&quot;next() called after reaching end of iterator&quot;);</span>
+    }
+<span class="fc" id="L62">    T tmp = item;</span>
+<span class="fc" id="L63">    findNext();</span>
+<span class="fc" id="L64">    return tmp;</span>
+  }
+
+  @Override public void remove() {
+<span class="nc" id="L68">    throw new UnsupportedOperationException(&quot;remove&quot;);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

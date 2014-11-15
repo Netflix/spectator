@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>RxHttp.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">RxHttp.java</span></div><h1>RxHttp.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.nflx;
+
+import com.netflix.appinfo.InstanceInfo;
+import com.netflix.discovery.DiscoveryClient;
+import com.netflix.discovery.DiscoveryManager;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.sandbox.HttpLogEntry;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpContentDecompressor;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.timeout.ReadTimeoutException;
+import io.reactivex.netty.RxNetty;
+import io.reactivex.netty.pipeline.PipelineConfigurator;
+import io.reactivex.netty.pipeline.PipelineConfiguratorComposite;
+import io.reactivex.netty.pipeline.ssl.DefaultFactories;
+import io.reactivex.netty.protocol.http.HttpObjectAggregationConfigurator;
+import io.reactivex.netty.protocol.http.client.HttpClient;
+import io.reactivex.netty.protocol.http.client.HttpClientBuilder;
+import io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
+import io.reactivex.netty.protocol.http.client.HttpClientRequest;
+import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.functions.Action0;
+import rx.functions.Action1;
+import rx.functions.Func1;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.ConnectException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.GZIPOutputStream;
+
+/**
+ * Helper for some simple uses of rxnetty with eureka. Only intended for use within the spectator
+ * plugin.
+ */
+public final class RxHttp {
+
+<span class="nc" id="L67">  private RxHttp() {</span>
+<span class="nc" id="L68">  }</span>
+
+<span class="fc" id="L70">  private static final Logger LOGGER = LoggerFactory.getLogger(RxHttp.class);</span>
+
+<span class="fc" id="L72">  private static final Pattern NIWS_URI = Pattern.compile(&quot;niws://([^/]+).*&quot;);</span>
+
+<span class="fc" id="L74">  private static final Pattern VIP_URI = Pattern.compile(&quot;vip://([^:]+):([^/]+).*&quot;);</span>
+
+  private static final int MIN_COMPRESS_SIZE = 512;
+
+  private static HttpClientRequest&lt;ByteBuf&gt; compress(
+      ClientConfig clientCfg, HttpClientRequest&lt;ByteBuf&gt; req, byte[] entity) {
+<span class="pc bpc" id="L80" title="1 of 4 branches missed.">    if (entity.length &gt;= MIN_COMPRESS_SIZE &amp;&amp; clientCfg.gzipEnabled()) {</span>
+<span class="fc" id="L81">      req.withHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.GZIP);</span>
+<span class="fc" id="L82">      ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="pc" id="L83">      try (GZIPOutputStream gzip = new GZIPOutputStream(baos)) {</span>
+<span class="fc" id="L84">        gzip.write(entity);</span>
+<span class="pc bpc" id="L85" title="6 of 8 branches missed.">      } catch (IOException e) {</span>
+        // This isn't expected to occur
+<span class="nc" id="L87">        throw new RuntimeException(&quot;failed to gzip request payload&quot;, e);</span>
+<span class="fc" id="L88">      }</span>
+<span class="fc" id="L89">      req.withContent(baos.toByteArray());</span>
+<span class="fc" id="L90">    } else {</span>
+<span class="fc" id="L91">      req.withContent(entity);</span>
+    }
+<span class="fc" id="L93">    return req;</span>
+  }
+
+  /** Create a log entry for an rxnetty request. */
+  public static HttpLogEntry create(HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="fc" id="L98">    HttpLogEntry entry = new HttpLogEntry()</span>
+<span class="fc" id="L99">        .withMethod(req.getMethod().name())</span>
+<span class="fc" id="L100">        .withRequestUri(URI.create(req.getUri()))</span>
+<span class="fc" id="L101">        .withRequestContentLength(req.getHeaders().getContentLength(-1));</span>
+
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; h : req.getHeaders().entries()) {</span>
+<span class="fc" id="L104">      entry.withRequestHeader(h.getKey(), h.getValue());</span>
+<span class="fc" id="L105">    }</span>
+
+<span class="fc" id="L107">    return entry;</span>
+  }
+
+  private static HttpLogEntry create(ClientConfig cfg, HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="fc" id="L111">    return create(req)</span>
+<span class="fc" id="L112">        .withClientName(cfg.name())</span>
+<span class="fc" id="L113">        .withOriginalUri(cfg.originalUri())</span>
+<span class="fc" id="L114">        .withMaxAttempts(cfg.numRetries() + 1);</span>
+  }
+
+  private static void nextAttempt(HttpLogEntry entry, int attempt, HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="nc" id="L118">    entry.withAttempt(attempt)</span>
+<span class="nc" id="L119">        .withMethod(req.getMethod().name())</span>
+<span class="nc" id="L120">        .withRequestUri(URI.create(req.getUri()))</span>
+<span class="nc" id="L121">        .withRequestContentLength(req.getHeaders().getContentLength(-1));</span>
+
+<span class="nc bnc" id="L123" title="All 2 branches missed.">    for (Map.Entry&lt;String, String&gt; h : req.getHeaders().entries()) {</span>
+<span class="nc" id="L124">      entry.withRequestHeader(h.getKey(), h.getValue());</span>
+<span class="nc" id="L125">    }</span>
+<span class="nc" id="L126">  }</span>
+
+  private static void update(HttpLogEntry entry, HttpClientResponse&lt;ByteBuf&gt; res) {
+<span class="fc" id="L129">    int code = res.getStatus().code();</span>
+<span class="fc bfc" id="L130" title="All 4 branches covered.">    boolean canRetry = (code == 429 || code &gt;= 500);</span>
+<span class="fc" id="L131">    entry.mark(&quot;received-response&quot;)</span>
+<span class="fc" id="L132">        .withStatusCode(code)</span>
+<span class="fc" id="L133">        .withStatusReason(res.getStatus().reasonPhrase())</span>
+<span class="fc" id="L134">        .withResponseContentLength(res.getHeaders().getContentLength(-1))</span>
+<span class="fc" id="L135">        .withCanRetry(canRetry);</span>
+
+<span class="fc bfc" id="L137" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; h : res.getHeaders().entries()) {</span>
+<span class="fc" id="L138">      entry.withResponseHeader(h.getKey(), h.getValue());</span>
+<span class="fc" id="L139">    }</span>
+<span class="fc" id="L140">  }</span>
+
+  private static void update(HttpLogEntry entry, Throwable t) {
+<span class="pc bpc" id="L143" title="1 of 4 branches missed.">    boolean canRetry = (t instanceof ConnectException || t instanceof ReadTimeoutException);</span>
+<span class="fc" id="L144">    entry.mark(&quot;received-error&quot;).withException(t).withCanRetry(canRetry);</span>
+<span class="fc" id="L145">  }</span>
+
+  /**
+   * Perform a GET request.
+   *
+   * @param uri
+   *     Location to send the request.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; get(String uri) {
+<span class="fc" id="L156">    return get(URI.create(uri));</span>
+  }
+
+  /**
+   * Perform a GET request.
+   *
+   * @param uri
+   *     Location to send the request.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; get(URI uri) {
+<span class="fc" id="L168">    final ClientConfig clientCfg = getConfigForUri(uri);</span>
+<span class="fc" id="L169">    final List&lt;Server&gt; servers = getServers(clientCfg);</span>
+<span class="fc" id="L170">    return execute(clientCfg, servers, HttpClientRequest.createGet(relative(clientCfg.uri())));</span>
+  }
+
+  /**
+   * Perform a POST request.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param contentType
+   *     MIME type for the request payload.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  post(URI uri, String contentType, byte[] entity) {
+<span class="fc" id="L187">    final ClientConfig clientCfg = getConfigForUri(uri);</span>
+<span class="fc" id="L188">    final List&lt;Server&gt; servers = getServers(clientCfg);</span>
+<span class="fc" id="L189">    HttpClientRequest&lt;ByteBuf&gt; req = HttpClientRequest.createPost(relative(clientCfg.uri()))</span>
+<span class="fc" id="L190">        .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);</span>
+<span class="fc" id="L191">    return execute(clientCfg, servers, compress(clientCfg, req, entity));</span>
+  }
+
+  /**
+   * Perform a POST request with {@code Content-Type: application/json}.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; postJson(URI uri, byte[] entity) {
+<span class="fc" id="L205">    return post(uri, &quot;application/json&quot;, entity);</span>
+  }
+
+  /**
+   * Perform a POST request with {@code Content-Type: application/json}.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; postJson(URI uri, String entity) {
+<span class="fc" id="L219">    return postJson(uri, getBytes(entity));</span>
+  }
+
+  /**
+   * Perform a POST request with form data. The body will be extracted from the query string
+   * in the URI.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; postForm(URI uri) {
+<span class="fc" id="L232">    Preconditions.checkNotNull(uri.getRawQuery(), &quot;uri.query&quot;);</span>
+<span class="fc" id="L233">    byte[] entity = getBytes(uri.getRawQuery());</span>
+<span class="fc" id="L234">    return post(uri, HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED, entity);</span>
+  }
+
+  /**
+   * Perform a PUT request.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param contentType
+   *     MIME type for the request payload.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  put(URI uri, String contentType, byte[] entity) {
+<span class="fc" id="L251">    final ClientConfig clientCfg = getConfigForUri(uri);</span>
+<span class="fc" id="L252">    final List&lt;Server&gt; servers = getServers(clientCfg);</span>
+<span class="fc" id="L253">    HttpClientRequest&lt;ByteBuf&gt; req = HttpClientRequest.createPut(relative(clientCfg.uri()))</span>
+<span class="fc" id="L254">        .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);</span>
+<span class="fc" id="L255">    return execute(clientCfg, servers, compress(clientCfg, req, entity));</span>
+  }
+
+  /**
+   * Perform a PUT request with {@code Content-Type: application/json}.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; putJson(URI uri, byte[] entity) {
+<span class="fc" id="L269">    return put(uri, &quot;application/json&quot;, entity);</span>
+  }
+
+  /**
+   * Perform a PUT request with {@code Content-Type: application/json}.
+   *
+   * @param uri
+   *     Location to send the data.
+   * @param entity
+   *     Data to send.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; putJson(URI uri, String entity) {
+<span class="fc" id="L283">    return putJson(uri, getBytes(entity));</span>
+  }
+
+  /**
+   * Perform a DELETE request.
+   *
+   * @param uri
+   *     Location to send the request.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; delete(String uri) {
+<span class="fc" id="L295">    return delete(URI.create(uri));</span>
+  }
+
+  /**
+   * Perform a DELETE request.
+   *
+   * @param uri
+   *     Location to send the request.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; delete(URI uri) {
+<span class="fc" id="L307">    final ClientConfig clientCfg = getConfigForUri(uri);</span>
+<span class="fc" id="L308">    final List&lt;Server&gt; servers = getServers(clientCfg);</span>
+<span class="fc" id="L309">    return execute(clientCfg, servers, HttpClientRequest.createDelete(relative(clientCfg.uri())));</span>
+  }
+
+  /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; submit(HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="fc" id="L324">    return submit(req, (byte[]) null);</span>
+  }
+
+  /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @param entity
+   *     Content data or null if no content is needed for the request body.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  submit(HttpClientRequest&lt;ByteBuf&gt; req, String entity) {
+<span class="pc bpc" id="L342" title="1 of 2 branches missed.">    return submit(req, (entity == null) ? null : getBytes(entity));</span>
+  }
+
+  /**
+   * Submit an HTTP request.
+   *
+   * @param req
+   *     Request to execute. Note the content should be passed in separately not already passed
+   *     to the request. The RxNetty request object doesn't provide a way to get the content
+   *     out via the public api, so we need to keep it separate in case a new request object must
+   *     be created.
+   * @param entity
+   *     Content data or null if no content is needed for the request body.
+   * @return
+   *     Observable with the response of the request.
+   */
+  public static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  submit(HttpClientRequest&lt;ByteBuf&gt; req, byte[] entity) {
+<span class="fc" id="L360">    final URI uri = URI.create(req.getUri());</span>
+<span class="fc" id="L361">    final ClientConfig clientCfg = getConfigForUri(uri);</span>
+<span class="fc" id="L362">    final List&lt;Server&gt; servers = getServers(clientCfg);</span>
+<span class="fc" id="L363">    final String reqUri = relative(clientCfg.uri());</span>
+<span class="fc" id="L364">    final HttpClientRequest&lt;ByteBuf&gt; newReq = copy(req, reqUri);</span>
+<span class="fc bfc" id="L365" title="All 2 branches covered.">    final HttpClientRequest&lt;ByteBuf&gt; finalReq = (entity == null)</span>
+        ? newReq
+<span class="fc" id="L367">        : compress(clientCfg, newReq, entity);</span>
+<span class="fc" id="L368">    return execute(clientCfg, servers, finalReq);</span>
+  }
+
+  /**
+   * Execute an HTTP request.
+   *
+   * @param clientCfg
+   *     Configuration settings for the request.
+   * @param servers
+   *     List of servers to attempt. The servers will be tried in order until a successful
+   *     response or a non-retriable error occurs. For status codes 429 and 503 the
+   *     {@code Retry-After} header is honored. Otherwise back-off will be based on the
+   *     {@code RetryDelay} config setting.
+   * @param req
+   *     Request to execute.
+   * @return
+   *     Observable with the response of the request.
+   */
+  static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  execute(final ClientConfig clientCfg, final List&lt;Server&gt; servers, final HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="fc" id="L388">    final HttpLogEntry entry = create(clientCfg, req);</span>
+
+<span class="pc bpc" id="L390" title="1 of 2 branches missed.">    if (servers.isEmpty()) {</span>
+<span class="nc" id="L391">      final String msg = &quot;empty server list for client &quot; + clientCfg.name();</span>
+<span class="nc" id="L392">      return Observable.error(new IllegalStateException(msg));</span>
+    }
+
+<span class="pc bpc" id="L395" title="1 of 2 branches missed.">    if (clientCfg.gzipEnabled()) {</span>
+<span class="fc" id="L396">      req.withHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);</span>
+    }
+
+<span class="fc" id="L399">    final long backoffMillis = clientCfg.retryDelay();</span>
+<span class="fc" id="L400">    Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; observable = execute(entry, clientCfg, servers.get(0), req);</span>
+<span class="fc bfc" id="L401" title="All 2 branches covered.">    for (int i = 1; i &lt; servers.size(); ++i) {</span>
+<span class="fc" id="L402">      final Server server = servers.get(i);</span>
+<span class="fc" id="L403">      final long delay = backoffMillis &lt;&lt; (i - 1);</span>
+<span class="fc" id="L404">      final int attempt = i + 1;</span>
+<span class="fc" id="L405">      observable = observable</span>
+<span class="fc" id="L406">          .flatMap(new RedirectHandler(entry, clientCfg, server, req))</span>
+<span class="fc" id="L407">          .flatMap(new Func1&lt;HttpClientResponse&lt;ByteBuf&gt;, Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;&gt;() {</span>
+            @Override
+            public Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; call(HttpClientResponse&lt;ByteBuf&gt; res) {
+<span class="fc" id="L410">              final int code = res.getStatus().code();</span>
+              Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; resObs;
+<span class="fc bfc" id="L412" title="All 4 branches covered.">              if (code == 429 || code == 503) {</span>
+<span class="fc" id="L413">                final long retryDelay = getRetryDelay(res, delay);</span>
+<span class="fc" id="L414">                res.getContent().subscribe();</span>
+<span class="fc" id="L415">                entry.withAttempt(attempt);</span>
+<span class="fc" id="L416">                resObs = execute(entry, clientCfg, server, req);</span>
+<span class="fc bfc" id="L417" title="All 2 branches covered.">                if (retryDelay &gt; 0) {</span>
+<span class="fc" id="L418">                  resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);</span>
+                }
+<span class="fc bfc" id="L420" title="All 2 branches covered.">              } else if (code &gt;= 500) {</span>
+<span class="fc" id="L421">                res.getContent().subscribe();</span>
+<span class="fc" id="L422">                entry.withAttempt(attempt);</span>
+<span class="fc" id="L423">                resObs = execute(entry, clientCfg, server, req);</span>
+              } else {
+<span class="fc" id="L425">                resObs = Observable.just(res);</span>
+              }
+<span class="fc" id="L427">              return resObs;</span>
+            }
+          })
+<span class="fc" id="L430">          .onErrorResumeNext(new Func1&lt;Throwable, Observable&lt;? extends HttpClientResponse&lt;ByteBuf&gt;&gt;&gt;() {</span>
+            @Override
+            public Observable&lt;? extends HttpClientResponse&lt;ByteBuf&gt;&gt; call(Throwable throwable) {
+<span class="pc bpc" id="L433" title="1 of 4 branches missed.">              if (throwable instanceof ConnectException</span>
+                  || throwable instanceof ReadTimeoutException) {
+<span class="fc" id="L435">                entry.withAttempt(attempt);</span>
+<span class="fc" id="L436">                return execute(entry, clientCfg, server, req);</span>
+              }
+<span class="nc" id="L438">              return Observable.error(throwable);</span>
+            }
+          });
+    }
+
+<span class="fc" id="L443">    return observable;</span>
+  }
+
+  /**
+   * Execute an HTTP request.
+   *
+   * @param clientCfg
+   *     Configuration settings for the request.
+   * @param server
+   *     Server to send the request to.
+   * @param req
+   *     Request to execute.
+   * @return
+   *     Observable with the response of the request.
+   */
+  static Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;
+  execute(final HttpLogEntry entry, ClientConfig clientCfg, Server server, HttpClientRequest&lt;ByteBuf&gt; req) {
+<span class="fc" id="L460">    entry.withRemoteAddr(server.host()).withRemotePort(server.port());</span>
+
+<span class="fc" id="L462">    HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()</span>
+<span class="fc" id="L463">        .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)</span>
+<span class="fc" id="L464">        .userAgent(clientCfg.userAgent())</span>
+<span class="fc" id="L465">        .build();</span>
+
+    PipelineConfiguratorComposite&lt;HttpClientResponse&lt;ByteBuf&gt;, HttpClientRequest&lt;ByteBuf&gt;&gt;
+<span class="fc" id="L468">        pipelineCfg = new PipelineConfiguratorComposite&lt;HttpClientResponse&lt;ByteBuf&gt;, HttpClientRequest&lt;ByteBuf&gt;&gt;(</span>
+        new HttpClientPipelineConfigurator&lt;ByteBuf, ByteBuf&gt;(),
+        new HttpDecompressionConfigurator(),
+<span class="fc" id="L471">        new HttpObjectAggregationConfigurator(clientCfg.aggregationLimit())</span>
+    );
+
+<span class="fc" id="L474">    HttpClientBuilder&lt;ByteBuf, ByteBuf&gt; builder =</span>
+<span class="fc" id="L475">        RxNetty.&lt;ByteBuf, ByteBuf&gt;newHttpClientBuilder(server.host(), server.port())</span>
+<span class="fc" id="L476">            .pipelineConfigurator(pipelineCfg)</span>
+<span class="fc" id="L477">            .config(config)</span>
+<span class="fc" id="L478">            .channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientCfg.connectTimeout());</span>
+
+<span class="pc bpc" id="L480" title="1 of 2 branches missed.">    if (server.isSecure()) {</span>
+<span class="nc" id="L481">      builder.withSslEngineFactory(DefaultFactories.trustAll());</span>
+    }
+
+<span class="fc" id="L484">    entry.mark(&quot;start&quot;);</span>
+<span class="fc" id="L485">    final HttpClient&lt;ByteBuf, ByteBuf&gt; client = builder.build();</span>
+<span class="fc" id="L486">    return client.submit(req)</span>
+<span class="fc" id="L487">        .doOnNext(new Action1&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;() {</span>
+          @Override public void call(HttpClientResponse&lt;ByteBuf&gt; res) {
+<span class="fc" id="L489">            update(entry, res);</span>
+<span class="fc" id="L490">            HttpLogEntry.logClientRequest(LOGGER, entry);</span>
+<span class="fc" id="L491">          }</span>
+        })
+<span class="fc" id="L493">        .doOnError(new Action1&lt;Throwable&gt;() {</span>
+          @Override public void call(Throwable throwable) {
+<span class="fc" id="L495">            update(entry, throwable);</span>
+<span class="fc" id="L496">            HttpLogEntry.logClientRequest(LOGGER, entry);</span>
+<span class="fc" id="L497">          }</span>
+        })
+<span class="fc" id="L499">        .doOnTerminate(new Action0() {</span>
+          @Override public void call() {
+<span class="fc" id="L501">            client.shutdown();</span>
+<span class="fc" id="L502">          }</span>
+        });
+  }
+
+  /**
+   * Create a copy of a request object. It can only copy the method, uri, and headers so should
+   * not be used for any request with a content already specified.
+   */
+  static HttpClientRequest&lt;ByteBuf&gt; copy(HttpClientRequest&lt;ByteBuf&gt; req, String uri) {
+<span class="fc" id="L511">    HttpClientRequest&lt;ByteBuf&gt; newReq = HttpClientRequest.create(</span>
+<span class="fc" id="L512">        req.getHttpVersion(), req.getMethod(), uri);</span>
+<span class="fc bfc" id="L513" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; h : req.getHeaders().entries()) {</span>
+<span class="fc" id="L514">      newReq.withHeader(h.getKey(), h.getValue());</span>
+<span class="fc" id="L515">    }</span>
+<span class="fc" id="L516">    return newReq;</span>
+  }
+
+  private static long getRetryDelay(HttpClientResponse&lt;ByteBuf&gt; res, long dflt) {
+    try {
+<span class="pc bpc" id="L521" title="1 of 2 branches missed.">      if (res.getHeaders().contains(HttpHeaders.Names.RETRY_AFTER)) {</span>
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.37
+<span class="nc" id="L523">        int delaySeconds = res.getHeaders().getIntHeader(HttpHeaders.Names.RETRY_AFTER);</span>
+<span class="nc" id="L524">        return TimeUnit.MILLISECONDS.convert(delaySeconds, TimeUnit.SECONDS);</span>
+      }
+<span class="nc" id="L526">    } catch (NumberFormatException e) {</span>
+      // We don't support the date version, so use dflt in this case
+<span class="nc" id="L528">      return dflt;</span>
+<span class="fc" id="L529">    }</span>
+<span class="fc" id="L530">    return dflt;</span>
+  }
+
+  /** We expect UTF-8 to always be supported. */
+  private static byte[] getBytes(String s) {
+    try {
+<span class="fc" id="L536">      return s.getBytes(&quot;UTF-8&quot;);</span>
+<span class="nc" id="L537">    } catch (UnsupportedEncodingException e) {</span>
+<span class="nc" id="L538">      throw new RuntimeException(e);</span>
+    }
+  }
+
+  /** Create relative uri string with the path and query. */
+  static String relative(URI uri) {
+<span class="fc" id="L544">    String r = uri.getRawPath();</span>
+<span class="pc bpc" id="L545" title="1 of 2 branches missed.">    if (uri.getRawQuery() != null) {</span>
+<span class="nc" id="L546">      r += &quot;?&quot; + uri.getRawQuery();</span>
+    }
+<span class="fc" id="L548">    return r;</span>
+  }
+
+  private static String fixPath(String path) {
+<span class="pc bpc" id="L552" title="3 of 4 branches missed.">    return (path.startsWith(&quot;/http://&quot;) || path.startsWith(&quot;/https://&quot;))</span>
+<span class="pc" id="L553">        ? path.substring(1)</span>
+        : path;
+  }
+
+  private static ClientConfig getConfigForUri(URI uri) {
+<span class="fc" id="L558">    Matcher m = null;</span>
+<span class="fc" id="L559">    ClientConfig cfg = null;</span>
+<span class="pc bpc" id="L560" title="7 of 10 branches missed.">    switch (uri.getScheme()) {</span>
+      case &quot;niws&quot;:
+<span class="fc" id="L562">        m = NIWS_URI.matcher(uri.toString());</span>
+<span class="pc bpc" id="L563" title="1 of 2 branches missed.">        if (m.matches()) {</span>
+<span class="fc" id="L564">          final URI newUri = URI.create(fixPath(uri.getRawPath()));</span>
+<span class="fc" id="L565">          cfg = new ClientConfig(m.group(1), null, uri, newUri);</span>
+<span class="fc" id="L566">        } else {</span>
+<span class="nc" id="L567">          throw new IllegalArgumentException(&quot;invalid niws uri: &quot; + uri);</span>
+        }
+        break;
+      case &quot;vip&quot;:
+<span class="nc" id="L571">        m = VIP_URI.matcher(uri.toString());</span>
+<span class="nc bnc" id="L572" title="All 2 branches missed.">        if (m.matches()) {</span>
+<span class="nc" id="L573">          cfg = new ClientConfig(m.group(1), m.group(2), uri, uri);</span>
+        } else {
+<span class="nc" id="L575">          throw new IllegalArgumentException(&quot;invalid vip uri: &quot; + uri);</span>
+        }
+        break;
+      default:
+<span class="nc" id="L579">        cfg = new ClientConfig(&quot;default&quot;, null, uri, uri);</span>
+        break;
+    }
+<span class="fc" id="L582">    return cfg;</span>
+  }
+
+  private static List&lt;Server&gt; getServers(ClientConfig clientCfg) {
+<span class="fc" id="L586">    List&lt;Server&gt; servers = null;</span>
+<span class="pc bpc" id="L587" title="1 of 2 branches missed.">    if (clientCfg.uri().isAbsolute()) {</span>
+<span class="fc" id="L588">      servers = getServersForUri(clientCfg, clientCfg.uri());</span>
+    } else {
+<span class="nc" id="L590">      servers = getServersForVip(clientCfg, clientCfg.vip());</span>
+    }
+<span class="fc" id="L592">    return servers;</span>
+  }
+
+  private static List&lt;Server&gt; getServersForUri(ClientConfig clientCfg, URI uri) {
+<span class="fc" id="L596">    final int numRetries = clientCfg.numRetries();</span>
+<span class="fc" id="L597">    final boolean secure = &quot;https&quot;.equals(uri.getScheme());</span>
+<span class="fc" id="L598">    List&lt;Server&gt; servers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L599">    servers.add(new Server(uri.getHost(), getPort(uri), secure));</span>
+<span class="fc bfc" id="L600" title="All 2 branches covered.">    for (int i = 0; i &lt; numRetries; ++i) {</span>
+<span class="fc" id="L601">      servers.add(new Server(uri.getHost(), getPort(uri), secure));</span>
+    }
+<span class="fc" id="L603">    return servers;</span>
+  }
+
+  private static List&lt;Server&gt; getServersForVip(ClientConfig clientCfg, String vip) {
+<span class="nc" id="L607">    Preconditions.checkNotNull(vip, &quot;vipAddress&quot;);</span>
+<span class="nc" id="L608">    DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();</span>
+<span class="nc" id="L609">    List&lt;InstanceInfo&gt; instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());</span>
+<span class="nc" id="L610">    Collections.shuffle(instances);</span>
+
+    // If the number of instances is less than the number of attempts, retry multiple times
+    // on previously used servers
+<span class="nc" id="L614">    int numAttempts = clientCfg.numRetries();</span>
+<span class="nc bnc" id="L615" title="All 2 branches missed.">    while (instances.size() &lt; numAttempts) {</span>
+<span class="nc" id="L616">      instances.addAll(instances);</span>
+    }
+
+<span class="nc" id="L619">    List&lt;Server&gt; servers = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L620" title="All 2 branches missed.">    for (int i = 0; i &lt; numAttempts; ++i) {</span>
+<span class="nc" id="L621">      InstanceInfo instance = instances.get(i);</span>
+<span class="nc bnc" id="L622" title="All 2 branches missed.">      String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();</span>
+<span class="nc bnc" id="L623" title="All 2 branches missed.">      int port = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();</span>
+<span class="nc" id="L624">      servers.add(new Server(host, port, clientCfg.isSecure()));</span>
+    }
+<span class="nc" id="L626">    return servers;</span>
+  }
+
+  /**
+   * Return the port taking care of handling defaults for http and https if not explicit in the
+   * uri.
+   */
+  static int getPort(URI uri) {
+<span class="pc bpc" id="L634" title="1 of 2 branches missed.">    final int defaultPort = (&quot;https&quot;.equals(uri.getScheme())) ? 443 : 80;</span>
+<span class="pc bpc" id="L635" title="1 of 2 branches missed.">    return (uri.getPort() &lt;= 0) ? defaultPort : uri.getPort();</span>
+  }
+
+<span class="fc" id="L638">  private static class HttpDecompressionConfigurator implements PipelineConfigurator&lt;ByteBuf, ByteBuf&gt; {</span>
+    @Override public void configureNewPipeline(ChannelPipeline pipeline) {
+<span class="fc" id="L640">      pipeline.addLast(&quot;deflater&quot;, new HttpContentDecompressor());</span>
+<span class="fc" id="L641">    }</span>
+  }
+
+  /**
+   * Represents a server to try and connect to.
+   */
+  public static class Server {
+    private final String host;
+    private final int port;
+    private final boolean secure;
+
+    /** Create a new instance. */
+<span class="fc" id="L653">    public Server(String host, int port, boolean secure) {</span>
+<span class="fc" id="L654">      this.host = host;</span>
+<span class="fc" id="L655">      this.port = port;</span>
+<span class="fc" id="L656">      this.secure = secure;</span>
+<span class="fc" id="L657">    }</span>
+
+    /** Return the host name for the server. */
+    public String host() {
+<span class="fc" id="L661">      return host;</span>
+    }
+
+    /** Return the port for the server. */
+    public int port() {
+<span class="fc" id="L666">      return port;</span>
+    }
+
+    /** Return true if HTTPS should be used. */
+    public boolean isSecure() {
+<span class="fc" id="L671">      return secure;</span>
+    }
+  }
+
+  /** Configuration settings to use for making the request. */
+  static class ClientConfig {
+
+    private final String name;
+    private final String vipAddress;
+    private final URI originalUri;
+    private final URI uri;
+
+    /** Create a new instance. */
+<span class="fc" id="L684">    ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {</span>
+<span class="fc" id="L685">      this.name = name;</span>
+<span class="fc" id="L686">      this.vipAddress = vipAddress;</span>
+<span class="fc" id="L687">      this.originalUri = originalUri;</span>
+<span class="fc" id="L688">      this.uri = uri;</span>
+<span class="fc" id="L689">    }</span>
+
+    private String prop(String k) {
+<span class="fc" id="L692">      return name + &quot;.niws.client.&quot; + k;</span>
+    }
+
+    /** Name of the client. */
+    String name() {
+<span class="fc" id="L697">      return name;</span>
+    }
+
+    /** Original URI specified before selecting a specific server. */
+    URI originalUri() {
+<span class="fc" id="L702">      return originalUri;</span>
+    }
+
+    /** URI for the request. */
+    URI uri() {
+<span class="fc" id="L707">      return uri;</span>
+    }
+
+    /** Maximum time to wait for a connection attempt in milliseconds. */
+    int connectTimeout() {
+<span class="fc" id="L712">      return Spectator.config().getInt(prop(&quot;ConnectTimeout&quot;), 1000);</span>
+    }
+
+    /** Maximum time to wait for reading data in milliseconds. */
+    int readTimeout() {
+<span class="fc" id="L717">      return Spectator.config().getInt(prop(&quot;ReadTimeout&quot;), 30000);</span>
+    }
+
+    /** Maximum number of redirects to follow. Set to 0 to disable. */
+    int followRedirects() {
+<span class="fc" id="L722">      return Spectator.config().getInt(prop(&quot;FollowRedirects&quot;), 3);</span>
+    }
+
+    /** Should HTTPS be used for the request? */
+    boolean isSecure() {
+<span class="nc" id="L727">      final boolean https = &quot;https&quot;.equals(uri.getScheme());</span>
+<span class="nc bnc" id="L728" title="All 4 branches missed.">      return https || Spectator.config().getBoolean(prop(&quot;IsSecure&quot;), false);</span>
+    }
+
+    /**
+     * When getting a server list from eureka should the host name or ip address be used? The
+     * default is to use the ip address and avoid the dns lookup.
+     */
+    boolean useIpAddress() {
+<span class="nc" id="L736">      return Spectator.config().getBoolean(prop(&quot;UseIpAddress&quot;), false);</span>
+    }
+
+    /**
+     * Should it attempt to compress the request body and automatically decompress the response
+     * body?
+     */
+    boolean gzipEnabled() {
+<span class="fc" id="L744">      return Spectator.config().getBoolean(prop(&quot;GzipEnabled&quot;), true);</span>
+    }
+
+    /** Max number of retries. */
+    int numRetries() {
+<span class="fc" id="L749">      return Spectator.config().getInt(prop(&quot;MaxAutoRetriesNextServer&quot;), 2);</span>
+    }
+
+    /**
+     * Initial delay to use between retries if a throttled response (429 or 503) is received. The
+     * delay will be doubled between each throttled attempt.
+     */
+    int retryDelay() {
+<span class="fc" id="L757">      return Spectator.config().getInt(prop(&quot;RetryDelay&quot;), 500);</span>
+    }
+
+    /** Max size of the request body. Defaults to 10MB. */
+    int aggregationLimit() {
+<span class="fc" id="L762">      return Spectator.config().getInt(prop(&quot;AggregationLimit&quot;), 10 * 1024 * 1024);</span>
+    }
+
+    /** User agent string to use when making the request. */
+    String userAgent() {
+<span class="fc" id="L767">      return Spectator.config().get(prop(&quot;UserAgent&quot;), &quot;RxHttp&quot;);</span>
+    }
+
+    /** VIP used to lookup a set of servers in eureka. */
+    String vip() {
+<span class="nc bnc" id="L772" title="All 2 branches missed.">      return (vipAddress == null)</span>
+<span class="nc" id="L773">          ? Spectator.config().get(prop(&quot;DeploymentContextBasedVipAddresses&quot;))</span>
+          : vipAddress;
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

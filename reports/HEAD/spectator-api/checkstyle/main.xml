@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="5.6">
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/AbstractConfigMap.java">
+</file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/AbstractMeter.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/AbstractRegistry.java">
@@ -20,6 +22,8 @@
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Config.java">
 </file>
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/ConfigMap.java">
+</file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Counter.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/DefaultCounter.java">
@@ -39,6 +43,8 @@
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/DoubleFunction.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/ExtendedRegistry.java">
+</file>
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/FilteredIterator.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Functions.java">
 </file>
@@ -66,11 +72,13 @@
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/ObjectGauge.java">
 </file>
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Predicate.java">
+</file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Registry.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/RegistryListener.java">
-</file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Spectator.java">
+</file>
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/SystemConfigMap.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Tag.java">
 </file>
@@ -79,6 +87,8 @@
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Throwables.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Timer.java">
+</file>
+<file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/Utils.java">
 </file>
 <file name="/Users/brharrington/stash/spectator-brh/spectator-api/src/main/java/com/netflix/spectator/api/ValueFunction.java">
 </file>

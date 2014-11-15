@@ -85,8 +85,8 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
 <span class="fc bfc" id="L85" title="All 2 branches covered.">    if (this == obj) return true;</span>
 <span class="fc bfc" id="L86" title="All 4 branches covered.">    if (obj == null || !(obj instanceof TagList)) return false;</span>
 <span class="fc" id="L87">    TagList other = (TagList) obj;</span>
-<span class="pc bpc" id="L88" title="1 of 10 branches missed.">    return key.equals(other.key) &amp;&amp; value.equals(other.value)</span>
-      &amp;&amp; (next == other.next || (next != null &amp;&amp; next.equals(other.next)));
+<span class="fc bfc" id="L88" title="All 8 branches covered.">    return key.equals(other.key) &amp;&amp; value.equals(other.value)</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">      &amp;&amp; (next == other.next || (next != null &amp;&amp; next.equals(other.next)));</span>
   }
 
   /**
@@ -102,6 +102,22 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
   }
 
   /**
+   * Create a new list with the tags prepended to this list.
+   *
+   * @param tags
+   *     A set of tags to prepend.
+   * @return
+   *     New tag list with the tags prepended.
+   */
+  TagList prepend(Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L113">    TagList head = this;</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    for (Tag t : tags) {</span>
+<span class="fc" id="L115">      head = new TagList(t.key(), t.value(), head);</span>
+<span class="fc" id="L116">    }</span>
+<span class="fc" id="L117">    return head;</span>
+  }
+
+  /**
    * Create a new tag list from the key/value pairs in the iterable.
    *
    * @param tags
@@ -110,14 +126,14 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    *     New tag list with a copy of the data.
    */
   public static TagList create(Iterable&lt;Tag&gt; tags) {
-<span class="fc bfc" id="L113" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
-<span class="fc" id="L114">      return (TagList) tags;</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
+<span class="fc" id="L130">      return (TagList) tags;</span>
     } else {
-<span class="fc" id="L116">      TagList head = null;</span>
-<span class="fc bfc" id="L117" title="All 2 branches covered.">      for (Tag t : tags) {</span>
-<span class="fc" id="L118">        head = new TagList(t.key(), t.value(), head);</span>
-<span class="fc" id="L119">      }</span>
-<span class="fc" id="L120">      return head;</span>
+<span class="fc" id="L132">      TagList head = null;</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">      for (Tag t : tags) {</span>
+<span class="fc" id="L134">        head = new TagList(t.key(), t.value(), head);</span>
+<span class="fc" id="L135">      }</span>
+<span class="fc" id="L136">      return head;</span>
     }
   }
 
@@ -130,14 +146,14 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    *     New tag list with a copy of the data.
    */
   public static TagList create(Map&lt;String, String&gt; tags) {
-<span class="fc" id="L133">    TagList head = null;</span>
-<span class="fc bfc" id="L134" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
-<span class="fc" id="L135">      head = new TagList(t.getKey(), t.getValue(), head);</span>
-<span class="fc" id="L136">    }</span>
-<span class="fc" id="L137">    return head;</span>
+<span class="fc" id="L149">    TagList head = null;</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
+<span class="fc" id="L151">      head = new TagList(t.getKey(), t.getValue(), head);</span>
+<span class="fc" id="L152">    }</span>
+<span class="fc" id="L153">    return head;</span>
   }
 
   /** Empty tag list. */
-<span class="fc" id="L141">  static final TagList EMPTY = null;</span>
+<span class="fc" id="L157">  static final TagList EMPTY = null;</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

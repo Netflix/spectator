@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ChronosGcEventListener.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">ChronosGcEventListener.java</span></div><h1>ChronosGcEventListener.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.nflx;
+
+import com.netflix.client.http.HttpRequest;
+import com.netflix.client.http.HttpResponse;
+import com.netflix.config.DynamicBooleanProperty;
+import com.netflix.config.DynamicPropertyFactory;
+import com.netflix.niws.client.http.RestClient;
+import com.netflix.spectator.gc.GcEvent;
+import com.netflix.spectator.gc.GcEventListener;
+import com.netflix.spectator.ribbon.RestClientFactory;
+import com.sun.management.GcInfo;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
+/**
+ * Listener that sends GC events to a chronos backend.
+ */
+<span class="nc" id="L42">public class ChronosGcEventListener implements GcEventListener {</span>
+
+<span class="nc" id="L44">  private static final DynamicBooleanProperty ENABLED =</span>
+<span class="nc" id="L45">    DynamicPropertyFactory.getInstance().getBooleanProperty(&quot;spectator.gc.chronosEnabled&quot;, true);</span>
+
+<span class="nc" id="L47">  private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+<span class="nc" id="L49">  private final ObjectMapper mapper = new ObjectMapper();</span>
+
+<span class="nc" id="L51">  private final ExecutorService executor = Executors.newSingleThreadExecutor(</span>
+<span class="nc" id="L52">    new ThreadFactory() {</span>
+      public Thread newThread(Runnable r) {
+<span class="nc" id="L54">        Thread t = new Thread(r, &quot;ChronosGcEventListener&quot;);</span>
+<span class="nc" id="L55">        t.setDaemon(true);</span>
+<span class="nc" id="L56">        return t;</span>
+      }
+    });
+
+<span class="nc" id="L60">  private final RestClient client = RestClientFactory.getClient(&quot;chronos_gc&quot;);</span>
+
+  private String getenv(String k) {
+<span class="nc" id="L63">    String v = System.getenv(k);</span>
+<span class="nc bnc" id="L64" title="All 4 branches missed.">    return (v == null || v.length() == 0) ? &quot;unknown&quot; : v;</span>
+  }
+
+  /** Convert a GC event into a map. */
+  Map&lt;String, Object&gt; toGcInfoMap(GcEvent event) {
+<span class="nc" id="L69">    final GcInfo info = event.getInfo().getGcInfo();</span>
+<span class="nc" id="L70">    Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L71">    map.put(&quot;id&quot;, info.getId());</span>
+<span class="nc" id="L72">    map.put(&quot;startTime&quot;, event.getStartTime());</span>
+<span class="nc" id="L73">    map.put(&quot;endTime&quot;, event.getStartTime() + info.getEndTime());</span>
+<span class="nc" id="L74">    map.put(&quot;duration&quot;, info.getDuration());</span>
+<span class="nc" id="L75">    map.put(&quot;memoryBeforeGc&quot;, info.getMemoryUsageBeforeGc());</span>
+<span class="nc" id="L76">    map.put(&quot;memoryAfterGc&quot;, info.getMemoryUsageAfterGc());</span>
+<span class="nc" id="L77">    return map;</span>
+  }
+
+  /** Convert a GC event into a map. */
+  Map&lt;String, Object&gt; toEventMap(GcEvent event) {
+<span class="nc" id="L82">    Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L83">    map.put(&quot;action&quot;, event.getInfo().getGcAction());</span>
+<span class="nc" id="L84">    map.put(&quot;cause&quot;, event.getInfo().getGcCause());</span>
+<span class="nc" id="L85">    map.put(&quot;name&quot;, event.getName());</span>
+<span class="nc" id="L86">    map.put(&quot;gcInfo&quot;, toGcInfoMap(event));</span>
+<span class="nc" id="L87">    map.put(&quot;app&quot;, getenv(&quot;NETFLIX_APP&quot;));</span>
+<span class="nc" id="L88">    map.put(&quot;cluster&quot;, getenv(&quot;NETFLIX_CLUSTER&quot;));</span>
+<span class="nc" id="L89">    map.put(&quot;asg&quot;, getenv(&quot;NETFLIX_AUTO_SCALE_GROUP&quot;));</span>
+<span class="nc" id="L90">    map.put(&quot;region&quot;, getenv(&quot;EC2_REGION&quot;));</span>
+<span class="nc" id="L91">    map.put(&quot;zone&quot;, getenv(&quot;EC2_AVAILABILITY_ZONE&quot;));</span>
+<span class="nc" id="L92">    map.put(&quot;ami&quot;, getenv(&quot;EC2_AMI_ID&quot;));</span>
+<span class="nc" id="L93">    map.put(&quot;node&quot;, getenv(&quot;EC2_INSTANCE_ID&quot;));</span>
+<span class="nc" id="L94">    return map;</span>
+  }
+
+  @Override
+  public void onComplete(final GcEvent event) {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">    if (!ENABLED.get()) {</span>
+<span class="nc" id="L100">      return;</span>
+    }
+
+    try {
+<span class="nc" id="L104">      final byte[] json = mapper.writeValueAsBytes(toEventMap(event));</span>
+<span class="nc" id="L105">      executor.submit(new Runnable() {</span>
+        public void run() {
+<span class="nc" id="L107">          HttpRequest request = new HttpRequest.Builder()</span>
+<span class="nc" id="L108">            .verb(HttpRequest.Verb.POST)</span>
+<span class="nc" id="L109">            .uri(URI.create(&quot;/api/v2/event&quot;))</span>
+<span class="nc" id="L110">            .header(&quot;Content-Type&quot;, &quot;application/json&quot;)</span>
+<span class="nc" id="L111">            .entity(json)</span>
+<span class="nc" id="L112">            .build();</span>
+<span class="nc" id="L113">          try (HttpResponse response = client.executeWithLoadBalancer(request)) {</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (response.getStatus() != 200) {</span>
+<span class="nc" id="L115">              logger.warn(&quot;failed to send GC event to chronos (status={})&quot;, response.getStatus());</span>
+            }
+<span class="nc bnc" id="L117" title="All 8 branches missed.">          } catch (Exception e) {</span>
+<span class="nc" id="L118">            logger.warn(&quot;failed to send GC event to chronos&quot;, e);</span>
+<span class="nc" id="L119">          }</span>
+<span class="nc" id="L120">        }</span>
+      });
+<span class="nc" id="L122">    } catch (IOException e) {</span>
+<span class="nc" id="L123">      logger.warn(&quot;failed to send GC event to chronos&quot;, e);</span>
+<span class="nc" id="L124">    }</span>
+<span class="nc" id="L125">  }</span>
+
+  /** Shutdown the executor used to send data to chronos. */
+  public void shutdown() {
+<span class="nc" id="L129">    executor.shutdown();</span>
+<span class="nc" id="L130">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

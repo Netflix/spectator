@@ -41,8 +41,12 @@ final class NoopId implements Id {
 <span class="fc" id="L41">    return this;</span>
   }
 
+  @Override public Id withTags(Iterable&lt;Tag&gt; tags) {
+<span class="nc" id="L45">    return this;</span>
+  }
+
   @Override public String toString() {
-<span class="fc" id="L45">    return name();</span>
+<span class="fc" id="L49">    return name();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
