@@ -13,16 +13,12 @@ To instrument your code you need to depend on the api library. This provides the
 for you to code against and build test cases. The only dependency is slf4j.
 
 ```
-com.netflix.spectator:spectator-api:latest.release
+com.netflix.spectator:spectator-api:0.14.2
 ```
 
-If running at Netflix with the standard platform, use the spectator-nflx library to automatically
-setup and initalize with the correct bindings to report data to internal tools like Atlas and
-Chronos.
-
-```
-com.netflix.spectator:spectator-nflx:latest.release
-```
+If running at Netflix with the standard platform, see the
+[Netflix Integration](https://github.com/Netflix/spectator/wiki/Netflix-Integration) page on the
+wiki.
 
 ## Instrumenting Code
 
@@ -46,7 +42,8 @@ public class Server {
   private final Timer requestLatency;
   private final DistributionSummary responseSizes;
 
-  // We can pass in the registry to make unit testing easier
+  // We can pass in the registry to make unit testing easier. Outside of tests it should typically
+  // be bound to Spectator.registry() to make sure data goes to the right place.
   public Server(ExtendedRegistry registry) {
     this.registry = registry;
 
@@ -74,8 +71,8 @@ public class Server {
 
       // Update the counter id with dimensions based on the request. The counter will then
       // be looked up in the registry which should be fairly cheap, such as lookup of id object
-      // in a ConcurrentHashMap, it is more expensive than having a local variable set to the
-      // counter.
+      // in a ConcurrentHashMap. However, it is more expensive than having a local variable set
+      // to the counter.
       final Id cntId = requestCountId
         .withTag("country", req.country())
         .withTag("status", res.status());
