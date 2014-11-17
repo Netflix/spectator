@@ -607,18 +607,26 @@ public final class RxHttp {
     Preconditions.checkNotNull(vip, "vipAddress");
     DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();
     List<InstanceInfo> instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
-    Collections.shuffle(instances);
+    List<InstanceInfo> filtered = new ArrayList<>(instances.size());
+    for (InstanceInfo info : instances) {
+      if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
+        filtered.add(info);
+      }
+    }
+    Collections.shuffle(filtered);
 
     // If the number of instances is less than the number of attempts, retry multiple times
     // on previously used servers
-    int numAttempts = clientCfg.numRetries();
-    while (instances.size() < numAttempts) {
-      instances.addAll(instances);
+    int numAttempts = clientCfg.numRetries() + 1;
+    int numServers = filtered.size();
+
+    if (numServers == 0) {
+      throw new IllegalStateException("no UP servers for vip: " + vip);
     }
 
     List<Server> servers = new ArrayList<>();
     for (int i = 0; i < numAttempts; ++i) {
-      InstanceInfo instance = instances.get(i);
+      InstanceInfo instance = filtered.get(i % numServers);
       String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
       int port = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();
       servers.add(new Server(host, port, clientCfg.isSecure()));
