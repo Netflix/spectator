@@ -140,7 +140,7 @@ project(':spectator-nflx-plugin') {
     compile 'com.netflix.rxnetty:rx-netty:0.3.18'
     compile 'com.netflix.rxnetty:rx-netty-contexts:0.3.18'
     compile 'com.netflix.rxnetty:rx-netty-servo:0.3.18'
-    compile 'io.reactivex:rxjava:1.0.0-rc.8'
+    compile 'io.reactivex:rxjava:1.0.0'
     testCompile 'com.netflix.governator:governator:1.2.20'
   }
 }
