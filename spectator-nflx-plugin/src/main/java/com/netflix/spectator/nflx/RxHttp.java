@@ -570,7 +570,7 @@ public final class RxHttp {
       case "vip":
         m = VIP_URI.matcher(uri.toString());
         if (m.matches()) {
-          cfg = new ClientConfig(m.group(1), m.group(2), uri, uri);
+          cfg = new ClientConfig(m.group(1), m.group(2), uri, URI.create(uri.getRawPath()));
         } else {
           throw new IllegalArgumentException("invalid vip uri: " + uri);
         }
