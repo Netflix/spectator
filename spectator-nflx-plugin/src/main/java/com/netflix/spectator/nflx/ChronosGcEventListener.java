@@ -25,12 +25,12 @@ import com.netflix.spectator.gc.GcEvent;
 import com.netflix.spectator.gc.GcEventListener;
 import com.sun.management.GcInfo;
 import io.netty.buffer.ByteBuf;
-import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.functions.Action0;
-import rx.functions.Action1;
+import iep.rx.functions.Action0;
+import iep.rx.functions.Action1;
 
 import java.io.IOException;
 import java.net.URI;
