@@ -627,11 +627,17 @@ public final class RxHttp {
     List<Server> servers = new ArrayList<>();
     for (int i = 0; i < numAttempts; ++i) {
       InstanceInfo instance = filtered.get(i % numServers);
-      String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
-      int port = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();
-      servers.add(new Server(host, port, clientCfg.isSecure()));
+      servers.add(toServer(clientCfg, instance));
     }
     return servers;
+  }
+
+  /** Convert a eureka InstanceInfo object to a server. */
+  static Server toServer(ClientConfig clientCfg, InstanceInfo instance) {
+    String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
+    int dfltPort = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();
+    int port = clientCfg.port(dfltPort);
+    return new Server(host, port, clientCfg.isSecure());
   }
 
   /**
@@ -713,6 +719,11 @@ public final class RxHttp {
     /** URI for the request. */
     URI uri() {
       return uri;
+    }
+
+    /** Port to use for the connection. */
+    int port(int dflt) {
+      return Spectator.config().getInt(prop("Port"), dflt);
     }
 
     /** Maximum time to wait for a connection attempt in milliseconds. */
