@@ -43,6 +43,8 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   private final StepCounter servoTotalOfSquares;
   private final MaxGauge servoMax;
 
+  private final AtomicLong lastUpdated;
+
   /** Create a new instance. */
   ServoDistributionSummary(ServoRegistry r, Id id) {
     this.clock = r.clock();
@@ -55,6 +57,8 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
     servoTotalOfSquares = new StepCounter(
         r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)));
     servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
+
+    lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
@@ -69,7 +73,8 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    long now = clock.wallTime();
+    return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
   }
 
   @Override public void record(long amount) {
@@ -80,6 +85,7 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
       servoTotalOfSquares.increment(amount * amount);
       servoCount.increment();
       servoMax.update(amount);
+      lastUpdated.set(clock.wallTime());
     }
   }
 

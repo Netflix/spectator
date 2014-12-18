@@ -31,12 +31,14 @@ class ServoCounter implements Counter, ServoMeter {
   private final Clock clock;
   private final com.netflix.servo.monitor.StepCounter impl;
   private final AtomicLong count;
+  private final AtomicLong lastUpdated;
 
   /** Create a new instance. */
   ServoCounter(Clock clock, com.netflix.servo.monitor.StepCounter impl) {
     this.clock = clock;
     this.impl = impl;
     this.count = new AtomicLong(0L);
+    this.lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
@@ -48,7 +50,8 @@ class ServoCounter implements Counter, ServoMeter {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    long now = clock.wallTime();
+    return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
   }
 
   @Override public Iterable<Measurement> measure() {
@@ -60,11 +63,13 @@ class ServoCounter implements Counter, ServoMeter {
   @Override public void increment() {
     impl.increment();
     count.incrementAndGet();
+    lastUpdated.set(clock.wallTime());
   }
 
   @Override public void increment(long amount) {
     impl.increment(amount);
     count.addAndGet(amount);
+    lastUpdated.set(clock.wallTime());
   }
 
   @Override public long count() {
