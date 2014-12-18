@@ -142,19 +142,14 @@ public class HttpLogEntry {
     REGISTRY.distributionSummary(RES_ENTITY_SIZE.withTags(dimensions.tags()))
         .record(entry.responseContentLength);
 
-    // Write data out to logger if enabled
-    if (entry.exception != null || entry.statusCode >= 500) {
-      if (logger.isErrorEnabled(marker)) {
-        logger.error(marker, entry.toString());
-      }
-    } else if (entry.statusCode >= 400) {
-      if (logger.isWarnEnabled(marker)) {
-        logger.warn(marker, entry.toString());
-      }
-    } else {
-      if (logger.isInfoEnabled(marker)) {
-        logger.info(marker, entry.toString());
-      }
+    // Write data out to logger if enabled. For many monitoring use-cases there tend to be
+    // frequent requests that can be quite noisy so the log level is set to debug. This class is
+    // mostly intended to generate something like an access log so it presumes users who want the
+    // information will configure an appender based on the markers to send the data to a
+    // dedicated file. Others shouldn't have to deal with the spam in the logs, so debug for the
+    // level seems reasonable.
+    if (logger.isDebugEnabled(marker)) {
+      logger.debug(marker, entry.toString());
     }
   }
 
