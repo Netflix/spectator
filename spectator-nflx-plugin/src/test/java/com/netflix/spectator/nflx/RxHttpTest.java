@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.netflix.appinfo.InstanceInfo;
 import com.netflix.config.ConfigurationManager;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
@@ -47,6 +48,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -562,6 +564,33 @@ public class RxHttpTest {
     RxHttp.submit(HttpClientRequest.createPost(uri("/empty").toString()).withHeader("k", "v"), "{}")
         .toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
+  }
+
+  @Test
+  public void portOverrideSetting() throws Exception {
+    set("port-override.niws.client.Port", "2");
+    URI origUri = URI.create("niws://port-override/foo");
+    URI relUri = URI.create("/foo");
+    RxHttp.ClientConfig cfg = new RxHttp.ClientConfig("port-override", "vip", origUri, relUri);
+    InstanceInfo info = InstanceInfo.Builder.newBuilder()
+        .setAppName("foo")
+        .setPort(1)
+        .build();
+    RxHttp.Server server = RxHttp.toServer(cfg, info);
+    Assert.assertEquals(server.port(), 2);
+  }
+
+  @Test
+  public void portDefaultSetting() throws Exception {
+    URI origUri = URI.create("niws://port-default/foo");
+    URI relUri = URI.create("/foo");
+    RxHttp.ClientConfig cfg = new RxHttp.ClientConfig("port-default", "vip", origUri, relUri);
+    InstanceInfo info = InstanceInfo.Builder.newBuilder()
+        .setAppName("foo")
+        .setPort(1)
+        .build();
+    RxHttp.Server server = RxHttp.toServer(cfg, info);
+    Assert.assertEquals(server.port(), 1);
   }
 }
 
