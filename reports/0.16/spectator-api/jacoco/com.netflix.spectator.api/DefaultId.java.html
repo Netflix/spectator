@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DefaultId.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">DefaultId.java</span></div><h1>DefaultId.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.*;
+
+/** Id implementation for the default registry. */
+final class DefaultId implements Id {
+
+<span class="fc" id="L25">  private static final Set&lt;String&gt; EMPTY = new HashSet&lt;&gt;();</span>
+
+  private final String name;
+  private final TagList tags;
+
+  /** Create a new instance. */
+  DefaultId(String name) {
+<span class="fc" id="L32">    this(name, TagList.EMPTY);</span>
+<span class="fc" id="L33">  }</span>
+
+  /** Create a new instance. */
+<span class="fc" id="L36">  DefaultId(String name, TagList tags) {</span>
+<span class="fc" id="L37">    this.name = Preconditions.checkNotNull(name, &quot;name&quot;);</span>
+<span class="fc" id="L38">    this.tags = tags;</span>
+<span class="fc" id="L39">  }</span>
+
+  @Override public String name() {
+<span class="fc" id="L42">    return name;</span>
+  }
+
+  @Override public Iterable&lt;Tag&gt; tags() {
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    return (tags == TagList.EMPTY) ? Collections.&lt;Tag&gt;emptyList() : tags;</span>
+  }
+
+  @Override public DefaultId withTag(Tag tag) {
+<span class="nc" id="L50">    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));</span>
+  }
+
+  @Override public DefaultId withTag(String key, String value) {
+<span class="fc" id="L54">    return new DefaultId(name, new TagList(key, value, tags));</span>
+  }
+
+  @Override public DefaultId withTags(Iterable&lt;Tag&gt; ts) {
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">    TagList tmp = (tags == null) ? TagList.create(ts) : tags.prepend(ts);</span>
+<span class="fc" id="L59">    return new DefaultId(name, tmp);</span>
+  }
+
+  /**
+   * Returns a new id with the tag list sorted by key and with no duplicate keys. If a duplicate
+   * is found the last entry in the list with a given key will be used.
+   */
+  public DefaultId normalize() {
+<span class="fc" id="L67">    return rollup(EMPTY, false);</span>
+  }
+
+  /**
+   * Create a new id by removing tags from the list. This operation will 1) sort the list by the
+   * tag keys, 2) dedup entries if multiple have the same key, and 3) remove keys specified by
+   * the parameters.
+   *
+   * @param keys
+   *     Set of keys to either keep or remove.
+   * @param keep
+   *     If true, then the new id can only have tag keys in the provided set. Otherwise the new id
+   *     can only have ids not in that set.
+   * @return
+   *     New identifier after applying the rollup.
+   */
+  public DefaultId rollup(Set&lt;String&gt; keys, boolean keep) {
+<span class="fc" id="L84">    Map&lt;String, String&gt; ts = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">    for (Tag t : tags) {</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">      if (keys.contains(t.key()) == keep) {</span>
+<span class="fc" id="L87">        ts.put(t.key(), t.value());</span>
+      }
+<span class="fc" id="L89">    }</span>
+<span class="fc" id="L90">    return new DefaultId(name, TagList.create(ts));</span>
+  }
+
+  @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L94" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L95" title="All 4 branches covered.">    if (obj == null || !(obj instanceof DefaultId)) return false;</span>
+<span class="fc" id="L96">    DefaultId other = (DefaultId) obj;</span>
+<span class="pc bpc" id="L97" title="2 of 8 branches missed.">    return name.equals(other.name)</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">      &amp;&amp; ((tags == null &amp;&amp; other.tags == null) || (tags != null &amp;&amp; tags.equals(other.tags)));</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc bfc" id="L102" title="All 2 branches covered.">    return name.hashCode() + (tags == null ? 0 : tags.hashCode());</span>
+  }
+
+  @Override public String toString() {
+<span class="fc" id="L106">    StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L107">    buf.append(name);</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">    for (Tag t : tags()) {</span>
+<span class="fc" id="L109">      buf.append(&quot;:&quot;).append(t.key()).append(&quot;=&quot;).append(t.value());</span>
+<span class="fc" id="L110">    }</span>
+<span class="fc" id="L111">    return buf.toString();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

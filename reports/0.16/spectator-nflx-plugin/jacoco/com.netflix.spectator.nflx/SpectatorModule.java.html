@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SpectatorModule.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">SpectatorModule.java</span></div><h1>SpectatorModule.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2014 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.nflx;
+
+import com.google.inject.AbstractModule;
+import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+
+/**
+ * Guice module to configure the appropriate bindings for running an application. Note that this
+ * will configure it to use the global registry bindings for reporting. This also means that test
+ * cases will not be completely isolated. For unit tests see
+ * {@link com.netflix.spectator.nflx.TestModule}. Typical usage:
+ *
+ * &lt;p&gt;&lt;b&gt;User code&lt;/b&gt;&lt;/p&gt;
+ * &lt;pre&gt;
+ * public class Foo {
+ *   private final Counter counter;
+ *
+ *  {@literal @}Inject
+ *   public Foo(ExtendedRegistry registry) {
+ *     counter = registry.counter(&quot;foo.doSomething&quot;);
+ *   }
+ *
+ *   public void doSomething() {
+ *     counter.increment();
+ *   }
+ * }
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;&lt;b&gt;Governator&lt;/b&gt;&lt;/p&gt;
+ * &lt;p&gt;One of the classes requires an {@link javax.annotation.PostConstruct} block to initialize
+ * so governator should be used to manage the lifecycle as guice doesn't support it directly.&lt;/p&gt;
+ * &lt;pre&gt;
+ * Injector injector = LifecycleInjector.builder()
+ *   .withModules(new SpectatorModule())
+ *   .build()
+ *   .createInjector();
+ * injector.getInstance(LifecycleManager.class).start();
+ * &lt;/pre&gt;
+ */
+<span class="fc" id="L56">public class SpectatorModule extends AbstractModule {</span>
+  @Override protected void configure() {
+<span class="fc" id="L58">    bind(Plugin.class).asEagerSingleton();</span>
+<span class="fc" id="L59">    bind(ExtendedRegistry.class).toInstance(Spectator.registry());</span>
+<span class="fc" id="L60">    bind(Registry.class).toInstance(Spectator.registry());</span>
+<span class="fc" id="L61">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

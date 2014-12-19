@@ -27,22 +27,22 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.timeout.ReadTimeoutException;
-import io.reactivex.netty.RxNetty;
-import io.reactivex.netty.pipeline.PipelineConfigurator;
-import io.reactivex.netty.pipeline.PipelineConfiguratorComposite;
-import io.reactivex.netty.pipeline.ssl.DefaultFactories;
-import io.reactivex.netty.protocol.http.HttpObjectAggregationConfigurator;
-import io.reactivex.netty.protocol.http.client.HttpClient;
-import io.reactivex.netty.protocol.http.client.HttpClientBuilder;
-import io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
-import io.reactivex.netty.protocol.http.client.HttpClientRequest;
-import io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import iep.io.reactivex.netty.RxNetty;
+import iep.io.reactivex.netty.pipeline.PipelineConfigurator;
+import iep.io.reactivex.netty.pipeline.PipelineConfiguratorComposite;
+import iep.io.reactivex.netty.pipeline.ssl.DefaultFactories;
+import iep.io.reactivex.netty.protocol.http.HttpObjectAggregationConfigurator;
+import iep.io.reactivex.netty.protocol.http.client.HttpClient;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientBuilder;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
-import rx.functions.Action0;
-import rx.functions.Action1;
-import rx.functions.Func1;
+import iep.rx.Observable;
+import iep.rx.functions.Action0;
+import iep.rx.functions.Action1;
+import iep.rx.functions.Func1;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -570,7 +570,7 @@ public final class RxHttp {
       case &quot;vip&quot;:
 <span class="nc" id="L571">        m = VIP_URI.matcher(uri.toString());</span>
 <span class="nc bnc" id="L572" title="All 2 branches missed.">        if (m.matches()) {</span>
-<span class="nc" id="L573">          cfg = new ClientConfig(m.group(1), m.group(2), uri, uri);</span>
+<span class="nc" id="L573">          cfg = new ClientConfig(m.group(1), m.group(2), uri, URI.create(uri.getRawPath()));</span>
         } else {
 <span class="nc" id="L575">          throw new IllegalArgumentException(&quot;invalid vip uri: &quot; + uri);</span>
         }
@@ -607,23 +607,37 @@ public final class RxHttp {
 <span class="nc" id="L607">    Preconditions.checkNotNull(vip, &quot;vipAddress&quot;);</span>
 <span class="nc" id="L608">    DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();</span>
 <span class="nc" id="L609">    List&lt;InstanceInfo&gt; instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());</span>
-<span class="nc" id="L610">    Collections.shuffle(instances);</span>
+<span class="nc" id="L610">    List&lt;InstanceInfo&gt; filtered = new ArrayList&lt;&gt;(instances.size());</span>
+<span class="nc bnc" id="L611" title="All 2 branches missed.">    for (InstanceInfo info : instances) {</span>
+<span class="nc bnc" id="L612" title="All 2 branches missed.">      if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {</span>
+<span class="nc" id="L613">        filtered.add(info);</span>
+      }
+<span class="nc" id="L615">    }</span>
+<span class="nc" id="L616">    Collections.shuffle(filtered);</span>
 
     // If the number of instances is less than the number of attempts, retry multiple times
     // on previously used servers
-<span class="nc" id="L614">    int numAttempts = clientCfg.numRetries();</span>
-<span class="nc bnc" id="L615" title="All 2 branches missed.">    while (instances.size() &lt; numAttempts) {</span>
-<span class="nc" id="L616">      instances.addAll(instances);</span>
+<span class="nc" id="L620">    int numAttempts = clientCfg.numRetries() + 1;</span>
+<span class="nc" id="L621">    int numServers = filtered.size();</span>
+
+<span class="nc bnc" id="L623" title="All 2 branches missed.">    if (numServers == 0) {</span>
+<span class="nc" id="L624">      throw new IllegalStateException(&quot;no UP servers for vip: &quot; + vip);</span>
     }
 
-<span class="nc" id="L619">    List&lt;Server&gt; servers = new ArrayList&lt;&gt;();</span>
-<span class="nc bnc" id="L620" title="All 2 branches missed.">    for (int i = 0; i &lt; numAttempts; ++i) {</span>
-<span class="nc" id="L621">      InstanceInfo instance = instances.get(i);</span>
-<span class="nc bnc" id="L622" title="All 2 branches missed.">      String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();</span>
-<span class="nc bnc" id="L623" title="All 2 branches missed.">      int port = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();</span>
-<span class="nc" id="L624">      servers.add(new Server(host, port, clientCfg.isSecure()));</span>
+<span class="nc" id="L627">    List&lt;Server&gt; servers = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L628" title="All 2 branches missed.">    for (int i = 0; i &lt; numAttempts; ++i) {</span>
+<span class="nc" id="L629">      InstanceInfo instance = filtered.get(i % numServers);</span>
+<span class="nc" id="L630">      servers.add(toServer(clientCfg, instance));</span>
     }
-<span class="nc" id="L626">    return servers;</span>
+<span class="nc" id="L632">    return servers;</span>
+  }
+
+  /** Convert a eureka InstanceInfo object to a server. */
+  static Server toServer(ClientConfig clientCfg, InstanceInfo instance) {
+<span class="pc bpc" id="L637" title="1 of 2 branches missed.">    String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();</span>
+<span class="pc bpc" id="L638" title="1 of 2 branches missed.">    int dfltPort = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();</span>
+<span class="fc" id="L639">    int port = clientCfg.port(dfltPort);</span>
+<span class="fc" id="L640">    return new Server(host, port, clientCfg.isSecure());</span>
   }
 
   /**
@@ -631,14 +645,14 @@ public final class RxHttp {
    * uri.
    */
   static int getPort(URI uri) {
-<span class="pc bpc" id="L634" title="1 of 2 branches missed.">    final int defaultPort = (&quot;https&quot;.equals(uri.getScheme())) ? 443 : 80;</span>
-<span class="pc bpc" id="L635" title="1 of 2 branches missed.">    return (uri.getPort() &lt;= 0) ? defaultPort : uri.getPort();</span>
+<span class="pc bpc" id="L648" title="1 of 2 branches missed.">    final int defaultPort = (&quot;https&quot;.equals(uri.getScheme())) ? 443 : 80;</span>
+<span class="pc bpc" id="L649" title="1 of 2 branches missed.">    return (uri.getPort() &lt;= 0) ? defaultPort : uri.getPort();</span>
   }
 
-<span class="fc" id="L638">  private static class HttpDecompressionConfigurator implements PipelineConfigurator&lt;ByteBuf, ByteBuf&gt; {</span>
+<span class="fc" id="L652">  private static class HttpDecompressionConfigurator implements PipelineConfigurator&lt;ByteBuf, ByteBuf&gt; {</span>
     @Override public void configureNewPipeline(ChannelPipeline pipeline) {
-<span class="fc" id="L640">      pipeline.addLast(&quot;deflater&quot;, new HttpContentDecompressor());</span>
-<span class="fc" id="L641">    }</span>
+<span class="fc" id="L654">      pipeline.addLast(&quot;deflater&quot;, new HttpContentDecompressor());</span>
+<span class="fc" id="L655">    }</span>
   }
 
   /**
@@ -650,25 +664,25 @@ public final class RxHttp {
     private final boolean secure;
 
     /** Create a new instance. */
-<span class="fc" id="L653">    public Server(String host, int port, boolean secure) {</span>
-<span class="fc" id="L654">      this.host = host;</span>
-<span class="fc" id="L655">      this.port = port;</span>
-<span class="fc" id="L656">      this.secure = secure;</span>
-<span class="fc" id="L657">    }</span>
+<span class="fc" id="L667">    public Server(String host, int port, boolean secure) {</span>
+<span class="fc" id="L668">      this.host = host;</span>
+<span class="fc" id="L669">      this.port = port;</span>
+<span class="fc" id="L670">      this.secure = secure;</span>
+<span class="fc" id="L671">    }</span>
 
     /** Return the host name for the server. */
     public String host() {
-<span class="fc" id="L661">      return host;</span>
+<span class="fc" id="L675">      return host;</span>
     }
 
     /** Return the port for the server. */
     public int port() {
-<span class="fc" id="L666">      return port;</span>
+<span class="fc" id="L680">      return port;</span>
     }
 
     /** Return true if HTTPS should be used. */
     public boolean isSecure() {
-<span class="fc" id="L671">      return secure;</span>
+<span class="fc" id="L685">      return secure;</span>
     }
   }
 
@@ -681,51 +695,56 @@ public final class RxHttp {
     private final URI uri;
 
     /** Create a new instance. */
-<span class="fc" id="L684">    ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {</span>
-<span class="fc" id="L685">      this.name = name;</span>
-<span class="fc" id="L686">      this.vipAddress = vipAddress;</span>
-<span class="fc" id="L687">      this.originalUri = originalUri;</span>
-<span class="fc" id="L688">      this.uri = uri;</span>
-<span class="fc" id="L689">    }</span>
+<span class="fc" id="L698">    ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {</span>
+<span class="fc" id="L699">      this.name = name;</span>
+<span class="fc" id="L700">      this.vipAddress = vipAddress;</span>
+<span class="fc" id="L701">      this.originalUri = originalUri;</span>
+<span class="fc" id="L702">      this.uri = uri;</span>
+<span class="fc" id="L703">    }</span>
 
     private String prop(String k) {
-<span class="fc" id="L692">      return name + &quot;.niws.client.&quot; + k;</span>
+<span class="fc" id="L706">      return name + &quot;.niws.client.&quot; + k;</span>
     }
 
     /** Name of the client. */
     String name() {
-<span class="fc" id="L697">      return name;</span>
+<span class="fc" id="L711">      return name;</span>
     }
 
     /** Original URI specified before selecting a specific server. */
     URI originalUri() {
-<span class="fc" id="L702">      return originalUri;</span>
+<span class="fc" id="L716">      return originalUri;</span>
     }
 
     /** URI for the request. */
     URI uri() {
-<span class="fc" id="L707">      return uri;</span>
+<span class="fc" id="L721">      return uri;</span>
+    }
+
+    /** Port to use for the connection. */
+    int port(int dflt) {
+<span class="fc" id="L726">      return Spectator.config().getInt(prop(&quot;Port&quot;), dflt);</span>
     }
 
     /** Maximum time to wait for a connection attempt in milliseconds. */
     int connectTimeout() {
-<span class="fc" id="L712">      return Spectator.config().getInt(prop(&quot;ConnectTimeout&quot;), 1000);</span>
+<span class="fc" id="L731">      return Spectator.config().getInt(prop(&quot;ConnectTimeout&quot;), 1000);</span>
     }
 
     /** Maximum time to wait for reading data in milliseconds. */
     int readTimeout() {
-<span class="fc" id="L717">      return Spectator.config().getInt(prop(&quot;ReadTimeout&quot;), 30000);</span>
+<span class="fc" id="L736">      return Spectator.config().getInt(prop(&quot;ReadTimeout&quot;), 30000);</span>
     }
 
     /** Maximum number of redirects to follow. Set to 0 to disable. */
     int followRedirects() {
-<span class="fc" id="L722">      return Spectator.config().getInt(prop(&quot;FollowRedirects&quot;), 3);</span>
+<span class="fc" id="L741">      return Spectator.config().getInt(prop(&quot;FollowRedirects&quot;), 3);</span>
     }
 
     /** Should HTTPS be used for the request? */
     boolean isSecure() {
-<span class="nc" id="L727">      final boolean https = &quot;https&quot;.equals(uri.getScheme());</span>
-<span class="nc bnc" id="L728" title="All 4 branches missed.">      return https || Spectator.config().getBoolean(prop(&quot;IsSecure&quot;), false);</span>
+<span class="fc" id="L746">      final boolean https = &quot;https&quot;.equals(uri.getScheme());</span>
+<span class="pc bpc" id="L747" title="2 of 4 branches missed.">      return https || Spectator.config().getBoolean(prop(&quot;IsSecure&quot;), false);</span>
     }
 
     /**
@@ -733,7 +752,7 @@ public final class RxHttp {
      * default is to use the ip address and avoid the dns lookup.
      */
     boolean useIpAddress() {
-<span class="nc" id="L736">      return Spectator.config().getBoolean(prop(&quot;UseIpAddress&quot;), false);</span>
+<span class="fc" id="L755">      return Spectator.config().getBoolean(prop(&quot;UseIpAddress&quot;), false);</span>
     }
 
     /**
@@ -741,12 +760,12 @@ public final class RxHttp {
      * body?
      */
     boolean gzipEnabled() {
-<span class="fc" id="L744">      return Spectator.config().getBoolean(prop(&quot;GzipEnabled&quot;), true);</span>
+<span class="fc" id="L763">      return Spectator.config().getBoolean(prop(&quot;GzipEnabled&quot;), true);</span>
     }
 
     /** Max number of retries. */
     int numRetries() {
-<span class="fc" id="L749">      return Spectator.config().getInt(prop(&quot;MaxAutoRetriesNextServer&quot;), 2);</span>
+<span class="fc" id="L768">      return Spectator.config().getInt(prop(&quot;MaxAutoRetriesNextServer&quot;), 2);</span>
     }
 
     /**
@@ -754,23 +773,23 @@ public final class RxHttp {
      * delay will be doubled between each throttled attempt.
      */
     int retryDelay() {
-<span class="fc" id="L757">      return Spectator.config().getInt(prop(&quot;RetryDelay&quot;), 500);</span>
+<span class="fc" id="L776">      return Spectator.config().getInt(prop(&quot;RetryDelay&quot;), 500);</span>
     }
 
     /** Max size of the request body. Defaults to 10MB. */
     int aggregationLimit() {
-<span class="fc" id="L762">      return Spectator.config().getInt(prop(&quot;AggregationLimit&quot;), 10 * 1024 * 1024);</span>
+<span class="fc" id="L781">      return Spectator.config().getInt(prop(&quot;AggregationLimit&quot;), 10 * 1024 * 1024);</span>
     }
 
     /** User agent string to use when making the request. */
     String userAgent() {
-<span class="fc" id="L767">      return Spectator.config().get(prop(&quot;UserAgent&quot;), &quot;RxHttp&quot;);</span>
+<span class="fc" id="L786">      return Spectator.config().get(prop(&quot;UserAgent&quot;), &quot;RxHttp&quot;);</span>
     }
 
     /** VIP used to lookup a set of servers in eureka. */
     String vip() {
-<span class="nc bnc" id="L772" title="All 2 branches missed.">      return (vipAddress == null)</span>
-<span class="nc" id="L773">          ? Spectator.config().get(prop(&quot;DeploymentContextBasedVipAddresses&quot;))</span>
+<span class="nc bnc" id="L791" title="All 2 branches missed.">      return (vipAddress == null)</span>
+<span class="nc" id="L792">          ? Spectator.config().get(prop(&quot;DeploymentContextBasedVipAddresses&quot;))</span>
           : vipAddress;
     }
   }
