@@ -5,8 +5,9 @@ ext.githubProjectName = 'spectator'
 buildscript {
   repositories {
     mavenLocal()
-    mavenCentral()
-    jcenter()
+    // http://stackoverflow.com/questions/26675814/gradle-could-not-head-https-pom-peer-not-authenticated
+    maven { url "http://repo1.maven.org/maven2" }
+    jcenter { url "http://jcenter.bintray.com/" }
   }
   apply from: file('gradle/buildscript.gradle'), to: buildscript 
 }
@@ -19,7 +20,7 @@ allprojects {
 
   repositories {
     mavenLocal()
-    mavenCentral()
+    maven { url "http://repo1.maven.org/maven2" }
   }
 }
 
