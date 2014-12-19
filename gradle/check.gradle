@@ -28,6 +28,8 @@ subprojects {
   pmd {
     ignoreFailures = false
     sourceSets = [sourceSets.main]
+    ruleSets = []
+    ruleSetFiles = rootProject.files("codequality/pmd.xml")
   }
   //tasks.withType(Pmd) { reports.html.enabled true }
 
