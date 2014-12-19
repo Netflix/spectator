@@ -216,4 +216,20 @@ public class ServoTimerTest {
     Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 2.0);
   }
 
+  @Test
+  public void expiration() {
+    // Not expired on init
+    clock.setWallTime(0L);
+    Timer t = newTimer("foo");
+    Assert.assertTrue(!t.hasExpired());
+
+    // Expires with inactivity
+    clock.setWallTime(TimeUnit.MINUTES.toMillis(16));
+    Assert.assertTrue(t.hasExpired());
+
+    // Activity brings it back
+    t.record(42, TimeUnit.SECONDS);
+    Assert.assertTrue(!t.hasExpired());
+  }
+
 }

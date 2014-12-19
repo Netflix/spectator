@@ -50,6 +50,8 @@ class ServoTimer implements Timer, ServoMeter {
   private final DoubleCounter servoTotalOfSquares;
   private final MaxGauge servoMax;
 
+  private final AtomicLong lastUpdated;
+
   /** Create a new instance. */
   ServoTimer(ServoRegistry r, Id id) {
     this.clock = r.clock();
@@ -65,6 +67,8 @@ class ServoTimer implements Timer, ServoMeter {
 
     // Constructor that takes a clock param is not public
     servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
+
+    lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
@@ -79,7 +83,8 @@ class ServoTimer implements Timer, ServoMeter {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    long now = clock.wallTime();
+    return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
   }
 
   @Override public void record(long amount, TimeUnit unit) {
@@ -92,6 +97,7 @@ class ServoTimer implements Timer, ServoMeter {
       servoTotalOfSquares.increment(nanosSquared);
       servoCount.increment();
       servoMax.update(nanos);
+      lastUpdated.set(clock.wallTime());
     }
   }
 

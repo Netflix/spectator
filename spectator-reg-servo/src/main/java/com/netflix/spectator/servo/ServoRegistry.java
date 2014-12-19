@@ -20,15 +20,43 @@ import com.netflix.servo.monitor.*;
 import com.netflix.spectator.api.*;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /** Registry that maps spectator types to servo. */
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
 
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(ServoRegistry.class);
+
+  /**
+   * The amount of time in milliseconds after which activity based meters will get marked as
+   * expired. Right now they will not go away completely so the total count for the life of the
+   * process can be maintained in the api.
+   *
+   * The configuration setting is in minutes.
+   */
+  static final long EXPIRATION_TIME_MILLIS = getExpirationTimeMillis();
+
   private static final MonitorConfig DEFAULT_CONFIG =
     (new MonitorConfig.Builder("spectator.registry")).build();
+
+  private static long getExpirationTimeMillis() {
+    final String key = "spectator.servo.expirationTimeInMinutes";
+    long minutes = 15;
+    String v = System.getProperty(key, "" + minutes);
+    try {
+      minutes = Long.parseLong(v);
+    } catch (NumberFormatException e) {
+      LOGGER.error("invalid value for property '" + key + "', expecting integer: '" + v + "'."
+        + " The default value of " + minutes + " minutes will be used.", e);
+    }
+    return TimeUnit.MINUTES.toMillis(minutes);
+  }
 
   private final MonitorConfig config;
 
@@ -88,7 +116,9 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
       if (meter instanceof ServoMeter) {
-        ((ServoMeter) meter).addMonitors(monitors);
+        if (!meter.hasExpired()) {
+          ((ServoMeter) meter).addMonitors(monitors);
+        }
       } else {
         for (Measurement m : meter.measure()) {
           monitors.add(new NumberGauge(toMonitorConfig(m.id()), m.value()));
