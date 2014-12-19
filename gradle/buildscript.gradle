@@ -3,6 +3,7 @@ repositories {
   // Repo in addition to maven central
   repositories { maven { url 'http://dl.bintray.com/content/netflixoss/external-gradle-plugins/' } } // For gradle-release
 }
+
 dependencies {
   classpath 'nl.javadude.gradle.plugins:license-gradle-plugin:0.10.0'
   classpath 'com.mapvine:gradle-cobertura-plugin:0.1'
@@ -12,3 +13,4 @@ dependencies {
   classpath 'com.github.ben-manes:gradle-versions-plugin:0.5'
   classpath 'org.codehaus.groovy:groovy-backports-compat23:2.3.5'
 }
+
