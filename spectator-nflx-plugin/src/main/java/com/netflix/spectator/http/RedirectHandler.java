@@ -34,7 +34,7 @@ class RedirectHandler implements
   private final HttpLogEntry entry;
   private final HttpClientRequest<ByteBuf> req;
   private final RxHttp.ClientConfig config;
-  private final RxHttp.Server server;
+  private final Server server;
 
   private int redirect;
 
@@ -55,7 +55,7 @@ class RedirectHandler implements
   RedirectHandler(
       HttpLogEntry entry,
       RxHttp.ClientConfig config,
-      RxHttp.Server server,
+      Server server,
       HttpClientRequest<ByteBuf> req) {
     this.entry = entry;
     this.config = config;
@@ -74,7 +74,7 @@ class RedirectHandler implements
       if (loc.isAbsolute()) {
         // Should we allow redirect from https to http?
         final boolean secure = server.isSecure() || "https".equals(loc.getScheme());
-        final RxHttp.Server s = new RxHttp.Server(loc.getHost(), RxHttp.getPort(loc), secure);
+        final Server s = new Server(loc.getHost(), RxHttp.getPort(loc), secure);
         final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, RxHttp.relative(loc));
         resObs = RxHttp.execute(entry, config, s, redirReq);
       } else {

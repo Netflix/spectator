@@ -611,37 +611,6 @@ public final class RxHttp {
     }
   }
 
-  /**
-   * Represents a server to try and connect to.
-   */
-  public static class Server {
-    private final String host;
-    private final int port;
-    private final boolean secure;
-
-    /** Create a new instance. */
-    public Server(String host, int port, boolean secure) {
-      this.host = host;
-      this.port = port;
-      this.secure = secure;
-    }
-
-    /** Return the host name for the server. */
-    public String host() {
-      return host;
-    }
-
-    /** Return the port for the server. */
-    public int port() {
-      return port;
-    }
-
-    /** Return true if HTTPS should be used. */
-    public boolean isSecure() {
-      return secure;
-    }
-  }
-
   /** Configuration settings to use for making the request. */
   static class ClientConfig {
 
