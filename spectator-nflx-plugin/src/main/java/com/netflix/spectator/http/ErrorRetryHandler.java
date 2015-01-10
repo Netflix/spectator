@@ -33,7 +33,7 @@ class ErrorRetryHandler implements
 
   private final HttpLogEntry entry;
   private final RxHttp.ClientConfig config;
-  private final RxHttp.Server server;
+  private final Server server;
   private final HttpClientRequest<ByteBuf> req;
 
   private final int attempt;
@@ -57,7 +57,7 @@ class ErrorRetryHandler implements
   ErrorRetryHandler(
       HttpLogEntry entry,
       RxHttp.ClientConfig config,
-      RxHttp.Server server,
+      Server server,
       HttpClientRequest<ByteBuf> req,
       int attempt) {
     this.entry = entry;
