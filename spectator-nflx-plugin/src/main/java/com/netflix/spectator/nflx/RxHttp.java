@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import iep.rx.Observable;
 import iep.rx.functions.Action0;
 import iep.rx.functions.Action1;
-import iep.rx.functions.Func1;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -404,40 +403,8 @@ public final class RxHttp {
       final int attempt = i + 1;
       observable = observable
           .flatMap(new RedirectHandler(entry, clientCfg, server, req))
-          .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>>() {
-            @Override
-            public Observable<HttpClientResponse<ByteBuf>> call(HttpClientResponse<ByteBuf> res) {
-              final int code = res.getStatus().code();
-              Observable<HttpClientResponse<ByteBuf>> resObs;
-              if (code == 429 || code == 503) {
-                final long retryDelay = getRetryDelay(res, delay);
-                res.getContent().subscribe();
-                entry.withAttempt(attempt);
-                resObs = execute(entry, clientCfg, server, req);
-                if (retryDelay > 0) {
-                  resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);
-                }
-              } else if (code >= 500) {
-                res.getContent().subscribe();
-                entry.withAttempt(attempt);
-                resObs = execute(entry, clientCfg, server, req);
-              } else {
-                resObs = Observable.just(res);
-              }
-              return resObs;
-            }
-          })
-          .onErrorResumeNext(new Func1<Throwable, Observable<? extends HttpClientResponse<ByteBuf>>>() {
-            @Override
-            public Observable<? extends HttpClientResponse<ByteBuf>> call(Throwable throwable) {
-              if (throwable instanceof ConnectException
-                  || throwable instanceof ReadTimeoutException) {
-                entry.withAttempt(attempt);
-                return execute(entry, clientCfg, server, req);
-              }
-              return Observable.error(throwable);
-            }
-          });
+          .flatMap(new StatusRetryHandler(entry, clientCfg, server, req, attempt, delay))
+          .onErrorResumeNext(new ErrorRetryHandler(entry, clientCfg, server, req, attempt));
     }
 
     return observable;
