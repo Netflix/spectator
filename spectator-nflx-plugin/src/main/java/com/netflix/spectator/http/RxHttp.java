@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.nflx;
+package com.netflix.spectator.http;
 
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.DiscoveryClient;
@@ -111,17 +111,6 @@ public final class RxHttp {
         .withClientName(cfg.name())
         .withOriginalUri(cfg.originalUri())
         .withMaxAttempts(cfg.numRetries() + 1);
-  }
-
-  private static void nextAttempt(HttpLogEntry entry, int attempt, HttpClientRequest<ByteBuf> req) {
-    entry.withAttempt(attempt)
-        .withMethod(req.getMethod().name())
-        .withRequestUri(URI.create(req.getUri()))
-        .withRequestContentLength(req.getHeaders().getContentLength(-1));
-
-    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
-      entry.withRequestHeader(h.getKey(), h.getValue());
-    }
   }
 
   private static void update(HttpLogEntry entry, HttpClientResponse<ByteBuf> res) {
