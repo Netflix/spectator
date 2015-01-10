@@ -19,7 +19,6 @@ import com.netflix.config.ConfigurationManager;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.api.SystemConfigMap;
 import com.netflix.spectator.gc.GcEvent;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;

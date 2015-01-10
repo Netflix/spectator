@@ -23,6 +23,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
 import com.netflix.spectator.gc.GcEventListener;
+import com.netflix.spectator.http.RxHttp;
 import com.sun.management.GcInfo;
 import io.netty.buffer.ByteBuf;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;

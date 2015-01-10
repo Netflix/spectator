@@ -24,7 +24,6 @@ import org.junit.runners.JUnit4;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RunWith(JUnit4.class)
 public class CompositeRegistryTest {
