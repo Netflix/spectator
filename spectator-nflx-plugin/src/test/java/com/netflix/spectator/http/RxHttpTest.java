@@ -17,7 +17,6 @@ package com.netflix.spectator.http;
 
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.config.ConfigurationManager;
-import com.netflix.spectator.http.RxHttp;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -571,7 +570,7 @@ public class RxHttpTest {
     set("port-override.niws.client.Port", "2");
     URI origUri = URI.create("niws://port-override/foo");
     URI relUri = URI.create("/foo");
-    RxHttp.ClientConfig cfg = new RxHttp.ClientConfig("port-override", "vip", origUri, relUri);
+    ClientConfig cfg = new ClientConfig("port-override", "vip", origUri, relUri);
     InstanceInfo info = InstanceInfo.Builder.newBuilder()
         .setAppName("foo")
         .setPort(1)
@@ -584,7 +583,7 @@ public class RxHttpTest {
   public void portDefaultSetting() throws Exception {
     URI origUri = URI.create("niws://port-default/foo");
     URI relUri = URI.create("/foo");
-    RxHttp.ClientConfig cfg = new RxHttp.ClientConfig("port-default", "vip", origUri, relUri);
+    ClientConfig cfg = new ClientConfig("port-default", "vip", origUri, relUri);
     InstanceInfo info = InstanceInfo.Builder.newBuilder()
         .setAppName("foo")
         .setPort(1)

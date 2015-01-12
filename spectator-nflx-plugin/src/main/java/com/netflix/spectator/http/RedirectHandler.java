@@ -33,7 +33,7 @@ class RedirectHandler implements
 
   private final HttpLogEntry entry;
   private final HttpClientRequest<ByteBuf> req;
-  private final RxHttp.ClientConfig config;
+  private final ClientConfig config;
   private final Server server;
 
   private int redirect;
@@ -54,7 +54,7 @@ class RedirectHandler implements
    */
   RedirectHandler(
       HttpLogEntry entry,
-      RxHttp.ClientConfig config,
+      ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req) {
     this.entry = entry;
