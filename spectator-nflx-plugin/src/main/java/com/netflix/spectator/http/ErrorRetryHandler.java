@@ -32,7 +32,7 @@ class ErrorRetryHandler implements
     Func1<Throwable, Observable<? extends HttpClientResponse<ByteBuf>>> {
 
   private final HttpLogEntry entry;
-  private final RxHttp.ClientConfig config;
+  private final ClientConfig config;
   private final Server server;
   private final HttpClientRequest<ByteBuf> req;
 
@@ -56,7 +56,7 @@ class ErrorRetryHandler implements
    */
   ErrorRetryHandler(
       HttpLogEntry entry,
-      RxHttp.ClientConfig config,
+      ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req,
       int attempt) {

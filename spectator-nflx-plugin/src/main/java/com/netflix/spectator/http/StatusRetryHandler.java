@@ -32,7 +32,7 @@ class StatusRetryHandler implements
     Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>> {
 
   private final HttpLogEntry entry;
-  private final RxHttp.ClientConfig config;
+  private final ClientConfig config;
   private final Server server;
   private final HttpClientRequest<ByteBuf> req;
 
@@ -59,7 +59,7 @@ class StatusRetryHandler implements
    */
   StatusRetryHandler(
       HttpLogEntry entry,
-      RxHttp.ClientConfig config,
+      ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req,
       int attempt,
