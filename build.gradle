@@ -43,7 +43,7 @@ subprojects {
     options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" 
   }
 
-  if (System.getProperty("java.version").startsWith("1.8.")) {
+  if (JavaVersion.current().isJava8()) {
     tasks.withType(Javadoc) {
       // http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html
       options.addStringOption('Xdoclint:none', '-quiet')
