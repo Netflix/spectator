@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.servo;
-
-import com.netflix.spectator.api.Tag;
+package com.netflix.spectator.api;
 
 /**
  * The valid set of statistics that can be reported by timers and distribution summaries.
  */
-enum Statistic implements Tag {
+public enum Statistic implements Tag {
   /** Rate per second for calls to record. */
   count,
 
@@ -34,7 +32,13 @@ enum Statistic implements Tag {
   totalOfSquares,
 
   /** The sum of the times recorded. */
-  totalTime;
+  totalTime,
+
+  /** Number of currently active tasks for a long task timer. */
+  activeTasks,
+
+  /** Duration of a running task. */
+  duration;
 
   @Override public String key() {
     return "statistic";

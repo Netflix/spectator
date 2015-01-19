@@ -65,9 +65,9 @@ public class DefaultLongTaskTimerTest {
   static void assertLongTaskTimer(Meter t, long timestamp, int activeTasks, double duration) {
     for (Measurement m : t.measure()) {
       Assert.assertEquals(m.timestamp(), timestamp);
-      if (m.id().equals(t.id().withTag("statistic", "activeTasks"))) {
+      if (m.id().equals(t.id().withTag(Statistic.activeTasks))) {
         Assert.assertEquals(m.value(), activeTasks, 1.0e-12);
-      } else if (m.id().equals(t.id().withTag("statistic", "duration"))) {
+      } else if (m.id().equals(t.id().withTag(Statistic.duration))) {
         Assert.assertEquals(m.value(), duration, 1.0e-12);
       } else {
         Assert.fail("unexpected id: " + m.id());

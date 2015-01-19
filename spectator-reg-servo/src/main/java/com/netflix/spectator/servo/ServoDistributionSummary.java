@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
 
 import java.util.ArrayList;
 import java.util.List;

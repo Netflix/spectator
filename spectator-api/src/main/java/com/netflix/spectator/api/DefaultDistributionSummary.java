@@ -27,17 +27,12 @@ final class DefaultDistributionSummary implements DistributionSummary {
   private final AtomicLong count;
   private final AtomicLong totalAmount;
 
-  private final Id countId;
-  private final Id totalAmountId;
-
   /** Create a new instance. */
   DefaultDistributionSummary(Clock clock, Id id) {
     this.clock = clock;
     this.id = id;
     count = new AtomicLong(0L);
     totalAmount = new AtomicLong(0L);
-    countId = id.withTag("statistic", "count");
-    totalAmountId = id.withTag("statistic", "totalAmount");
   }
 
   @Override public Id id() {
@@ -58,8 +53,8 @@ final class DefaultDistributionSummary implements DistributionSummary {
   @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
-    ms.add(new Measurement(countId, now, count.get()));
-    ms.add(new Measurement(totalAmountId, now, totalAmount.get()));
+    ms.add(new Measurement(id.withTag(Statistic.count), now, count.get()));
+    ms.add(new Measurement(id.withTag(Statistic.totalAmount), now, totalAmount.get()));
     return ms;
   }
 

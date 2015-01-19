@@ -18,6 +18,7 @@ package com.netflix.spectator.servo;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Utils;
 import org.junit.Assert;

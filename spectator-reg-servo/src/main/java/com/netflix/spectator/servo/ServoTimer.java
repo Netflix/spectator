@@ -22,6 +22,7 @@ import com.netflix.servo.monitor.StepCounter;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 

@@ -29,17 +29,12 @@ final class DefaultTimer implements Timer {
   private final AtomicLong count;
   private final AtomicLong totalTime;
 
-  private final Id countId;
-  private final Id totalTimeId;
-
   /** Create a new instance. */
   DefaultTimer(Clock clock, Id id) {
     this.clock = clock;
     this.id = id;
     count = new AtomicLong(0L);
     totalTime = new AtomicLong(0L);
-    countId = id.withTag("statistic", "count");
-    totalTimeId = id.withTag("statistic", "totalTime");
   }
 
   @Override public Id id() {
@@ -61,8 +56,8 @@ final class DefaultTimer implements Timer {
   @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     final List<Measurement> ms = new ArrayList<>(2);
-    ms.add(new Measurement(countId, now, count.get()));
-    ms.add(new Measurement(totalTimeId, now, totalTime.get()));
+    ms.add(new Measurement(id.withTag(Statistic.count), now, count.get()));
+    ms.add(new Measurement(id.withTag(Statistic.totalTime), now, totalTime.get()));
     return ms;
   }
 
