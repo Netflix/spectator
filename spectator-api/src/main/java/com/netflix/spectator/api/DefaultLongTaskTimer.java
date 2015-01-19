@@ -31,16 +31,11 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
   private final Id id;
   private final ConcurrentMap<Long, Long> tasks = new ConcurrentHashMap<>();
   private final AtomicLong nextTask = new AtomicLong(0L);
-  private final Id activeTasksId;
-  private final Id durationId;
 
   /** Create a new instance. */
   DefaultLongTaskTimer(Clock clock, Id id) {
     this.clock = clock;
     this.id = id;
-
-    this.activeTasksId = id.withTag("statistic", "activeTasks");
-    this.durationId = id.withTag("statistic", "duration");
   }
 
   @Override public Id id() {
@@ -89,8 +84,8 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
     final List<Measurement> ms = new ArrayList<>(2);
     final long now = clock.wallTime();
     final double durationSeconds = duration() / NANOS_PER_SECOND;
-    ms.add(new Measurement(durationId, now, durationSeconds));
-    ms.add(new Measurement(activeTasksId, now, activeTasks()));
+    ms.add(new Measurement(id.withTag(Statistic.duration), now, durationSeconds));
+    ms.add(new Measurement(id.withTag(Statistic.activeTasks), now, activeTasks()));
     return ms;
   }
 }

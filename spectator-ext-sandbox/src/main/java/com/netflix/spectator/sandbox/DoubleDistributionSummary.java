@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.Statistic;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,10 +107,10 @@ public class DoubleDistributionSummary implements Meter {
     totalAmount = new AtomicLong(ZERO);
     totalOfSquares = new AtomicLong(ZERO);
     max = new AtomicLong(ZERO);
-    countId = id.withTag("statistic", "count");
-    totalAmountId = id.withTag("statistic", "totalAmount");
-    totalOfSquaresId = id.withTag("statistic", "totalOfSquares");
-    maxId = id.withTag("statistic", "max");
+    countId = id.withTag(Statistic.count);
+    totalAmountId = id.withTag(Statistic.totalAmount);
+    totalOfSquaresId = id.withTag(Statistic.totalOfSquares);
+    maxId = id.withTag(Statistic.max);
   }
 
   private void add(AtomicLong num, double amount) {

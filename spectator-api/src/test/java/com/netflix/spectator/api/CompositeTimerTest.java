@@ -150,9 +150,9 @@ public class CompositeTimerTest {
     clock.setWallTime(3712345L);
     for (Measurement m : t.measure()) {
       Assert.assertEquals(m.timestamp(), 3712345L);
-      if (m.id().equals(t.id().withTag("statistic", "count"))) {
+      if (m.id().equals(t.id().withTag(Statistic.count))) {
         Assert.assertEquals(m.value(), 1.0, 0.1e-12);
-      } else if (m.id().equals(t.id().withTag("statistic", "totalTime"))) {
+      } else if (m.id().equals(t.id().withTag(Statistic.totalTime))) {
         Assert.assertEquals(m.value(), 42e6, 0.1e-12);
       } else {
         Assert.fail("unexpected id: " + m.id());
