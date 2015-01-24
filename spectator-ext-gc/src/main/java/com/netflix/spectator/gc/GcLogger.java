@@ -192,8 +192,8 @@ public final class GcLogger {
   private void processGcEvent(GarbageCollectionNotificationInfo info) {
     GcEvent event = new GcEvent(info, jvmStartTime + info.getGcInfo().getStartTime());
     gcLogs.get(info.getGcName()).add(event);
-    if (LOGGER.isInfoEnabled()) {
-      LOGGER.info(event.toString());
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(event.toString());
     }
 
     // Update pause timer for the action and cause...
