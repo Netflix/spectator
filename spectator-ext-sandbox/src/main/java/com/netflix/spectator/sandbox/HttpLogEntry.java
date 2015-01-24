@@ -50,6 +50,9 @@ public class HttpLogEntry {
   private static final Id RES_HEADER_SIZE = REGISTRY.createId("http.res.headerSize");
   private static final Id RES_ENTITY_SIZE = REGISTRY.createId("http.res.entitySize");
 
+  private static final BucketFunction BUCKETS = BucketFunctions.latency(
+      Spectator.config().getLong("spectator.http.maxLatency", 8000), TimeUnit.MILLISECONDS);
+
   /**
    * Including the endpoint is useful, but we need to be careful about the number of
    * matches. A fixed prefix list is fairly easy to use and makes the number and set of matches
@@ -126,12 +129,12 @@ public class HttpLogEntry {
 
     // Update stats for the final attempt after retries are exhausted
     if (!entry.canRetry || entry.attempt >= entry.maxAttempts) {
-      REGISTRY.timer(COMPLETE.withTags(dimensions.tags()))
+      BucketTimer.get(REGISTRY, COMPLETE.withTags(dimensions.tags()), BUCKETS)
           .record(entry.getOverallLatency(), TimeUnit.MILLISECONDS);
     }
 
     // Update stats for every actual http request
-    REGISTRY.timer(ATTEMPT.withTags(dimensions.tags()))
+    BucketTimer.get(REGISTRY, ATTEMPT.withTags(dimensions.tags()), BUCKETS)
         .record(entry.getLatency(), TimeUnit.MILLISECONDS);
     REGISTRY.distributionSummary(REQ_HEADER_SIZE.withTags(dimensions.tags()))
         .record(entry.getRequestHeadersLength());
