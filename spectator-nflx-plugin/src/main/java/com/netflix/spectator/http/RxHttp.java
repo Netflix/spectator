@@ -442,13 +442,13 @@ public final class RxHttp {
         .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
           @Override public void call(HttpClientResponse<ByteBuf> res) {
             update(entry, res);
-            HttpLogEntry.logClientRequest(LOGGER, entry);
+            HttpLogEntry.logClientRequest(entry);
           }
         })
         .doOnError(new Action1<Throwable>() {
           @Override public void call(Throwable throwable) {
             update(entry, throwable);
-            HttpLogEntry.logClientRequest(LOGGER, entry);
+            HttpLogEntry.logClientRequest(entry);
           }
         })
         .doOnTerminate(new Action0() {

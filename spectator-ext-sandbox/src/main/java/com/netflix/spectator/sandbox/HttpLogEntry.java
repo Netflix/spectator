@@ -96,7 +96,11 @@ public class HttpLogEntry {
     log(LOGGER, CLIENT, entry);
   }
 
-  /** Log a client request. */
+  /**
+   * Log a client request.
+   * @deprecated Use {@link #logClientRequest(HttpLogEntry)} instead.
+   */
+  @Deprecated
   public static void logClientRequest(Logger logger, HttpLogEntry entry) {
     log(logger, CLIENT, entry);
   }
@@ -106,7 +110,11 @@ public class HttpLogEntry {
     log(LOGGER, SERVER, entry);
   }
 
-  /** Log a request received by a server. */
+  /**
+   * Log a request received by a server.
+   * @deprecated Use {@link #logServerRequest(HttpLogEntry)} instead.
+   */
+  @Deprecated
   public static void logServerRequest(Logger logger, HttpLogEntry entry) {
     log(logger, SERVER, entry);
   }
