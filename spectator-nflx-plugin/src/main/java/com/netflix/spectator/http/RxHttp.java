@@ -36,8 +36,6 @@ import iep.io.reactivex.netty.protocol.http.client.HttpClientBuilder;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import iep.rx.Observable;
 import iep.rx.functions.Action0;
 import iep.rx.functions.Action1;
@@ -64,8 +62,6 @@ public final class RxHttp {
 
   private RxHttp() {
   }
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(RxHttp.class);
 
   private static final Pattern NIWS_URI = Pattern.compile("niws://([^/]+).*");
 
