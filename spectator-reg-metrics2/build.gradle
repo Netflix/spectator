@@ -1,0 +1,5 @@
+dependencies {
+  compile project(':spectator-api')
+  compile 'com.yammer.metrics:metrics-core:2.2.0'
+  jmh project(':spectator-api')
+}
