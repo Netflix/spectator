@@ -1,0 +1,21 @@
+javadoc {
+  options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
+  title "Spectator"
+}
+
+task(checkCompatibility, dependsOn: 'jar', type: JavaExec) {
+  doFirst {
+    main = 'com.googlecode.japi.checker.cli.Main'
+    classpath = files("$projectDir/../codequality/japi-checker-cli-0.2.0-SNAPSHOT.jar")
+    args = [
+      "$projectDir/../codequality/spectator-api-BASELINE.jar",
+      jar.archivePath.path
+    ]
+  }
+}
+
+build {
+  it.dependsOn checkCompatibility
+  it.dependsOn licenseMain
+  it.dependsOn licenseTest
+}
