@@ -1,0 +1,7 @@
+project(':spectator-ext-log4j2') {
+  dependencies {
+    compile project(':spectator-api')
+    compile 'org.apache.logging.log4j:log4j-api:2.1'
+    compile 'org.apache.logging.log4j:log4j-core:2.1'
+  }
+}
