@@ -6,8 +6,8 @@ buildscript {
   repositories {
     mavenLocal()
     // http://stackoverflow.com/questions/26675814/gradle-could-not-head-https-pom-peer-not-authenticated
-    maven { url "http://repo1.maven.org/maven2" }
     jcenter { url "http://jcenter.bintray.com/" }
+    maven { url "http://repo1.maven.org/maven2" }
   }
   apply from: file('gradle/buildscript.gradle'), to: buildscript 
 }
@@ -20,6 +20,7 @@ allprojects {
 
   repositories {
     mavenLocal()
+    jcenter { url "http://jcenter.bintray.com/" }
     maven { url "http://repo1.maven.org/maven2" }
   }
 }

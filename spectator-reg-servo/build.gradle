@@ -1,5 +1,5 @@
 dependencies {
   compile project(':spectator-api')
-  compile 'com.netflix.servo:servo-core:0.8.0'
+  compile 'com.netflix.servo:servo-core:0.8.2'
   jmh project(':spectator-api')
 }
