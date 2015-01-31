@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.DynamicBooleanProperty;
 import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.config.DynamicStringProperty;
@@ -27,7 +28,6 @@ import com.netflix.spectator.http.RxHttp;
 import com.sun.management.GcInfo;
 import io.netty.buffer.ByteBuf;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import iep.rx.functions.Action0;
