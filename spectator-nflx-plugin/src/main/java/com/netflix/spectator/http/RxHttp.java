@@ -426,6 +426,7 @@ public final class RxHttp {
         RxNetty.<ByteBuf, ByteBuf>newHttpClientBuilder(server.host(), server.port())
             .pipelineConfigurator(pipelineCfg)
             .config(config)
+            .withName(clientCfg.name())
             .channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientCfg.connectTimeout());
 
     if (server.isSecure()) {
