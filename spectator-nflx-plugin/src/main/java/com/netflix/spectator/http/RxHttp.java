@@ -144,7 +144,7 @@ public final class RxHttp {
   public static Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    return execute(clientCfg, servers, HttpClientRequest.createGet(clientCfg.uri().toString()));
+    return execute(clientCfg, servers, HttpClientRequest.createGet(clientCfg.relativeUri()));
   }
 
   /**
@@ -163,7 +163,7 @@ public final class RxHttp {
   post(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPost(clientCfg.uri().toString())
+    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPost(clientCfg.relativeUri())
         .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return execute(clientCfg, servers, compress(clientCfg, req, entity));
   }
@@ -227,7 +227,7 @@ public final class RxHttp {
   put(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPut(clientCfg.uri().toString())
+    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPut(clientCfg.relativeUri())
         .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return execute(clientCfg, servers, compress(clientCfg, req, entity));
   }
@@ -283,7 +283,7 @@ public final class RxHttp {
   public static Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    return execute(clientCfg, servers, HttpClientRequest.createDelete(clientCfg.uri().toString()));
+    return execute(clientCfg, servers, HttpClientRequest.createDelete(clientCfg.relativeUri()));
   }
 
   /**
@@ -337,7 +337,7 @@ public final class RxHttp {
     final URI uri = URI.create(req.getUri());
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    final String reqUri = clientCfg.uri().toString();
+    final String reqUri = clientCfg.relativeUri();
     final HttpClientRequest<ByteBuf> newReq = copy(req, reqUri);
     final HttpClientRequest<ByteBuf> finalReq = (entity == null)
         ? newReq

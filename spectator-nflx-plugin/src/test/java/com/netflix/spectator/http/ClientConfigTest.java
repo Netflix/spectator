@@ -84,6 +84,15 @@ public class ClientConfigTest {
   }
 
   @Test
+  public void fromUriNiwsWithAbsolute() {
+    ClientConfig config = ClientConfig.fromUri(URI.create("niws://foo/http://foo.com/bar"));
+    Assert.assertEquals(config.name(), "foo");
+    Assert.assertEquals(config.originalUri().toString(), "niws://foo/http://foo.com/bar");
+    Assert.assertEquals(config.uri().toString(), "http://foo.com/bar");
+    Assert.assertEquals(config.relativeUri(), "/bar");
+  }
+
+  @Test
   public void fromUriVip() {
     ClientConfig config = ClientConfig.fromUri(URI.create("vip://foo:vip:7001/bar"));
     Assert.assertEquals(config.uri().toString(), "/bar");
