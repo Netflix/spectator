@@ -17,7 +17,6 @@ package com.netflix.spectator.http;
 
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.DiscoveryClient;
-import com.netflix.discovery.DiscoveryManager;
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
@@ -40,6 +39,8 @@ import iep.rx.Observable;
 import iep.rx.functions.Action0;
 import iep.rx.functions.Action1;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -56,9 +57,14 @@ import java.util.zip.GZIPOutputStream;
  * Helper for some simple uses of rxnetty with eureka. Only intended for use within the spectator
  * plugin.
  */
+@Singleton
 public final class RxHttp {
 
-  private RxHttp() {
+  private final DiscoveryClient discoveryClient;
+
+  @Inject
+  public RxHttp(DiscoveryClient client) {
+    this.discoveryClient = client;
   }
 
   private static final int MIN_COMPRESS_SIZE = 512;
@@ -116,7 +122,7 @@ public final class RxHttp {
     }
   }
 
-  private static void update(HttpLogEntry entry, Throwable t) {
+  private void update(HttpLogEntry entry, Throwable t) {
     boolean canRetry = (t instanceof ConnectException || t instanceof ReadTimeoutException);
     entry.mark("received-error").withException(t).withCanRetry(canRetry);
   }
@@ -129,7 +135,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> get(String uri) {
+  public Observable<HttpClientResponse<ByteBuf>> get(String uri) {
     return get(URI.create(uri));
   }
 
@@ -141,7 +147,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
     return execute(clientCfg, servers, HttpClientRequest.createGet(clientCfg.uri().toString()));
@@ -159,7 +165,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   post(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
@@ -178,7 +184,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, byte[] entity) {
+  public Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, byte[] entity) {
     return post(uri, "application/json", entity);
   }
 
@@ -192,7 +198,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, String entity) {
+  public Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, String entity) {
     return postJson(uri, getBytes(entity));
   }
 
@@ -205,7 +211,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postForm(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> postForm(URI uri) {
     Preconditions.checkNotNull(uri.getRawQuery(), "uri.query");
     byte[] entity = getBytes(uri.getRawQuery());
     return post(uri, HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED, entity);
@@ -223,7 +229,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   put(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
@@ -242,7 +248,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, byte[] entity) {
+  public Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, byte[] entity) {
     return put(uri, "application/json", entity);
   }
 
@@ -256,7 +262,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, String entity) {
+  public Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, String entity) {
     return putJson(uri, getBytes(entity));
   }
 
@@ -268,7 +274,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> delete(String uri) {
+  public Observable<HttpClientResponse<ByteBuf>> delete(String uri) {
     return delete(URI.create(uri));
   }
 
@@ -280,7 +286,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
     return execute(clientCfg, servers, HttpClientRequest.createDelete(clientCfg.uri().toString()));
@@ -297,7 +303,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> submit(HttpClientRequest<ByteBuf> req) {
+  public Observable<HttpClientResponse<ByteBuf>> submit(HttpClientRequest<ByteBuf> req) {
     return submit(req, (byte[]) null);
   }
 
@@ -314,7 +320,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   submit(HttpClientRequest<ByteBuf> req, String entity) {
     return submit(req, (entity == null) ? null : getBytes(entity));
   }
@@ -332,7 +338,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   submit(HttpClientRequest<ByteBuf> req, byte[] entity) {
     final URI uri = URI.create(req.getUri());
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
@@ -360,7 +366,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  static Observable<HttpClientResponse<ByteBuf>>
+  Observable<HttpClientResponse<ByteBuf>>
   execute(final ClientConfig clientCfg, final List<Server> servers, final HttpClientRequest<ByteBuf> req) {
     final HttpLogEntry entry = create(clientCfg, req);
 
@@ -380,9 +386,9 @@ public final class RxHttp {
       final long delay = backoffMillis << (i - 1);
       final int attempt = i + 1;
       observable = observable
-          .flatMap(new RedirectHandler(entry, clientCfg, server, req))
-          .flatMap(new StatusRetryHandler(entry, clientCfg, server, req, attempt, delay))
-          .onErrorResumeNext(new ErrorRetryHandler(entry, clientCfg, server, req, attempt));
+          .flatMap(new RedirectHandler(this, entry, clientCfg, server, req))
+          .flatMap(new StatusRetryHandler(this, entry, clientCfg, server, req, attempt, delay))
+          .onErrorResumeNext(new ErrorRetryHandler(this, entry, clientCfg, server, req, attempt));
     }
 
     return observable;
@@ -400,7 +406,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  static Observable<HttpClientResponse<ByteBuf>>
+  Observable<HttpClientResponse<ByteBuf>>
   execute(final HttpLogEntry entry, ClientConfig clientCfg, Server server, HttpClientRequest<ByteBuf> req) {
     entry.withRemoteAddr(server.host()).withRemotePort(server.port());
 
@@ -449,43 +455,7 @@ public final class RxHttp {
         });
   }
 
-  /**
-   * Create a copy of a request object. It can only copy the method, uri, and headers so should
-   * not be used for any request with a content already specified.
-   */
-  static HttpClientRequest<ByteBuf> copy(HttpClientRequest<ByteBuf> req, String uri) {
-    HttpClientRequest<ByteBuf> newReq = HttpClientRequest.create(
-        req.getHttpVersion(), req.getMethod(), uri);
-    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
-      newReq.withHeader(h.getKey(), h.getValue());
-    }
-    return newReq;
-  }
-
-  private static long getRetryDelay(HttpClientResponse<ByteBuf> res, long dflt) {
-    try {
-      if (res.getHeaders().contains(HttpHeaders.Names.RETRY_AFTER)) {
-        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.37
-        int delaySeconds = res.getHeaders().getIntHeader(HttpHeaders.Names.RETRY_AFTER);
-        return TimeUnit.MILLISECONDS.convert(delaySeconds, TimeUnit.SECONDS);
-      }
-    } catch (NumberFormatException e) {
-      // We don't support the date version, so use dflt in this case
-      return dflt;
-    }
-    return dflt;
-  }
-
-  /** We expect UTF-8 to always be supported. */
-  private static byte[] getBytes(String s) {
-    try {
-      return s.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static List<Server> getServers(ClientConfig clientCfg) {
+  private List<Server> getServers(ClientConfig clientCfg) {
     List<Server> servers = null;
     if (clientCfg.uri().isAbsolute()) {
       servers = getServersForUri(clientCfg, clientCfg.uri());
@@ -495,7 +465,7 @@ public final class RxHttp {
     return servers;
   }
 
-  private static List<Server> getServersForUri(ClientConfig clientCfg, URI uri) {
+  private List<Server> getServersForUri(ClientConfig clientCfg, URI uri) {
     final int numRetries = clientCfg.numRetries();
     final boolean secure = "https".equals(uri.getScheme());
     List<Server> servers = new ArrayList<>();
@@ -506,10 +476,9 @@ public final class RxHttp {
     return servers;
   }
 
-  private static List<Server> getServersForVip(ClientConfig clientCfg, String vip) {
+  private List<Server> getServersForVip(ClientConfig clientCfg, String vip) {
     Preconditions.checkNotNull(vip, "vipAddress");
-    DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();
-    List<InstanceInfo> instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
+    List<InstanceInfo> instances = discoveryClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
     List<InstanceInfo> filtered = new ArrayList<>(instances.size());
     for (InstanceInfo info : instances) {
       if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
@@ -533,6 +502,28 @@ public final class RxHttp {
       servers.add(toServer(clientCfg, instance));
     }
     return servers;
+  }
+
+  /**
+   * Create a copy of a request object. It can only copy the method, uri, and headers so should
+   * not be used for any request with a content already specified.
+   */
+  static HttpClientRequest<ByteBuf> copy(HttpClientRequest<ByteBuf> req, String uri) {
+    HttpClientRequest<ByteBuf> newReq = HttpClientRequest.create(
+        req.getHttpVersion(), req.getMethod(), uri);
+    for (Map.Entry<String, String> h : req.getHeaders().entries()) {
+      newReq.withHeader(h.getKey(), h.getValue());
+    }
+    return newReq;
+  }
+
+  /** We expect UTF-8 to always be supported. */
+  private static byte[] getBytes(String s) {
+    try {
+      return s.getBytes("UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /** Convert a eureka InstanceInfo object to a server. */

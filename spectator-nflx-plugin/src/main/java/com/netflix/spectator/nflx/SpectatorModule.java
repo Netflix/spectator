@@ -19,6 +19,7 @@ import com.google.inject.AbstractModule;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.http.RxHttp;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
@@ -55,6 +56,7 @@ import com.netflix.spectator.api.Spectator;
  */
 public class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
+    bind(RxHttp.class).asEagerSingleton();
     bind(Plugin.class).asEagerSingleton();
     bind(ExtendedRegistry.class).toInstance(Spectator.registry());
     bind(Registry.class).toInstance(Spectator.registry());

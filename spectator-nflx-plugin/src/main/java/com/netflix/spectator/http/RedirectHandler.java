@@ -31,6 +31,7 @@ import java.net.URI;
 class RedirectHandler implements
     Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>> {
 
+  private final RxHttp rxHttp;
   private final HttpLogEntry entry;
   private final HttpClientRequest<ByteBuf> req;
   private final ClientConfig config;
@@ -41,6 +42,8 @@ class RedirectHandler implements
   /**
    * Create a new instance.
    *
+   * @param rxHttp
+   *     Instance of RxHttp to use.
    * @param entry
    *     Log entry to update for each request.
    * @param config
@@ -53,10 +56,12 @@ class RedirectHandler implements
    *     Original request.
    */
   RedirectHandler(
+      RxHttp rxHttp,
       HttpLogEntry entry,
       ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req) {
+    this.rxHttp = rxHttp;
     this.entry = entry;
     this.config = config;
     this.server = server;
@@ -76,10 +81,10 @@ class RedirectHandler implements
         final boolean secure = server.isSecure() || "https".equals(loc.getScheme());
         final Server s = new Server(loc.getHost(), RxHttp.getPort(loc), secure);
         final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
-        resObs = RxHttp.execute(entry, config, s, redirReq);
+        resObs = rxHttp.execute(entry, config, s, redirReq);
       } else {
         final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
-        resObs = RxHttp.execute(entry, config, server, redirReq);
+        resObs = rxHttp.execute(entry, config, server, redirReq);
       }
 
       ++redirect;

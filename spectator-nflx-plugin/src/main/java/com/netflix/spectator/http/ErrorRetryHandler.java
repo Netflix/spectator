@@ -31,6 +31,7 @@ import java.net.ConnectException;
 class ErrorRetryHandler implements
     Func1<Throwable, Observable<? extends HttpClientResponse<ByteBuf>>> {
 
+  private final RxHttp rxHttp;
   private final HttpLogEntry entry;
   private final ClientConfig config;
   private final Server server;
@@ -41,6 +42,8 @@ class ErrorRetryHandler implements
   /**
    * Create a new instance.
    *
+   * @param rxHttp
+   *     Instance of RxHttp to use.
    * @param entry
    *     Log entry to update for each request.
    * @param config
@@ -55,11 +58,13 @@ class ErrorRetryHandler implements
    *     The number of this attempt.
    */
   ErrorRetryHandler(
+      RxHttp rxHttp,
       HttpLogEntry entry,
       ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req,
       int attempt) {
+    this.rxHttp = rxHttp;
     this.entry = entry;
     this.config = config;
     this.server = server;
@@ -71,7 +76,7 @@ class ErrorRetryHandler implements
   public Observable<? extends HttpClientResponse<ByteBuf>> call(Throwable throwable) {
     if (throwable instanceof ConnectException || throwable instanceof ReadTimeoutException) {
       entry.withAttempt(attempt);
-      return RxHttp.execute(entry, config, server, req);
+      return rxHttp.execute(entry, config, server, req);
     }
     return Observable.error(throwable);
   }

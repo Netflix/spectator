@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 class StatusRetryHandler implements
     Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>> {
 
+  private final RxHttp rxHttp;
   private final HttpLogEntry entry;
   private final ClientConfig config;
   private final Server server;
@@ -42,6 +43,8 @@ class StatusRetryHandler implements
   /**
    * Create a new instance.
    *
+   * @param rxHttp
+   *     Instance of RxHttp to use.
    * @param entry
    *     Log entry to update for each request.
    * @param config
@@ -58,12 +61,14 @@ class StatusRetryHandler implements
    *     default delay.
    */
   StatusRetryHandler(
+      RxHttp rxHttp,
       HttpLogEntry entry,
       ClientConfig config,
       Server server,
       HttpClientRequest<ByteBuf> req,
       int attempt,
       long delay) {
+    this.rxHttp = rxHttp;
     this.entry = entry;
     this.config = config;
     this.server = server;
@@ -94,14 +99,14 @@ class StatusRetryHandler implements
       final long retryDelay = getRetryDelay(res, delay);
       res.getContent().subscribe();
       entry.withAttempt(attempt);
-      resObs = RxHttp.execute(entry, config, server, req);
+      resObs = rxHttp.execute(entry, config, server, req);
       if (retryDelay > 0) {
         resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);
       }
     } else if (code >= 500) {
       res.getContent().subscribe();
       entry.withAttempt(attempt);
-      resObs = RxHttp.execute(entry, config, server, req);
+      resObs = rxHttp.execute(entry, config, server, req);
     } else {
       resObs = Observable.just(res);
     }
