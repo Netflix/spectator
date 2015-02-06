@@ -18,9 +18,59 @@ package com.netflix.spectator.http;
 import com.netflix.spectator.api.Spectator;
 
 import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Configuration settings to use for making the request. */
 class ClientConfig {
+
+  private static final Pattern NIWS_URI = Pattern.compile("niws://([^/]+).*");
+
+  private static final Pattern VIP_URI = Pattern.compile("vip://([^:]+):([^/]+).*");
+
+  /** Create relative uri string with the path and query. */
+  static String relative(URI uri) {
+    String r = uri.getRawPath();
+    if (uri.getRawQuery() != null) {
+      r += "?" + uri.getRawQuery();
+    }
+    return r;
+  }
+
+  private static String fixPath(String path) {
+    return (path.startsWith("/http://") || path.startsWith("/https://"))
+        ? path.substring(1)
+        : path;
+  }
+
+  /** Create a client config instance based on a URI. */
+  static ClientConfig fromUri(URI uri) {
+    Matcher m = null;
+    ClientConfig cfg = null;
+    switch (uri.getScheme()) {
+      case "niws":
+        m = NIWS_URI.matcher(uri.toString());
+        if (m.matches()) {
+          final URI newUri = URI.create(fixPath(relative(uri)));
+          cfg = new ClientConfig(m.group(1), null, uri, newUri);
+        } else {
+          throw new IllegalArgumentException("invalid niws uri: " + uri);
+        }
+        break;
+      case "vip":
+        m = VIP_URI.matcher(uri.toString());
+        if (m.matches()) {
+          cfg = new ClientConfig(m.group(1), m.group(2), uri, URI.create(relative(uri)));
+        } else {
+          throw new IllegalArgumentException("invalid vip uri: " + uri);
+        }
+        break;
+      default:
+        cfg = new ClientConfig("default", null, uri, uri);
+        break;
+    }
+    return cfg;
+  }
 
   private final String name;
   private final String vipAddress;

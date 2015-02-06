@@ -75,10 +75,10 @@ class RedirectHandler implements
         // Should we allow redirect from https to http?
         final boolean secure = server.isSecure() || "https".equals(loc.getScheme());
         final Server s = new Server(loc.getHost(), RxHttp.getPort(loc), secure);
-        final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, RxHttp.relative(loc));
+        final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
         resObs = RxHttp.execute(entry, config, s, redirReq);
       } else {
-        final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, RxHttp.relative(loc));
+        final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
         resObs = RxHttp.execute(entry, config, server, redirReq);
       }
 
