@@ -35,8 +35,27 @@ class ClientConfig {
     this.uri = uri;
   }
 
+  private String dfltProp(String k) {
+    return "niws.client." + k;
+  }
+
   private String prop(String k) {
-    return name + ".niws.client." + k;
+    return name + "." + dfltProp(k);
+  }
+
+  private String getString(String k, String dflt) {
+    String v = Spectator.config().get(prop(k));
+    return (v == null) ? Spectator.config().get(dfltProp(k), dflt) : v;
+  }
+
+  private int getInt(String k, int dflt) {
+    String v = getString(k, null);
+    return (v == null) ? dflt : Integer.parseInt(v);
+  }
+
+  private boolean getBoolean(String k, boolean dflt) {
+    String v = getString(k, null);
+    return (v == null) ? dflt : Boolean.parseBoolean(v);
   }
 
   /** Name of the client. */
@@ -56,28 +75,28 @@ class ClientConfig {
 
   /** Port to use for the connection. */
   int port(int dflt) {
-    return Spectator.config().getInt(prop("Port"), dflt);
+    return getInt("Port", dflt);
   }
 
   /** Maximum time to wait for a connection attempt in milliseconds. */
   int connectTimeout() {
-    return Spectator.config().getInt(prop("ConnectTimeout"), 1000);
+    return getInt("ConnectTimeout", 1000);
   }
 
   /** Maximum time to wait for reading data in milliseconds. */
   int readTimeout() {
-    return Spectator.config().getInt(prop("ReadTimeout"), 30000);
+    return getInt("ReadTimeout", 30000);
   }
 
   /** Maximum number of redirects to follow. Set to 0 to disable. */
   int followRedirects() {
-    return Spectator.config().getInt(prop("FollowRedirects"), 3);
+    return getInt("FollowRedirects", 3);
   }
 
   /** Should HTTPS be used for the request? */
   boolean isSecure() {
     final boolean https = "https".equals(uri.getScheme());
-    return https || Spectator.config().getBoolean(prop("IsSecure"), false);
+    return https || getBoolean("IsSecure", false);
   }
 
   /**
@@ -85,7 +104,7 @@ class ClientConfig {
    * default is to use the ip address and avoid the dns lookup.
    */
   boolean useIpAddress() {
-    return Spectator.config().getBoolean(prop("UseIpAddress"), false);
+    return getBoolean("UseIpAddress", false);
   }
 
   /**
@@ -93,12 +112,12 @@ class ClientConfig {
    * body?
    */
   boolean gzipEnabled() {
-    return Spectator.config().getBoolean(prop("GzipEnabled"), true);
+    return getBoolean("GzipEnabled", true);
   }
 
   /** Max number of retries. */
   int numRetries() {
-    return Spectator.config().getInt(prop("MaxAutoRetriesNextServer"), 2);
+    return getInt("MaxAutoRetriesNextServer", 2);
   }
 
   /**
@@ -106,23 +125,23 @@ class ClientConfig {
    * delay will be doubled between each throttled attempt.
    */
   int retryDelay() {
-    return Spectator.config().getInt(prop("RetryDelay"), 500);
+    return getInt("RetryDelay", 500);
   }
 
   /** Max size of the request body. Defaults to 10MB. */
   int aggregationLimit() {
-    return Spectator.config().getInt(prop("AggregationLimit"), 10 * 1024 * 1024);
+    return getInt("AggregationLimit", 10 * 1024 * 1024);
   }
 
   /** User agent string to use when making the request. */
   String userAgent() {
-    return Spectator.config().get(prop("UserAgent"), "RxHttp");
+    return getString("UserAgent", "RxHttp");
   }
 
   /** VIP used to lookup a set of servers in eureka. */
   String vip() {
     return (vipAddress == null)
-        ? Spectator.config().get(prop("DeploymentContextBasedVipAddresses"))
+        ? getString("DeploymentContextBasedVipAddresses", null)
         : vipAddress;
   }
 }
