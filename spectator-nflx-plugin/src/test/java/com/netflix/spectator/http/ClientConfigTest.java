@@ -70,4 +70,30 @@ public class ClientConfigTest {
     set("foo.niws.client.UseIpAddress", "false");
     Assert.assertEquals(cfg.useIpAddress(), false);
   }
+
+  @Test
+  public void fromUriNiws() {
+    ClientConfig config = ClientConfig.fromUri(URI.create("niws://foo/bar"));
+    Assert.assertEquals(config.uri().toString(), "/bar");
+  }
+
+  @Test
+  public void fromUriNiwsWithQuery() {
+    ClientConfig config = ClientConfig.fromUri(URI.create("niws://foo/bar?a=b"));
+    Assert.assertEquals(config.uri().toString(), "/bar?a=b");
+  }
+
+  @Test
+  public void fromUriVip() {
+    ClientConfig config = ClientConfig.fromUri(URI.create("vip://foo:vip:7001/bar"));
+    Assert.assertEquals(config.uri().toString(), "/bar");
+    Assert.assertEquals(config.vip(), "vip:7001");
+  }
+
+  @Test
+  public void fromUriVipWithQuery() {
+    ClientConfig config = ClientConfig.fromUri(URI.create("vip://foo:vip:7001/bar?a=b"));
+    Assert.assertEquals(config.uri().toString(), "/bar?a=b");
+    Assert.assertEquals(config.vip(), "vip:7001");
+  }
 }

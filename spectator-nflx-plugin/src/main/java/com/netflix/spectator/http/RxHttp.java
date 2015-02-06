@@ -50,8 +50,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -62,10 +60,6 @@ public final class RxHttp {
 
   private RxHttp() {
   }
-
-  private static final Pattern NIWS_URI = Pattern.compile("niws://([^/]+).*");
-
-  private static final Pattern VIP_URI = Pattern.compile("vip://([^:]+):([^/]+).*");
 
   private static final int MIN_COMPRESS_SIZE = 512;
 
@@ -148,9 +142,9 @@ public final class RxHttp {
    *     Observable with the response of the request.
    */
   public static Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
-    final ClientConfig clientCfg = getConfigForUri(uri);
+    final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    return execute(clientCfg, servers, HttpClientRequest.createGet(relative(clientCfg.uri())));
+    return execute(clientCfg, servers, HttpClientRequest.createGet(clientCfg.uri().toString()));
   }
 
   /**
@@ -167,9 +161,9 @@ public final class RxHttp {
    */
   public static Observable<HttpClientResponse<ByteBuf>>
   post(URI uri, String contentType, byte[] entity) {
-    final ClientConfig clientCfg = getConfigForUri(uri);
+    final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPost(relative(clientCfg.uri()))
+    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPost(clientCfg.uri().toString())
         .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return execute(clientCfg, servers, compress(clientCfg, req, entity));
   }
@@ -231,9 +225,9 @@ public final class RxHttp {
    */
   public static Observable<HttpClientResponse<ByteBuf>>
   put(URI uri, String contentType, byte[] entity) {
-    final ClientConfig clientCfg = getConfigForUri(uri);
+    final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPut(relative(clientCfg.uri()))
+    HttpClientRequest<ByteBuf> req = HttpClientRequest.createPut(clientCfg.uri().toString())
         .withHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
     return execute(clientCfg, servers, compress(clientCfg, req, entity));
   }
@@ -287,9 +281,9 @@ public final class RxHttp {
    *     Observable with the response of the request.
    */
   public static Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
-    final ClientConfig clientCfg = getConfigForUri(uri);
+    final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    return execute(clientCfg, servers, HttpClientRequest.createDelete(relative(clientCfg.uri())));
+    return execute(clientCfg, servers, HttpClientRequest.createDelete(clientCfg.uri().toString()));
   }
 
   /**
@@ -341,9 +335,9 @@ public final class RxHttp {
   public static Observable<HttpClientResponse<ByteBuf>>
   submit(HttpClientRequest<ByteBuf> req, byte[] entity) {
     final URI uri = URI.create(req.getUri());
-    final ClientConfig clientCfg = getConfigForUri(uri);
+    final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
-    final String reqUri = relative(clientCfg.uri());
+    final String reqUri = clientCfg.uri().toString();
     final HttpClientRequest<ByteBuf> newReq = copy(req, reqUri);
     final HttpClientRequest<ByteBuf> finalReq = (entity == null)
         ? newReq
@@ -489,49 +483,6 @@ public final class RxHttp {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /** Create relative uri string with the path and query. */
-  static String relative(URI uri) {
-    String r = uri.getRawPath();
-    if (uri.getRawQuery() != null) {
-      r += "?" + uri.getRawQuery();
-    }
-    return r;
-  }
-
-  private static String fixPath(String path) {
-    return (path.startsWith("/http://") || path.startsWith("/https://"))
-        ? path.substring(1)
-        : path;
-  }
-
-  private static ClientConfig getConfigForUri(URI uri) {
-    Matcher m = null;
-    ClientConfig cfg = null;
-    switch (uri.getScheme()) {
-      case "niws":
-        m = NIWS_URI.matcher(uri.toString());
-        if (m.matches()) {
-          final URI newUri = URI.create(fixPath(uri.getRawPath()));
-          cfg = new ClientConfig(m.group(1), null, uri, newUri);
-        } else {
-          throw new IllegalArgumentException("invalid niws uri: " + uri);
-        }
-        break;
-      case "vip":
-        m = VIP_URI.matcher(uri.toString());
-        if (m.matches()) {
-          cfg = new ClientConfig(m.group(1), m.group(2), uri, URI.create(uri.getRawPath()));
-        } else {
-          throw new IllegalArgumentException("invalid vip uri: " + uri);
-        }
-        break;
-      default:
-        cfg = new ClientConfig("default", null, uri, uri);
-        break;
-    }
-    return cfg;
   }
 
   private static List<Server> getServers(ClientConfig clientCfg) {
