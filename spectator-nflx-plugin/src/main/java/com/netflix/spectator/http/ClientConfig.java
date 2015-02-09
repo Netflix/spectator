@@ -123,6 +123,16 @@ class ClientConfig {
     return uri;
   }
 
+  /**
+   * Relative URI that should be used for the RxNetty HTTP request. Otherwise RxNetty will include
+   * the absolute URI on the first line of the HTTP request:
+   *
+   * <pre>GET http://localhost:53535/test HTTP/1.1</pre>
+   */
+  String relativeUri() {
+    return relative(uri);
+  }
+
   /** Port to use for the connection. */
   int port(int dflt) {
     return getInt("Port", dflt);

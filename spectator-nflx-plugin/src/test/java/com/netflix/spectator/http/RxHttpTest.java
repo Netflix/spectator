@@ -39,7 +39,6 @@ import iep.rx.functions.Action1;
 import iep.rx.functions.Actions;
 import iep.rx.functions.Func1;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -56,8 +55,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 @RunWith(JUnit4.class)
 public class RxHttpTest {
@@ -84,26 +81,6 @@ public class RxHttpTest {
       byte[] buf = new byte[1024];
       while (in.read(buf) > 0);
     }
-  }
-
-  private static byte[] gzip(String data) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try (GZIPOutputStream out = new GZIPOutputStream(baos)) {
-      out.write(data.getBytes("UTF-8"));
-    }
-    return baos.toByteArray();
-  }
-
-  private static String gunzip(InputStream input) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try (GZIPInputStream in = new GZIPInputStream(input)) {
-      byte[] buf = new byte[1024];
-      int length;
-      while ((length = in.read(buf)) > 0) {
-        baos.write(buf, 0, length);
-      }
-    }
-    return new String(baos.toByteArray(), "UTF-8");
   }
 
   @BeforeClass
