@@ -17,6 +17,10 @@ package com.netflix.spectator.http;
 
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.sandbox.HttpLogEntry;
+import iep.io.reactivex.netty.client.CompositePoolLimitDeterminationStrategy;
+import iep.io.reactivex.netty.client.MaxConnectionsBasedStrategy;
+import iep.io.reactivex.netty.client.PoolLimitDeterminationStrategy;
+import iep.rx.functions.Actions;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -33,9 +37,12 @@ import iep.io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurato
 import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import iep.rx.Observable;
-import iep.rx.functions.Action0;
 import iep.rx.functions.Action1;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.ByteArrayOutputStream;
@@ -46,8 +53,12 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-//import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -57,9 +68,15 @@ import java.util.zip.GZIPOutputStream;
 @Singleton
 public final class RxHttp {
 
-  private static final int MIN_COMPRESS_SIZE = 512;
+  private static final Logger LOGGER = LoggerFactory.getLogger(RxHttp.class);
 
-  //private final ConcurrentHashMap<Server, HttpClient> clients = new ConcurrentHashMap<>();
+  private static final int MIN_COMPRESS_SIZE = 512;
+  private static final AtomicInteger NEXT_THREAD_ID = new AtomicInteger(0);
+
+  private final ConcurrentHashMap<String, PoolLimitDeterminationStrategy> poolLimits = new ConcurrentHashMap<>();
+
+  private final ConcurrentHashMap<Server, HttpClient<ByteBuf, ByteBuf>> clients = new ConcurrentHashMap<>();
+  private ScheduledExecutorService executor;
 
   private final ServerRegistry serverRegistry;
 
@@ -71,6 +88,53 @@ public final class RxHttp {
   @Inject
   public RxHttp(ServerRegistry serverRegistry) {
     this.serverRegistry = serverRegistry;
+  }
+
+  /**
+   * Setup the background tasks for cleaning up connections.
+   */
+  @PostConstruct
+  public void start() {
+    LOGGER.info("starting up backround cleanup threads");
+    executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+      @Override public Thread newThread(Runnable r) {
+        Thread t = new Thread(r, "spectator-rxhttp-" + NEXT_THREAD_ID.getAndIncrement());
+        t.setDaemon(true);
+        return t;
+      }
+    });
+
+    Runnable task = new Runnable() {
+      @Override public void run() {
+        try {
+          LOGGER.debug("executing cleanup for {} clients", clients.size());
+          for (Map.Entry<Server, HttpClient<ByteBuf, ByteBuf>> entry : clients.entrySet()) {
+            final Server s = entry.getKey();
+            if (s.isRegistered() && !serverRegistry.isStillAvailable(s)) {
+              LOGGER.debug("cleaning up client for {}", s);
+              clients.remove(s);
+              entry.getValue().shutdown();
+            }
+          }
+          LOGGER.debug("cleanup complete with {} clients remaining", clients.size());
+        } catch (Exception e) {
+          LOGGER.warn("connection cleanup task failed", e);
+        }
+      }
+    };
+    executor.scheduleWithFixedDelay(task, 0L, 15L, TimeUnit.SECONDS);
+  }
+
+  /**
+   * Shutdown all connections that are currently open.
+   */
+  @PreDestroy
+  public void stop() {
+    LOGGER.info("shutting down backround cleanup threads");
+    executor.shutdown();
+    for (HttpClient<ByteBuf, ByteBuf> client : clients.values()) {
+      client.shutdown();
+    }
   }
 
   private static HttpClientRequest<ByteBuf> compress(
@@ -409,9 +473,41 @@ public final class RxHttp {
    */
   Observable<HttpClientResponse<ByteBuf>> execute(final RequestContext context) {
     final HttpLogEntry entry = context.entry();
+
+    final HttpClient<ByteBuf, ByteBuf> client = getClient(context);
+    entry.mark("start");
+    return client.submit(context.request())
+        .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
+          @Override public void call(HttpClientResponse<ByteBuf> res) {
+            update(entry, res);
+            HttpLogEntry.logClientRequest(entry);
+          }
+        })
+        .doOnError(new Action1<Throwable>() {
+          @Override public void call(Throwable throwable) {
+            update(entry, throwable);
+            HttpLogEntry.logClientRequest(entry);
+          }
+        })
+        .doOnTerminate(Actions.empty());
+  }
+
+  private HttpClient<ByteBuf, ByteBuf> getClient(final RequestContext context) {
+    HttpClient<ByteBuf, ByteBuf> c = clients.get(context.server());
+    if (c == null) {
+      c = newClient(context);
+      HttpClient<ByteBuf, ByteBuf> tmp = clients.putIfAbsent(context.server(), c);
+      if (tmp != null) {
+        c.shutdown();
+        c = tmp;
+      }
+    }
+    return c;
+  }
+
+  private HttpClient<ByteBuf, ByteBuf> newClient(final RequestContext context) {
     final Server server = context.server();
     final ClientConfig clientCfg = context.config();
-    entry.withRemoteAddr(server.host()).withRemotePort(server.port());
 
     HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
         .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)
@@ -426,6 +522,8 @@ public final class RxHttp {
 
     HttpClientBuilder<ByteBuf, ByteBuf> builder =
         RxNetty.<ByteBuf, ByteBuf>newHttpClientBuilder(server.host(), server.port())
+            .withConnectionPoolLimitStrategy(getPoolLimitStrategy(clientCfg))
+            .withIdleConnectionsTimeoutMillis(clientCfg.idleConnectionsTimeoutMillis())
             .pipelineConfigurator(pipelineCfg)
             .config(config)
             .withName(clientCfg.name())
@@ -435,26 +533,21 @@ public final class RxHttp {
       builder.withSslEngineFactory(DefaultFactories.trustAll());
     }
 
-    entry.mark("start");
-    final HttpClient<ByteBuf, ByteBuf> client = builder.build();
-    return client.submit(context.request())
-        .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
-          @Override public void call(HttpClientResponse<ByteBuf> res) {
-            update(entry, res);
-            HttpLogEntry.logClientRequest(entry);
-          }
-        })
-        .doOnError(new Action1<Throwable>() {
-          @Override public void call(Throwable throwable) {
-            update(entry, throwable);
-            HttpLogEntry.logClientRequest(entry);
-          }
-        })
-        .doOnTerminate(new Action0() {
-          @Override public void call() {
-            client.shutdown();
-          }
-        });
+    return builder.build();
+  }
+
+  private PoolLimitDeterminationStrategy getPoolLimitStrategy(ClientConfig clientCfg) {
+    PoolLimitDeterminationStrategy totalStrategy = poolLimits.get(clientCfg.name());
+    if (totalStrategy == null) {
+      totalStrategy = new MaxConnectionsBasedStrategy(clientCfg.maxConnectionsTotal());
+      PoolLimitDeterminationStrategy tmp = poolLimits.putIfAbsent(clientCfg.name(), totalStrategy);
+      if (tmp != null) {
+        totalStrategy = tmp;
+      }
+    }
+    return new CompositePoolLimitDeterminationStrategy(
+        new MaxConnectionsBasedStrategy(clientCfg.maxConnectionsPerHost()),
+        totalStrategy);
   }
 
   private List<Server> getServers(ClientConfig clientCfg) {

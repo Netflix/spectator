@@ -19,6 +19,9 @@ package com.netflix.spectator.http;
  * Represents a server to try and connect to.
  */
 public final class Server {
+  /** Id for servers that are not created as part of a server registry. */
+  public static final String UNREGISTERED_HOST_ID = "UNREGISTERED";
+
   private final String id;
   private final String host;
   private final int port;
@@ -26,7 +29,7 @@ public final class Server {
 
   /** Create a new instance with an id based on the other fields. */
   public Server(String host, int port, boolean secure) {
-    this(host + ":" + port + ":" + secure, host, port, secure);
+    this(UNREGISTERED_HOST_ID, host, port, secure);
   }
 
   /** Create a new instance. */
@@ -55,6 +58,11 @@ public final class Server {
   /** Return true if HTTPS should be used. */
   public boolean isSecure() {
     return secure;
+  }
+
+  /** Return true if this server is registered with a server registry. */
+  public boolean isRegistered() {
+    return !UNREGISTERED_HOST_ID.equals(id);
   }
 
   @Override

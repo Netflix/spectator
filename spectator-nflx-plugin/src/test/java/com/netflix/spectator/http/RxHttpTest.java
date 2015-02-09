@@ -48,6 +48,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -106,6 +108,8 @@ public class RxHttpTest {
 
   @BeforeClass
   public static void startServer() throws Exception {
+    rxHttp.start();
+
     server = HttpServer.create(new InetSocketAddress(0), 100);
     server.setExecutor(Executors.newFixedThreadPool(10, new ThreadFactory() {
       @Override public Thread newThread(Runnable r) {
@@ -118,6 +122,8 @@ public class RxHttpTest {
       @Override
       public void handle(HttpExchange exchange) throws IOException {
         ignore(exchange.getRequestBody());
+        int port = exchange.getRemoteAddress().getPort();
+        exchange.getResponseHeaders().add("X-Test-Port", "" + port);
         statusCounts.incrementAndGet(statusCode.get());
         exchange.sendResponseHeaders(statusCode.get(), -1L);
         exchange.close();
@@ -217,6 +223,7 @@ public class RxHttpTest {
 
   @AfterClass
   public static void stopServer() {
+    rxHttp.stop();
     server.stop(0);
   }
 
@@ -592,6 +599,26 @@ public class RxHttpTest {
         .build();
     Server server = EurekaServerRegistry.toServer(cfg, info);
     Assert.assertEquals(server.port(), 1);
+  }
+
+  private int getPortForReq() throws Exception {
+    HttpClientResponse<ByteBuf> r = rxHttp.get(uri("/empty")).toBlocking().toFuture().get();
+    return Integer.parseInt(r.getHeaders().get("X-Test-Port"));
+  }
+
+  @Test
+  public void connectionReuse() throws Exception {
+    Map<Integer, Integer> counts = new HashMap<>();
+    for (int i = 0; i < 10; ++i) {
+      int p = getPortForReq();
+      Integer c = counts.get(p);
+      if (c == null) {
+        counts.put(p, 1);
+      } else {
+        counts.put(p, c + 1);
+      }
+    }
+    Assert.assertTrue("connections not getting reused", counts.size() < 4);
   }
 }
 

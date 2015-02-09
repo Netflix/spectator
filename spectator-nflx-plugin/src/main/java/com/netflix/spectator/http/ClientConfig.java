@@ -143,6 +143,21 @@ class ClientConfig {
     return getInt("FollowRedirects", 3);
   }
 
+  /** Maximum number of connections permitted to a single host. */
+  int maxConnectionsPerHost() {
+    return getInt("MaxConnectionsPerHost", 20);
+  }
+
+  /** Maximum number of connections for all clients with the same name. */
+  int maxConnectionsTotal() {
+    return getInt("MaxConnectionsTotal", 200);
+  }
+
+  /** How long in milliseconds a connection can be idle in the pool before being closed. */
+  int idleConnectionsTimeoutMillis() {
+    return getInt("ConnectionPoolIdleEvictTimeMilliseconds", 60000);
+  }
+
   /** Should HTTPS be used for the request? */
   boolean isSecure() {
     final boolean https = "https".equals(uri.getScheme());
