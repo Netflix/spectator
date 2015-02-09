@@ -178,11 +178,6 @@ class ClientConfig {
     return getInt("RetryDelay", 500);
   }
 
-  /** Max size of the request body. Defaults to 10MB. */
-  int aggregationLimit() {
-    return getInt("AggregationLimit", 10 * 1024 * 1024);
-  }
-
   /** User agent string to use when making the request. */
   String userAgent() {
     return getString("UserAgent", "RxHttp");

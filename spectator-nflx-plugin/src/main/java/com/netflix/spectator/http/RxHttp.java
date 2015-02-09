@@ -27,7 +27,6 @@ import iep.io.reactivex.netty.RxNetty;
 import iep.io.reactivex.netty.pipeline.PipelineConfigurator;
 import iep.io.reactivex.netty.pipeline.PipelineConfiguratorComposite;
 import iep.io.reactivex.netty.pipeline.ssl.DefaultFactories;
-import iep.io.reactivex.netty.protocol.http.HttpObjectAggregationConfigurator;
 import iep.io.reactivex.netty.protocol.http.client.HttpClient;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientBuilder;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
@@ -422,8 +421,7 @@ public final class RxHttp {
     PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>
         pipelineCfg = new PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>(
         new HttpClientPipelineConfigurator<ByteBuf, ByteBuf>(),
-        new HttpDecompressionConfigurator(),
-        new HttpObjectAggregationConfigurator(clientCfg.aggregationLimit())
+        new HttpDecompressionConfigurator()
     );
 
     HttpClientBuilder<ByteBuf, ByteBuf> builder =
