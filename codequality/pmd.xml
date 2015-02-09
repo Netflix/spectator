@@ -49,6 +49,7 @@
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="MethodReturnsInternalArray"/>
     <exclude name="NullAssignment"/>
+    <exclude name="OneDeclarationPerLine"/>
     <exclude name="OnlyOneReturn"/>
     <exclude name="PrematureDeclaration"/>
     <exclude name="RedundantFieldInitializer"/>

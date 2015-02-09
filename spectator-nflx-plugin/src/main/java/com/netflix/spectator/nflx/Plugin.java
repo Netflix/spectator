@@ -45,6 +45,7 @@ public final class Plugin {
 
   private final RxHttp rxHttp;
 
+  /** Create a new instance. */
   @Inject
   public Plugin(RxHttp rxHttp) {
     this.rxHttp = rxHttp;

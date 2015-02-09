@@ -19,15 +19,27 @@ package com.netflix.spectator.http;
  * Represents a server to try and connect to.
  */
 public final class Server {
+  private final String id;
   private final String host;
   private final int port;
   private final boolean secure;
 
-  /** Create a new instance. */
+  /** Create a new instance with an id based on the other fields. */
   public Server(String host, int port, boolean secure) {
+    this(host + ":" + port + ":" + secure, host, port, secure);
+  }
+
+  /** Create a new instance. */
+  public Server(String id, String host, int port, boolean secure) {
+    this.id = id;
     this.host = host;
     this.port = port;
     this.secure = secure;
+  }
+
+  /** Return the unique id for the server. */
+  public String id() {
+    return id;
   }
 
   /** Return the host name for the server. */
@@ -50,7 +62,8 @@ public final class Server {
     if (this == obj) return true;
     if (obj == null || !(obj instanceof Server)) return false;
     Server other = (Server) obj;
-    return host.equals(other.host)
+    return id.equals(other.id)
+        && host.equals(other.host)
         && port == other.port
         && secure == other.secure;
   }
@@ -59,6 +72,7 @@ public final class Server {
   public int hashCode() {
     final int prime = 31;
     int hc = prime;
+    hc = prime * hc + id.hashCode();
     hc = prime * hc + host.hashCode();
     hc = prime * hc + Integer.valueOf(port).hashCode();
     hc = prime * hc + Boolean.valueOf(secure).hashCode();
@@ -67,6 +81,6 @@ public final class Server {
 
   @Override
   public String toString() {
-    return "Server(" + host + "," + port + "," + secure + ")";
+    return "Server(" + id + "," + host + "," + port + "," + secure + ")";
   }
 }

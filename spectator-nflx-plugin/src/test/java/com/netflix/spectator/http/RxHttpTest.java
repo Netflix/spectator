@@ -577,7 +577,7 @@ public class RxHttpTest {
         .setAppName("foo")
         .setPort(1)
         .build();
-    Server server = RxHttp.toServer(cfg, info);
+    Server server = EurekaServerRegistry.toServer(cfg, info);
     Assert.assertEquals(server.port(), 2);
   }
 
@@ -590,7 +590,7 @@ public class RxHttpTest {
         .setAppName("foo")
         .setPort(1)
         .build();
-    Server server = RxHttp.toServer(cfg, info);
+    Server server = EurekaServerRegistry.toServer(cfg, info);
     Assert.assertEquals(server.port(), 1);
   }
 }

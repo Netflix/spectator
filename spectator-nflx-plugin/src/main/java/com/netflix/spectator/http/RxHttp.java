@@ -15,8 +15,6 @@
  */
 package com.netflix.spectator.http;
 
-import com.netflix.appinfo.InstanceInfo;
-import com.netflix.discovery.DiscoveryClient;
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
@@ -47,9 +45,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+//import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.GZIPOutputStream;
 
@@ -60,14 +58,21 @@ import java.util.zip.GZIPOutputStream;
 @Singleton
 public final class RxHttp {
 
-  private final DiscoveryClient discoveryClient;
-
-  @Inject
-  public RxHttp(DiscoveryClient client) {
-    this.discoveryClient = client;
-  }
-
   private static final int MIN_COMPRESS_SIZE = 512;
+
+  //private final ConcurrentHashMap<Server, HttpClient> clients = new ConcurrentHashMap<>();
+
+  private final ServerRegistry serverRegistry;
+
+  /**
+   * Create a new instance using the specified server registry. Calls using client side
+   * load-balancing (niws:// or vip:// URIs) need a server registry to lookup the set of servers
+   * to balance over.
+   */
+  @Inject
+  public RxHttp(ServerRegistry serverRegistry) {
+    this.serverRegistry = serverRegistry;
+  }
 
   private static HttpClientRequest<ByteBuf> compress(
       ClientConfig clientCfg, HttpClientRequest<ByteBuf> req, byte[] entity) {
@@ -460,7 +465,7 @@ public final class RxHttp {
     if (clientCfg.uri().isAbsolute()) {
       servers = getServersForUri(clientCfg, clientCfg.uri());
     } else {
-      servers = getServersForVip(clientCfg, clientCfg.vip());
+      servers = serverRegistry.getServers(clientCfg.vip(), clientCfg);
     }
     return servers;
   }
@@ -472,34 +477,6 @@ public final class RxHttp {
     servers.add(new Server(uri.getHost(), getPort(uri), secure));
     for (int i = 0; i < numRetries; ++i) {
       servers.add(new Server(uri.getHost(), getPort(uri), secure));
-    }
-    return servers;
-  }
-
-  private List<Server> getServersForVip(ClientConfig clientCfg, String vip) {
-    Preconditions.checkNotNull(vip, "vipAddress");
-    List<InstanceInfo> instances = discoveryClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
-    List<InstanceInfo> filtered = new ArrayList<>(instances.size());
-    for (InstanceInfo info : instances) {
-      if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
-        filtered.add(info);
-      }
-    }
-    Collections.shuffle(filtered);
-
-    // If the number of instances is less than the number of attempts, retry multiple times
-    // on previously used servers
-    int numAttempts = clientCfg.numRetries() + 1;
-    int numServers = filtered.size();
-
-    if (numServers == 0) {
-      throw new IllegalStateException("no UP servers for vip: " + vip);
-    }
-
-    List<Server> servers = new ArrayList<>();
-    for (int i = 0; i < numAttempts; ++i) {
-      InstanceInfo instance = filtered.get(i % numServers);
-      servers.add(toServer(clientCfg, instance));
     }
     return servers;
   }
@@ -524,14 +501,6 @@ public final class RxHttp {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  /** Convert a eureka InstanceInfo object to a server. */
-  static Server toServer(ClientConfig clientCfg, InstanceInfo instance) {
-    String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
-    int dfltPort = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();
-    int port = clientCfg.port(dfltPort);
-    return new Server(host, port, clientCfg.isSecure());
   }
 
   /**

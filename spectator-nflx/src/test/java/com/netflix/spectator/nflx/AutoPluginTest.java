@@ -31,13 +31,13 @@ public class AutoPluginTest {
   @Before
   public void init() {
     ConfigurationManager.getConfigInstance().setProperty("spectator.nflx.enabled", "false");
-    ConfigurationManager.getConfigInstance().setProperty("eureka.validateInstanceId", "false");
   }
 
   @Test
   public void inject() throws Exception {
     Injector injector = LifecycleInjector.builder()
         .usingBasePackages("com.netflix")
+        .withModules(new TestModule())
         .build()
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);

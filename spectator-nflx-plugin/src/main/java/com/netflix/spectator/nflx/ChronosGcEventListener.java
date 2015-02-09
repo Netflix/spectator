@@ -67,6 +67,7 @@ class ChronosGcEventListener implements GcEventListener {
 
   private final RxHttp rxHttp;
 
+  /** Create a new instance. */
   ChronosGcEventListener(RxHttp rxHttp) {
     this.rxHttp = rxHttp;
   }
