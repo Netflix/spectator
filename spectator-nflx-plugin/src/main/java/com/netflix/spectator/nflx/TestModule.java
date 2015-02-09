@@ -19,6 +19,8 @@ import com.google.inject.AbstractModule;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.http.BasicServerRegistry;
+import com.netflix.spectator.http.ServerRegistry;
 
 /**
  * Guice module to configure the appropriate bindings for unit tests. Note that this module will
@@ -33,5 +35,8 @@ public class TestModule extends AbstractModule {
     final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
     bind(ExtendedRegistry.class).toInstance(registry);
     bind(Registry.class).toInstance(registry);
+
+    // Allows auto-plugin to come up without needing to get DiscoveryClient to work
+    bind(ServerRegistry.class).toInstance(new BasicServerRegistry());
   }
 }

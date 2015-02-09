@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Listener that sends GC events to a chronos backend.
  */
-public class ChronosGcEventListener implements GcEventListener {
+class ChronosGcEventListener implements GcEventListener {
 
   private static final DynamicBooleanProperty ENABLED =
     DynamicPropertyFactory.getInstance().getBooleanProperty("spectator.gc.chronosEnabled", true);
@@ -64,6 +64,13 @@ public class ChronosGcEventListener implements GcEventListener {
   // without needing to find the previous event. Stored as atomic long as there is no guarantee
   // that the listener won't receive events from multiple threads.
   private final AtomicLong previousEndTime = new AtomicLong(-1L);
+
+  private final RxHttp rxHttp;
+
+  /** Create a new instance. */
+  ChronosGcEventListener(RxHttp rxHttp) {
+    this.rxHttp = rxHttp;
+  }
 
   private String getenv(String k) {
     String v = System.getenv(k);
@@ -106,7 +113,7 @@ public class ChronosGcEventListener implements GcEventListener {
 
     final CountDownLatch latch = new CountDownLatch(1);
     final long start = System.nanoTime();
-    RxHttp.postJson(uri, json).subscribe(
+    rxHttp.postJson(uri, json).subscribe(
         new Action1<HttpClientResponse<ByteBuf>>() {
           @Override
           public void call(HttpClientResponse<ByteBuf> response) {

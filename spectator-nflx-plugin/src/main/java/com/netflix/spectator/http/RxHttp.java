@@ -15,11 +15,13 @@
  */
 package com.netflix.spectator.http;
 
-import com.netflix.appinfo.InstanceInfo;
-import com.netflix.discovery.DiscoveryClient;
-import com.netflix.discovery.DiscoveryManager;
+import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.sandbox.HttpLogEntry;
+import iep.io.reactivex.netty.client.CompositePoolLimitDeterminationStrategy;
+import iep.io.reactivex.netty.client.MaxConnectionsBasedStrategy;
+import iep.io.reactivex.netty.client.PoolLimitDeterminationStrategy;
+import iep.rx.functions.Actions;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -30,38 +32,113 @@ import iep.io.reactivex.netty.RxNetty;
 import iep.io.reactivex.netty.pipeline.PipelineConfigurator;
 import iep.io.reactivex.netty.pipeline.PipelineConfiguratorComposite;
 import iep.io.reactivex.netty.pipeline.ssl.DefaultFactories;
-import iep.io.reactivex.netty.protocol.http.HttpObjectAggregationConfigurator;
 import iep.io.reactivex.netty.protocol.http.client.HttpClient;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientBuilder;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientPipelineConfigurator;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import iep.rx.Observable;
-import iep.rx.functions.Action0;
 import iep.rx.functions.Action1;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPOutputStream;
 
 /**
  * Helper for some simple uses of rxnetty with eureka. Only intended for use within the spectator
  * plugin.
  */
+@Singleton
 public final class RxHttp {
 
-  private RxHttp() {
-  }
+  private static final Logger LOGGER = LoggerFactory.getLogger(RxHttp.class);
 
   private static final int MIN_COMPRESS_SIZE = 512;
+  private static final AtomicInteger NEXT_THREAD_ID = new AtomicInteger(0);
+
+  private final ConcurrentHashMap<String, PoolLimitDeterminationStrategy> poolLimits = new ConcurrentHashMap<>();
+
+  private final ConcurrentHashMap<Server, HttpClient<ByteBuf, ByteBuf>> clients = new ConcurrentHashMap<>();
+  private ScheduledExecutorService executor;
+
+  private final ServerRegistry serverRegistry;
+
+  /**
+   * Create a new instance using the specified server registry. Calls using client side
+   * load-balancing (niws:// or vip:// URIs) need a server registry to lookup the set of servers
+   * to balance over.
+   */
+  @Inject
+  public RxHttp(ServerRegistry serverRegistry) {
+    this.serverRegistry = serverRegistry;
+  }
+
+  /**
+   * Setup the background tasks for cleaning up connections.
+   */
+  @PostConstruct
+  public void start() {
+    LOGGER.info("starting up backround cleanup threads");
+    executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+      @Override public Thread newThread(Runnable r) {
+        Thread t = new Thread(r, "spectator-rxhttp-" + NEXT_THREAD_ID.getAndIncrement());
+        t.setDaemon(true);
+        return t;
+      }
+    });
+
+    Runnable task = new Runnable() {
+      @Override public void run() {
+        try {
+          LOGGER.debug("executing cleanup for {} clients", clients.size());
+          for (Map.Entry<Server, HttpClient<ByteBuf, ByteBuf>> entry : clients.entrySet()) {
+            final Server s = entry.getKey();
+            if (s.isRegistered() && !serverRegistry.isStillAvailable(s)) {
+              LOGGER.debug("cleaning up client for {}", s);
+              clients.remove(s);
+              entry.getValue().shutdown();
+            }
+          }
+          LOGGER.debug("cleanup complete with {} clients remaining", clients.size());
+        } catch (Exception e) {
+          LOGGER.warn("connection cleanup task failed", e);
+        }
+      }
+    };
+
+    final long cleanupFreq = Spectator.config().getLong("spectator.http.cleanupFrequency", 60);
+    executor.scheduleWithFixedDelay(task, 0L, cleanupFreq, TimeUnit.SECONDS);
+  }
+
+  /**
+   * Shutdown all connections that are currently open.
+   */
+  @PreDestroy
+  public void stop() {
+    LOGGER.info("shutting down backround cleanup threads");
+    executor.shutdown();
+    for (HttpClient<ByteBuf, ByteBuf> client : clients.values()) {
+      client.shutdown();
+    }
+  }
 
   private static HttpClientRequest<ByteBuf> compress(
       ClientConfig clientCfg, HttpClientRequest<ByteBuf> req, byte[] entity) {
@@ -116,7 +193,7 @@ public final class RxHttp {
     }
   }
 
-  private static void update(HttpLogEntry entry, Throwable t) {
+  private void update(HttpLogEntry entry, Throwable t) {
     boolean canRetry = (t instanceof ConnectException || t instanceof ReadTimeoutException);
     entry.mark("received-error").withException(t).withCanRetry(canRetry);
   }
@@ -129,7 +206,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> get(String uri) {
+  public Observable<HttpClientResponse<ByteBuf>> get(String uri) {
     return get(URI.create(uri));
   }
 
@@ -141,7 +218,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> get(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
     return execute(clientCfg, servers, HttpClientRequest.createGet(clientCfg.relativeUri()));
@@ -159,7 +236,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   post(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
@@ -178,7 +255,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, byte[] entity) {
+  public Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, byte[] entity) {
     return post(uri, "application/json", entity);
   }
 
@@ -192,7 +269,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, String entity) {
+  public Observable<HttpClientResponse<ByteBuf>> postJson(URI uri, String entity) {
     return postJson(uri, getBytes(entity));
   }
 
@@ -205,7 +282,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> postForm(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> postForm(URI uri) {
     Preconditions.checkNotNull(uri.getRawQuery(), "uri.query");
     byte[] entity = getBytes(uri.getRawQuery());
     return post(uri, HttpHeaders.Values.APPLICATION_X_WWW_FORM_URLENCODED, entity);
@@ -223,7 +300,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   put(URI uri, String contentType, byte[] entity) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
@@ -242,7 +319,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, byte[] entity) {
+  public Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, byte[] entity) {
     return put(uri, "application/json", entity);
   }
 
@@ -256,7 +333,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, String entity) {
+  public Observable<HttpClientResponse<ByteBuf>> putJson(URI uri, String entity) {
     return putJson(uri, getBytes(entity));
   }
 
@@ -268,7 +345,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> delete(String uri) {
+  public Observable<HttpClientResponse<ByteBuf>> delete(String uri) {
     return delete(URI.create(uri));
   }
 
@@ -280,7 +357,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
+  public Observable<HttpClientResponse<ByteBuf>> delete(URI uri) {
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
     final List<Server> servers = getServers(clientCfg);
     return execute(clientCfg, servers, HttpClientRequest.createDelete(clientCfg.relativeUri()));
@@ -297,7 +374,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>> submit(HttpClientRequest<ByteBuf> req) {
+  public Observable<HttpClientResponse<ByteBuf>> submit(HttpClientRequest<ByteBuf> req) {
     return submit(req, (byte[]) null);
   }
 
@@ -314,7 +391,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   submit(HttpClientRequest<ByteBuf> req, String entity) {
     return submit(req, (entity == null) ? null : getBytes(entity));
   }
@@ -332,7 +409,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  public static Observable<HttpClientResponse<ByteBuf>>
+  public Observable<HttpClientResponse<ByteBuf>>
   submit(HttpClientRequest<ByteBuf> req, byte[] entity) {
     final URI uri = URI.create(req.getUri());
     final ClientConfig clientCfg = ClientConfig.fromUri(uri);
@@ -360,7 +437,7 @@ public final class RxHttp {
    * @return
    *     Observable with the response of the request.
    */
-  static Observable<HttpClientResponse<ByteBuf>>
+  Observable<HttpClientResponse<ByteBuf>>
   execute(final ClientConfig clientCfg, final List<Server> servers, final HttpClientRequest<ByteBuf> req) {
     final HttpLogEntry entry = create(clientCfg, req);
 
@@ -373,16 +450,17 @@ public final class RxHttp {
       req.withHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
     }
 
+    final RequestContext context = new RequestContext(this, entry, req, clientCfg, servers.get(0));
     final long backoffMillis = clientCfg.retryDelay();
-    Observable<HttpClientResponse<ByteBuf>> observable = execute(entry, clientCfg, servers.get(0), req);
+    Observable<HttpClientResponse<ByteBuf>> observable = execute(context);
     for (int i = 1; i < servers.size(); ++i) {
-      final Server server = servers.get(i);
+      final RequestContext ctxt = context.withServer(servers.get(i));
       final long delay = backoffMillis << (i - 1);
       final int attempt = i + 1;
       observable = observable
-          .flatMap(new RedirectHandler(entry, clientCfg, server, req))
-          .flatMap(new StatusRetryHandler(entry, clientCfg, server, req, attempt, delay))
-          .onErrorResumeNext(new ErrorRetryHandler(entry, clientCfg, server, req, attempt));
+          .flatMap(new RedirectHandler(ctxt))
+          .flatMap(new StatusRetryHandler(ctxt, attempt, delay))
+          .onErrorResumeNext(new ErrorRetryHandler(ctxt, attempt));
     }
 
     return observable;
@@ -391,45 +469,17 @@ public final class RxHttp {
   /**
    * Execute an HTTP request.
    *
-   * @param clientCfg
-   *     Configuration settings for the request.
-   * @param server
-   *     Server to send the request to.
-   * @param req
-   *     Request to execute.
+   * @param context
+   *     Context associated with the request.
    * @return
    *     Observable with the response of the request.
    */
-  static Observable<HttpClientResponse<ByteBuf>>
-  execute(final HttpLogEntry entry, ClientConfig clientCfg, Server server, HttpClientRequest<ByteBuf> req) {
-    entry.withRemoteAddr(server.host()).withRemotePort(server.port());
+  Observable<HttpClientResponse<ByteBuf>> execute(final RequestContext context) {
+    final HttpLogEntry entry = context.entry();
 
-    HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
-        .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)
-        .userAgent(clientCfg.userAgent())
-        .build();
-
-    PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>
-        pipelineCfg = new PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>(
-        new HttpClientPipelineConfigurator<ByteBuf, ByteBuf>(),
-        new HttpDecompressionConfigurator(),
-        new HttpObjectAggregationConfigurator(clientCfg.aggregationLimit())
-    );
-
-    HttpClientBuilder<ByteBuf, ByteBuf> builder =
-        RxNetty.<ByteBuf, ByteBuf>newHttpClientBuilder(server.host(), server.port())
-            .pipelineConfigurator(pipelineCfg)
-            .config(config)
-            .withName(clientCfg.name())
-            .channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientCfg.connectTimeout());
-
-    if (server.isSecure()) {
-      builder.withSslEngineFactory(DefaultFactories.trustAll());
-    }
-
+    final HttpClient<ByteBuf, ByteBuf> client = getClient(context);
     entry.mark("start");
-    final HttpClient<ByteBuf, ByteBuf> client = builder.build();
-    return client.submit(req)
+    return client.submit(context.request())
         .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
           @Override public void call(HttpClientResponse<ByteBuf> res) {
             update(entry, res);
@@ -442,11 +492,86 @@ public final class RxHttp {
             HttpLogEntry.logClientRequest(entry);
           }
         })
-        .doOnTerminate(new Action0() {
-          @Override public void call() {
-            client.shutdown();
-          }
-        });
+        .doOnTerminate(Actions.empty());
+  }
+
+  private HttpClient<ByteBuf, ByteBuf> getClient(final RequestContext context) {
+    HttpClient<ByteBuf, ByteBuf> c = clients.get(context.server());
+    if (c == null) {
+      c = newClient(context);
+      HttpClient<ByteBuf, ByteBuf> tmp = clients.putIfAbsent(context.server(), c);
+      if (tmp != null) {
+        c.shutdown();
+        c = tmp;
+      }
+    }
+    return c;
+  }
+
+  private HttpClient<ByteBuf, ByteBuf> newClient(final RequestContext context) {
+    final Server server = context.server();
+    final ClientConfig clientCfg = context.config();
+
+    HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
+        .readTimeout(clientCfg.readTimeout(), TimeUnit.MILLISECONDS)
+        .userAgent(clientCfg.userAgent())
+        .build();
+
+    PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>
+        pipelineCfg = new PipelineConfiguratorComposite<HttpClientResponse<ByteBuf>, HttpClientRequest<ByteBuf>>(
+        new HttpClientPipelineConfigurator<ByteBuf, ByteBuf>(),
+        new HttpDecompressionConfigurator()
+    );
+
+    HttpClientBuilder<ByteBuf, ByteBuf> builder =
+        RxNetty.<ByteBuf, ByteBuf>newHttpClientBuilder(server.host(), server.port())
+            .withConnectionPoolLimitStrategy(getPoolLimitStrategy(clientCfg))
+            .withIdleConnectionsTimeoutMillis(clientCfg.idleConnectionsTimeoutMillis())
+            .pipelineConfigurator(pipelineCfg)
+            .config(config)
+            .withName(clientCfg.name())
+            .channelOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, clientCfg.connectTimeout());
+
+    if (server.isSecure()) {
+      builder.withSslEngineFactory(DefaultFactories.trustAll());
+    }
+
+    return builder.build();
+  }
+
+  private PoolLimitDeterminationStrategy getPoolLimitStrategy(ClientConfig clientCfg) {
+    PoolLimitDeterminationStrategy totalStrategy = poolLimits.get(clientCfg.name());
+    if (totalStrategy == null) {
+      totalStrategy = new MaxConnectionsBasedStrategy(clientCfg.maxConnectionsTotal());
+      PoolLimitDeterminationStrategy tmp = poolLimits.putIfAbsent(clientCfg.name(), totalStrategy);
+      if (tmp != null) {
+        totalStrategy = tmp;
+      }
+    }
+    return new CompositePoolLimitDeterminationStrategy(
+        new MaxConnectionsBasedStrategy(clientCfg.maxConnectionsPerHost()),
+        totalStrategy);
+  }
+
+  private List<Server> getServers(ClientConfig clientCfg) {
+    List<Server> servers = null;
+    if (clientCfg.uri().isAbsolute()) {
+      servers = getServersForUri(clientCfg, clientCfg.uri());
+    } else {
+      servers = serverRegistry.getServers(clientCfg.vip(), clientCfg);
+    }
+    return servers;
+  }
+
+  private List<Server> getServersForUri(ClientConfig clientCfg, URI uri) {
+    final int numRetries = clientCfg.numRetries();
+    final boolean secure = "https".equals(uri.getScheme());
+    List<Server> servers = new ArrayList<>();
+    servers.add(new Server(uri.getHost(), getPort(uri), secure));
+    for (int i = 0; i < numRetries; ++i) {
+      servers.add(new Server(uri.getHost(), getPort(uri), secure));
+    }
+    return servers;
   }
 
   /**
@@ -462,20 +587,6 @@ public final class RxHttp {
     return newReq;
   }
 
-  private static long getRetryDelay(HttpClientResponse<ByteBuf> res, long dflt) {
-    try {
-      if (res.getHeaders().contains(HttpHeaders.Names.RETRY_AFTER)) {
-        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.37
-        int delaySeconds = res.getHeaders().getIntHeader(HttpHeaders.Names.RETRY_AFTER);
-        return TimeUnit.MILLISECONDS.convert(delaySeconds, TimeUnit.SECONDS);
-      }
-    } catch (NumberFormatException e) {
-      // We don't support the date version, so use dflt in this case
-      return dflt;
-    }
-    return dflt;
-  }
-
   /** We expect UTF-8 to always be supported. */
   private static byte[] getBytes(String s) {
     try {
@@ -483,64 +594,6 @@ public final class RxHttp {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private static List<Server> getServers(ClientConfig clientCfg) {
-    List<Server> servers = null;
-    if (clientCfg.uri().isAbsolute()) {
-      servers = getServersForUri(clientCfg, clientCfg.uri());
-    } else {
-      servers = getServersForVip(clientCfg, clientCfg.vip());
-    }
-    return servers;
-  }
-
-  private static List<Server> getServersForUri(ClientConfig clientCfg, URI uri) {
-    final int numRetries = clientCfg.numRetries();
-    final boolean secure = "https".equals(uri.getScheme());
-    List<Server> servers = new ArrayList<>();
-    servers.add(new Server(uri.getHost(), getPort(uri), secure));
-    for (int i = 0; i < numRetries; ++i) {
-      servers.add(new Server(uri.getHost(), getPort(uri), secure));
-    }
-    return servers;
-  }
-
-  private static List<Server> getServersForVip(ClientConfig clientCfg, String vip) {
-    Preconditions.checkNotNull(vip, "vipAddress");
-    DiscoveryClient discoClient = DiscoveryManager.getInstance().getDiscoveryClient();
-    List<InstanceInfo> instances = discoClient.getInstancesByVipAddress(vip, clientCfg.isSecure());
-    List<InstanceInfo> filtered = new ArrayList<>(instances.size());
-    for (InstanceInfo info : instances) {
-      if (info.getStatus() == InstanceInfo.InstanceStatus.UP) {
-        filtered.add(info);
-      }
-    }
-    Collections.shuffle(filtered);
-
-    // If the number of instances is less than the number of attempts, retry multiple times
-    // on previously used servers
-    int numAttempts = clientCfg.numRetries() + 1;
-    int numServers = filtered.size();
-
-    if (numServers == 0) {
-      throw new IllegalStateException("no UP servers for vip: " + vip);
-    }
-
-    List<Server> servers = new ArrayList<>();
-    for (int i = 0; i < numAttempts; ++i) {
-      InstanceInfo instance = filtered.get(i % numServers);
-      servers.add(toServer(clientCfg, instance));
-    }
-    return servers;
-  }
-
-  /** Convert a eureka InstanceInfo object to a server. */
-  static Server toServer(ClientConfig clientCfg, InstanceInfo instance) {
-    String host = clientCfg.useIpAddress() ? instance.getIPAddr() : instance.getHostName();
-    int dfltPort = clientCfg.isSecure() ? instance.getSecurePort() : instance.getPort();
-    int port = clientCfg.port(dfltPort);
-    return new Server(host, port, clientCfg.isSecure());
   }
 
   /**

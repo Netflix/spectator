@@ -47,6 +47,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -68,6 +70,8 @@ public class RxHttpTest {
 
   private static AtomicInteger redirects = new AtomicInteger(0);
 
+  private static final RxHttp rxHttp = new RxHttp(null);
+
   private static void set(String k, String v) {
     ConfigurationManager.getConfigInstance().setProperty(k, v);
   }
@@ -81,6 +85,8 @@ public class RxHttpTest {
 
   @BeforeClass
   public static void startServer() throws Exception {
+    rxHttp.start();
+
     server = HttpServer.create(new InetSocketAddress(0), 100);
     server.setExecutor(Executors.newFixedThreadPool(10, new ThreadFactory() {
       @Override public Thread newThread(Runnable r) {
@@ -93,6 +99,8 @@ public class RxHttpTest {
       @Override
       public void handle(HttpExchange exchange) throws IOException {
         ignore(exchange.getRequestBody());
+        int port = exchange.getRemoteAddress().getPort();
+        exchange.getResponseHeaders().add("X-Test-Port", "" + port);
         statusCounts.incrementAndGet(statusCode.get());
         exchange.sendResponseHeaders(statusCode.get(), -1L);
         exchange.close();
@@ -192,6 +200,7 @@ public class RxHttpTest {
 
   @AfterClass
   public static void stopServer() {
+    rxHttp.stop();
     server.stop(0);
   }
 
@@ -227,7 +236,7 @@ public class RxHttpTest {
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, attempts);
 
-    RxHttp.get(uri("/empty")).toBlocking().toFuture().get();
+    rxHttp.get(uri("/empty")).toBlocking().toFuture().get();
 
     assertEquals(expected, statusCounts);
   }
@@ -284,7 +293,7 @@ public class RxHttpTest {
 
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
-    RxHttp.get(uri("/relativeRedirect")).subscribe(
+    rxHttp.get(uri("/relativeRedirect")).subscribe(
         Actions.empty(),
         new Action1<Throwable>() {
           @Override public void call(Throwable t) {
@@ -314,7 +323,7 @@ public class RxHttpTest {
 
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
-    RxHttp.get(uri("/absoluteRedirect")).subscribe(
+    rxHttp.get(uri("/absoluteRedirect")).subscribe(
         Actions.empty(),
         new Action1<Throwable>() {
           @Override public void call(Throwable t) {
@@ -344,7 +353,7 @@ public class RxHttpTest {
 
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
-    RxHttp.get(uri("/readTimeout")).subscribe(
+    rxHttp.get(uri("/readTimeout")).subscribe(
         Actions.empty(),
         new Action1<Throwable>() {
           @Override public void call(Throwable t) {
@@ -377,7 +386,7 @@ public class RxHttpTest {
 
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicReference<Throwable> throwable = new AtomicReference<>();
-    RxHttp.get("niws://test/http://localhost:" + serverPort + "/empty").subscribe(
+    rxHttp.get("niws://test/http://localhost:" + serverPort + "/empty").subscribe(
         Actions.empty(),
         new Action1<Throwable>() {
           @Override
@@ -406,7 +415,7 @@ public class RxHttpTest {
     expected.addAndGet(code, 1);
 
     final StringBuilder builder = new StringBuilder();
-    RxHttp.post(uri("/echo"), "text/plain", "foo bar".getBytes())
+    rxHttp.post(uri("/echo"), "text/plain", "foo bar".getBytes())
         .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<ByteBuf>>() {
           @Override
           public Observable<ByteBuf> call(HttpClientResponse<ByteBuf> res) {
@@ -441,7 +450,7 @@ public class RxHttpTest {
     String body = content.toString();
 
     final StringBuilder builder = new StringBuilder();
-    RxHttp.post(uri("/echo"), "text/plain", body.getBytes())
+    rxHttp.post(uri("/echo"), "text/plain", body.getBytes())
         .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<ByteBuf>>() {
           @Override
           public Observable<ByteBuf> call(HttpClientResponse<ByteBuf> res) {
@@ -468,7 +477,7 @@ public class RxHttpTest {
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
-    RxHttp.postJson(uri("/empty"), "{}").toBlocking().toFuture().get();
+    rxHttp.postJson(uri("/empty"), "{}").toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
 
@@ -480,7 +489,7 @@ public class RxHttpTest {
     expected.addAndGet(code, 1);
 
     final StringBuilder builder = new StringBuilder();
-    RxHttp.postForm(uri("/echo?foo=bar&name=John+Doe&pct=%2042%25"))
+    rxHttp.postForm(uri("/echo?foo=bar&name=John+Doe&pct=%2042%25"))
         .flatMap(new Func1<HttpClientResponse<ByteBuf>, Observable<ByteBuf>>() {
           @Override
           public Observable<ByteBuf> call(HttpClientResponse<ByteBuf> res) {
@@ -506,7 +515,7 @@ public class RxHttpTest {
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
-    RxHttp.putJson(uri("/empty"), "{}").toBlocking().toFuture().get();
+    rxHttp.putJson(uri("/empty"), "{}").toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
 
@@ -516,7 +525,7 @@ public class RxHttpTest {
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
-    RxHttp.delete(uri("/empty").toString()).toBlocking().toFuture().get();
+    rxHttp.delete(uri("/empty").toString()).toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
 
@@ -526,7 +535,7 @@ public class RxHttpTest {
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
-    RxHttp.submit(HttpClientRequest.<ByteBuf>create(HttpMethod.HEAD, uri("/empty").toString()))
+    rxHttp.submit(HttpClientRequest.<ByteBuf>create(HttpMethod.HEAD, uri("/empty").toString()))
         .toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
@@ -537,7 +546,7 @@ public class RxHttpTest {
     statusCode.set(code);
     AtomicIntegerArray expected = copy(statusCounts);
     expected.addAndGet(code, 1);
-    RxHttp.submit(HttpClientRequest.createPost(uri("/empty").toString()).withHeader("k", "v"), "{}")
+    rxHttp.submit(HttpClientRequest.createPost(uri("/empty").toString()).withHeader("k", "v"), "{}")
         .toBlocking().toFuture().get();
     assertEquals(expected, statusCounts);
   }
@@ -552,7 +561,7 @@ public class RxHttpTest {
         .setAppName("foo")
         .setPort(1)
         .build();
-    Server server = RxHttp.toServer(cfg, info);
+    Server server = EurekaServerRegistry.toServer(cfg, info);
     Assert.assertEquals(server.port(), 2);
   }
 
@@ -565,8 +574,28 @@ public class RxHttpTest {
         .setAppName("foo")
         .setPort(1)
         .build();
-    Server server = RxHttp.toServer(cfg, info);
+    Server server = EurekaServerRegistry.toServer(cfg, info);
     Assert.assertEquals(server.port(), 1);
+  }
+
+  private int getPortForReq() throws Exception {
+    HttpClientResponse<ByteBuf> r = rxHttp.get(uri("/empty")).toBlocking().toFuture().get();
+    return Integer.parseInt(r.getHeaders().get("X-Test-Port"));
+  }
+
+  @Test
+  public void connectionReuse() throws Exception {
+    Map<Integer, Integer> counts = new HashMap<>();
+    for (int i = 0; i < 10; ++i) {
+      int p = getPortForReq();
+      Integer c = counts.get(p);
+      if (c == null) {
+        counts.put(p, 1);
+      } else {
+        counts.put(p, c + 1);
+      }
+    }
+    Assert.assertTrue("connections not getting reused", counts.size() < 4);
   }
 }
 

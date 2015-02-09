@@ -20,6 +20,7 @@ import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
+import com.netflix.spectator.http.RxHttp;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;
 import com.sun.management.GcInfo;
@@ -89,6 +90,10 @@ public class ChronosGcEventListenerTest {
     server.stop(0);
   }
 
+  private ChronosGcEventListener newListener() {
+    return new ChronosGcEventListener(new RxHttp(null));
+  }
+
   private long reqCount(int status) {
     ExtendedRegistry r = Spectator.registry();
     Id requests = r.createId("spectator.gc.chronosPost", "status", "" + status);
@@ -120,7 +125,7 @@ public class ChronosGcEventListenerTest {
     statusCode.set(200);
     long before = reqCount(200);
 
-    final ChronosGcEventListener listener = new ChronosGcEventListener();
+    final ChronosGcEventListener listener = newListener();
     listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 
@@ -137,7 +142,7 @@ public class ChronosGcEventListenerTest {
     long beforeError = reqCount(statusStr);
     int errorCount = statusCounts.get(status);
 
-    final ChronosGcEventListener listener = new ChronosGcEventListener();
+    final ChronosGcEventListener listener = newListener();
     listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 

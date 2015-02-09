@@ -153,6 +153,21 @@ class ClientConfig {
     return getInt("FollowRedirects", 3);
   }
 
+  /** Maximum number of connections permitted to a single host. */
+  int maxConnectionsPerHost() {
+    return getInt("MaxConnectionsPerHost", 20);
+  }
+
+  /** Maximum number of connections for all clients with the same name. */
+  int maxConnectionsTotal() {
+    return getInt("MaxConnectionsTotal", 200);
+  }
+
+  /** How long in milliseconds a connection can be idle in the pool before being closed. */
+  int idleConnectionsTimeoutMillis() {
+    return getInt("ConnectionPoolIdleEvictTimeMilliseconds", 60000);
+  }
+
   /** Should HTTPS be used for the request? */
   boolean isSecure() {
     final boolean https = "https".equals(uri.getScheme());
@@ -186,11 +201,6 @@ class ClientConfig {
    */
   int retryDelay() {
     return getInt("RetryDelay", 500);
-  }
-
-  /** Max size of the request body. Defaults to 10MB. */
-  int aggregationLimit() {
-    return getInt("AggregationLimit", 10 * 1024 * 1024);
   }
 
   /** User agent string to use when making the request. */

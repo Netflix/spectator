@@ -18,12 +18,14 @@ package com.netflix.spectator.nflx;
 import com.netflix.config.ConfigurationManager;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
+import com.netflix.spectator.http.RxHttp;
 import com.netflix.spectator.jvm.Jmx;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
 
@@ -41,6 +43,14 @@ public final class Plugin {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Plugin.class);
 
+  private final RxHttp rxHttp;
+
+  /** Create a new instance. */
+  @Inject
+  public Plugin(RxHttp rxHttp) {
+    this.rxHttp = rxHttp;
+  }
+
   @PostConstruct
   private void init() throws IOException {
     AbstractConfiguration config = ConfigurationManager.getConfigInstance();
@@ -48,7 +58,7 @@ public final class Plugin {
     if (enabled) {
       ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
       if (config.getBoolean("spectator.gc.loggingEnabled")) {
-        GC_LOGGER.start(new ChronosGcEventListener());
+        GC_LOGGER.start(new ChronosGcEventListener(rxHttp));
         LOGGER.info("gc logging started");
       } else {
         LOGGER.info("gc logging is not enabled");

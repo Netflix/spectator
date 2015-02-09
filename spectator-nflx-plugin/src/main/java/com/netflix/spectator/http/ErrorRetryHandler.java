@@ -15,9 +15,7 @@
  */
 package com.netflix.spectator.http;
 
-import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
-import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import iep.rx.Observable;
 import iep.rx.functions.Func1;
@@ -31,47 +29,28 @@ import java.net.ConnectException;
 class ErrorRetryHandler implements
     Func1<Throwable, Observable<? extends HttpClientResponse<ByteBuf>>> {
 
-  private final HttpLogEntry entry;
-  private final ClientConfig config;
-  private final Server server;
-  private final HttpClientRequest<ByteBuf> req;
+  private final RequestContext context;
 
   private final int attempt;
 
   /**
    * Create a new instance.
    *
-   * @param entry
-   *     Log entry to update for each request.
-   * @param config
-   *     Config settings to use, FollowRedirects setting will determine how deep to go before
-   *     giving up.
-   * @param server
-   *     Server for the original request. In the case of relative URI in the Location header this
-   *     is the server that will be used for the redirect.
-   * @param req
-   *     Original request.
+   * @param context
+   *     Context associated with the request.
    * @param attempt
    *     The number of this attempt.
    */
-  ErrorRetryHandler(
-      HttpLogEntry entry,
-      ClientConfig config,
-      Server server,
-      HttpClientRequest<ByteBuf> req,
-      int attempt) {
-    this.entry = entry;
-    this.config = config;
-    this.server = server;
-    this.req = req;
+  ErrorRetryHandler(RequestContext context, int attempt) {
+    this.context = context;
     this.attempt = attempt;
   }
 
   @Override
   public Observable<? extends HttpClientResponse<ByteBuf>> call(Throwable throwable) {
     if (throwable instanceof ConnectException || throwable instanceof ReadTimeoutException) {
-      entry.withAttempt(attempt);
-      return RxHttp.execute(entry, config, server, req);
+      context.entry().withAttempt(attempt);
+      return context.rxHttp().execute(context);
     }
     return Observable.error(throwable);
   }

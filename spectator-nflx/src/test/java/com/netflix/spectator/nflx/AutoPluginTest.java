@@ -16,6 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.Injector;
+import com.netflix.config.ConfigurationManager;
 import com.netflix.governator.guice.LifecycleInjector;
 import com.netflix.governator.lifecycle.LifecycleManager;
 import org.junit.Assert;
@@ -29,13 +30,14 @@ public class AutoPluginTest {
 
   @Before
   public void init() {
-    System.setProperty("spectator.nflx.enabled", "false");
+    ConfigurationManager.getConfigInstance().setProperty("spectator.nflx.enabled", "false");
   }
 
   @Test
   public void inject() throws Exception {
     Injector injector = LifecycleInjector.builder()
         .usingBasePackages("com.netflix")
+        .withModules(new TestModule())
         .build()
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);

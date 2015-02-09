@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.http;
 
-import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
-import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import iep.rx.Observable;
 import iep.rx.functions.Func1;
@@ -31,10 +29,7 @@ import java.util.concurrent.TimeUnit;
 class StatusRetryHandler implements
     Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>> {
 
-  private final HttpLogEntry entry;
-  private final ClientConfig config;
-  private final Server server;
-  private final HttpClientRequest<ByteBuf> req;
+  private final RequestContext context;
 
   private final int attempt;
   private final long delay;
@@ -42,14 +37,8 @@ class StatusRetryHandler implements
   /**
    * Create a new instance.
    *
-   * @param entry
-   *     Log entry to update for each request.
-   * @param config
-   *     Config settings to use.
-   * @param server
-   *     Server to use for the retry.
-   * @param req
-   *     Original request.
+   * @param context
+   *     Context associated with the request.
    * @param attempt
    *     The number of this attempt.
    * @param delay
@@ -57,17 +46,8 @@ class StatusRetryHandler implements
    *     {@code Retry-After} header is set on the response it will take precedence over the
    *     default delay.
    */
-  StatusRetryHandler(
-      HttpLogEntry entry,
-      ClientConfig config,
-      Server server,
-      HttpClientRequest<ByteBuf> req,
-      int attempt,
-      long delay) {
-    this.entry = entry;
-    this.config = config;
-    this.server = server;
-    this.req = req;
+  StatusRetryHandler(RequestContext context, int attempt, long delay) {
+    this.context = context;
     this.attempt = attempt;
     this.delay = delay;
   }
@@ -93,15 +73,15 @@ class StatusRetryHandler implements
     if (code == 429 || code == 503) {
       final long retryDelay = getRetryDelay(res, delay);
       res.getContent().subscribe();
-      entry.withAttempt(attempt);
-      resObs = RxHttp.execute(entry, config, server, req);
+      context.entry().withAttempt(attempt);
+      resObs = context.rxHttp().execute(context);
       if (retryDelay > 0) {
         resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);
       }
     } else if (code >= 500) {
       res.getContent().subscribe();
-      entry.withAttempt(attempt);
-      resObs = RxHttp.execute(entry, config, server, req);
+      context.entry().withAttempt(attempt);
+      resObs = context.rxHttp().execute(context);
     } else {
       resObs = Observable.just(res);
     }
