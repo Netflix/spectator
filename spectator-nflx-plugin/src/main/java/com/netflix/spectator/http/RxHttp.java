@@ -384,16 +384,17 @@ public final class RxHttp {
       req.withHeader(HttpHeaders.Names.ACCEPT_ENCODING, HttpHeaders.Values.GZIP);
     }
 
+    final RequestContext context = new RequestContext(this, entry, req, clientCfg, servers.get(0));
     final long backoffMillis = clientCfg.retryDelay();
-    Observable<HttpClientResponse<ByteBuf>> observable = execute(entry, clientCfg, servers.get(0), req);
+    Observable<HttpClientResponse<ByteBuf>> observable = execute(context);
     for (int i = 1; i < servers.size(); ++i) {
-      final Server server = servers.get(i);
+      final RequestContext ctxt = context.withServer(servers.get(i));
       final long delay = backoffMillis << (i - 1);
       final int attempt = i + 1;
       observable = observable
-          .flatMap(new RedirectHandler(this, entry, clientCfg, server, req))
-          .flatMap(new StatusRetryHandler(this, entry, clientCfg, server, req, attempt, delay))
-          .onErrorResumeNext(new ErrorRetryHandler(this, entry, clientCfg, server, req, attempt));
+          .flatMap(new RedirectHandler(ctxt))
+          .flatMap(new StatusRetryHandler(ctxt, attempt, delay))
+          .onErrorResumeNext(new ErrorRetryHandler(ctxt, attempt));
     }
 
     return observable;
@@ -402,17 +403,15 @@ public final class RxHttp {
   /**
    * Execute an HTTP request.
    *
-   * @param clientCfg
-   *     Configuration settings for the request.
-   * @param server
-   *     Server to send the request to.
-   * @param req
-   *     Request to execute.
+   * @param context
+   *     Context associated with the request.
    * @return
    *     Observable with the response of the request.
    */
-  Observable<HttpClientResponse<ByteBuf>>
-  execute(final HttpLogEntry entry, ClientConfig clientCfg, Server server, HttpClientRequest<ByteBuf> req) {
+  Observable<HttpClientResponse<ByteBuf>> execute(final RequestContext context) {
+    final HttpLogEntry entry = context.entry();
+    final Server server = context.server();
+    final ClientConfig clientCfg = context.config();
     entry.withRemoteAddr(server.host()).withRemotePort(server.port());
 
     HttpClient.HttpClientConfig config = new HttpClient.HttpClientConfig.Builder()
@@ -440,7 +439,7 @@ public final class RxHttp {
 
     entry.mark("start");
     final HttpClient<ByteBuf, ByteBuf> client = builder.build();
-    return client.submit(req)
+    return client.submit(context.request())
         .doOnNext(new Action1<HttpClientResponse<ByteBuf>>() {
           @Override public void call(HttpClientResponse<ByteBuf> res) {
             update(entry, res);

@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.http;
 
-import com.netflix.spectator.sandbox.HttpLogEntry;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
@@ -31,41 +30,18 @@ import java.net.URI;
 class RedirectHandler implements
     Func1<HttpClientResponse<ByteBuf>, Observable<HttpClientResponse<ByteBuf>>> {
 
-  private final RxHttp rxHttp;
-  private final HttpLogEntry entry;
-  private final HttpClientRequest<ByteBuf> req;
-  private final ClientConfig config;
-  private final Server server;
+  private final RequestContext context;
 
   private int redirect;
 
   /**
    * Create a new instance.
    *
-   * @param rxHttp
-   *     Instance of RxHttp to use.
-   * @param entry
-   *     Log entry to update for each request.
-   * @param config
-   *     Config settings to use, FollowRedirects setting will determine how deep to go before
-   *     giving up.
-   * @param server
-   *     Server for the original request. In the case of relative URI in the Location header this
-   *     is the server that will be used for the redirect.
-   * @param req
-   *     Original request.
+   * @param context
+   *     Context associated with the request.
    */
-  RedirectHandler(
-      RxHttp rxHttp,
-      HttpLogEntry entry,
-      ClientConfig config,
-      Server server,
-      HttpClientRequest<ByteBuf> req) {
-    this.rxHttp = rxHttp;
-    this.entry = entry;
-    this.config = config;
-    this.server = server;
-    this.req = req;
+  RedirectHandler(RequestContext context) {
+    this.context = context;
   }
 
   @Override
@@ -73,22 +49,23 @@ class RedirectHandler implements
     final int code = res.getStatus().code();
     Observable<HttpClientResponse<ByteBuf>> resObs;
     if (code > 300 && code <= 307) {
+      final HttpClientRequest<ByteBuf> req = context.request();
       res.getContent().subscribe();
       final URI loc = URI.create(res.getHeaders().get(HttpHeaders.Names.LOCATION));
-      entry.withRedirect(loc);
+      context.entry().withRedirect(loc);
       if (loc.isAbsolute()) {
         // Should we allow redirect from https to http?
-        final boolean secure = server.isSecure() || "https".equals(loc.getScheme());
+        final boolean secure = context.server().isSecure() || "https".equals(loc.getScheme());
         final Server s = new Server(loc.getHost(), RxHttp.getPort(loc), secure);
         final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
-        resObs = rxHttp.execute(entry, config, s, redirReq);
+        resObs = context.rxHttp().execute(context.withRequest(redirReq).withServer(s));
       } else {
         final HttpClientRequest<ByteBuf> redirReq = RxHttp.copy(req, ClientConfig.relative(loc));
-        resObs = rxHttp.execute(entry, config, server, redirReq);
+        resObs = context.rxHttp().execute(context.withRequest(redirReq));
       }
 
       ++redirect;
-      if (redirect < config.followRedirects()) {
+      if (redirect < context.config().followRedirects()) {
         resObs = resObs.flatMap(this);
       }
     } else {
