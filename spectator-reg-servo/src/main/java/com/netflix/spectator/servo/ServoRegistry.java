@@ -121,7 +121,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
         }
       } else {
         for (Measurement m : meter.measure()) {
-          monitors.add(new NumberGauge(toMonitorConfig(m.id()), m.value()));
+          monitors.add(new ServoGauge(toMonitorConfig(m.id()), m.value()));
         }
       }
     }
