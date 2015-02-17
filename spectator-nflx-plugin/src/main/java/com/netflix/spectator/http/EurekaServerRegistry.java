@@ -62,12 +62,10 @@ public class EurekaServerRegistry implements ServerRegistry {
     long now = System.currentTimeMillis();
     ServerEntry entry = serversByVip.get(vip);
     if (entry == null || now - entry.ctime() > EXPIRATION_TIME) {
-      ServerEntry tmp = new ServerEntry(getServersImpl(vip, clientCfg), now);
-      entry = serversByVip.putIfAbsent(vip, tmp);
-      return next(vip, (entry == null) ? tmp : entry, clientCfg);
-    } else {
-      return next(vip, entry, clientCfg);
+      entry = new ServerEntry(getServersImpl(vip, clientCfg), now);
+      serversByVip.put(vip, entry);
     }
+    return next(vip, entry, clientCfg);
   }
 
   private List<Server> next(String vip, ServerEntry entry, ClientConfig clientCfg) {
