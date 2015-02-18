@@ -1,55 +1,42 @@
+buildscript {
+  repositories { jcenter() }
+  dependencies {
+    classpath 'me.champeau.gradle:jmh-gradle-plugin:0.1.3'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5'
+  }
+}
+
+plugins {
+  id 'nebula.netflixoss' version '2.2.7'
+}
 
 // Establish version and status
 ext.githubProjectName = 'spectator'
 
-buildscript {
-  repositories {
-    mavenLocal()
-    // http://stackoverflow.com/questions/26675814/gradle-could-not-head-https-pom-peer-not-authenticated
-    jcenter { url "http://jcenter.bintray.com/" }
-    maven { url "http://repo1.maven.org/maven2" }
-  }
-  apply from: file('gradle/buildscript.gradle'), to: buildscript 
-}
-
 allprojects {
-  apply plugin: 'idea'
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
-
-  repositories {
-    mavenLocal()
-    jcenter { url "http://jcenter.bintray.com/" }
-    maven { url "http://repo1.maven.org/maven2" }
-  }
 }
 
-apply from: file('gradle/convention.gradle')
-apply from: file('gradle/maven.gradle')
-apply from: file('gradle/check.gradle')
-apply from: file('gradle/license.gradle')
-apply from: file('gradle/release.gradle')
-
 subprojects {
+  apply plugin: 'nebula.netflixoss'
   apply plugin: 'java'
+  apply plugin: 'build-dashboard'
   apply plugin: 'jacoco'
+  apply plugin: 'checkstyle'
+  apply plugin: 'findbugs'
+  apply plugin: 'pmd'
+
+  repositories {
+    jcenter()
+    mavenLocal()
+  }
 
   group = "com.netflix.${githubProjectName}"
 
   sourceCompatibility = 1.7
   targetCompatibility = 1.7
-
-  compileJava { 
-    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" 
-  }
-
-  if (JavaVersion.current().isJava8()) {
-    tasks.withType(Javadoc) {
-      // http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html
-      options.addStringOption('Xdoclint:none', '-quiet')
-    }
-  }
 
   javadoc {
     options {
@@ -83,6 +70,31 @@ subprojects {
       csv.enabled false
       html.destination "${buildDir}/reports/jacoco"
     }
+  }
+  
+  checkstyle {
+    ignoreFailures = false 
+    configFile = rootProject.file('codequality/checkstyle.xml')
+    sourceSets = [sourceSets.main]
+  }
+  
+  findbugs {
+    ignoreFailures = false
+    sourceSets = [sourceSets.main]
+  }
+  tasks.withType(FindBugs) {
+    findbugs.toolVersion "3.0.0"
+    reports {
+      xml.enabled = false
+      html.enabled = true
+    }
+  }
+
+  pmd {
+    ignoreFailures = false
+    sourceSets = [sourceSets.main]
+    ruleSets = []
+    ruleSetFiles = rootProject.files("codequality/pmd.xml")
   }
 
   task copyDepsToBuild << {
