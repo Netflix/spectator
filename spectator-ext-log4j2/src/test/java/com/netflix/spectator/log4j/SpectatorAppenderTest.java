@@ -47,6 +47,7 @@ public class SpectatorAppenderTest {
   public void before() {
     registry = new ExtendedRegistry(new DefaultRegistry());
     appender = new SpectatorAppender(registry, "foo", null, null, false);
+    appender.start();
   }
 
   @Test
@@ -92,6 +93,7 @@ public class SpectatorAppenderTest {
   @Test
   public void ignoreExceptions() {
     appender = new SpectatorAppender(registry, "foo", null, null, true);
+    appender.start();
     Counter c = registry.counter("log4j.numStackTraces",
         "appender", "foo",
         "loglevel", "5_DEBUG",
