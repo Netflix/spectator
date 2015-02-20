@@ -11,7 +11,9 @@ gh-pages-build
 
 # Ivy caches
 .gradle
+.ivy2
 .ivy2.cache
+.m2
 
 # Intellij
 *.iml
