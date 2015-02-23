@@ -16,11 +16,11 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
+import com.netflix.iep.http.RxHttp;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
-import com.netflix.spectator.http.RxHttp;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GarbageCollectorMXBean;
 import com.sun.management.GcInfo;
