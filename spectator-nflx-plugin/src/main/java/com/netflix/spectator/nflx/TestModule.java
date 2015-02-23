@@ -16,11 +16,11 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.AbstractModule;
+import com.netflix.iep.http.BasicServerRegistry;
+import com.netflix.iep.http.ServerRegistry;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.http.BasicServerRegistry;
-import com.netflix.spectator.http.ServerRegistry;
 
 /**
  * Guice module to configure the appropriate bindings for unit tests. Note that this module will

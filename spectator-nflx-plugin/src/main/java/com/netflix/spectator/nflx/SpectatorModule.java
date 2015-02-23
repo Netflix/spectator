@@ -18,12 +18,12 @@ package com.netflix.spectator.nflx;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.netflix.discovery.DiscoveryClient;
+import com.netflix.iep.http.EurekaServerRegistry;
+import com.netflix.iep.http.RxHttp;
+import com.netflix.iep.http.ServerRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.http.EurekaServerRegistry;
-import com.netflix.spectator.http.RxHttp;
-import com.netflix.spectator.http.ServerRegistry;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
