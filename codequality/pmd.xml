@@ -64,6 +64,7 @@
     <exclude name="TooManyMethods"/>
     <exclude name="UncommentedEmptyMethod"/>
     <exclude name="UnusedPrivateMethod"/>
+    <exclude name="UnnecessaryConstructor"/>
     <exclude name="UnnecessaryParentheses"/>
     <exclude name="UseConcurrentHashMap"/>
     <exclude name="UseIndexOfChar"/>

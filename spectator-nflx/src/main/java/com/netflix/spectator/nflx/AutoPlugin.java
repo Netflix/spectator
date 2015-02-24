@@ -17,23 +17,13 @@ package com.netflix.spectator.nflx;
 
 import com.netflix.governator.annotations.AutoBindSingleton;
 
-import javax.inject.Inject;
-
 /**
  * Auto bind wrapper around the base plugin.
  */
 @AutoBindSingleton
-public final class AutoPlugin {
-
-  private final Plugin plugin;
-
-  /** Create a new instance for the plugin. */
-  @Inject public AutoPlugin(Plugin plugin) {
-    this.plugin = plugin;
-  }
-
-  /** Returns the plugin instance that was injected. */
-  public Plugin getPlugin() {
-    return plugin;
+public final class AutoPlugin extends SpectatorModule {
+  /** Create a new instance. */
+  public AutoPlugin() {
+    super();
   }
 }
