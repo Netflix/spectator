@@ -19,6 +19,7 @@ import com.google.inject.Injector;
 import com.netflix.config.ConfigurationManager;
 import com.netflix.governator.guice.LifecycleInjector;
 import com.netflix.governator.lifecycle.LifecycleManager;
+import org.apache.commons.configuration.AbstractConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,20 +31,19 @@ public class AutoPluginTest {
 
   @Before
   public void init() {
-    ConfigurationManager.getConfigInstance().setProperty("spectator.nflx.enabled", "false");
+    AbstractConfiguration cfg = ConfigurationManager.getConfigInstance();
+    cfg.setProperty("spectator.nflx.enabled", "false");
   }
 
   @Test
   public void inject() throws Exception {
     Injector injector = LifecycleInjector.builder()
         .usingBasePackages("com.netflix")
-        .withModules(new TestModule())
         .build()
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);
     lcMgr.start();
-    AutoPlugin ap = injector.getInstance(AutoPlugin.class);
-    Assert.assertEquals(ap.getPlugin(), injector.getInstance(Plugin.class));
+    Assert.assertNotNull(injector.getInstance(Plugin.class));
     lcMgr.close();
   }
 
