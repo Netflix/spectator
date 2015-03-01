@@ -35,6 +35,19 @@ final class CompositeRegistry implements Registry {
     this.registries = registries;
   }
 
+  /**
+   * Find the first registry in the composite that is an instance of {@code c}. If no match is
+   * found then null will be returned.
+   */
+  <T extends Registry> T find(Class<T> c) {
+    for (Registry r : registries) {
+      if (c.isAssignableFrom(r.getClass())) {
+        return (T) r;
+      }
+    }
+    return null;
+  }
+
   @Override public Clock clock() {
     return clock;
   }

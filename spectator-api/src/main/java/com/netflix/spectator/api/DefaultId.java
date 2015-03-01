@@ -20,7 +20,7 @@ import com.netflix.spectator.impl.Preconditions;
 import java.util.*;
 
 /** Id implementation for the default registry. */
-final class DefaultId implements Id {
+public final class DefaultId implements Id {
 
   private static final Set<String> EMPTY = new HashSet<>();
 
@@ -28,7 +28,7 @@ final class DefaultId implements Id {
   private final TagList tags;
 
   /** Create a new instance. */
-  DefaultId(String name) {
+  public DefaultId(String name) {
     this(name, TagList.EMPTY);
   }
 

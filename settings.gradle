@@ -7,4 +7,5 @@ include 'spectator-api',
         'spectator-ext-sandbox',
         'spectator-reg-metrics2',
         'spectator-reg-metrics3',
-        'spectator-reg-servo'
+        'spectator-reg-servo',
+        'spectator-reg-tdigest'
