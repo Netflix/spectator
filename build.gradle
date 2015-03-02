@@ -77,8 +77,12 @@ subprojects {
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
+  tasks.withType(Checkstyle) {
+    exclude '**/tdunning/**'
+  }
   
   findbugs {
+    excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
   }
@@ -95,6 +99,9 @@ subprojects {
     sourceSets = [sourceSets.main]
     ruleSets = []
     ruleSetFiles = rootProject.files("codequality/pmd.xml")
+  }
+  tasks.withType(Pmd) {
+    exclude '**/tdunning/**'
   }
 
   task copyDepsToBuild << {

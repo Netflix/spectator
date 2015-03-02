@@ -19,9 +19,11 @@
     <exclude name="AvoidFinalLocalVariable"/>
     <exclude name="AvoidInstantiatingObjectsInLoops"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
+    <exclude name="AvoidPrefixingMethodParameters"/>
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
     <exclude name="AvoidThrowingNullPointerException"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
+    <exclude name="AvoidUsingShortType"/>
     <exclude name="BeanMembersShouldSerialize"/>
     <exclude name="CommentRequired"/>
     <exclude name="CommentSize"/>
@@ -32,6 +34,7 @@
     <exclude name="DefaultPackage"/>
     <exclude name="DoNotUseThreads"/>
     <exclude name="DuplicateImports"/>
+    <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
     <exclude name="ExcessiveImports"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     <exclude name="ForLoopsMustUseBraces"/>
