@@ -22,6 +22,10 @@ import com.amazonaws.services.kinesis.model.GetShardIteratorRequest;
 import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Spectator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,8 +39,13 @@ import java.util.List;
  */
 public class KinesisTDigestReader implements TDigestReader {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(KinesisTDigestReader.class);
+
   private final AmazonKinesisClient client;
   private final GetShardIteratorRequest iterRequest;
+
+  private final Counter recordsProcessed;
+  private final Counter recordsSkipped;
 
   private GetRecordsRequest recRequest;
 
@@ -69,7 +78,15 @@ public class KinesisTDigestReader implements TDigestReader {
   public KinesisTDigestReader(AmazonKinesisClient client, GetShardIteratorRequest iterRequest) {
     this.client = client;
     this.iterRequest = iterRequest;
+    this.recordsProcessed = counter("recordsProcessed", iterRequest);
+    this.recordsSkipped = counter("recordsSkipped", iterRequest);
     this.recRequest = null;
+  }
+
+  private Counter counter(String name, GetShardIteratorRequest req) {
+    return Spectator.registry().counter("spectator.tdigest." + name,
+        "stream", req.getStreamName(),
+        "shard", req.getShardId());
   }
 
   private void init() {
@@ -90,8 +107,14 @@ public class KinesisTDigestReader implements TDigestReader {
       GetRecordsResult result = client.getRecords(recRequest);
       recRequest.setShardIterator(result.getNextShardIterator());
       for (Record r : result.getRecords()) {
+        recordsProcessed.increment();
         ByteBuffer data = r.getData();
-        ms.addAll(Json.decode(data.array()));
+        try {
+          ms.addAll(Json.decode(data.array()));
+        } catch (Exception e) {
+          recordsSkipped.increment();
+          LOGGER.warn("failed to decode record, skipping (" + iterRequest + ")", e);
+        }
       }
       return ms;
     }
