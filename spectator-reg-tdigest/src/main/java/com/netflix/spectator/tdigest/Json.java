@@ -42,11 +42,11 @@ final class Json {
 
   static {
     FACTORY
-        .enable(SmileGenerator.Feature.WRITE_HEADER)
-        .disable(SmileGenerator.Feature.WRITE_END_MARKER)
-        .enable(SmileGenerator.Feature.CHECK_SHARED_NAMES)
-        .enable(SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES)
-        .disable(SmileParser.Feature.REQUIRE_HEADER);
+       .enable(SmileGenerator.Feature.WRITE_HEADER)
+       .disable(SmileGenerator.Feature.WRITE_END_MARKER)
+       .enable(SmileGenerator.Feature.CHECK_SHARED_NAMES)
+       .enable(SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES)
+       .disable(SmileParser.Feature.REQUIRE_HEADER);
   }
 
   private Json() {

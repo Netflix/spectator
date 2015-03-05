@@ -15,36 +15,17 @@
  */
 package com.netflix.spectator.tdigest;
 
-import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
- * Write measurements to a file. Each call to write will open the file, append the data, and
- * close the file. This class is mostly used for testing.
+ * Write measurements to a file. This class is mostly used for testing.
  */
-public class FileTDigestWriter extends TDigestWriter {
-
-  private final File file;
-  private final byte[] buf = new byte[BUFFER_SIZE];
+public class FileTDigestWriter extends StreamTDigestWriter {
 
   /** Create a new instance. */
-  public FileTDigestWriter(File file) {
-    super();
-    this.file = file;
-  }
-
-  @Override void write(ByteBuffer data) throws IOException {
-    try (DataOutputStream out = new DataOutputStream(new FileOutputStream(file, true))) {
-      int len = data.limit();
-      data.get(buf, 0, len);
-      out.writeInt(data.limit());
-      out.write(buf, 0, len);
-    }
-  }
-
-  @Override public void close() throws IOException {
+  public FileTDigestWriter(File file) throws FileNotFoundException {
+    super(new FileOutputStream(file));
   }
 }
