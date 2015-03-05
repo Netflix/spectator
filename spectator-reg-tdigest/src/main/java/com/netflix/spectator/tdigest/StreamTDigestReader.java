@@ -18,6 +18,7 @@ package com.netflix.spectator.tdigest;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -58,5 +59,21 @@ public class StreamTDigestReader implements TDigestReader {
 
   @Override public void close() throws IOException {
     in.close();
+  }
+
+  /**
+   * Consume all data from the stream create a list of the measurement batches as they were
+   * read from the stream.
+   */
+  static List<List<TDigestMeasurement>> readAll(InputStream in) throws IOException {
+    List<List<TDigestMeasurement>> data = new ArrayList<>();
+    try (StreamTDigestReader r = new StreamTDigestReader(in)) {
+      List<TDigestMeasurement> ms = r.read();
+      while (!ms.isEmpty()) {
+        data.add(ms);
+        ms = r.read();
+      }
+    }
+    return data;
   }
 }

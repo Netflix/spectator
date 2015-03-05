@@ -81,7 +81,9 @@ public class TDigestPlugin {
    */
   @PreDestroy
   public void shutdown() {
-    executor.shutdown();
+    if (executor != null) {
+      executor.shutdown();
+    }
     try {
       writer.close();
     } catch (IOException e) {

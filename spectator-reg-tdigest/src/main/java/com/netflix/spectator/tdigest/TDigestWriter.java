@@ -40,23 +40,24 @@ abstract class TDigestWriter implements AutoCloseable {
    */
   static final int MIN_FREE = 4096;
 
+  private final ByteBuffer buf = ByteBuffer.allocate(BUFFER_SIZE);
+  private final ByteBufferOutputStream out = new ByteBufferOutputStream(buf, 2);
+
   /**
    * Writes a buffer of data.
    *
-   * @param buf
+   * @param buffer
    *     Buffer to write to the underlying storage. The buffer will be setup so it is ready to
    *     consume, i.e., position=0 and limit=N where N is the amount of data to write. No
    *     guarantees are made about data in the remaining part of the buffer. The buffer will be
    *     reused when this method returns.
    */
-  abstract void write(ByteBuffer buf) throws IOException;
+  abstract void write(ByteBuffer buffer) throws IOException;
 
   /**
    * Write a list of measurements to some underlying storage.
    */
   void write(List<TDigestMeasurement> measurements) throws IOException {
-    ByteBuffer buf = ByteBuffer.allocate(BUFFER_SIZE);
-    ByteBufferOutputStream out = new ByteBufferOutputStream(buf, 2);
     JsonGenerator gen = Json.newGenerator(out);
     gen.writeStartArray();
     gen.flush();
@@ -67,7 +68,7 @@ abstract class TDigestWriter implements AutoCloseable {
 
       if (out.overflow()) {
         // Ignore the last entry written to the buffer
-        buf.position(pos);
+        out.setPosition(pos);
         gen.writeEndArray();
         gen.close();
         write(buf);
@@ -100,6 +101,8 @@ abstract class TDigestWriter implements AutoCloseable {
         gen = Json.newGenerator(out);
         gen.writeStartArray();
         gen.flush();
+        pos = buf.position();
+      } else {
         pos = buf.position();
       }
     }

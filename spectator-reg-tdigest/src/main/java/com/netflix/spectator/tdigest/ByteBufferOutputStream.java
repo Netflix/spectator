@@ -59,6 +59,12 @@ final class ByteBufferOutputStream extends OutputStream implements DataOutput {
     overflow = false;
   }
 
+  /** Set the current position for the buffer. */
+  void setPosition(int p) {
+    buf.position(p);
+    overflow = false;
+  }
+
   /** Returns true if the amount of data written exceeds the capacity of the buffer. */
   boolean overflow() {
     return overflow;
