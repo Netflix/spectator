@@ -33,12 +33,12 @@ public class TDigestDistributionSummary implements TDigestMeter, DistributionSum
   /** Create a new instance. */
   TDigestDistributionSummary(Clock clock, Id id) {
     this.id = id;
-    this.digest = new StepDigest(100.0, clock, 60000L);
+    this.digest = new StepDigest(id, 100.0, clock, 60000L);
   }
 
   @Override public void record(long amount) {
     if (amount >= 0L) {
-      digest.current().add(amount);
+      digest.add(amount);
     }
   }
 
@@ -79,6 +79,6 @@ public class TDigestDistributionSummary implements TDigestMeter, DistributionSum
   }
 
   @Override public TDigestMeasurement measureDigest() {
-    return digest.measure(id());
+    return digest.measure();
   }
 }

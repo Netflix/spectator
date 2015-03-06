@@ -37,13 +37,13 @@ public class TDigestTimer implements TDigestMeter, Timer {
   TDigestTimer(Clock clock, Id id) {
     this.clock = clock;
     this.id = id;
-    this.digest = new StepDigest(100.0, clock, 60000L);
+    this.digest = new StepDigest(id, 100.0, clock, 60000L);
   }
 
   @Override public void record(long amount, TimeUnit unit) {
     if (amount >= 0L) {
       final long nanos = unit.toNanos(amount);
-      digest.current().add(nanos / 1e9);
+      digest.add(nanos / 1e9);
     }
   }
 
@@ -102,6 +102,6 @@ public class TDigestTimer implements TDigestMeter, Timer {
   }
 
   @Override public TDigestMeasurement measureDigest() {
-    return digest.measure(id());
+    return digest.measure();
   }
 }
