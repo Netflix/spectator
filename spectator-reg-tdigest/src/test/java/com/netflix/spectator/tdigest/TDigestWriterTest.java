@@ -34,8 +34,6 @@ import java.util.List;
 @RunWith(JUnit4.class)
 public class TDigestWriterTest {
 
-  private final ManualClock clock = new ManualClock();
-
   private ByteArrayOutputStream baos;
   private TDigestWriter writer;
 

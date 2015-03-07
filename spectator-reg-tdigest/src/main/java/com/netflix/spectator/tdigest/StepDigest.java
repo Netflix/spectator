@@ -104,7 +104,11 @@ class StepDigest {
    */
   void add(double v) {
     if (lock.tryLock()) {
-      current().add(v);
+      try {
+        current().add(v);
+      } finally {
+        lock.unlock();
+      }
     } else {
       droppedSamples.incrementAndGet();
     }
