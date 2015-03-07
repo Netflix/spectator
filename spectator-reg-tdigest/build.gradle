@@ -1,9 +1,9 @@
 dependencies {
   compile project(':spectator-api')
   compile project(':spectator-nflx-plugin')
-  compile 'com.amazonaws:aws-java-sdk-kinesis:1.9.22'
-  compile 'com.fasterxml.jackson.core:jackson-core:2.5.0'
-  compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile:2.5.0'
+  compile "com.amazonaws:aws-java-sdk-kinesis:$version_aws"
+  compile "com.fasterxml.jackson.core:jackson-core:$version_jackson"
+  compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:$version_jackson"
   // Older version
   //compile 'com.tdunning:t-digest:3.0'
 }

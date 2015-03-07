@@ -4,10 +4,10 @@ dependencies {
   compile project(':spectator-ext-jvm')
   compile project(':spectator-ext-sandbox')
   compile project(':spectator-reg-servo')
-  compile 'com.fasterxml.jackson.core:jackson-databind:2.5.0'
-  compile 'com.google.inject:guice:3.0'
-  compile 'com.netflix.archaius:archaius-core:0.6.5'
-  compile 'com.netflix.eureka:eureka-client:1.1.147'
-  compile 'com.netflix.iep:iep-rxhttp:0.1.10'
-  testCompile 'com.netflix.governator:governator:1.3.3'
+  compile "com.fasterxml.jackson.core:jackson-databind:$version_jackson"
+  compile "com.google.inject:guice:3.0"
+  compile "com.netflix.archaius:archaius-core:0.6.5"
+  compile "com.netflix.eureka:eureka-client:1.1.147"
+  compile "com.netflix.iep:iep-rxhttp:$version_iep"
+  testCompile "com.netflix.governator:governator:1.3.3"
 }
