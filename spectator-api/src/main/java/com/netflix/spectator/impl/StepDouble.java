@@ -25,24 +25,24 @@ import java.util.concurrent.atomic.AtomicLong;
  * being updated and the other is the value from the previous interval and is only available for
  * polling.
  */
-public class StepLong {
+public class StepDouble {
 
-  private final long init;
+  private final double init;
   private final Clock clock;
   private final long step;
 
-  private final AtomicLong previous;
-  private final AtomicLong current;
+  private final AtomicDouble previous;
+  private final AtomicDouble current;
 
   private final AtomicLong lastInitPos;
 
   /** Create a new instance. */
-  public StepLong(long init, Clock clock, long step) {
+  public StepDouble(double init, Clock clock, long step) {
     this.init = init;
     this.clock = clock;
     this.step = step;
-    previous = new AtomicLong(init);
-    current = new AtomicLong(init);
+    previous = new AtomicDouble(init);
+    current = new AtomicDouble(init);
     lastInitPos = new AtomicLong(clock.wallTime() / step);
   }
 
@@ -50,7 +50,7 @@ public class StepLong {
     final long stepTime = now / step;
     final long lastInit = lastInitPos.get();
     if (lastInit < stepTime && lastInitPos.compareAndSet(lastInit, stepTime)) {
-      final long v = current.getAndSet(init);
+      final double v = current.getAndSet(init);
       // Need to check if there was any activity during the previous step interval. If there was
       // then the init position will move forward by 1, otherwise it will be older. No activity
       // means the previous interval should be set to the `init` value.
@@ -58,14 +58,14 @@ public class StepLong {
     }
   }
 
-  /** Get the AtomicLong for the current bucket. */
-  public AtomicLong getCurrent() {
+  /** Get the AtomicDouble for the current bucket. */
+  public AtomicDouble getCurrent() {
     rollCount(clock.wallTime());
     return current;
   }
 
   /** Get the value for the last completed interval. */
-  public long poll() {
+  public double poll() {
     rollCount(clock.wallTime());
     return previous.get();
   }
