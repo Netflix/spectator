@@ -1,0 +1,5 @@
+dependencies {
+  compile project(':spectator-api')
+  compile 'io.dropwizard.metrics:metrics-core:3.1.0'
+  compile 'org.apache.spark:spark-core_2.10:1.2.1'
+}
