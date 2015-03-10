@@ -118,7 +118,6 @@ public final class SpectatorReporter extends ScheduledReporter {
 
     for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
       final Object obj = entry.getValue().getValue();
-      LOGGER.info("type " + obj.getClass().getName());
       if (obj instanceof Number) {
         final double v = ((Number) obj).doubleValue();
         setGaugeValue(entry.getKey(), v);

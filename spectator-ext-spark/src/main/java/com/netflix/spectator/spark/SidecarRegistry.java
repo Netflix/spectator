@@ -123,7 +123,7 @@ public class SidecarRegistry extends AbstractRegistry {
   }
 
   private void appendJson(StringBuilder buf, Measurement m) {
-    if (Double.isFinite(m.value())) {
+    if (!Double.isNaN(m.value()) && !Double.isInfinite(m.value())) {
       buf.append('{');
       appendJsonString(buf, "timestamp");
       buf.append(':').append(m.timestamp());
@@ -209,7 +209,6 @@ public class SidecarRegistry extends AbstractRegistry {
       numMessages.increment();
       numMeasurements.increment(ms.size());
       String json = toJson(ms);
-      LOGGER.info(json);
       HttpURLConnection con = (HttpURLConnection) url.openConnection();
       try {
         con.setRequestMethod("POST");
