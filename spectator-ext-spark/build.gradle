@@ -1,5 +1,22 @@
+plugins {
+  id 'com.github.johnrengelman.shadow' version '1.2.1'
+}
+
 dependencies {
   compile project(':spectator-api')
   compile 'io.dropwizard.metrics:metrics-core:3.1.0'
   compile 'org.apache.spark:spark-core_2.10:1.2.1'
 }
+
+shadowJar {
+  classifier = 'shadow'
+
+  // These should come from the spark distribution
+  dependencies {
+    include(project(':spectator-api'))
+  }
+}
+
+import nebula.plugin.publishing.component.CustomComponentPlugin
+CustomComponentPlugin.addArtifact(project, 'shadow', shadowJar)
+
