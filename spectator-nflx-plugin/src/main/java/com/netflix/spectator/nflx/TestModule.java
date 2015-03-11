@@ -16,8 +16,8 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.AbstractModule;
-import com.netflix.iep.http.BasicServerRegistry;
-import com.netflix.iep.http.ServerRegistry;
+import iep.com.netflix.iep.http.BasicServerRegistry;
+import iep.com.netflix.iep.http.ServerRegistry;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;

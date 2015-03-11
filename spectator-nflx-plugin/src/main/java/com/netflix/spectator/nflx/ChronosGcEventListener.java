@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.DynamicBooleanProperty;
 import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.config.DynamicStringProperty;
-import com.netflix.iep.http.RxHttp;
+import iep.com.netflix.iep.http.RxHttp;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
