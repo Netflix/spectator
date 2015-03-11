@@ -16,7 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
-import com.netflix.iep.http.RxHttp;
+import iep.com.netflix.iep.http.RxHttp;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
