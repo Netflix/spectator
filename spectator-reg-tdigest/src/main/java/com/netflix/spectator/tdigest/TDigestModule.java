@@ -17,55 +17,27 @@ package com.netflix.spectator.tdigest;
 
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.google.inject.AbstractModule;
-import com.netflix.config.ConfigurationManager;
-import com.netflix.spectator.api.Spectator;
-import org.apache.commons.configuration.AbstractConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
+import com.google.inject.Provides;
+import com.netflix.archaius.guice.ArchaiusModule;
+import com.netflix.spectator.api.ExtendedRegistry;
 
 /**
  * Guice module to configure the plugin.
  */
 public class TDigestModule extends AbstractModule {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(TDigestModule.class);
-
-  private static final String ENDPOINT_PROP = "spectator.tdigest.kinesis.endpoint";
-  private static final String STREAM_PROP = "spectator.tdigest.kinesis.stream";
-
-  private void loadProperties(String name) {
-    try {
-      ConfigurationManager.loadCascadedPropertiesFromResources(name);
-    } catch (IOException e) {
-      LOGGER.warn("failed to load properties for '" + name + "'");
-    }
-  }
-
-  private AmazonKinesisClient newKinesisClient(AbstractConfiguration cfg) {
-    String endpoint = cfg.getString(ENDPOINT_PROP);
-    AmazonKinesisClient client = new AmazonKinesisClient();
-    client.setEndpoint(endpoint);
-    return client;
-  }
-
   @Override protected void configure() {
-    loadProperties("spectator-tdigest");
-    AbstractConfiguration cfg = ConfigurationManager.getConfigInstance();
-    String stream = cfg.getString(STREAM_PROP);
-    if (stream == null) {
-      throw new IllegalStateException("stream name property, " + STREAM_PROP + ", is not set");
-    }
+    install(ArchaiusModule.forProxy(TDigestConfig.class));
+    bind(TDigestPlugin.class).asEagerSingleton();
+  }
 
-    TDigestRegistry registry = Spectator.registry().underlying(TDigestRegistry.class);
-    if (registry == null) {
-      throw new IllegalStateException("TDigestRegistry is not being used");
-    }
+  @Provides private TDigestRegistry providesRegistry(ExtendedRegistry registry) {
+    return registry.underlying(TDigestRegistry.class);
+  }
 
-    KinesisTDigestWriter writer = new KinesisTDigestWriter(newKinesisClient(cfg), stream);
-    TDigestPlugin plugin = new TDigestPlugin(registry, writer);
-    plugin.init();
-    bind(TDigestPlugin.class).toInstance(plugin);
+  @Provides private TDigestWriter providesWriter(TDigestConfig config) {
+    AmazonKinesisClient client = new AmazonKinesisClient();
+    client.setEndpoint(config.endpoint());
+    return new KinesisTDigestWriter(client, config.stream());
   }
 }
