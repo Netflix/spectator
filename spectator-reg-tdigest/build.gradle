@@ -2,6 +2,8 @@ dependencies {
   compile project(':spectator-api')
   compile project(':spectator-nflx-plugin')
   compile "com.amazonaws:aws-java-sdk-kinesis:$version_aws"
+  compile "com.netflix.archaius:archaius-core:$version_archaius"
+  compile "com.netflix.archaius:archaius-guice:$version_archaius"
   compile "com.fasterxml.jackson.core:jackson-core:$version_jackson"
   compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:$version_jackson"
   // Older version
