@@ -30,8 +30,8 @@ import io.netty.buffer.ByteBuf;
 import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import iep.rx.functions.Action0;
-import iep.rx.functions.Action1;
+import rx.functions.Action0;
+import rx.functions.Action1;
 
 import java.io.IOException;
 import java.net.URI;
