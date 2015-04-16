@@ -15,8 +15,8 @@
  */
 package com.netflix.spectator.tdigest;
 
-import com.netflix.archaius.mapper.annotations.Configuration;
-import com.netflix.archaius.mapper.annotations.DefaultValue;
+import com.netflix.archaius.annotations.Configuration;
+import com.netflix.archaius.annotations.DefaultValue;
 
 /**
  * Configuration settings for the digest plugin.
