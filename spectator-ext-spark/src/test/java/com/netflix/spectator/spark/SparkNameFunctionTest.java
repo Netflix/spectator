@@ -17,6 +17,7 @@ package com.netflix.spectator.spark;
 
 import com.netflix.spectator.api.DefaultId;
 import com.netflix.spectator.api.Id;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,6 +26,12 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class SparkNameFunctionTest {
 
+  private final SparkNameFunction f = SparkNameFunction.fromConfig(ConfigFactory.load());
+
+  private void assertEquals(Id expected, Id actual) {
+    Assert.assertEquals(((DefaultId) expected).normalize(), ((DefaultId) actual).normalize());
+  }
+
   @Test
   public void executorName() {
     final String name = "app-20150309231421-0000.0.executor.filesystem.file.largeRead_ops";
@@ -32,18 +39,16 @@ public class SparkNameFunctionTest {
         .withTag("role", "executor")
         .withTag("appId", "app-20150309231421-0000")
         .withTag("executorId", "0");
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
   public void driverName() {
     final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
-    final Id expected = new DefaultId("spark.BlockManager.disk.diskSpaceUsed_MB")
+    final Id expected = new DefaultId("spark.BlockManager.disk.diskSpaceUsed")
         .withTag("role", "driver")
         .withTag("appId", "app-20150309231421-0000");
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -52,20 +57,34 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
         .withTag("role", "driver")
         .withTag("appId", "app-20150309231421-0000");
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverName3() {
+    final String name = "local-1429219722964.<driver>.DAGScheduler.job.activeJobs";
+    final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
+        .withTag("role", "driver")
+        .withTag("appId", "local-1429219722964");
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
   public void applicationName() {
     final String name = "application.Spark shell.1425968061869.cores";
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertNull(f.apply(name));
-    //final Id expected = new DefaultId("spark.cores")
-    //    .withTag("role", "application")
-    //    .withTag("jobId", "Spark shell.1425968061869");
-    //final SparkNameFunction f = new SparkNameFunction();
-    //Assert.assertEquals(expected, f.apply(name));
+    final Id expected = new DefaultId("spark.cores")
+        .withTag("role", "application")
+        .withTag("appName", "Spark shell");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void applicationName2() {
+    final String name = "application.SubscriptionEnded.1429226958083.runtime_ms";
+    final Id expected = new DefaultId("spark.runtime")
+        .withTag("role", "application")
+        .withTag("appName", "SubscriptionEnded");
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -73,17 +92,15 @@ public class SparkNameFunctionTest {
     final String name = "master.apps";
     final Id expected = new DefaultId("spark.apps")
         .withTag("role", "master");
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
   public void workerName() {
     final String name = "worker.memFree_MB";
-    final Id expected = new DefaultId("spark.memFree_MB")
+    final Id expected = new DefaultId("spark.memFree")
         .withTag("role", "worker");
-    final SparkNameFunction f = new SparkNameFunction();
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
 }
