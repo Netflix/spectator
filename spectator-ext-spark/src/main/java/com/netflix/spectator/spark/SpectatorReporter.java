@@ -57,9 +57,14 @@ public final class SpectatorReporter extends ScheduledReporter {
   public static final class Builder {
     private final MetricRegistry registry;
     private ExtendedRegistry spectatorRegistry = Spectator.registry();
-    private NameFunction function = new NameFunction() {
+    private NameFunction nameFunction = new NameFunction() {
       @Override public Id apply(String name) {
         return spectatorRegistry.createId(name);
+      }
+    };
+    private ValueFunction valueFunction = new ValueFunction() {
+      @Override public double convert(String name, double v) {
+        return v;
       }
     };
 
@@ -76,18 +81,25 @@ public final class SpectatorReporter extends ScheduledReporter {
 
     /** Set the name mapping function to use. */
     public Builder withNameFunction(NameFunction f) {
-      function = f;
+      nameFunction = f;
+      return this;
+    }
+
+    /** Set the value mapping function to use. */
+    public Builder withValueFunction(ValueFunction f) {
+      valueFunction = f;
       return this;
     }
 
     /** Create a new instance of the reporter. */
     public SpectatorReporter build() {
-      return new SpectatorReporter(registry, spectatorRegistry, function);
+      return new SpectatorReporter(registry, spectatorRegistry, nameFunction, valueFunction);
     }
   }
 
   private final ExtendedRegistry spectatorRegistry;
   private final NameFunction nameFunction;
+  private final ValueFunction valueFunction;
 
   private final ConcurrentHashMap<String, AtomicDouble> gaugeDoubles = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> previousValues = new ConcurrentHashMap<>();
@@ -96,7 +108,8 @@ public final class SpectatorReporter extends ScheduledReporter {
   SpectatorReporter(
       MetricRegistry metricRegistry,
       ExtendedRegistry spectatorRegistry,
-      NameFunction nameFunction) {
+      NameFunction nameFunction,
+      ValueFunction valueFunction) {
     super(metricRegistry,
         "spectator",       // name
         MetricFilter.ALL,  // filter
@@ -104,6 +117,7 @@ public final class SpectatorReporter extends ScheduledReporter {
         TimeUnit.SECONDS); // durationUnit
     this.spectatorRegistry = spectatorRegistry;
     this.nameFunction = nameFunction;
+    this.valueFunction = valueFunction;
   }
 
   @SuppressWarnings("PMD.NPathComplexity")
@@ -172,8 +186,9 @@ public final class SpectatorReporter extends ScheduledReporter {
         register(name, value);
       }
     }
-    LOGGER.debug("setting gauge {} to {}", name, v);
-    value.set(v);
+    final double cv = valueFunction.convert(name, v);
+    LOGGER.debug("setting gauge {} to {}", name, cv);
+    value.set(cv);
   }
 
   private Id register(String name, AtomicDouble value) {

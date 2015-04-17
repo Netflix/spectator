@@ -17,6 +17,7 @@ package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.Spectator;
+import com.typesafe.config.ConfigFactory;
 import org.apache.spark.metrics.sink.Sink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,8 @@ public class SparkSink implements Sink {
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) throws MalformedURLException {
     reporter = SpectatorReporter.forRegistry(registry)
-        .withNameFunction(new SparkNameFunction())
+        .withNameFunction(SparkNameFunction.fromConfig(ConfigFactory.load()))
+        .withValueFunction(SparkValueFunction.fromConfig(ConfigFactory.load()))
         .build();
     pollPeriod = getPeriod(properties);
     pollUnit = getUnit(properties);
