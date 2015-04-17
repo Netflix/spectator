@@ -14,8 +14,8 @@ shadowJar {
 
   // The dependencies not listed here should come from the spark distribution
   dependencies {
-    include(project(':spectator-api'))
-    include('com.typesafe:config:1.2.1')
+    include project(':spectator-api')
+    include dependency('com.typesafe:config:1.2.1')
   }
 }
 
