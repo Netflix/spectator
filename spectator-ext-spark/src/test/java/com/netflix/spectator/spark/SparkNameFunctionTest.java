@@ -28,6 +28,10 @@ public class SparkNameFunctionTest {
 
   private final SparkNameFunction f = SparkNameFunction.fromConfig(ConfigFactory.load());
 
+  private void assertEquals(Id expected, Id actual) {
+    Assert.assertEquals(((DefaultId) expected).normalize(), ((DefaultId) actual).normalize());
+  }
+
   @Test
   public void executorName() {
     final String name = "app-20150309231421-0000.0.executor.filesystem.file.largeRead_ops";
@@ -35,7 +39,7 @@ public class SparkNameFunctionTest {
         .withTag("role", "executor")
         .withTag("appId", "app-20150309231421-0000")
         .withTag("executorId", "0");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -44,7 +48,7 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.BlockManager.disk.diskSpaceUsed")
         .withTag("role", "driver")
         .withTag("appId", "app-20150309231421-0000");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -53,7 +57,7 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
         .withTag("role", "driver")
         .withTag("appId", "app-20150309231421-0000");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -62,7 +66,7 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
         .withTag("role", "driver")
         .withTag("appId", "local-1429219722964");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -71,7 +75,7 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.cores")
         .withTag("role", "application")
         .withTag("appName", "Spark shell");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -80,7 +84,7 @@ public class SparkNameFunctionTest {
     final Id expected = new DefaultId("spark.runtime")
         .withTag("role", "application")
         .withTag("appName", "SubscriptionEnded");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -88,7 +92,7 @@ public class SparkNameFunctionTest {
     final String name = "master.apps";
     final Id expected = new DefaultId("spark.apps")
         .withTag("role", "master");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
   @Test
@@ -96,7 +100,7 @@ public class SparkNameFunctionTest {
     final String name = "worker.memFree_MB";
     final Id expected = new DefaultId("spark.memFree")
         .withTag("role", "worker");
-    Assert.assertEquals(expected, f.apply(name));
+    assertEquals(expected, f.apply(name));
   }
 
 }
