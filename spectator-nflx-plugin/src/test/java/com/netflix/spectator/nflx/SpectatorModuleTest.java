@@ -15,15 +15,21 @@
  */
 package com.netflix.spectator.nflx;
 
-import com.google.inject.AbstractModule;
-import com.netflix.governator.annotations.AutoBindSingleton;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-/**
- * Auto bind wrapper around the base plugin.
- */
-@AutoBindSingleton
-public final class AutoPlugin extends AbstractModule {
-  @Override protected void configure() {
-    install(new SpectatorModule());
+@RunWith(JUnit4.class)
+public class SpectatorModuleTest {
+
+  @Test
+  public void equals() {
+    Assert.assertEquals(new SpectatorModule(), new SpectatorModule());
+  }
+
+  @Test
+  public void hashCodeTest() {
+    Assert.assertEquals(new SpectatorModule().hashCode(), new SpectatorModule().hashCode());
   }
 }

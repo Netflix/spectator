@@ -58,7 +58,7 @@ import com.netflix.spectator.api.Spectator;
  * injector.getInstance(LifecycleManager.class).start();
  * </pre>
  */
-public class SpectatorModule extends AbstractModule {
+public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
     bind(RxHttp.class).asEagerSingleton();
     bind(Plugin.class).asEagerSingleton();
@@ -70,5 +70,13 @@ public class SpectatorModule extends AbstractModule {
   @Provides
   public ServerRegistry getServerRegistry(DiscoveryClient client) {
     return new EurekaServerRegistry(client);
+  }
+
+  @Override public boolean equals(Object obj) {
+    return obj != null && getClass().equals(obj.getClass());
+  }
+
+  @Override public int hashCode() {
+    return getClass().hashCode();
   }
 }
