@@ -30,7 +30,7 @@ import com.netflix.spectator.api.Registry;
  * calling {@link com.netflix.spectator.api.Spectator#registry()}. Use the
  * {@link com.netflix.spectator.nflx.SpectatorModule} when running code outside of unit tests.
  */
-public class TestModule extends AbstractModule {
+public final class TestModule extends AbstractModule {
   @Override protected void configure() {
     final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
     bind(ExtendedRegistry.class).toInstance(registry);
