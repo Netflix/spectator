@@ -16,14 +16,10 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.netflix.discovery.DiscoveryClient;
-import iep.com.netflix.iep.http.EurekaServerRegistry;
-import iep.com.netflix.iep.http.RxHttp;
-import iep.com.netflix.iep.http.ServerRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import iep.com.netflix.iep.rxnetty.RxNettyModule;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
@@ -60,16 +56,10 @@ import com.netflix.spectator.api.Spectator;
  */
 public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
-    bind(RxHttp.class).asEagerSingleton();
+    install(new RxNettyModule());
     bind(Plugin.class).asEagerSingleton();
     bind(ExtendedRegistry.class).toInstance(Spectator.registry());
     bind(Registry.class).toInstance(Spectator.registry());
-  }
-
-  /** Returns an instance of a server registry based on eureka. */
-  @Provides
-  public ServerRegistry getServerRegistry(DiscoveryClient client) {
-    return new EurekaServerRegistry(client);
   }
 
   @Override public boolean equals(Object obj) {
