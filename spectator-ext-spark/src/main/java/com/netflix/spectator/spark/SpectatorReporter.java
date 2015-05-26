@@ -56,7 +56,7 @@ public final class SpectatorReporter extends ScheduledReporter {
    */
   public static final class Builder {
     private final MetricRegistry registry;
-    private ExtendedRegistry spectatorRegistry = Spectator.registry();
+    private ExtendedRegistry spectatorRegistry;
     private NameFunction nameFunction = new NameFunction() {
       @Override public Id apply(String name) {
         return spectatorRegistry.createId(name);
@@ -93,6 +93,9 @@ public final class SpectatorReporter extends ScheduledReporter {
 
     /** Create a new instance of the reporter. */
     public SpectatorReporter build() {
+      if (spectatorRegistry == null) {
+        spectatorRegistry = Spectator.registry();
+      }
       return new SpectatorReporter(registry, spectatorRegistry, nameFunction, valueFunction);
     }
   }
