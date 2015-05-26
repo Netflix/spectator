@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 /**
@@ -58,24 +59,45 @@ public final class Spectator {
    * are found the default will be used.
    */
   static Registry newInstanceUsingServiceLoader() {
-    final ServiceLoader<Registry> loader = ServiceLoader.load(Registry.class);
+    final ClassLoader cl = pickClassLoader();
+    final ServiceLoader<Registry> loader = ServiceLoader.load(Registry.class, cl);
     final Iterator<Registry> registryIterator = loader.iterator();
     if (registryIterator.hasNext()) {
       StringBuilder desc = new StringBuilder();
       List<Registry> rs = new ArrayList<>();
       while (registryIterator.hasNext()) {
-        Registry r = registryIterator.next();
-        desc.append(' ').append(r.getClass().getName());
-        rs.add(r);
+        try {
+          Registry r = registryIterator.next();
+          desc.append(' ').append(r.getClass().getName());
+          rs.add(r);
+        } catch (ServiceConfigurationError e) {
+          LOGGER.warn("failed to load registry, it will be skipped", e);
+        }
       }
-      Registry r = (rs.size() == 1)
-          ? rs.get(0)
-          : new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
-      LOGGER.info("using registries found in classpath: {}", desc.toString());
-      return r;
+      if (rs.isEmpty()) {
+        return new DefaultRegistry();
+      } else {
+        Registry r = (rs.size() == 1)
+            ? rs.get(0)
+            : new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
+        LOGGER.info("using registries found in classpath: {}", desc.toString());
+        return r;
+      }
     } else {
       LOGGER.warn("no registry impl found in classpath, using default");
       return new DefaultRegistry();
+    }
+  }
+
+  @SuppressWarnings("PMD.UseProperClassLoader")
+  private static ClassLoader pickClassLoader() {
+    final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      LOGGER.info("Thread.currentThread().getContextClassLoader() is null,"
+          + " using Spectator.class.getClassLoader()");
+      return Spectator.class.getClassLoader();
+    } else {
+      return cl;
     }
   }
 

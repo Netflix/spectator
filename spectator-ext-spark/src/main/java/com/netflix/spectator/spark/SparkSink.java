@@ -17,6 +17,7 @@ package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.Spectator;
+import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.spark.metrics.sink.Sink;
 import org.slf4j.Logger;
@@ -55,14 +56,29 @@ public class SparkSink implements Sink {
       Properties properties,
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) throws MalformedURLException {
+    final Config config = loadConfig();
+    sidecarRegistry = Spectator.registry().underlying(SidecarRegistry.class);
     reporter = SpectatorReporter.forRegistry(registry)
-        .withNameFunction(SparkNameFunction.fromConfig(ConfigFactory.load()))
-        .withValueFunction(SparkValueFunction.fromConfig(ConfigFactory.load()))
+        .withNameFunction(SparkNameFunction.fromConfig(config))
+        .withValueFunction(SparkValueFunction.fromConfig(config))
         .build();
     pollPeriod = getPeriod(properties);
     pollUnit = getUnit(properties);
     url = URI.create(properties.getProperty("url", DEFAULT_URL)).toURL();
-    sidecarRegistry = Spectator.registry().underlying(SidecarRegistry.class);
+  }
+
+  private Config loadConfig() {
+    return ConfigFactory.load(pickClassLoader());
+  }
+
+  @SuppressWarnings("PMD.UseProperClassLoader")
+  private ClassLoader pickClassLoader() {
+    final ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    if (cl == null) {
+      return getClass().getClassLoader();
+    } else {
+      return cl;
+    }
   }
 
   private long getPeriod(Properties properties) {
