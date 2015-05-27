@@ -125,7 +125,7 @@ final class TagList implements Iterable<Tag>, Tag {
    * @return
    *     New tag list with a copy of the data.
    */
-  public static TagList create(Iterable<Tag> tags) {
+  static TagList create(Iterable<Tag> tags) {
     if (tags instanceof TagList) {
       return (TagList) tags;
     } else {
@@ -145,7 +145,7 @@ final class TagList implements Iterable<Tag>, Tag {
    * @return
    *     New tag list with a copy of the data.
    */
-  public static TagList create(Map<String, String> tags) {
+  static TagList create(Map<String, String> tags) {
     TagList head = null;
     for (Map.Entry<String, String> t : tags.entrySet()) {
       head = new TagList(t.getKey(), t.getValue(), head);

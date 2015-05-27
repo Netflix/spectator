@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Tag;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /** Id implementation for the servo registry. */
 class ServoId implements Id {
@@ -74,6 +75,14 @@ class ServoId implements Id {
     MonitorConfig.Builder builder = new MonitorConfig.Builder(config);
     for (Tag t : ts) {
       builder.withTag(t.key(), t.value());
+    }
+    return new ServoId(builder.build());
+  }
+
+  @Override public Id withTags(Map<String, String> ts) {
+    MonitorConfig.Builder builder = new MonitorConfig.Builder(config);
+    for (Map.Entry<String, String> t : ts.entrySet()) {
+      builder.withTag(t.getKey(), t.getValue());
     }
     return new ServoId(builder.build());
   }

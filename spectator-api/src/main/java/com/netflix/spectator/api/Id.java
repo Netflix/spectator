@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.Map;
+
 /**
  * Identifier for a meter or measurement.
  */
@@ -33,4 +35,7 @@ public interface Id {
 
   /** New id with additional tag values. */
   Id withTags(Iterable<Tag> tags);
+
+  /** New id with additional tag values. */
+  Id withTags(Map<String, String> tags);
 }

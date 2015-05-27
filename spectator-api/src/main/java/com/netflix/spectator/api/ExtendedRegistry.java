@@ -122,6 +122,20 @@ public final class ExtendedRegistry implements Registry {
   }
 
   /**
+   * Creates an identifier for a meter.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Identifier for a meter.
+   */
+  public Id createId(String name, Map<String, String> tags) {
+    return impl.createId(name).withTags(TagList.create(tags));
+  }
+
+  /**
    * Measures the rate of some activity.
    *
    * @param name

@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import java.util.Collections;
+import java.util.Map;
 
 /** Id implementation for the no-op registry. */
 final class NoopId implements Id {
@@ -42,6 +43,10 @@ final class NoopId implements Id {
   }
 
   @Override public Id withTags(Iterable<Tag> tags) {
+    return this;
+  }
+
+  @Override public Id withTags(Map<String, String> tags) {
     return this;
   }
 

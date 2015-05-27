@@ -59,6 +59,10 @@ public final class DefaultId implements Id {
     return new DefaultId(name, tmp);
   }
 
+  @Override public DefaultId withTags(Map<String, String> ts) {
+    return withTags(TagList.create(ts));
+  }
+
   /**
    * Returns a new id with the tag list sorted by key and with no duplicate keys. If a duplicate
    * is found the last entry in the list with a given key will be used.
