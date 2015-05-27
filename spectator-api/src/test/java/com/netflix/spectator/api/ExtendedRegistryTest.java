@@ -21,6 +21,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,6 +48,17 @@ public class ExtendedRegistryTest {
   public void testCreateIdArrayOdd() {
     ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry());
     r.createId("foo", "bar", "baz", "k");
+  }
+
+  @Test
+  public void testCreateIdMap() {
+    Map<String, String> map = new LinkedHashMap<>();
+    map.put("k1", "v1");
+    map.put("k2", "v2");
+    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry());
+    Id id1 = r.createId("foo", map);
+    Id id2 = r.createId("foo", "k1", "v1", "k2", "v2");
+    Assert.assertEquals(id1, id2);
   }
 
   @Test

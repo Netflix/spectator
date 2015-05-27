@@ -23,6 +23,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 @RunWith(JUnit4.class)
@@ -94,5 +96,14 @@ public class DefaultIdTest {
   public void testToStringNameOnly() {
     DefaultId id = new DefaultId("foo");
     Assert.assertEquals(id.toString(), "foo");
+  }
+
+  @Test
+  public void testWithTagsMap() {
+    Map<String, String> map = new LinkedHashMap<>();
+    map.put("k1", "v1");
+    map.put("k2", "v2");
+    DefaultId id = (new DefaultId("foo")).withTags(map);
+    Assert.assertEquals(id.toString(), "foo:k2=v2:k1=v1");
   }
 }
