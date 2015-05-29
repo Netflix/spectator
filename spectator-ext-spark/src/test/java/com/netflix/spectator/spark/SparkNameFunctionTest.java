@@ -45,8 +45,9 @@ public class SparkNameFunctionTest {
   @Test
   public void driverName() {
     final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
-    final Id expected = new DefaultId("spark.BlockManager.disk.diskSpaceUsed")
+    final Id expected = new DefaultId("spark.disk.diskSpaceUsed")
         .withTag("role", "driver")
+        .withTag("driver", "BlockManager")
         .withTag("appId", "app-20150309231421-0000");
     assertEquals(expected, f.apply(name));
   }
@@ -54,8 +55,9 @@ public class SparkNameFunctionTest {
   @Test
   public void driverName2() {
     final String name = "app-20150309231421-0000.driver.DAGScheduler.job.activeJobs";
-    final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
+    final Id expected = new DefaultId("spark.job.activeJobs")
         .withTag("role", "driver")
+        .withTag("driver", "DAGScheduler")
         .withTag("appId", "app-20150309231421-0000");
     assertEquals(expected, f.apply(name));
   }
@@ -63,10 +65,39 @@ public class SparkNameFunctionTest {
   @Test
   public void driverName3() {
     final String name = "local-1429219722964.<driver>.DAGScheduler.job.activeJobs";
-    final Id expected = new DefaultId("spark.DAGScheduler.job.activeJobs")
+    final Id expected = new DefaultId("spark.job.activeJobs")
         .withTag("role", "driver")
+        .withTag("driver", "DAGScheduler")
         .withTag("appId", "local-1429219722964");
     assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverStreamingSimple() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.receivers";
+    final Id expected = new DefaultId("spark.streaming.receivers")
+        .withTag("role", "driver")
+        .withTag("driver", "StreamingMetrics")
+        .withTag("appId", "app-20150527224111-0014")
+        .withTag("appName", "SubscriptionEnded");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverStreamingDelay() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
+    final Id expected = new DefaultId("spark.streaming.lastReceivedBatch_submissionDelay")
+        .withTag("role", "driver")
+        .withTag("driver", "StreamingMetrics")
+        .withTag("appId", "app-20150527224111-0014")
+        .withTag("appName", "SubscriptionEnded");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverStreamingTime() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionTime";
+    Assert.assertNull(f.apply(name));
   }
 
   @Test
