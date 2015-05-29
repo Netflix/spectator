@@ -39,6 +39,18 @@ public class SparkValueFunctionTest {
   }
 
   @Test
+  public void driverStreamingDelay() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
+    Assert.assertEquals(42.0 / 1000.0, f.convert(name, 42.0), 1e-12);
+  }
+
+  @Test
+  public void driverStreamingDelayAbnormal() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
+    Assert.assertEquals(Double.NaN, f.convert(name, -1.0), 1e-12);
+  }
+
+  @Test
   public void applicationName2() {
     final String name = "application.SubscriptionEnded.1429226958083.runtime_ms";
     Assert.assertEquals(42.0 / 1000.0, f.convert(name, 42.0), 1e-12);
