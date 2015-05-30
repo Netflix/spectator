@@ -47,7 +47,7 @@ subprojects {
   dependencies {
     compile "org.slf4j:slf4j-api:$version_slf4j"
     testCompile 'junit:junit:4.12'
-    testCompile 'nl.jqno.equalsverifier:equalsverifier:1.5.1'
+    testCompile 'nl.jqno.equalsverifier:equalsverifier:1.7.2'
     jmh "org.slf4j:slf4j-simple:$version_slf4j"
   }
 
