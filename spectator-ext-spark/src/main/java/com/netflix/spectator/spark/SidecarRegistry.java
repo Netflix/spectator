@@ -78,7 +78,9 @@ public class SidecarRegistry extends AbstractRegistry {
     executor = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactory() {
           @Override public Thread newThread(Runnable r) {
-            return new Thread(r, "spectator-sidecar");
+            final Thread t = new Thread(r, "spectator-sidecar");
+            t.setDaemon(true);
+            return t;
           }
         }
     );
