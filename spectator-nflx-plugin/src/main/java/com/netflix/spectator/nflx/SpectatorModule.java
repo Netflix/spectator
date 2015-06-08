@@ -15,11 +15,15 @@
  */
 package com.netflix.spectator.nflx;
 
+import iep.com.netflix.iep.rxnetty.RxNettyModule;
+
+import javax.inject.Singleton;
+
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import iep.com.netflix.iep.rxnetty.RxNettyModule;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
@@ -58,10 +62,20 @@ public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
     install(new RxNettyModule());
     bind(Plugin.class).asEagerSingleton();
-    bind(ExtendedRegistry.class).toInstance(Spectator.registry());
-    bind(Registry.class).toInstance(Spectator.registry());
   }
 
+  @Provides
+  @Singleton
+  ExtendedRegistry getExtendedRegistry() {
+      return Spectator.registry();
+  }
+  
+  @Provides
+  @Singleton
+  Registry getRegistry() {
+      return Spectator.registry();
+  }
+  
   @Override public boolean equals(Object obj) {
     return obj != null && getClass().equals(obj.getClass());
   }
