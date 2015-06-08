@@ -67,13 +67,13 @@ public final class SpectatorModule extends AbstractModule {
   @Provides
   @Singleton
   ExtendedRegistry getExtendedRegistry() {
-      return Spectator.registry();
+    return Spectator.registry();
   }
   
   @Provides
   @Singleton
   Registry getRegistry() {
-      return Spectator.registry();
+    return Spectator.registry();
   }
   
   @Override public boolean equals(Object obj) {
