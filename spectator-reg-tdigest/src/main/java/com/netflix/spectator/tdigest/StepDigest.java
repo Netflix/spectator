@@ -84,6 +84,16 @@ class StepDigest {
     }
   }
 
+  /** Return the id for the digest. */
+  Id id() {
+    return id;
+  }
+
+  /** Return the clock for the digest. */
+  Clock clock() {
+    return clock;
+  }
+
   /** Return the previous digest. */
   TDigest previous() {
     roll(clock.wallTime());

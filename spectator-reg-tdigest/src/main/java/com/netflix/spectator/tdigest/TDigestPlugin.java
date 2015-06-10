@@ -35,20 +35,22 @@ import java.util.concurrent.TimeUnit;
  * Plugin for managing the collection of digest measurements.
  */
 @Singleton
-public class TDigestPlugin {
+class TDigestPlugin {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TDigestPlugin.class);
 
   private final TDigestRegistry registry;
   private final TDigestWriter writer;
+  private final TDigestConfig config;
 
   private ScheduledExecutorService executor;
 
   /** Create a new instance. */
   @Inject
-  public TDigestPlugin(TDigestRegistry registry, TDigestWriter writer) {
+  public TDigestPlugin(TDigestRegistry registry, TDigestWriter writer, TDigestConfig config) {
     this.registry = registry;
     this.writer = writer;
+    this.config = config;
   }
 
   /**
@@ -73,7 +75,7 @@ public class TDigestPlugin {
       }
     };
 
-    executor.scheduleWithFixedDelay(task, 0L, 40L, TimeUnit.SECONDS);
+    executor.scheduleAtFixedRate(task, 0L, config.pollingFrequency(), TimeUnit.SECONDS);
   }
 
   /**

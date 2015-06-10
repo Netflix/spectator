@@ -15,30 +15,28 @@
  */
 package com.netflix.spectator.tdigest;
 
-import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 
-import java.util.Collections;
-
 /**
  * Timer that updates a T-Digest with recorded values.
  */
-public class TDigestDistributionSummary implements TDigestMeter, DistributionSummary {
+class TDigestDistributionSummary implements TDigestMeter, DistributionSummary {
 
-  private final Id id;
   private final StepDigest digest;
+  private final DistributionSummary underlying;
 
   /** Create a new instance. */
-  TDigestDistributionSummary(Clock clock, Id id) {
-    this.id = id;
-    this.digest = new StepDigest(id, 100.0, clock, 60000L);
+  TDigestDistributionSummary(StepDigest digest, DistributionSummary underlying) {
+    this.digest = digest;
+    this.underlying = underlying;
   }
 
   @Override public void record(long amount) {
     if (amount >= 0L) {
       digest.add(amount);
+      underlying.record(amount);
     }
   }
 
@@ -59,19 +57,19 @@ public class TDigestDistributionSummary implements TDigestMeter, DistributionSum
   }
 
   @Override public long count() {
-    return -1L;
+    return underlying.count();
   }
 
   @Override public long totalAmount() {
-    return -1L;
+    return underlying.totalAmount();
   }
 
   @Override public Id id() {
-    return id;
+    return digest.id();
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
+    return underlying.measure();
   }
 
   @Override public boolean hasExpired() {

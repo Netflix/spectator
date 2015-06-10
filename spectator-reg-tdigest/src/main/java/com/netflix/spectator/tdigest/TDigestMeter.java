@@ -20,7 +20,7 @@ import com.netflix.spectator.api.Meter;
 /**
  * Meter type for collecting a digest measurment.
  */
-public interface TDigestMeter extends Meter {
+interface TDigestMeter extends Meter {
   /** Returns the measurement for the last completed interval. */
   TDigestMeasurement measureDigest();
 }

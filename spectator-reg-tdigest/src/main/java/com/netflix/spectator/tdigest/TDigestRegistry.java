@@ -18,31 +18,38 @@ package com.netflix.spectator.tdigest;
 import com.netflix.spectator.api.*;
 import com.netflix.spectator.api.Counter;
 
+import javax.inject.Inject;
+import java.util.concurrent.TimeUnit;
+
 
 /** Registry that maps spectator types to servo. */
 public class TDigestRegistry extends AbstractRegistry {
 
-  private static final Registry NOOP = new NoopRegistry();
+  private final Registry underlying;
+  private final TDigestConfig config;
 
   /** Create a new instance. */
-  public TDigestRegistry() {
-    this(Clock.SYSTEM);
-  }
-
-  /** Create a new instance. */
-  public TDigestRegistry(Clock clock) {
-    super(clock);
+  @Inject
+  public TDigestRegistry(Registry registry, TDigestConfig config) {
+    super(registry.clock());
+    this.underlying = registry;
+    this.config = config;
   }
 
   @Override protected Counter newCounter(Id id) {
-    return NOOP.counter(id);
+    return underlying.counter(id);
   }
 
   @Override protected TDigestDistributionSummary newDistributionSummary(Id id) {
-    return new TDigestDistributionSummary(clock(), id);
+    return new TDigestDistributionSummary(newDigest(id), underlying.distributionSummary(id));
   }
 
   @Override protected TDigestTimer newTimer(Id id) {
-    return new TDigestTimer(clock(), id);
+    return new TDigestTimer(newDigest(id), underlying.timer(id));
+  }
+
+  private StepDigest newDigest(Id id) {
+    final long step = TimeUnit.SECONDS.toMillis(config.pollingFrequency());
+    return new StepDigest(id, 100.0, clock(), step);
   }
 }
