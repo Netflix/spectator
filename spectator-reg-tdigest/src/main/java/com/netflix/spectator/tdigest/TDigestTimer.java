@@ -15,53 +15,50 @@
  */
 package com.netflix.spectator.tdigest;
 
-import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Timer;
 
-import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Timer that updates a T-Digest with recorded values.
  */
-public class TDigestTimer implements TDigestMeter, Timer {
+class TDigestTimer implements TDigestMeter, Timer {
 
-  private final Clock clock;
-  private final Id id;
   private final StepDigest digest;
+  private final Timer underlying;
 
   /** Create a new instance. */
-  TDigestTimer(Clock clock, Id id) {
-    this.clock = clock;
-    this.id = id;
-    this.digest = new StepDigest(id, 100.0, clock, 60000L);
+  TDigestTimer(StepDigest digest, Timer underlying) {
+    this.digest = digest;
+    this.underlying = underlying;
   }
 
   @Override public void record(long amount, TimeUnit unit) {
     if (amount >= 0L) {
       final long nanos = unit.toNanos(amount);
       digest.add(nanos / 1e9);
+      underlying.record(amount, unit);
     }
   }
 
   @Override public <T> T record(Callable<T> f) throws Exception {
-    final long start = clock.monotonicTime();
+    final long start = digest.clock().monotonicTime();
     try {
       return f.call();
     } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
+      record(digest.clock().monotonicTime() - start, TimeUnit.NANOSECONDS);
     }
   }
 
   @Override public void record(Runnable f) {
-    final long start = clock.monotonicTime();
+    final long start = digest.clock().monotonicTime();
     try {
       f.run();
     } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
+      record(digest.clock().monotonicTime() - start, TimeUnit.NANOSECONDS);
     }
   }
 
@@ -82,19 +79,19 @@ public class TDigestTimer implements TDigestMeter, Timer {
   }
 
   @Override public long count() {
-    return -1L;
+    return underlying.count();
   }
 
   @Override public long totalTime() {
-    return -1L;
+    return underlying.totalTime();
   }
 
   @Override public Id id() {
-    return id;
+    return digest.id();
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
+    return underlying.measure();
   }
 
   @Override public boolean hasExpired() {

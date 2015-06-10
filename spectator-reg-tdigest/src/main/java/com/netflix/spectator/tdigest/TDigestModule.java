@@ -21,6 +21,8 @@ import com.google.inject.Provides;
 import com.netflix.archaius.guice.ArchaiusModule;
 import com.netflix.spectator.api.ExtendedRegistry;
 
+import javax.inject.Singleton;
+
 /**
  * Guice module to configure the plugin.
  */
@@ -31,11 +33,15 @@ public class TDigestModule extends AbstractModule {
     bind(TDigestPlugin.class).asEagerSingleton();
   }
 
-  @Provides private TDigestRegistry providesRegistry(ExtendedRegistry registry) {
-    return registry.underlying(TDigestRegistry.class);
+  @Provides
+  @Singleton
+  private TDigestRegistry providesRegistry(ExtendedRegistry registry, TDigestConfig config) {
+    return new TDigestRegistry(registry, config);
   }
 
-  @Provides private TDigestWriter providesWriter(TDigestConfig config) {
+  @Provides
+  @Singleton
+  private TDigestWriter providesWriter(TDigestConfig config) {
     AmazonKinesisClient client = new AmazonKinesisClient();
     client.setEndpoint(config.endpoint());
     return new KinesisTDigestWriter(client, config.stream());

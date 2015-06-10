@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
@@ -68,8 +69,21 @@ public class TDigestPluginTest {
   public void writeData() throws Exception {
     final File f = new File("build/TDigestPlugin_writeData.out");
     f.getParentFile().mkdirs();
-    final TDigestRegistry r = new TDigestRegistry(clock);
-    final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(f));
+    final TDigestConfig config = new TDigestConfig() {
+      @Override public String endpoint() {
+        return "";
+      }
+
+      @Override public String stream() {
+        return "";
+      }
+
+      @Override public long pollingFrequency() {
+        return 60L;
+      }
+    };
+    final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
+    final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(f), config);
 
     // Adding a bunch of tags to test the effect of setting
     // SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES.

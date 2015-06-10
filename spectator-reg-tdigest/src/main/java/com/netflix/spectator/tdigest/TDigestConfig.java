@@ -22,7 +22,7 @@ import com.netflix.archaius.annotations.DefaultValue;
  * Configuration settings for the digest plugin.
  */
 @Configuration(prefix = "spectator.tdigest.kinesis")
-public interface TDigestConfig {
+interface TDigestConfig {
   /** Kinesis endpoint to use. */
   @DefaultValue("kinesis.${EC2_REGION}.amazonaws.com")
   String endpoint();
@@ -30,4 +30,8 @@ public interface TDigestConfig {
   /** Name of the kinesis stream where the data should be written. */
   @DefaultValue("spectator-tdigest")
   String stream();
+
+  /** Polling frequency for digest data. */
+  @DefaultValue("60")
+  long pollingFrequency();
 }
