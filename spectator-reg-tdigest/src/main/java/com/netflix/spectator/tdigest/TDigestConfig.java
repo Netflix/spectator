@@ -22,7 +22,7 @@ import com.netflix.archaius.annotations.DefaultValue;
  * Configuration settings for the digest plugin.
  */
 @Configuration(prefix = "spectator.tdigest.kinesis")
-interface TDigestConfig {
+public interface TDigestConfig {
   /** Kinesis endpoint to use. */
   @DefaultValue("kinesis.${EC2_REGION}.amazonaws.com")
   String endpoint();
