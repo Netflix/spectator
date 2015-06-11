@@ -33,15 +33,15 @@ public class TDigestTimerTest {
 
   private TDigestTimer newTimer(String name) {
     final TDigestConfig config = new TDigestConfig() {
-      @Override public String endpoint() {
+      @Override public String getEndpoint() {
         return null;
       }
 
-      @Override public String stream() {
+      @Override public String getStream() {
         return null;
       }
 
-      @Override public long pollingFrequency() {
+      @Override public long getPollingFrequency() {
         return 60L;
       }
     };
