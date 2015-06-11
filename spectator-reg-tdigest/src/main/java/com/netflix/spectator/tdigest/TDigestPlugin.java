@@ -75,7 +75,8 @@ class TDigestPlugin {
       }
     };
 
-    executor.scheduleAtFixedRate(task, 0L, config.getPollingFrequency(), TimeUnit.SECONDS);
+    final long freq = config.getPollingFrequency(TimeUnit.SECONDS);
+    executor.scheduleAtFixedRate(task, 0L, freq, TimeUnit.SECONDS);
   }
 
   /**

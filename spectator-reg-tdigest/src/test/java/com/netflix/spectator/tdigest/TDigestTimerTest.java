@@ -17,6 +17,7 @@ package com.netflix.spectator.tdigest;
 
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,19 +33,7 @@ public class TDigestTimerTest {
   private final ManualClock clock = new ManualClock();
 
   private TDigestTimer newTimer(String name) {
-    final TDigestConfig config = new TDigestConfig() {
-      @Override public String getEndpoint() {
-        return null;
-      }
-
-      @Override public String getStream() {
-        return null;
-      }
-
-      @Override public long getPollingFrequency() {
-        return 60L;
-      }
-    };
+    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
     final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
     return (TDigestTimer) r.timer(r.createId(name));
   }
