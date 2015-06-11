@@ -25,13 +25,13 @@ import com.netflix.archaius.annotations.DefaultValue;
 public interface TDigestConfig {
   /** Kinesis endpoint to use. */
   @DefaultValue("kinesis.${EC2_REGION}.amazonaws.com")
-  String endpoint();
+  String getEndpoint();
 
   /** Name of the kinesis stream where the data should be written. */
   @DefaultValue("spectator-tdigest")
-  String stream();
+  String getStream();
 
   /** Polling frequency for digest data. */
   @DefaultValue("60")
-  long pollingFrequency();
+  long getPollingFrequency();
 }

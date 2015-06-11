@@ -75,7 +75,7 @@ class TDigestPlugin {
       }
     };
 
-    executor.scheduleAtFixedRate(task, 0L, config.pollingFrequency(), TimeUnit.SECONDS);
+    executor.scheduleAtFixedRate(task, 0L, config.getPollingFrequency(), TimeUnit.SECONDS);
   }
 
   /**

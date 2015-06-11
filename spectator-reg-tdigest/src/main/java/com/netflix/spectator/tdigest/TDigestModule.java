@@ -43,7 +43,7 @@ public class TDigestModule extends AbstractModule {
   @Singleton
   private TDigestWriter providesWriter(TDigestConfig config) {
     AmazonKinesisClient client = new AmazonKinesisClient();
-    client.setEndpoint(config.endpoint());
-    return new KinesisTDigestWriter(client, config.stream());
+    client.setEndpoint(config.getEndpoint());
+    return new KinesisTDigestWriter(client, config.getStream());
   }
 }

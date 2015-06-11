@@ -70,15 +70,15 @@ public class TDigestPluginTest {
     final File f = new File("build/TDigestPlugin_writeData.out");
     f.getParentFile().mkdirs();
     final TDigestConfig config = new TDigestConfig() {
-      @Override public String endpoint() {
+      @Override public String getEndpoint() {
         return "";
       }
 
-      @Override public String stream() {
+      @Override public String getStream() {
         return "";
       }
 
-      @Override public long pollingFrequency() {
+      @Override public long getPollingFrequency() {
         return 60L;
       }
     };
