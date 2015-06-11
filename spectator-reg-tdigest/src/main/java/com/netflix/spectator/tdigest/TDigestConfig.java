@@ -15,23 +15,36 @@
  */
 package com.netflix.spectator.tdigest;
 
-import com.netflix.archaius.annotations.Configuration;
-import com.netflix.archaius.annotations.DefaultValue;
+import com.typesafe.config.Config;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Configuration settings for the digest plugin.
  */
-@Configuration(prefix = "spectator.tdigest.kinesis")
-public interface TDigestConfig {
+public final class TDigestConfig {
+
+  private final Config cfg;
+
+  /**
+   * Create a new instance based on the {@link Config} object.
+   */
+  public TDigestConfig(Config cfg) {
+    this.cfg = cfg;
+  }
+
   /** Kinesis endpoint to use. */
-  @DefaultValue("kinesis.${EC2_REGION}.amazonaws.com")
-  String getEndpoint();
+  public String getEndpoint() {
+    return cfg.getString("kinesis.endpoint");
+  }
 
   /** Name of the kinesis stream where the data should be written. */
-  @DefaultValue("spectator-tdigest")
-  String getStream();
+  public String getStream() {
+    return cfg.getString("kinesis.stream");
+  }
 
   /** Polling frequency for digest data. */
-  @DefaultValue("60")
-  long getPollingFrequency();
+  public long getPollingFrequency(TimeUnit unit) {
+    return cfg.getDuration("polling-frequency", unit);
+  }
 }

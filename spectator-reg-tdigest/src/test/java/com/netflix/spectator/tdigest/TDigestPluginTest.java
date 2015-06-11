@@ -21,6 +21,7 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
 import com.tdunning.math.stats.TDigest;
 import com.tdunning.math.stats.TreeDigest;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,19 +70,7 @@ public class TDigestPluginTest {
   public void writeData() throws Exception {
     final File f = new File("build/TDigestPlugin_writeData.out");
     f.getParentFile().mkdirs();
-    final TDigestConfig config = new TDigestConfig() {
-      @Override public String getEndpoint() {
-        return "";
-      }
-
-      @Override public String getStream() {
-        return "";
-      }
-
-      @Override public long getPollingFrequency() {
-        return 60L;
-      }
-    };
+    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
     final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
     final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(f), config);
 

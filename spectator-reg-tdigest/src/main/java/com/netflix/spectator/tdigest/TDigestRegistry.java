@@ -49,7 +49,7 @@ public class TDigestRegistry extends AbstractRegistry {
   }
 
   private StepDigest newDigest(Id id) {
-    final long step = TimeUnit.SECONDS.toMillis(config.getPollingFrequency());
+    final long step = config.getPollingFrequency(TimeUnit.MILLISECONDS);
     return new StepDigest(id, 100.0, clock(), step);
   }
 }

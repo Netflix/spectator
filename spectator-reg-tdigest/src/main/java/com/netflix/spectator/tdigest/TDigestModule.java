@@ -17,9 +17,11 @@ package com.netflix.spectator.tdigest;
 
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.inject.Provides;
-import com.netflix.archaius.guice.ArchaiusModule;
 import com.netflix.spectator.api.ExtendedRegistry;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 
 import javax.inject.Singleton;
 
@@ -29,8 +31,13 @@ import javax.inject.Singleton;
 public class TDigestModule extends AbstractModule {
 
   @Override protected void configure() {
-    install(ArchaiusModule.forProxy(TDigestConfig.class));
     bind(TDigestPlugin.class).asEagerSingleton();
+  }
+
+  @Provides
+  @Singleton
+  private TDigestConfig providesDigestConfig(OptionalInjections opts) {
+    return new TDigestConfig(opts.getConfig().getConfig("spectator.tdigest"));
   }
 
   @Provides
@@ -45,5 +52,14 @@ public class TDigestModule extends AbstractModule {
     AmazonKinesisClient client = new AmazonKinesisClient();
     client.setEndpoint(config.getEndpoint());
     return new KinesisTDigestWriter(client, config.getStream());
+  }
+
+  private static class OptionalInjections {
+    @Inject(optional = true)
+    private Config config;
+
+    Config getConfig() {
+      return (config == null) ? ConfigFactory.load() : config;
+    }
   }
 }
