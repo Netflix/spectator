@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DefaultId.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">DefaultId.java</span></div><h1>DefaultId.java</h1><pre class="source lang-java linenums">/**
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.netflix.spectator.impl.Preconditions;
 import java.util.*;
 
 /** Id implementation for the default registry. */
-final class DefaultId implements Id {
+public final class DefaultId implements Id {
 
 <span class="fc" id="L25">  private static final Set&lt;String&gt; EMPTY = new HashSet&lt;&gt;();</span>
 
@@ -28,7 +28,7 @@ final class DefaultId implements Id {
   private final TagList tags;
 
   /** Create a new instance. */
-  DefaultId(String name) {
+  public DefaultId(String name) {
 <span class="fc" id="L32">    this(name, TagList.EMPTY);</span>
 <span class="fc" id="L33">  }</span>
 
@@ -47,7 +47,7 @@ final class DefaultId implements Id {
   }
 
   @Override public DefaultId withTag(Tag tag) {
-<span class="nc" id="L50">    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));</span>
+<span class="fc" id="L50">    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));</span>
   }
 
   @Override public DefaultId withTag(String key, String value) {
@@ -55,8 +55,12 @@ final class DefaultId implements Id {
   }
 
   @Override public DefaultId withTags(Iterable&lt;Tag&gt; ts) {
-<span class="pc bpc" id="L58" title="1 of 2 branches missed.">    TagList tmp = (tags == null) ? TagList.create(ts) : tags.prepend(ts);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">    TagList tmp = (tags == null) ? TagList.create(ts) : tags.prepend(ts);</span>
 <span class="fc" id="L59">    return new DefaultId(name, tmp);</span>
+  }
+
+  @Override public DefaultId withTags(Map&lt;String, String&gt; ts) {
+<span class="fc" id="L63">    return withTags(TagList.create(ts));</span>
   }
 
   /**
@@ -64,7 +68,7 @@ final class DefaultId implements Id {
    * is found the last entry in the list with a given key will be used.
    */
   public DefaultId normalize() {
-<span class="fc" id="L67">    return rollup(EMPTY, false);</span>
+<span class="fc" id="L71">    return rollup(EMPTY, false);</span>
   }
 
   /**
@@ -81,34 +85,34 @@ final class DefaultId implements Id {
    *     New identifier after applying the rollup.
    */
   public DefaultId rollup(Set&lt;String&gt; keys, boolean keep) {
-<span class="fc" id="L84">    Map&lt;String, String&gt; ts = new TreeMap&lt;&gt;();</span>
-<span class="fc bfc" id="L85" title="All 2 branches covered.">    for (Tag t : tags) {</span>
-<span class="fc bfc" id="L86" title="All 2 branches covered.">      if (keys.contains(t.key()) == keep) {</span>
-<span class="fc" id="L87">        ts.put(t.key(), t.value());</span>
+<span class="fc" id="L88">    Map&lt;String, String&gt; ts = new TreeMap&lt;&gt;();</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    for (Tag t : tags) {</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">      if (keys.contains(t.key()) == keep) {</span>
+<span class="fc" id="L91">        ts.put(t.key(), t.value());</span>
       }
-<span class="fc" id="L89">    }</span>
-<span class="fc" id="L90">    return new DefaultId(name, TagList.create(ts));</span>
+<span class="fc" id="L93">    }</span>
+<span class="fc" id="L94">    return new DefaultId(name, TagList.create(ts));</span>
   }
 
   @Override public boolean equals(Object obj) {
-<span class="fc bfc" id="L94" title="All 2 branches covered.">    if (this == obj) return true;</span>
-<span class="fc bfc" id="L95" title="All 4 branches covered.">    if (obj == null || !(obj instanceof DefaultId)) return false;</span>
-<span class="fc" id="L96">    DefaultId other = (DefaultId) obj;</span>
-<span class="pc bpc" id="L97" title="2 of 8 branches missed.">    return name.equals(other.name)</span>
-<span class="fc bfc" id="L98" title="All 2 branches covered.">      &amp;&amp; ((tags == null &amp;&amp; other.tags == null) || (tags != null &amp;&amp; tags.equals(other.tags)));</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L99" title="All 4 branches covered.">    if (obj == null || !(obj instanceof DefaultId)) return false;</span>
+<span class="fc" id="L100">    DefaultId other = (DefaultId) obj;</span>
+<span class="pc bpc" id="L101" title="2 of 8 branches missed.">    return name.equals(other.name)</span>
+<span class="fc bfc" id="L102" title="All 2 branches covered.">      &amp;&amp; ((tags == null &amp;&amp; other.tags == null) || (tags != null &amp;&amp; tags.equals(other.tags)));</span>
   }
 
   @Override public int hashCode() {
-<span class="fc bfc" id="L102" title="All 2 branches covered.">    return name.hashCode() + (tags == null ? 0 : tags.hashCode());</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">    return name.hashCode() + (tags == null ? 0 : tags.hashCode());</span>
   }
 
   @Override public String toString() {
-<span class="fc" id="L106">    StringBuilder buf = new StringBuilder();</span>
-<span class="fc" id="L107">    buf.append(name);</span>
-<span class="fc bfc" id="L108" title="All 2 branches covered.">    for (Tag t : tags()) {</span>
-<span class="fc" id="L109">      buf.append(&quot;:&quot;).append(t.key()).append(&quot;=&quot;).append(t.value());</span>
-<span class="fc" id="L110">    }</span>
-<span class="fc" id="L111">    return buf.toString();</span>
+<span class="fc" id="L110">    StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L111">    buf.append(name);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">    for (Tag t : tags()) {</span>
+<span class="fc" id="L113">      buf.append(&quot;:&quot;).append(t.key()).append(&quot;=&quot;).append(t.value());</span>
+<span class="fc" id="L114">    }</span>
+<span class="fc" id="L115">    return buf.toString();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

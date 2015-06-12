@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="5.7">
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/ArchaiusConfigMap.java">
+<file name="/Users/brharrington/stash/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/ChronosGcEventListener.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/ChronosGcEventListener.java">
+<file name="/Users/brharrington/stash/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/Plugin.java">
 </file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/Plugin.java">
+<file name="/Users/brharrington/stash/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/SpectatorModule.java">
+<error line="72" severity="info" message="Line has trailing spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+<error line="78" severity="info" message="Line has trailing spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 </file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/RedirectHandler.java">
-</file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/RxHttp.java">
-</file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/SpectatorModule.java">
-</file>
-<file name="/Users/brharrington/stash/spectator-pages/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/TestModule.java">
+<file name="/Users/brharrington/stash/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/TestModule.java">
 </file>
 </checkstyle>

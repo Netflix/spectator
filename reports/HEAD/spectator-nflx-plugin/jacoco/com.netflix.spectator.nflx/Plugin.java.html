@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Plugin.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">Plugin.java</span></div><h1>Plugin.java</h1><pre class="source lang-java linenums">/**
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
+import iep.com.netflix.iep.http.RxHttp;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
@@ -24,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
 
@@ -31,33 +33,41 @@ import java.io.IOException;
  * Plugin for setting up spectator to report correctly into the standard Netflix stack.
  */
 @Singleton
-<span class="fc" id="L34">public final class Plugin {</span>
+public final class Plugin {
 
   private static final String CONFIG_FILE = &quot;spectator.properties&quot;;
 
   private static final String ENABLED_PROP = &quot;spectator.nflx.enabled&quot;;
 
-<span class="fc" id="L40">  private static final GcLogger GC_LOGGER = new GcLogger();</span>
+<span class="nc" id="L42">  private static final GcLogger GC_LOGGER = new GcLogger();</span>
 
-<span class="fc" id="L42">  private static final Logger LOGGER = LoggerFactory.getLogger(Plugin.class);</span>
+<span class="nc" id="L44">  private static final Logger LOGGER = LoggerFactory.getLogger(Plugin.class);</span>
+
+  private final RxHttp rxHttp;
+
+  /** Create a new instance. */
+  @Inject
+<span class="nc" id="L50">  public Plugin(RxHttp rxHttp) {</span>
+<span class="nc" id="L51">    this.rxHttp = rxHttp;</span>
+<span class="nc" id="L52">  }</span>
 
   @PostConstruct
   private void init() throws IOException {
-<span class="fc" id="L46">    AbstractConfiguration config = ConfigurationManager.getConfigInstance();</span>
-<span class="fc" id="L47">    final boolean enabled = config.getBoolean(ENABLED_PROP, true);</span>
-<span class="pc bpc" id="L48" title="1 of 2 branches missed.">    if (enabled) {</span>
-<span class="fc" id="L49">      ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);</span>
-<span class="pc bpc" id="L50" title="1 of 2 branches missed.">      if (config.getBoolean(&quot;spectator.gc.loggingEnabled&quot;)) {</span>
-<span class="fc" id="L51">        GC_LOGGER.start(new ChronosGcEventListener());</span>
-<span class="fc" id="L52">        LOGGER.info(&quot;gc logging started&quot;);</span>
+<span class="nc" id="L56">    AbstractConfiguration config = ConfigurationManager.getConfigInstance();</span>
+<span class="nc" id="L57">    final boolean enabled = config.getBoolean(ENABLED_PROP, true);</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    if (enabled) {</span>
+<span class="nc" id="L59">      ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">      if (config.getBoolean(&quot;spectator.gc.loggingEnabled&quot;)) {</span>
+<span class="nc" id="L61">        GC_LOGGER.start(new ChronosGcEventListener(rxHttp));</span>
+<span class="nc" id="L62">        LOGGER.info(&quot;gc logging started&quot;);</span>
       } else {
-<span class="nc" id="L54">        LOGGER.info(&quot;gc logging is not enabled&quot;);</span>
+<span class="nc" id="L64">        LOGGER.info(&quot;gc logging is not enabled&quot;);</span>
       }
 
-<span class="fc" id="L57">      Jmx.registerStandardMXBeans(Spectator.registry());</span>
+<span class="nc" id="L67">      Jmx.registerStandardMXBeans(Spectator.registry());</span>
     } else {
-<span class="nc" id="L59">      LOGGER.debug(&quot;plugin not enabled, set &quot; + ENABLED_PROP + &quot;=true to enable&quot;);</span>
+<span class="nc" id="L69">      LOGGER.debug(&quot;plugin not enabled, set &quot; + ENABLED_PROP + &quot;=true to enable&quot;);</span>
     }
-<span class="fc" id="L61">  }</span>
+<span class="nc" id="L71">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

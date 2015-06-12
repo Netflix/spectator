@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TagList.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">TagList.java</span></div><h1>TagList.java</h1><pre class="source lang-java linenums">/**
- * Copyright 2014 Netflix, Inc.
+ * Copyright 2015 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,7 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    * @return
    *     New tag list with a copy of the data.
    */
-  public static TagList create(Iterable&lt;Tag&gt; tags) {
+  static TagList create(Iterable&lt;Tag&gt; tags) {
 <span class="fc bfc" id="L129" title="All 2 branches covered.">    if (tags instanceof TagList) {</span>
 <span class="fc" id="L130">      return (TagList) tags;</span>
     } else {
@@ -145,7 +145,7 @@ final class TagList implements Iterable&lt;Tag&gt;, Tag {
    * @return
    *     New tag list with a copy of the data.
    */
-  public static TagList create(Map&lt;String, String&gt; tags) {
+  static TagList create(Map&lt;String, String&gt; tags) {
 <span class="fc" id="L149">    TagList head = null;</span>
 <span class="fc bfc" id="L150" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; t : tags.entrySet()) {</span>
 <span class="fc" id="L151">      head = new TagList(t.getKey(), t.getValue(), head);</span>
