@@ -125,9 +125,10 @@ public final class BucketFunctions {
   /**
    * Returns a function that maps latencies to a set of buckets. Example use-case would be
    * tracking the amount of time to process a request on a server. Values that are less than
-   * 0 will be marked as "future". These typically occur due to minor variations in the clocks
-   * across nodes. In addition to a bucket at the max, it will create buckets at max / 2,
-   * max / 4, and max / 8.
+   * 0 will be marked as "negative_latency". These typically occur due to minor variations in the
+   * clocks, e.g., using {@link System#currentTimeMillis()} to measure the latency and having a
+   * time adjustment between the start and end. In addition to a bucket at the max, it will create
+   * buckets at max / 2, max / 4, and max / 8.
    *
    * @param max
    *     Maximum expected age of data flowing through. Values greater than this max will be mapped
@@ -165,9 +166,10 @@ public final class BucketFunctions {
   /**
    * Returns a function that maps latencies to a set of buckets. Example use-case would be
    * tracking the amount of time to process a request on a server. Values that are less than
-   * 0 will be marked as "future". These typically occur due to minor variations in the clocks
-   * across nodes. In addition to a bucket at the max, it will create buckets at max - max / 8,
-   * max - max / 4, and max - max / 2.
+   * 0 will be marked as "negative_latency". These typically occur due to minor variations in the
+   * clocks, e.g., using {@link System#currentTimeMillis()} to measure the latency and having a
+   * time adjustment between the start and end. In addition to a bucket at the max, it will create
+   * buckets at max - max / 8, max - max / 4, and max - max / 2.
    *
    * @param max
    *     Maximum expected age of data flowing through. Values greater than this max will be mapped
