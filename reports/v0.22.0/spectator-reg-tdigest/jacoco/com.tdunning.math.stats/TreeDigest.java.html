@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TreeDigest.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.tdunning.math.stats</a> &gt; <span class="el_source">TreeDigest.java</span></div><h1>TreeDigest.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.tdunning.math.stats;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * Adaptive histogram based on something like streaming k-means crossed with Q-digest.
+ * &lt;p/&gt;
+ * The special characteristics of this algorithm are:
+ * &lt;p/&gt;
+ * a) smaller summaries than Q-digest
+ * &lt;p/&gt;
+ * b) works on doubles as well as integers.
+ * &lt;p/&gt;
+ * c) provides part per million accuracy for extreme quantiles and typically &lt;1000 ppm accuracy for middle quantiles
+ * &lt;p/&gt;
+ * d) fast
+ * &lt;p/&gt;
+ * e) simple
+ * &lt;p/&gt;
+ * f) test coverage &gt; 90%
+ * &lt;p/&gt;
+ * g) easy to adapt for use with map-reduce
+ */
+public class TreeDigest extends AbstractTDigest {
+
+<span class="fc" id="L49">    private double compression = 100;</span>
+<span class="fc" id="L50">    private GroupTree summary = new GroupTree();</span>
+<span class="fc" id="L51">    long count = 0; // package private for testing</span>
+
+    /**
+     * A histogram structure that will record a sketch of a distribution.
+     *
+     * @param compression How should accuracy be traded for size?  A value of N here will give quantile errors
+     *                    almost always less than 3/N with considerably smaller errors expected for extreme
+     *                    quantiles.  Conversely, you should expect to track about 5 N centroids for this
+     *                    accuracy.
+     */
+<span class="fc" id="L61">    public TreeDigest(double compression) {</span>
+<span class="fc" id="L62">        this.compression = compression;</span>
+<span class="fc" id="L63">    }</span>
+
+    @Override
+    public void add(double x, int w) {
+        // note that because of a zero id, this will be sorted *before* any existing Centroid with the same mean
+<span class="nc" id="L68">        add(x, w, createCentroid(x, 0));</span>
+<span class="nc" id="L69">    }</span>
+
+    @Override
+    public void add(double x, int w, Centroid base) {
+<span class="fc" id="L73">        checkValue(x);</span>
+<span class="fc" id="L74">        Centroid start = summary.floor(base);</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (start == null) {</span>
+<span class="fc" id="L76">            start = summary.ceiling(base);</span>
+        }
+
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (start == null) {</span>
+<span class="fc" id="L80">            summary.add(Centroid.createWeighted(x, w, base.data()));</span>
+<span class="fc" id="L81">            count = w;</span>
+        } else {
+<span class="fc" id="L83">            Iterable&lt;Centroid&gt; neighbors = summary.tailSet(start);</span>
+<span class="fc" id="L84">            double minDistance = Double.MAX_VALUE;</span>
+<span class="fc" id="L85">            int lastNeighbor = 0;</span>
+<span class="fc" id="L86">            int i = 0;</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            for (Centroid neighbor : neighbors) {</span>
+<span class="fc" id="L88">                double z = Math.abs(neighbor.mean() - x);</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">                if (z &lt;= minDistance) {</span>
+<span class="fc" id="L90">                    minDistance = z;</span>
+<span class="fc" id="L91">                    lastNeighbor = i;</span>
+                } else {
+                    // as soon as z increases, we have passed the nearest neighbor and can quit
+                    break;
+                }
+<span class="fc" id="L96">                i++;</span>
+<span class="fc" id="L97">            }</span>
+
+<span class="fc" id="L99">            Centroid closest = null;</span>
+<span class="fc" id="L100">            long sum = summary.headSum(start);</span>
+<span class="fc" id="L101">            i = 0;</span>
+<span class="fc" id="L102">            double n = 1;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            for (Centroid neighbor : neighbors) {</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">                if (i &gt; lastNeighbor) {</span>
+<span class="fc" id="L105">                    break;</span>
+                }
+<span class="fc" id="L107">                double z = Math.abs(neighbor.mean() - x);</span>
+<span class="fc" id="L108">                double q = (sum + neighbor.count() / 2.0) / count;</span>
+<span class="fc" id="L109">                double k = 4 * count * q * (1 - q) / compression;</span>
+
+                // this slightly clever selection method improves accuracy with lots of repeated points
+<span class="fc bfc" id="L112" title="All 4 branches covered.">                if (z == minDistance &amp;&amp; neighbor.count() + w &lt;= k) {</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">                    if (gen.nextDouble() &lt; 1 / n) {</span>
+<span class="fc" id="L114">                        closest = neighbor;</span>
+                    }
+<span class="fc" id="L116">                    n++;</span>
+                }
+<span class="fc" id="L118">                sum += neighbor.count();</span>
+<span class="fc" id="L119">                i++;</span>
+<span class="fc" id="L120">            }</span>
+
+<span class="fc bfc" id="L122" title="All 2 branches covered.">            if (closest == null) {</span>
+<span class="fc" id="L123">                summary.add(Centroid.createWeighted(x, w, base.data()));</span>
+            } else {
+                // if the nearest point was not unique, then we may not be modifying the first copy
+                // which means that ordering can change
+<span class="fc" id="L127">                summary.remove(closest);</span>
+<span class="fc" id="L128">                closest.add(x, w, base.data());</span>
+<span class="fc" id="L129">                summary.add(closest);</span>
+            }
+<span class="fc" id="L131">            count += w;</span>
+
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">            if (summary.size() &gt; 20 * compression) {</span>
+                // something such as sequential ordering of data points
+                // has caused a pathological expansion of our summary.
+                // To fight this, we simply replay the current centroids
+                // in random order.
+
+                // this causes us to forget the diagnostic recording of data points
+<span class="nc" id="L140">                compress();</span>
+            }
+        }
+<span class="fc" id="L143">    }</span>
+
+    public static TDigest merge(double compression, Iterable&lt;TDigest&gt; subData, Random gen) {
+<span class="fc" id="L146">        TreeDigest r = new TreeDigest(compression);</span>
+<span class="fc" id="L147">        return merge(subData, gen, r);</span>
+    }
+
+    @Override
+    public void compress() {
+<span class="nc" id="L152">        TreeDigest reduced = new TreeDigest(compression);</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (recordAllData) {</span>
+<span class="nc" id="L154">            reduced.recordAllData();</span>
+        }
+<span class="nc" id="L156">        List&lt;Centroid&gt; tmp = new ArrayList&lt;Centroid&gt;();</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L158">            tmp.add(centroid);</span>
+<span class="nc" id="L159">        }</span>
+<span class="nc" id="L160">        Collections.shuffle(tmp, gen);</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        for (Centroid centroid : tmp) {</span>
+<span class="nc" id="L162">            reduced.add(centroid.mean(), centroid.count(), centroid);</span>
+<span class="nc" id="L163">        }</span>
+
+<span class="nc" id="L165">        summary = reduced.summary;</span>
+<span class="nc" id="L166">    }</span>
+
+    /**
+     * Returns the number of samples represented in this histogram.  If you want to know how many
+     * centroids are being used, try centroids().size().
+     *
+     * @return the number of samples that have been added.
+     */
+    @Override
+    public long size() {
+<span class="nc" id="L176">        return count;</span>
+    }
+
+    /**
+     * @param x the value at which the CDF should be evaluated
+     * @return the approximate fraction of all samples that were less than or equal to x.
+     */
+    @Override
+    public double cdf(double x) {
+<span class="nc" id="L185">        GroupTree values = summary;</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">        if (values.size() == 0) {</span>
+<span class="nc" id="L187">            return Double.NaN;</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        } else if (values.size() == 1) {</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">            return x &lt; values.first().mean() ? 0 : 1;</span>
+        } else {
+<span class="nc" id="L191">            double r = 0;</span>
+
+            // we scan a across the centroids
+<span class="nc" id="L194">            Iterator&lt;Centroid&gt; it = values.iterator();</span>
+<span class="nc" id="L195">            Centroid a = it.next();</span>
+
+            // b is the look-ahead to the next centroid
+<span class="nc" id="L198">            Centroid b = it.next();</span>
+
+            // initially, we set left width equal to right width
+<span class="nc" id="L201">            double left = (b.mean() - a.mean()) / 2;</span>
+<span class="nc" id="L202">            double right = left;</span>
+
+            // scan to next to last element
+<span class="nc bnc" id="L205" title="All 2 branches missed.">            while (it.hasNext()) {</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">                if (x &lt; a.mean() + right) {</span>
+<span class="nc" id="L207">                    return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;</span>
+                }
+<span class="nc" id="L209">                r += a.count();</span>
+
+<span class="nc" id="L211">                a = b;</span>
+<span class="nc" id="L212">                b = it.next();</span>
+
+<span class="nc" id="L214">                left = right;</span>
+<span class="nc" id="L215">                right = (b.mean() - a.mean()) / 2;</span>
+            }
+
+            // for the last element, assume right width is same as left
+<span class="nc" id="L219">            left = right;</span>
+<span class="nc" id="L220">            a = b;</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">            if (x &lt; a.mean() + right) {</span>
+<span class="nc" id="L222">                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;</span>
+            } else {
+<span class="nc" id="L224">                return 1;</span>
+            }
+        }
+    }
+
+    /**
+     * @param q The quantile desired.  Can be in the range [0,1].
+     * @return The minimum value x such that we think that the proportion of samples is &lt;= x is q.
+     */
+    @Override
+    public double quantile(double q) {
+<span class="pc bpc" id="L235" title="2 of 4 branches missed.">        if (q &lt; 0 || q &gt; 1) {</span>
+<span class="nc" id="L236">            throw new IllegalArgumentException(&quot;q should be in [0,1], got &quot; + q);</span>
+        }
+
+<span class="fc" id="L239">        GroupTree values = summary;</span>
+<span class="fc bfc" id="L240" title="All 2 branches covered.">        if (values.size() == 0) {</span>
+<span class="fc" id="L241">            return Double.NaN;</span>
+<span class="pc bpc" id="L242" title="1 of 2 branches missed.">        } else if (values.size() == 1) {</span>
+<span class="nc" id="L243">            return values.iterator().next().mean();</span>
+        }
+
+        // if values were stored in a sorted array, index would be the offset we are interested in
+<span class="fc" id="L247">        final double index = q * (count - 1);</span>
+
+<span class="fc" id="L249">        double previousMean = Double.NaN, previousIndex = 0;</span>
+<span class="fc" id="L250">        long total = 0;</span>
+        Centroid next;
+<span class="fc" id="L252">        Iterator&lt;? extends Centroid&gt; it = centroids().iterator();</span>
+        while (true) {
+<span class="fc" id="L254">            next = it.next();</span>
+<span class="fc" id="L255">            final double nextIndex = total + (next.count() - 1.0) / 2;</span>
+<span class="fc bfc" id="L256" title="All 2 branches covered.">            if (nextIndex &gt;= index) {</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">                if (Double.isNaN(previousMean)) {</span>
+                    // special case 1: the index we are interested in is before the 1st centroid
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">                    if (nextIndex == previousIndex) {</span>
+<span class="fc" id="L260">                        return next.mean();</span>
+                    }
+                    // assume values grow linearly between index previousIndex=0 and nextIndex2
+<span class="nc" id="L263">                    Centroid next2 = it.next();</span>
+<span class="nc" id="L264">                    final double nextIndex2 = total + next.count() + (next2.count() - 1.0) / 2;</span>
+<span class="nc" id="L265">                    previousMean = (nextIndex2 * next.mean() - nextIndex * next2.mean()) / (nextIndex2 - nextIndex);</span>
+                }
+                // common case: we found two centroids previous and next so that the desired quantile is
+                // after 'previous' but before 'next'
+<span class="fc" id="L269">                return quantile(previousIndex, index, nextIndex, previousMean, next.mean());</span>
+<span class="pc bpc" id="L270" title="1 of 2 branches missed.">            } else if (!it.hasNext()) {</span>
+                // special case 2: the index we are interested in is beyond the last centroid
+                // again, assume values grow linearly between index previousIndex and (count - 1)
+                // which is the highest possible index
+<span class="nc" id="L274">                final double nextIndex2 = count - 1;</span>
+<span class="nc" id="L275">                final double nextMean2 = (next.mean() * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);</span>
+<span class="nc" id="L276">                return quantile(nextIndex, index, nextIndex2, next.mean(), nextMean2);</span>
+            }
+<span class="fc" id="L278">            total += next.count();</span>
+<span class="fc" id="L279">            previousMean = next.mean();</span>
+<span class="fc" id="L280">            previousIndex = nextIndex;</span>
+<span class="fc" id="L281">        }</span>
+    }
+
+    @Override
+    public Collection&lt;Centroid&gt; centroids() {
+<span class="fc" id="L286">        return Collections.unmodifiableCollection(summary);</span>
+    }
+
+    @Override
+    public double compression() {
+<span class="nc" id="L291">        return compression;</span>
+    }
+
+    /**
+     * Returns an upper bound on the number bytes that will be required to represent this histogram.
+     */
+    @Override
+    public int byteSize() {
+<span class="nc" id="L299">        return 4 + 8 + 4 + summary.size() * 12;</span>
+    }
+
+    /**
+     * Returns an upper bound on the number of bytes that will be required to represent this histogram in
+     * the tighter representation.
+     */
+    @Override
+    public int smallByteSize() {
+<span class="nc" id="L308">        int bound = byteSize();</span>
+<span class="nc" id="L309">        ByteBuffer buf = ByteBuffer.allocate(bound);</span>
+<span class="nc" id="L310">        asSmallBytes(buf);</span>
+<span class="nc" id="L311">        return buf.position();</span>
+    }
+
+    public final static int VERBOSE_ENCODING = 1;
+    public final static int SMALL_ENCODING = 2;
+
+    /**
+     * Outputs a histogram as bytes using a particularly cheesy encoding.
+     */
+    @Override
+    public void asBytes(ByteBuffer buf) {
+<span class="nc" id="L322">        buf.putInt(VERBOSE_ENCODING);</span>
+<span class="nc" id="L323">        buf.putDouble(compression());</span>
+<span class="nc" id="L324">        buf.putInt(summary.size());</span>
+<span class="nc bnc" id="L325" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L326">            buf.putDouble(centroid.mean());</span>
+<span class="nc" id="L327">        }</span>
+
+<span class="nc bnc" id="L329" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L330">            buf.putInt(centroid.count());</span>
+<span class="nc" id="L331">        }</span>
+<span class="nc" id="L332">    }</span>
+
+    @Override
+    public void asSmallBytes(ByteBuffer buf) {
+<span class="nc" id="L336">        buf.putInt(SMALL_ENCODING);</span>
+<span class="nc" id="L337">        buf.putDouble(compression());</span>
+<span class="nc" id="L338">        buf.putInt(summary.size());</span>
+
+<span class="nc" id="L340">        double x = 0;</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L342">            double delta = centroid.mean() - x;</span>
+<span class="nc" id="L343">            x = centroid.mean();</span>
+<span class="nc" id="L344">            buf.putFloat((float) delta);</span>
+<span class="nc" id="L345">        }</span>
+
+<span class="nc bnc" id="L347" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L348">            int n = centroid.count();</span>
+<span class="nc" id="L349">            encode(buf, n);</span>
+<span class="nc" id="L350">        }</span>
+<span class="nc" id="L351">    }</span>
+
+    /**
+     * Reads a histogram from a byte buffer
+     *
+     * @return The new histogram structure
+     */
+    public static TreeDigest fromBytes(ByteBuffer buf) {
+<span class="nc" id="L359">        int encoding = buf.getInt();</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">        if (encoding == VERBOSE_ENCODING) {</span>
+<span class="nc" id="L361">            double compression = buf.getDouble();</span>
+<span class="nc" id="L362">            TreeDigest r = new TreeDigest(compression);</span>
+<span class="nc" id="L363">            int n = buf.getInt();</span>
+<span class="nc" id="L364">            double[] means = new double[n];</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L366">                means[i] = buf.getDouble();</span>
+            }
+<span class="nc bnc" id="L368" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L369">                r.add(means[i], buf.getInt());</span>
+            }
+<span class="nc" id="L371">            return r;</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">        } else if (encoding == SMALL_ENCODING) {</span>
+<span class="nc" id="L373">            double compression = buf.getDouble();</span>
+<span class="nc" id="L374">            TreeDigest r = new TreeDigest(compression);</span>
+<span class="nc" id="L375">            int n = buf.getInt();</span>
+<span class="nc" id="L376">            double[] means = new double[n];</span>
+<span class="nc" id="L377">            double x = 0;</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L379">                double delta = buf.getFloat();</span>
+<span class="nc" id="L380">                x += delta;</span>
+<span class="nc" id="L381">                means[i] = x;</span>
+            }
+
+<span class="nc bnc" id="L384" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L385">                int z = decode(buf);</span>
+<span class="nc" id="L386">                r.add(means[i], z);</span>
+            }
+<span class="nc" id="L388">            return r;</span>
+        } else {
+<span class="nc" id="L390">            throw new IllegalStateException(&quot;Invalid format for serialized histogram&quot;);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

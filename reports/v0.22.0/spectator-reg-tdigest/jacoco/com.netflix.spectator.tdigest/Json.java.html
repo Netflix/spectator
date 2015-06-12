@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Json.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.tdigest</a> &gt; <span class="el_source">Json.java</span></div><h1>Json.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.tdigest;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+import com.fasterxml.jackson.dataformat.smile.SmileParser;
+import com.netflix.spectator.api.DefaultId;
+import com.netflix.spectator.api.Tag;
+import com.tdunning.math.stats.AVLTreeDigest;
+import com.tdunning.math.stats.TDigest;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Helper for encoding and decoding digest measurements.
+ */
+final class Json {
+
+<span class="fc" id="L41">  private static final SmileFactory FACTORY = new SmileFactory();</span>
+
+  static {
+<span class="fc" id="L44">    FACTORY</span>
+<span class="fc" id="L45">       .enable(SmileGenerator.Feature.WRITE_HEADER)</span>
+<span class="fc" id="L46">       .disable(SmileGenerator.Feature.WRITE_END_MARKER)</span>
+<span class="fc" id="L47">       .enable(SmileGenerator.Feature.CHECK_SHARED_NAMES)</span>
+<span class="fc" id="L48">       .enable(SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES)</span>
+<span class="fc" id="L49">       .disable(SmileParser.Feature.REQUIRE_HEADER);</span>
+<span class="fc" id="L50">  }</span>
+
+<span class="nc" id="L52">  private Json() {</span>
+<span class="nc" id="L53">  }</span>
+
+  /** Create a new generator for the output stream. */
+  static JsonGenerator newGenerator(OutputStream out) throws IOException {
+<span class="fc" id="L57">    return FACTORY.createGenerator(out);</span>
+  }
+
+  /** Encode the measurement using the generator. */
+  static void encode(TDigestMeasurement m, JsonGenerator gen) throws IOException {
+<span class="fc" id="L62">    TDigest digest = m.value();</span>
+<span class="fc" id="L63">    digest.compress();</span>
+<span class="fc" id="L64">    ByteBuffer buf = ByteBuffer.allocate(digest.byteSize());</span>
+<span class="fc" id="L65">    digest.asBytes(buf);</span>
+
+<span class="fc" id="L67">    gen.writeStartArray();</span>
+<span class="fc" id="L68">    gen.writeStartObject();</span>
+<span class="fc" id="L69">    gen.writeStringField(&quot;name&quot;, m.id().name());</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">    for (Tag t : m.id().tags()) {</span>
+<span class="fc" id="L71">      gen.writeStringField(t.key(), t.value());</span>
+<span class="fc" id="L72">    }</span>
+<span class="fc" id="L73">    gen.writeEndObject();</span>
+<span class="fc" id="L74">    gen.writeNumber(m.timestamp());</span>
+<span class="fc" id="L75">    gen.writeBinary(buf.array());</span>
+<span class="fc" id="L76">    gen.writeEndArray();</span>
+<span class="fc" id="L77">  }</span>
+
+  /** Encode the measurements using the generator. */
+  static void encode(List&lt;TDigestMeasurement&gt; ms, JsonGenerator gen) throws IOException {
+<span class="nc" id="L81">    gen.writeStartArray();</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">    for (TDigestMeasurement m : ms) {</span>
+<span class="nc" id="L83">      encode(m, gen);</span>
+<span class="nc" id="L84">    }</span>
+<span class="nc" id="L85">    gen.writeEndArray();</span>
+<span class="nc" id="L86">  }</span>
+
+  /** Return a byte-array with the encoded measurements. */
+  static byte[] encode(List&lt;TDigestMeasurement&gt; ms) throws IOException {
+<span class="nc" id="L90">    ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L91">    try (JsonGenerator gen = FACTORY.createGenerator(baos)) {</span>
+<span class="nc" id="L92">      encode(ms, gen);</span>
+<span class="nc bnc" id="L93" title="All 8 branches missed.">    }</span>
+<span class="nc" id="L94">    return baos.toByteArray();</span>
+  }
+
+  private static void require(boolean condition, String msg) {
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">    if (!condition) {</span>
+<span class="nc" id="L99">      throw new IllegalArgumentException(msg);</span>
+    }
+<span class="fc" id="L101">  }</span>
+
+  private static void expect(JsonParser parser, JsonToken expected) throws IOException {
+<span class="fc" id="L104">    JsonToken t = parser.nextToken();</span>
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">    if (t != expected) {</span>
+<span class="nc" id="L106">      String msg = String.format(&quot;expected %s, but found %s&quot;, expected, t);</span>
+<span class="nc" id="L107">      throw new IllegalArgumentException(msg);</span>
+    }
+<span class="fc" id="L109">  }</span>
+
+  private static TDigestMeasurement decode(JsonParser parser) throws IOException {
+<span class="fc" id="L112">    expect(parser, JsonToken.START_OBJECT);</span>
+<span class="fc" id="L113">    require(&quot;name&quot;.equals(parser.nextFieldName()), &quot;expected name&quot;);</span>
+<span class="fc" id="L114">    DefaultId id = new DefaultId(parser.nextTextValue());</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">    while (parser.nextToken() == JsonToken.FIELD_NAME) {</span>
+<span class="fc" id="L116">      id = id.withTag(parser.getText(), parser.nextTextValue());</span>
+    }
+<span class="fc" id="L118">    long t = parser.nextLongValue(-1L);</span>
+<span class="fc" id="L119">    expect(parser, JsonToken.VALUE_EMBEDDED_OBJECT);</span>
+<span class="fc" id="L120">    TDigest v = AVLTreeDigest.fromBytes(ByteBuffer.wrap(parser.getBinaryValue()));</span>
+<span class="fc" id="L121">    expect(parser, JsonToken.END_ARRAY);</span>
+<span class="fc" id="L122">    return new TDigestMeasurement(id, t, v);</span>
+  }
+
+  /** Decode a list of measurements from a byte array. */
+  static List&lt;TDigestMeasurement&gt; decode(byte[] data) throws IOException {
+<span class="nc" id="L127">    return decode(data, 0, data.length);</span>
+  }
+
+  /** Decode a list of measurements from a range of a byte array. */
+  static List&lt;TDigestMeasurement&gt; decode(byte[] data, int offset, int length) throws IOException {
+<span class="fc" id="L132">    JsonParser parser = FACTORY.createParser(data, offset, length);</span>
+<span class="fc" id="L133">    List&lt;TDigestMeasurement&gt; ms = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L134">    expect(parser, JsonToken.START_ARRAY);</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">    while (parser.nextToken() == JsonToken.START_ARRAY) {</span>
+<span class="fc" id="L136">      ms.add(decode(parser));</span>
+    }
+<span class="fc" id="L138">    return ms;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

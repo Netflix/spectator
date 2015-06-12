@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SidecarRegistry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-spark</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.spark</a> &gt; <span class="el_source">SidecarRegistry.java</span></div><h1>SidecarRegistry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.spark;
+
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Registry that reports values to a sidecar process via an HTTP call.
+ */
+public class SidecarRegistry extends AbstractRegistry {
+
+<span class="nc" id="L46">  private static final Logger LOGGER = LoggerFactory.getLogger(SidecarRegistry.class);</span>
+
+  private ScheduledExecutorService executor;
+
+  private final Counter numMessages;
+  private final Counter numMeasurements;
+
+  /** Create a new instance. */
+  public SidecarRegistry() {
+<span class="nc" id="L55">    this(Clock.SYSTEM);</span>
+<span class="nc" id="L56">  }</span>
+
+  /** Create a new instance. */
+  public SidecarRegistry(Clock clock) {
+<span class="nc" id="L60">    super(clock);</span>
+<span class="nc" id="L61">    numMessages = counter(createId(&quot;spectator.sidecar.numMessages&quot;));</span>
+<span class="nc" id="L62">    numMeasurements = counter(createId(&quot;spectator.sidecar.numMeasurements&quot;));</span>
+<span class="nc" id="L63">  }</span>
+
+  /**
+   * Start sending data to the sidecar.
+   *
+   * @param url
+   *     Location of the sidecar endpoint.
+   * @param pollPeriod
+   *     How frequently to poll the data and send to the sidecar.
+   * @param pollUnit
+   *     Unit for the {@code pollPeriod}.
+   */
+  public void start(final URL url, long pollPeriod, TimeUnit pollUnit) {
+<span class="nc" id="L76">    LOGGER.info(&quot;starting sidecar registry with url {} and poll period {} {}&quot;,</span>
+<span class="nc" id="L77">        url, pollPeriod, pollUnit);</span>
+<span class="nc" id="L78">    executor = Executors.newSingleThreadScheduledExecutor(</span>
+<span class="nc" id="L79">        new ThreadFactory() {</span>
+          @Override public Thread newThread(Runnable r) {
+<span class="nc" id="L81">            final Thread t = new Thread(r, &quot;spectator-sidecar&quot;);</span>
+<span class="nc" id="L82">            t.setDaemon(true);</span>
+<span class="nc" id="L83">            return t;</span>
+          }
+        }
+    );
+
+<span class="nc" id="L88">    final SidecarRegistry self = this;</span>
+<span class="nc" id="L89">    Runnable task = new Runnable() {</span>
+      @Override public void run() {
+        try {
+<span class="nc" id="L92">          List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">          for (Meter meter : self) {</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">            for (Measurement m : meter.measure()) {</span>
+<span class="nc" id="L95">              ms.add(m);</span>
+<span class="nc" id="L96">            }</span>
+<span class="nc" id="L97">          }</span>
+<span class="nc" id="L98">          postJson(url, ms);</span>
+<span class="nc" id="L99">        } catch (Exception e) {</span>
+<span class="nc" id="L100">          LOGGER.error(&quot;failed to send data to sidecar&quot;, e);</span>
+<span class="nc" id="L101">        }</span>
+<span class="nc" id="L102">      }</span>
+    };
+<span class="nc" id="L104">    executor.scheduleWithFixedDelay(task, pollPeriod, pollPeriod, pollUnit);</span>
+<span class="nc" id="L105">  }</span>
+
+  /**
+   * Stop sending data to the sidecar and shutdown the executor.
+   */
+  public void stop() {
+<span class="nc" id="L111">    executor.shutdown();</span>
+<span class="nc" id="L112">    executor = null;</span>
+<span class="nc" id="L113">  }</span>
+
+  private String toJson(List&lt;Measurement&gt; ms) {
+<span class="nc" id="L116">    StringBuilder buf = new StringBuilder();</span>
+<span class="nc" id="L117">    buf.append('[');</span>
+<span class="nc" id="L118">    appendJson(buf, ms.get(0));</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">    for (int i = 1; i &lt; ms.size(); ++i) {</span>
+<span class="nc" id="L120">      buf.append(',');</span>
+<span class="nc" id="L121">      appendJson(buf, ms.get(i));</span>
+    }
+<span class="nc" id="L123">    buf.append(']');</span>
+<span class="nc" id="L124">    return buf.toString();</span>
+  }
+
+  private void appendJson(StringBuilder buf, Measurement m) {
+<span class="nc bnc" id="L128" title="All 4 branches missed.">    if (!Double.isNaN(m.value()) &amp;&amp; !Double.isInfinite(m.value())) {</span>
+<span class="nc" id="L129">      buf.append('{');</span>
+<span class="nc" id="L130">      appendJsonString(buf, &quot;timestamp&quot;);</span>
+<span class="nc" id="L131">      buf.append(':').append(m.timestamp());</span>
+<span class="nc" id="L132">      buf.append(',');</span>
+
+<span class="nc" id="L134">      appendJsonString(buf, &quot;type&quot;);</span>
+<span class="nc" id="L135">      buf.append(':');</span>
+<span class="nc" id="L136">      appendJsonString(buf, getType(m.id()));</span>
+<span class="nc" id="L137">      buf.append(',');</span>
+
+<span class="nc" id="L139">      appendJsonString(buf, &quot;name&quot;);</span>
+<span class="nc" id="L140">      buf.append(':');</span>
+<span class="nc" id="L141">      appendJsonString(buf, m.id().name());</span>
+<span class="nc" id="L142">      buf.append(',');</span>
+
+<span class="nc" id="L144">      appendJsonString(buf, &quot;tags&quot;);</span>
+<span class="nc" id="L145">      buf.append(&quot;:{&quot;);</span>
+<span class="nc" id="L146">      boolean first = true;</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">      for (Tag t : m.id().tags()) {</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        if (first) {</span>
+<span class="nc" id="L149">          first = false;</span>
+        } else {
+<span class="nc" id="L151">          buf.append(',');</span>
+        }
+<span class="nc" id="L153">        appendJsonString(buf, t.key());</span>
+<span class="nc" id="L154">        buf.append(':');</span>
+<span class="nc" id="L155">        appendJsonString(buf, t.value());</span>
+<span class="nc" id="L156">      }</span>
+<span class="nc" id="L157">      buf.append(&quot;},&quot;);</span>
+
+<span class="nc" id="L159">      appendJsonString(buf, &quot;value&quot;);</span>
+<span class="nc" id="L160">      buf.append(':');</span>
+<span class="nc" id="L161">      buf.append(m.value());</span>
+
+<span class="nc" id="L163">      buf.append('}');</span>
+    }
+<span class="nc" id="L165">  }</span>
+
+  private String getType(Id id) {
+<span class="nc bnc" id="L168" title="All 2 branches missed.">    for (Tag t : id.tags()) {</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">      if (t.key().equals(&quot;type&quot;)) {</span>
+<span class="nc" id="L170">        return t.value();</span>
+      }
+<span class="nc" id="L172">    }</span>
+<span class="nc" id="L173">    return DataType.GAUGE.value();</span>
+  }
+
+  private void appendJsonString(StringBuilder buf, String s) {
+<span class="nc" id="L177">    buf.append('&quot;');</span>
+<span class="nc" id="L178">    final int length = s.length();</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">    for (int i = 0; i &lt; length; ++i) {</span>
+<span class="nc" id="L180">      final char c = s.charAt(i);</span>
+<span class="nc bnc" id="L181" title="All 7 branches missed.">      switch (s.charAt(i)) {</span>
+        case '&quot;':
+<span class="nc" id="L183">          buf.append(&quot;\\\&quot;&quot;);</span>
+<span class="nc" id="L184">          break;</span>
+        case '\b':
+<span class="nc" id="L186">          buf.append(&quot;\\b&quot;);</span>
+<span class="nc" id="L187">          break;</span>
+        case '\f':
+<span class="nc" id="L189">          buf.append(&quot;\\f&quot;);</span>
+<span class="nc" id="L190">          break;</span>
+        case '\n':
+<span class="nc" id="L192">          buf.append(&quot;\\n&quot;);</span>
+<span class="nc" id="L193">          break;</span>
+        case '\r':
+<span class="nc" id="L195">          buf.append(&quot;\\r&quot;);</span>
+<span class="nc" id="L196">          break;</span>
+        case '\t':
+<span class="nc" id="L198">          buf.append(&quot;\\t&quot;);</span>
+<span class="nc" id="L199">          break;</span>
+        default:
+<span class="nc" id="L201">          buf.append(c);</span>
+          break;
+      }
+    }
+<span class="nc" id="L205">    buf.append('&quot;');</span>
+<span class="nc" id="L206">  }</span>
+
+  private void postJson(URL url, List&lt;Measurement&gt; ms) throws Exception {
+<span class="nc bnc" id="L209" title="All 2 branches missed.">    if (!ms.isEmpty()) {</span>
+<span class="nc" id="L210">      LOGGER.debug(&quot;sending {} messages to sidecar {}&quot;, ms.size(), url.toString());</span>
+<span class="nc" id="L211">      numMessages.increment();</span>
+<span class="nc" id="L212">      numMeasurements.increment(ms.size());</span>
+<span class="nc" id="L213">      String json = toJson(ms);</span>
+<span class="nc" id="L214">      HttpURLConnection con = (HttpURLConnection) url.openConnection();</span>
+      try {
+<span class="nc" id="L216">        con.setRequestMethod(&quot;POST&quot;);</span>
+<span class="nc" id="L217">        con.setDoInput(true);</span>
+<span class="nc" id="L218">        con.setDoOutput(true);</span>
+<span class="nc" id="L219">        try (OutputStream out = con.getOutputStream()) {</span>
+<span class="nc" id="L220">          out.write(json.getBytes(&quot;UTF-8&quot;));</span>
+<span class="nc bnc" id="L221" title="All 8 branches missed.">        }</span>
+<span class="nc" id="L222">        con.connect();</span>
+
+<span class="nc" id="L224">        int status = con.getResponseCode();</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">        if (status != 200) {</span>
+<span class="nc" id="L226">          throw new IOException(&quot;post to sidecar failed with status: &quot; + status);</span>
+        }
+      } finally {
+<span class="nc" id="L229">        con.disconnect();</span>
+<span class="nc" id="L230">      }</span>
+    }
+<span class="nc" id="L232">  }</span>
+
+  @Override protected Counter newCounter(Id id) {
+<span class="nc" id="L235">    return new SidecarCounter(clock(), id);</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="nc" id="L239">    return new SidecarDistributionSummary(clock(), id);</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="nc" id="L243">    return new SidecarTimer(clock(), id);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

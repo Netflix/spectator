@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ClientConfig.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.http</a> &gt; <span class="el_source">ClientConfig.java</span></div><h1>ClientConfig.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.http;
+
+import com.netflix.spectator.api.Spectator;
+
+import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/** Configuration settings to use for making the request. */
+class ClientConfig {
+
+<span class="fc" id="L27">  private static final Pattern NIWS_URI = Pattern.compile(&quot;niws://([^/]+).*&quot;);</span>
+
+<span class="fc" id="L29">  private static final Pattern VIP_URI = Pattern.compile(&quot;vip://([^:]+):([^/]+).*&quot;);</span>
+
+  /** Create relative uri string with the path and query. */
+  static String relative(URI uri) {
+<span class="fc" id="L33">    String r = uri.getRawPath();</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">    if (uri.getRawQuery() != null) {</span>
+<span class="fc" id="L35">      r += &quot;?&quot; + uri.getRawQuery();</span>
+    }
+<span class="fc" id="L37">    return r;</span>
+  }
+
+  private static String fixPath(String path) {
+<span class="pc bpc" id="L41" title="1 of 4 branches missed.">    return (path.startsWith(&quot;/http://&quot;) || path.startsWith(&quot;/https://&quot;))</span>
+<span class="fc" id="L42">        ? path.substring(1)</span>
+        : path;
+  }
+
+  /** Create a client config instance based on a URI. */
+  static ClientConfig fromUri(URI uri) {
+<span class="fc" id="L48">    Matcher m = null;</span>
+<span class="fc" id="L49">    ClientConfig cfg = null;</span>
+<span class="pc bpc" id="L50" title="4 of 10 branches missed.">    switch (uri.getScheme()) {</span>
+      case &quot;niws&quot;:
+<span class="fc" id="L52">        m = NIWS_URI.matcher(uri.toString());</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (m.matches()) {</span>
+<span class="fc" id="L54">          final URI newUri = URI.create(fixPath(relative(uri)));</span>
+<span class="fc" id="L55">          cfg = new ClientConfig(m.group(1), null, uri, newUri);</span>
+<span class="fc" id="L56">        } else {</span>
+<span class="nc" id="L57">          throw new IllegalArgumentException(&quot;invalid niws uri: &quot; + uri);</span>
+        }
+        break;
+      case &quot;vip&quot;:
+<span class="fc" id="L61">        m = VIP_URI.matcher(uri.toString());</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">        if (m.matches()) {</span>
+<span class="fc" id="L63">          cfg = new ClientConfig(m.group(1), m.group(2), uri, URI.create(relative(uri)));</span>
+        } else {
+<span class="nc" id="L65">          throw new IllegalArgumentException(&quot;invalid vip uri: &quot; + uri);</span>
+        }
+        break;
+      default:
+<span class="nc" id="L69">        cfg = new ClientConfig(&quot;default&quot;, null, uri, uri);</span>
+        break;
+    }
+<span class="fc" id="L72">    return cfg;</span>
+  }
+
+  private final String name;
+  private final String vipAddress;
+  private final URI originalUri;
+  private final URI uri;
+
+  /** Create a new instance. */
+<span class="fc" id="L81">  ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {</span>
+<span class="fc" id="L82">    this.name = name;</span>
+<span class="fc" id="L83">    this.vipAddress = vipAddress;</span>
+<span class="fc" id="L84">    this.originalUri = originalUri;</span>
+<span class="fc" id="L85">    this.uri = uri;</span>
+<span class="fc" id="L86">  }</span>
+
+  private String dfltProp(String k) {
+<span class="fc" id="L89">    return &quot;niws.client.&quot; + k;</span>
+  }
+
+  private String prop(String k) {
+<span class="fc" id="L93">    return name + &quot;.&quot; + dfltProp(k);</span>
+  }
+
+  private String getString(String k, String dflt) {
+<span class="fc" id="L97">    String v = Spectator.config().get(prop(k));</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">    return (v == null) ? Spectator.config().get(dfltProp(k), dflt) : v;</span>
+  }
+
+  private int getInt(String k, int dflt) {
+<span class="fc" id="L102">    String v = getString(k, null);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    return (v == null) ? dflt : Integer.parseInt(v);</span>
+  }
+
+  private boolean getBoolean(String k, boolean dflt) {
+<span class="fc" id="L107">    String v = getString(k, null);</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">    return (v == null) ? dflt : Boolean.parseBoolean(v);</span>
+  }
+
+  /** Name of the client. */
+  String name() {
+<span class="fc" id="L113">    return name;</span>
+  }
+
+  /** Original URI specified before selecting a specific server. */
+  URI originalUri() {
+<span class="fc" id="L118">    return originalUri;</span>
+  }
+
+  /** URI for the request. */
+  URI uri() {
+<span class="fc" id="L123">    return uri;</span>
+  }
+
+  /**
+   * Relative URI that should be used for the RxNetty HTTP request. Otherwise RxNetty will include
+   * the absolute URI on the first line of the HTTP request:
+   *
+   * &lt;pre&gt;GET http://localhost:53535/test HTTP/1.1&lt;/pre&gt;
+   */
+  String relativeUri() {
+<span class="fc" id="L133">    return relative(uri);</span>
+  }
+
+  /** Port to use for the connection. */
+  int port(int dflt) {
+<span class="fc" id="L138">    return getInt(&quot;Port&quot;, dflt);</span>
+  }
+
+  /** Maximum time to wait for a connection attempt in milliseconds. */
+  int connectTimeout() {
+<span class="fc" id="L143">    return getInt(&quot;ConnectTimeout&quot;, 1000);</span>
+  }
+
+  /** Maximum time to wait for reading data in milliseconds. */
+  int readTimeout() {
+<span class="fc" id="L148">    return getInt(&quot;ReadTimeout&quot;, 30000);</span>
+  }
+
+  /** Maximum number of redirects to follow. Set to 0 to disable. */
+  int followRedirects() {
+<span class="fc" id="L153">    return getInt(&quot;FollowRedirects&quot;, 3);</span>
+  }
+
+  /** Maximum number of connections permitted to a single host. */
+  int maxConnectionsPerHost() {
+<span class="fc" id="L158">    return getInt(&quot;MaxConnectionsPerHost&quot;, 20);</span>
+  }
+
+  /** Maximum number of connections for all clients with the same name. */
+  int maxConnectionsTotal() {
+<span class="fc" id="L163">    return getInt(&quot;MaxConnectionsTotal&quot;, 200);</span>
+  }
+
+  /** How long in milliseconds a connection can be idle in the pool before being closed. */
+  int idleConnectionsTimeoutMillis() {
+<span class="fc" id="L168">    return getInt(&quot;ConnectionPoolIdleEvictTimeMilliseconds&quot;, 60000);</span>
+  }
+
+  /** Should HTTPS be used for the request? */
+  boolean isSecure() {
+<span class="fc" id="L173">    final boolean https = &quot;https&quot;.equals(uri.getScheme());</span>
+<span class="pc bpc" id="L174" title="2 of 4 branches missed.">    return https || getBoolean(&quot;IsSecure&quot;, false);</span>
+  }
+
+  /**
+   * When getting a server list from eureka should the host name or ip address be used? The
+   * default is to use the ip address and avoid the dns lookup.
+   */
+  boolean useIpAddress() {
+<span class="fc" id="L182">    return getBoolean(&quot;UseIpAddress&quot;, false);</span>
+  }
+
+  /**
+   * Should it attempt to compress the request body and automatically decompress the response
+   * body?
+   */
+  boolean gzipEnabled() {
+<span class="fc" id="L190">    return getBoolean(&quot;GzipEnabled&quot;, true);</span>
+  }
+
+  /** Max number of retries. */
+  int numRetries() {
+<span class="fc" id="L195">    return getInt(&quot;MaxAutoRetriesNextServer&quot;, 2);</span>
+  }
+
+  /**
+   * Initial delay to use between retries if a throttled response (429 or 503) is received. The
+   * delay will be doubled between each throttled attempt.
+   */
+  int retryDelay() {
+<span class="fc" id="L203">    return getInt(&quot;RetryDelay&quot;, 500);</span>
+  }
+
+  /** User agent string to use when making the request. */
+  String userAgent() {
+<span class="fc" id="L208">    return getString(&quot;UserAgent&quot;, &quot;RxHttp&quot;);</span>
+  }
+
+  /** VIP used to lookup a set of servers in eureka. */
+  String vip() {
+<span class="pc bpc" id="L213" title="1 of 2 branches missed.">    return (vipAddress == null)</span>
+<span class="pc" id="L214">        ? getString(&quot;DeploymentContextBasedVipAddresses&quot;, null)</span>
+        : vipAddress;
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

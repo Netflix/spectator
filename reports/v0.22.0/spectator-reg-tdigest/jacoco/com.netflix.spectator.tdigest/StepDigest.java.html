@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>StepDigest.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.tdigest</a> &gt; <span class="el_source">StepDigest.java</span></div><h1>StepDigest.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.tdigest;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.tdunning.math.stats.TDigest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
+
+/**
+ * Utility class for managing a set of TDigest instances mapped to a particular step interval.
+ * The current implementation keeps an array of with two items where one is the current value
+ * being updated and the other is the value from the previous interval and is only available for
+ * polling.
+ */
+class StepDigest {
+
+<span class="fc" id="L36">  private static final Logger LOGGER = LoggerFactory.getLogger(StepDigest.class);</span>
+
+  private final Id id;
+  private final double init;
+  private final Clock clock;
+  private final long step;
+
+<span class="fc" id="L43">  private final ReentrantLock lock = new ReentrantLock();</span>
+<span class="fc" id="L44">  private final AtomicLong droppedSamples = new AtomicLong(0L);</span>
+
+  private final AtomicReference&lt;TDigest&gt; previous;
+  private final AtomicReference&lt;TDigest&gt; current;
+
+  private final AtomicLong lastPollTime;
+  private final AtomicLong lastInitPos;
+
+  /**
+   * Create a new instance.
+   *
+   * @param id
+   *     Id for the meter using the digest.
+   * @param init
+   *     Initial compression value to use when creating the digest.
+   * @param clock
+   *     Clock for checking when a step boundary has been crossed.
+   * @param step
+   *     Step size in milliseconds.
+   */
+<span class="fc" id="L64">  StepDigest(Id id, double init, Clock clock, long step) {</span>
+<span class="fc" id="L65">    this.id = id;</span>
+<span class="fc" id="L66">    this.init = init;</span>
+<span class="fc" id="L67">    this.clock = clock;</span>
+<span class="fc" id="L68">    this.step = step;</span>
+<span class="fc" id="L69">    lastInitPos = new AtomicLong(0L);</span>
+<span class="fc" id="L70">    lastPollTime = new AtomicLong(0L);</span>
+<span class="fc" id="L71">    previous = new AtomicReference&lt;TDigest&gt;(TDigest.createDigest(init));</span>
+<span class="fc" id="L72">    current = new AtomicReference&lt;TDigest&gt;(TDigest.createDigest(init));</span>
+<span class="fc" id="L73">  }</span>
+
+  private void roll(long now) {
+<span class="fc" id="L76">    final long stepTime = now / step;</span>
+<span class="fc" id="L77">    final long lastInit = lastInitPos.get();</span>
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">    if (lastInit &lt; stepTime &amp;&amp; lastInitPos.compareAndSet(lastInit, stepTime)) {</span>
+<span class="fc" id="L79">      previous.set(current.getAndSet(TDigest.createDigest(init)));</span>
+<span class="fc" id="L80">      final long dropped = droppedSamples.getAndSet(0L);</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">      if (dropped &gt; 0L) {</span>
+<span class="nc" id="L82">        LOGGER.debug(&quot;dropped {} samples for {}&quot;, dropped, id.toString());</span>
+      }
+    }
+<span class="fc" id="L85">  }</span>
+
+  /** Return the previous digest. */
+  TDigest previous() {
+<span class="nc" id="L89">    roll(clock.wallTime());</span>
+<span class="nc" id="L90">    return previous.get();</span>
+  }
+
+  /** Return the current digest. */
+  TDigest current() {
+<span class="fc" id="L95">    roll(clock.wallTime());</span>
+<span class="fc" id="L96">    return current.get();</span>
+  }
+
+  /**
+   * Add a value to the current digest. If another thread holds the lock the sample will be
+   * dropped. We are assuming that in-practice the contention should be low and the number of
+   * dropped samples would be relatively small. A dropped sample count is maintained so we
+   * can collect to some data for actual usage.
+   */
+  void add(double v) {
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">    if (lock.tryLock()) {</span>
+      try {
+<span class="fc" id="L108">        current().add(v);</span>
+      } finally {
+<span class="pc" id="L110">        lock.unlock();</span>
+<span class="fc" id="L111">      }</span>
+    } else {
+<span class="nc" id="L113">      droppedSamples.incrementAndGet();</span>
+    }
+<span class="fc" id="L115">  }</span>
+
+  /** Get the value for the last completed interval. */
+  TDigest poll() {
+<span class="fc" id="L119">    final long now = clock.wallTime();</span>
+
+<span class="fc" id="L121">    roll(now);</span>
+<span class="fc" id="L122">    final TDigest value = previous.get();</span>
+
+<span class="fc" id="L124">    final long last = lastPollTime.getAndSet(now);</span>
+<span class="fc" id="L125">    final long missed = (now - last) / step - 1;</span>
+
+<span class="fc bfc" id="L127" title="All 2 branches covered.">    if (last / step == now / step) {</span>
+<span class="fc" id="L128">      return value;</span>
+<span class="pc bpc" id="L129" title="1 of 4 branches missed.">    } else if (last &gt; 0L &amp;&amp; missed &gt; 0L) {</span>
+<span class="nc" id="L130">      return null;</span>
+    } else {
+<span class="fc" id="L132">      return value;</span>
+    }
+  }
+
+  /** Get the value for the last completed interval. */
+  TDigestMeasurement measure() {
+<span class="fc" id="L138">    final long t = clock.wallTime() / step * step;</span>
+<span class="fc" id="L139">    return new TDigestMeasurement(id, t, poll());</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L143">    return &quot;StepDigest{init=&quot; + init</span>
+        + &quot;, step=&quot; + step
+<span class="nc" id="L145">        + &quot;, lastPollTime=&quot; + lastPollTime.get()</span>
+<span class="nc" id="L146">        + &quot;, lastInitPos=&quot; + lastInitPos.get() + '}';</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

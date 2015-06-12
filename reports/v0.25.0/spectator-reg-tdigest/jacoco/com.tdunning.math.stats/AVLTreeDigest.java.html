@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AVLTreeDigest.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.tdunning.math.stats</a> &gt; <span class="el_source">AVLTreeDigest.java</span></div><h1>AVLTreeDigest.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.tdunning.math.stats;
+
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+/**
+ *
+ */
+<span class="pc bpc" id="L29" title="1 of 2 branches missed.">public class AVLTreeDigest extends AbstractTDigest {</span>
+
+    private double compression;
+    private AVLGroupTree summary;
+<span class="fc" id="L33">    long count = 0; // package private for testing</span>
+
+    /**
+     * A histogram structure that will record a sketch of a distribution.
+     *
+     * @param compression How should accuracy be traded for size?  A value of N here will give quantile errors
+     *                    almost always less than 3/N with considerably smaller errors expected for extreme
+     *                    quantiles.  Conversely, you should expect to track about 5 N centroids for this
+     *                    accuracy.
+     */
+<span class="fc" id="L43">    public AVLTreeDigest(double compression) {</span>
+<span class="fc" id="L44">        this.compression = compression;</span>
+<span class="fc" id="L45">        summary = new AVLGroupTree(false);</span>
+<span class="fc" id="L46">    }</span>
+
+    @Override
+    public TDigest recordAllData() {
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (summary.size() != 0) {</span>
+<span class="nc" id="L51">            throw new IllegalStateException(&quot;Can only ask to record added data on an empty summary&quot;);</span>
+        }
+<span class="nc" id="L53">        summary = new AVLGroupTree(true);</span>
+<span class="nc" id="L54">        return super.recordAllData();</span>
+    }
+
+    @Override
+    void add(double x, int w, Centroid base) {
+<span class="nc bnc" id="L59" title="All 4 branches missed.">        if (x != base.mean() || w != base.count()) {</span>
+<span class="nc" id="L60">            throw new IllegalArgumentException();</span>
+        }
+<span class="nc" id="L62">        add(x, w, base.data());</span>
+<span class="nc" id="L63">    }</span>
+
+    @Override
+    public void add(double x, int w) {
+<span class="fc" id="L67">        add(x, w, (List&lt;Double&gt;) null);</span>
+<span class="fc" id="L68">    }</span>
+
+    public void add(double x, int w, List&lt;Double&gt; data) {
+<span class="fc" id="L71">        checkValue(x);</span>
+<span class="fc" id="L72">        int start = summary.floor(x);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (start == IntAVLTree.NIL) {</span>
+<span class="fc" id="L74">            start = summary.first();</span>
+        }
+
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (start == IntAVLTree.NIL) { // empty summary</span>
+<span class="pc bpc" id="L78" title="2 of 4 branches missed.">            assert summary.size() == 0;</span>
+<span class="fc" id="L79">            summary.add(x, w, data);</span>
+<span class="fc" id="L80">            count = w;</span>
+        } else {
+<span class="fc" id="L82">            double minDistance = Double.MAX_VALUE;</span>
+<span class="fc" id="L83">            int lastNeighbor = IntAVLTree.NIL;</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            for (int neighbor = start; neighbor != IntAVLTree.NIL; neighbor = summary.next(neighbor)) {</span>
+<span class="fc" id="L85">                double z = Math.abs(summary.mean(neighbor) - x);</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">                if (z &lt; minDistance) {</span>
+<span class="fc" id="L87">                    start = neighbor;</span>
+<span class="fc" id="L88">                    minDistance = z;</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">                } else if (z &gt; minDistance) {</span>
+                    // as soon as z increases, we have passed the nearest neighbor and can quit
+<span class="fc" id="L91">                    lastNeighbor = neighbor;</span>
+<span class="fc" id="L92">                    break;</span>
+                }
+            }
+
+<span class="fc" id="L96">            int closest = IntAVLTree.NIL;</span>
+<span class="fc" id="L97">            long sum = summary.headSum(start);</span>
+<span class="fc" id="L98">            double n = 0;</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">            for (int neighbor = start; neighbor != lastNeighbor; neighbor = summary.next(neighbor)) {</span>
+<span class="pc bpc" id="L100" title="2 of 4 branches missed.">                assert minDistance == Math.abs(summary.mean(neighbor) - x);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">                double q = count == 1 ? 0.5 : (sum + (summary.count(neighbor) - 1) / 2.0) / (count - 1);</span>
+<span class="fc" id="L102">                double k = 4 * count * q * (1 - q) / compression;</span>
+
+                // this slightly clever selection method improves accuracy with lots of repeated points
+<span class="fc bfc" id="L105" title="All 2 branches covered.">                if (summary.count(neighbor) + w &lt;= k) {</span>
+<span class="fc" id="L106">                    n++;</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">                    if (gen.nextDouble() &lt; 1 / n) {</span>
+<span class="fc" id="L108">                        closest = neighbor;</span>
+                    }
+                }
+<span class="fc" id="L111">                sum += summary.count(neighbor);</span>
+            }
+
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            if (closest == IntAVLTree.NIL) {</span>
+<span class="fc" id="L115">                summary.add(x, w, data);</span>
+            } else {
+                // if the nearest point was not unique, then we may not be modifying the first copy
+                // which means that ordering can change
+<span class="fc" id="L119">                double centroid = summary.mean(closest);</span>
+<span class="fc" id="L120">                int count = summary.count(closest);</span>
+<span class="fc" id="L121">                List&lt;Double&gt; d = summary.data(closest);</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">                if (d != null) {</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                    if (w == 1) {</span>
+<span class="nc" id="L124">                        d.add(x);</span>
+                    } else {
+<span class="nc" id="L126">                        d.addAll(data);</span>
+                    }
+                }
+<span class="fc" id="L129">                centroid = weightedAverage(centroid, count, x, w);</span>
+<span class="fc" id="L130">                count += w;</span>
+<span class="fc" id="L131">                summary.update(closest, centroid, count, d);</span>
+            }
+<span class="fc" id="L133">            count += w;</span>
+
+<span class="fc bfc" id="L135" title="All 2 branches covered.">            if (summary.size() &gt; 20 * compression) {</span>
+                // may happen in case of sequential points
+<span class="fc" id="L137">                compress();</span>
+            }
+        }
+<span class="fc" id="L140">    }</span>
+
+    @Override
+    public void compress() {
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (summary.size() &lt;= 1) {</span>
+<span class="fc" id="L145">            return;</span>
+        }
+
+<span class="fc" id="L148">        AVLGroupTree centroids = summary;</span>
+<span class="fc" id="L149">        this.summary = new AVLGroupTree(recordAllData);</span>
+
+<span class="fc" id="L151">        final int[] nodes = new int[centroids.size()];</span>
+<span class="fc" id="L152">        nodes[0] = centroids.first();</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        for (int i = 1; i &lt; nodes.length; ++i) {</span>
+<span class="fc" id="L154">            nodes[i] = centroids.next(nodes[i-1]);</span>
+<span class="pc bpc" id="L155" title="2 of 4 branches missed.">            assert nodes[i] != IntAVLTree.NIL;</span>
+        }
+<span class="pc bpc" id="L157" title="2 of 4 branches missed.">        assert centroids.next(nodes[nodes.length - 1]) == IntAVLTree.NIL;</span>
+
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        for (int i = centroids.size() - 1; i &gt; 0; --i) {</span>
+<span class="fc" id="L160">            final int other = gen.nextInt(i + 1);</span>
+<span class="fc" id="L161">            final int tmp = nodes[other];</span>
+<span class="fc" id="L162">            nodes[other] = nodes[i];</span>
+<span class="fc" id="L163">            nodes[i] = tmp;</span>
+        }
+
+<span class="fc bfc" id="L166" title="All 2 branches covered.">        for (int node : nodes) {</span>
+<span class="fc" id="L167">            add(centroids.mean(node), centroids.count(node), centroids.data(node));</span>
+        }
+<span class="fc" id="L169">    }</span>
+
+    /**
+     * Returns the number of samples represented in this histogram.  If you want to know how many
+     * centroids are being used, try centroids().size().
+     *
+     * @return the number of samples that have been added.
+     */
+    @Override
+    public long size() {
+<span class="nc" id="L179">        return count;</span>
+    }
+
+    /**
+     * @param x the value at which the CDF should be evaluated
+     * @return the approximate fraction of all samples that were less than or equal to x.
+     */
+    @Override
+    public double cdf(double x) {
+<span class="nc" id="L188">        AVLGroupTree values = summary;</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        if (values.size() == 0) {</span>
+<span class="nc" id="L190">            return Double.NaN;</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        } else if (values.size() == 1) {</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            return x &lt; values.mean(values.first()) ? 0 : 1;</span>
+        } else {
+<span class="nc" id="L194">            double r = 0;</span>
+
+            // we scan a across the centroids
+<span class="nc" id="L197">            Iterator&lt;Centroid&gt; it = values.iterator();</span>
+<span class="nc" id="L198">            Centroid a = it.next();</span>
+
+            // b is the look-ahead to the next centroid
+<span class="nc" id="L201">            Centroid b = it.next();</span>
+
+            // initially, we set left width equal to right width
+<span class="nc" id="L204">            double left = (b.mean() - a.mean()) / 2;</span>
+<span class="nc" id="L205">            double right = left;</span>
+
+            // scan to next to last element
+<span class="nc bnc" id="L208" title="All 2 branches missed.">            while (it.hasNext()) {</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">                if (x &lt; a.mean() + right) {</span>
+<span class="nc" id="L210">                    return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;</span>
+                }
+<span class="nc" id="L212">                r += a.count();</span>
+
+<span class="nc" id="L214">                a = b;</span>
+<span class="nc" id="L215">                b = it.next();</span>
+
+<span class="nc" id="L217">                left = right;</span>
+<span class="nc" id="L218">                right = (b.mean() - a.mean()) / 2;</span>
+            }
+
+            // for the last element, assume right width is same as left
+<span class="nc" id="L222">            left = right;</span>
+<span class="nc" id="L223">            a = b;</span>
+<span class="nc bnc" id="L224" title="All 2 branches missed.">            if (x &lt; a.mean() + right) {</span>
+<span class="nc" id="L225">                return (r + a.count() * interpolate(x, a.mean() - left, a.mean() + right)) / count;</span>
+            } else {
+<span class="nc" id="L227">                return 1;</span>
+            }
+        }
+    }
+
+    /**
+     * @param q The quantile desired.  Can be in the range [0,1].
+     * @return The minimum value x such that we think that the proportion of samples is &lt;= x is q.
+     */
+    @Override
+    public double quantile(double q) {
+<span class="pc bpc" id="L238" title="2 of 4 branches missed.">        if (q &lt; 0 || q &gt; 1) {</span>
+<span class="nc" id="L239">            throw new IllegalArgumentException(&quot;q should be in [0,1], got &quot; + q);</span>
+        }
+
+<span class="fc" id="L242">        AVLGroupTree values = summary;</span>
+<span class="fc bfc" id="L243" title="All 2 branches covered.">        if (values.size() == 0) {</span>
+<span class="fc" id="L244">            return Double.NaN;</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">        } else if (values.size() == 1) {</span>
+<span class="fc" id="L246">            return values.iterator().next().mean();</span>
+        }
+
+        // if values were stored in a sorted array, index would be the offset we are interested in
+<span class="fc" id="L250">        final double index = q * (count - 1);</span>
+
+<span class="fc" id="L252">        double previousMean = Double.NaN, previousIndex = 0;</span>
+<span class="fc" id="L253">        int next = values.floorSum((long) index);</span>
+<span class="pc bpc" id="L254" title="2 of 4 branches missed.">        assert next != IntAVLTree.NIL;</span>
+<span class="fc" id="L255">        long total = values.headSum(next);</span>
+<span class="fc" id="L256">        final int prev = values.prev(next);</span>
+<span class="fc bfc" id="L257" title="All 2 branches covered.">        if (prev != IntAVLTree.NIL) {</span>
+<span class="fc" id="L258">            previousMean = values.mean(prev);</span>
+<span class="fc" id="L259">            previousIndex = total - (values.count(prev) + 1.0) / 2;</span>
+        }
+
+        while (true) {
+<span class="fc" id="L263">            final double nextIndex = total + (values.count(next) - 1.0) / 2;</span>
+<span class="fc bfc" id="L264" title="All 2 branches covered.">            if (nextIndex &gt;= index) {</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">                if (Double.isNaN(previousMean)) {</span>
+                    // special case 1: the index we are interested in is before the 1st centroid
+<span class="pc bpc" id="L267" title="2 of 4 branches missed.">                    assert total == 0 : total;</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">                    if (nextIndex == previousIndex) {</span>
+<span class="fc" id="L269">                        return values.mean(next);</span>
+                    }
+                    // assume values grow linearly between index previousIndex=0 and nextIndex2
+<span class="nc" id="L272">                    int next2 = values.next(next);</span>
+<span class="nc" id="L273">                    final double nextIndex2 = total + values.count(next) + (values.count(next2) - 1.0) / 2;</span>
+<span class="nc" id="L274">                    previousMean = (nextIndex2 * values.mean(next) - nextIndex * values.mean(next2)) / (nextIndex2 - nextIndex);</span>
+                }
+                // common case: we found two centroids previous and next so that the desired quantile is
+                // after 'previous' but before 'next'
+<span class="fc" id="L278">                return quantile(previousIndex, index, nextIndex, previousMean, values.mean(next));</span>
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">            } else if (values.next(next) == IntAVLTree.NIL) {</span>
+                // special case 2: the index we are interested in is beyond the last centroid
+                // again, assume values grow linearly between index previousIndex and (count - 1)
+                // which is the highest possible index
+<span class="nc" id="L283">                final double nextIndex2 = count - 1;</span>
+<span class="nc" id="L284">                final double nextMean2 = (values.mean(next) * (nextIndex2 - previousIndex) - previousMean * (nextIndex2 - nextIndex)) / (nextIndex - previousIndex);</span>
+<span class="nc" id="L285">                return quantile(nextIndex, index, nextIndex2, values.mean(next), nextMean2);</span>
+            }
+<span class="fc" id="L287">            total += values.count(next);</span>
+<span class="fc" id="L288">            previousMean = values.mean(next);</span>
+<span class="fc" id="L289">            previousIndex = nextIndex;</span>
+<span class="fc" id="L290">            next = values.next(next);</span>
+<span class="fc" id="L291">        }</span>
+    }
+
+    @Override
+    public Collection&lt;Centroid&gt; centroids() {
+<span class="fc" id="L296">        return Collections.unmodifiableCollection(summary);</span>
+    }
+
+    @Override
+    public double compression() {
+<span class="fc" id="L301">        return compression;</span>
+    }
+
+    /**
+     * Returns an upper bound on the number bytes that will be required to represent this histogram.
+     */
+    @Override
+    public int byteSize() {
+<span class="fc" id="L309">        return 4 + 8 + 4 + summary.size() * 12;</span>
+    }
+
+    /**
+     * Returns an upper bound on the number of bytes that will be required to represent this histogram in
+     * the tighter representation.
+     */
+    @Override
+    public int smallByteSize() {
+<span class="nc" id="L318">        int bound = byteSize();</span>
+<span class="nc" id="L319">        ByteBuffer buf = ByteBuffer.allocate(bound);</span>
+<span class="nc" id="L320">        asSmallBytes(buf);</span>
+<span class="nc" id="L321">        return buf.position();</span>
+    }
+
+    public final static int VERBOSE_ENCODING = 1;
+    public final static int SMALL_ENCODING = 2;
+
+    /**
+     * Outputs a histogram as bytes using a particularly cheesy encoding.
+     */
+    @Override
+    public void asBytes(ByteBuffer buf) {
+<span class="fc" id="L332">        buf.putInt(VERBOSE_ENCODING);</span>
+<span class="fc" id="L333">        buf.putDouble(compression());</span>
+<span class="fc" id="L334">        buf.putInt(summary.size());</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">        for (Centroid centroid : summary) {</span>
+<span class="fc" id="L336">            buf.putDouble(centroid.mean());</span>
+<span class="fc" id="L337">        }</span>
+
+<span class="fc bfc" id="L339" title="All 2 branches covered.">        for (Centroid centroid : summary) {</span>
+<span class="fc" id="L340">            buf.putInt(centroid.count());</span>
+<span class="fc" id="L341">        }</span>
+<span class="fc" id="L342">    }</span>
+
+    @Override
+    public void asSmallBytes(ByteBuffer buf) {
+<span class="nc" id="L346">        buf.putInt(SMALL_ENCODING);</span>
+<span class="nc" id="L347">        buf.putDouble(compression());</span>
+<span class="nc" id="L348">        buf.putInt(summary.size());</span>
+
+<span class="nc" id="L350">        double x = 0;</span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L352">            double delta = centroid.mean() - x;</span>
+<span class="nc" id="L353">            x = centroid.mean();</span>
+<span class="nc" id="L354">            buf.putFloat((float) delta);</span>
+<span class="nc" id="L355">        }</span>
+
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        for (Centroid centroid : summary) {</span>
+<span class="nc" id="L358">            int n = centroid.count();</span>
+<span class="nc" id="L359">            encode(buf, n);</span>
+<span class="nc" id="L360">        }</span>
+<span class="nc" id="L361">    }</span>
+
+    /**
+     * Reads a histogram from a byte buffer
+     *
+     * @return The new histogram structure
+     */
+    public static AVLTreeDigest fromBytes(ByteBuffer buf) {
+<span class="fc" id="L369">        int encoding = buf.getInt();</span>
+<span class="pc bpc" id="L370" title="1 of 2 branches missed.">        if (encoding == VERBOSE_ENCODING) {</span>
+<span class="fc" id="L371">            double compression = buf.getDouble();</span>
+<span class="fc" id="L372">            AVLTreeDigest r = new AVLTreeDigest(compression);</span>
+<span class="fc" id="L373">            int n = buf.getInt();</span>
+<span class="fc" id="L374">            double[] means = new double[n];</span>
+<span class="fc bfc" id="L375" title="All 2 branches covered.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L376">                means[i] = buf.getDouble();</span>
+            }
+<span class="fc bfc" id="L378" title="All 2 branches covered.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="fc" id="L379">                r.add(means[i], buf.getInt());</span>
+            }
+<span class="fc" id="L381">            return r;</span>
+<span class="nc bnc" id="L382" title="All 2 branches missed.">        } else if (encoding == SMALL_ENCODING) {</span>
+<span class="nc" id="L383">            double compression = buf.getDouble();</span>
+<span class="nc" id="L384">            AVLTreeDigest r = new AVLTreeDigest(compression);</span>
+<span class="nc" id="L385">            int n = buf.getInt();</span>
+<span class="nc" id="L386">            double[] means = new double[n];</span>
+<span class="nc" id="L387">            double x = 0;</span>
+<span class="nc bnc" id="L388" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L389">                double delta = buf.getFloat();</span>
+<span class="nc" id="L390">                x += delta;</span>
+<span class="nc" id="L391">                means[i] = x;</span>
+            }
+
+<span class="nc bnc" id="L394" title="All 2 branches missed.">            for (int i = 0; i &lt; n; i++) {</span>
+<span class="nc" id="L395">                int z = decode(buf);</span>
+<span class="nc" id="L396">                r.add(means[i], z);</span>
+            }
+<span class="nc" id="L398">            return r;</span>
+        } else {
+<span class="nc" id="L400">            throw new IllegalStateException(&quot;Invalid format for serialized histogram&quot;);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

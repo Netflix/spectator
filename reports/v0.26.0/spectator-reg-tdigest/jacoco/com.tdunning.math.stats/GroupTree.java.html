@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>GroupTree.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.tdunning.math.stats</a> &gt; <span class="el_source">GroupTree.java</span></div><h1>GroupTree.java</h1><pre class="source lang-java linenums">/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the &quot;License&quot;); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.tdunning.math.stats;
+
+import java.util.AbstractCollection;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+/**
+ * A tree containing TDigest.Centroid.  This adds to the normal NavigableSet the
+ * ability to sum up the size of elements to the left of a particular group.
+ */
+public class GroupTree extends AbstractCollection&lt;Centroid&gt; {
+    private long count;
+    private int size;
+    private int depth;
+    private Centroid leaf;
+    private GroupTree left, right;
+
+<span class="fc" id="L37">    public GroupTree() {</span>
+<span class="fc" id="L38">        count = size = depth = 0;</span>
+<span class="fc" id="L39">        leaf = null;</span>
+<span class="fc" id="L40">        left = right = null;</span>
+<span class="fc" id="L41">    }</span>
+
+<span class="fc" id="L43">    public GroupTree(Centroid leaf) {</span>
+<span class="fc" id="L44">        size = depth = 1;</span>
+<span class="fc" id="L45">        this.leaf = leaf;</span>
+<span class="fc" id="L46">        count = leaf.count();</span>
+<span class="fc" id="L47">        left = right = null;</span>
+<span class="fc" id="L48">    }</span>
+
+<span class="fc" id="L50">    public GroupTree(GroupTree left, GroupTree right) {</span>
+<span class="fc" id="L51">        this.left = left;</span>
+<span class="fc" id="L52">        this.right = right;</span>
+<span class="fc" id="L53">        count = left.count + right.count;</span>
+<span class="fc" id="L54">        size = left.size + right.size;</span>
+<span class="fc" id="L55">        rebalance();</span>
+<span class="fc" id="L56">        leaf = this.right.first();</span>
+<span class="fc" id="L57">    }</span>
+
+    public boolean add(Centroid centroid) {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L61">            leaf = centroid;</span>
+<span class="fc" id="L62">            depth = 1;</span>
+<span class="fc" id="L63">            count = centroid.count();</span>
+<span class="fc" id="L64">            size = 1;</span>
+<span class="fc" id="L65">            return true;</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        } else if (size == 1) {</span>
+<span class="fc" id="L67">            int order = centroid.compareTo(leaf);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if (order &lt; 0) {</span>
+<span class="fc" id="L69">                left = new GroupTree(centroid);</span>
+<span class="fc" id="L70">                right = new GroupTree(leaf);</span>
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">            } else if (order &gt; 0) {</span>
+<span class="fc" id="L72">                left = new GroupTree(leaf);</span>
+<span class="fc" id="L73">                right = new GroupTree(centroid);</span>
+<span class="fc" id="L74">                leaf = centroid;</span>
+            }
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        } else if (centroid.compareTo(leaf) &lt; 0) {</span>
+<span class="fc" id="L77">            left.add(centroid);</span>
+        } else {
+<span class="fc" id="L79">            right.add(centroid);</span>
+        }
+<span class="fc" id="L81">        count += centroid.count();</span>
+<span class="fc" id="L82">        size++;</span>
+<span class="fc" id="L83">        depth = Math.max(left.depth, right.depth) + 1;</span>
+
+<span class="fc" id="L85">        rebalance();</span>
+<span class="fc" id="L86">        return true;</span>
+    }
+
+    /**
+     * Modify an existing value in the tree subject to the constraint that the change will not alter the
+     * ordering of the tree.
+     * @param x         New value to add to Centroid
+     * @param count     Weight of new value
+     * @param v         The value to modify
+     * @param data      The recorded data
+     */
+    public void move(double x, int count, Centroid v, Iterable&lt;? extends Double&gt; data) {
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (size &lt;= 0) {</span>
+<span class="nc" id="L99">            throw new IllegalStateException(&quot;Cannot move element of empty tree&quot;);</span>
+        }
+
+<span class="nc bnc" id="L102" title="All 2 branches missed.">        if (size == 1) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            if(leaf != v) {</span>
+<span class="nc" id="L104">                throw new IllegalStateException(&quot;Cannot move element that is not in tree&quot;);</span>
+            }
+<span class="nc" id="L106">            leaf.add(x, count, data);</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        } else if (v.compareTo(leaf) &lt; 0) {</span>
+<span class="nc" id="L108">            left.move(x, count, v, data);</span>
+        } else {
+<span class="nc" id="L110">            right.move(x, count, v, data);</span>
+        }
+<span class="nc" id="L112">        this.count += count;</span>
+<span class="nc" id="L113">    }</span>
+
+    private void rebalance() {
+<span class="fc" id="L116">        int l = left.depth();</span>
+<span class="fc" id="L117">        int r = right.depth();</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (l &gt; r + 1) {</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            if (left.left.depth() &gt; left.right.depth()) {</span>
+<span class="fc" id="L120">                rotate(left.left.left, left.left.right, left.right, right);</span>
+            } else {
+<span class="fc" id="L122">                rotate(left.left, left.right.left, left.right.right, right);</span>
+            }
+<span class="fc bfc" id="L124" title="All 2 branches covered.">        } else if (r &gt; l + 1) {</span>
+<span class="fc bfc" id="L125" title="All 2 branches covered.">            if (right.left.depth() &gt; right.right.depth()) {</span>
+<span class="fc" id="L126">                rotate(left, right.left.left, right.left.right, right.right);</span>
+            } else {
+<span class="fc" id="L128">                rotate(left, right.left, right.right.left, right.right.right);</span>
+            }
+        } else {
+<span class="fc" id="L131">            depth = Math.max(left.depth(), right.depth()) + 1;</span>
+        }
+<span class="fc" id="L133">    }</span>
+
+    private void rotate(GroupTree a, GroupTree b, GroupTree c, GroupTree d) {
+<span class="fc" id="L136">        left = new GroupTree(a, b);</span>
+<span class="fc" id="L137">        right = new GroupTree(c, d);</span>
+<span class="fc" id="L138">        count = left.count + right.count;</span>
+<span class="fc" id="L139">        size = left.size + right.size;</span>
+<span class="fc" id="L140">        depth = Math.max(left.depth(), right.depth()) + 1;</span>
+<span class="fc" id="L141">        leaf = right.first();</span>
+<span class="fc" id="L142">    }</span>
+
+    private int depth() {
+<span class="fc" id="L145">        return depth;</span>
+    }
+
+    public int size() {
+<span class="fc" id="L149">        return size;</span>
+    }
+
+    /**
+     * @return the number of items strictly before the current element
+     */
+    public int headCount(Centroid base) {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (size == 0) {</span>
+<span class="nc" id="L157">            return 0;</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        } else if (left == null) {</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">            return leaf.compareTo(base) &lt; 0 ? 1 : 0;</span>
+        } else {
+<span class="nc bnc" id="L161" title="All 2 branches missed.">            if (base.compareTo(leaf) &lt; 0) {</span>
+<span class="nc" id="L162">                return left.headCount(base);</span>
+            } else {
+<span class="nc" id="L164">                return left.size + right.headCount(base);</span>
+            }
+        }
+    }
+
+    /**
+     * @return the sum of the size() function for all elements strictly before the current element.
+     */
+    public long headSum(Centroid base) {
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">        if (size == 0) {</span>
+<span class="nc" id="L174">            return 0;</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">        } else if (left == null) {</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">            return leaf.compareTo(base) &lt; 0 ? count : 0;</span>
+        } else {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">            if (base.compareTo(leaf) &lt;= 0) {</span>
+<span class="fc" id="L179">                return left.headSum(base);</span>
+            } else {
+<span class="fc" id="L181">                return left.count + right.headSum(base);</span>
+            }
+        }
+    }
+
+    /**
+     * @return the first Centroid in this set
+     */
+    public Centroid first() {
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">        if(size &lt;= 0) {</span>
+<span class="nc" id="L191">            throw new IllegalStateException(&quot;No first element of empty set&quot;);</span>
+        }
+<span class="fc bfc" id="L193" title="All 2 branches covered.">        if (left == null) {</span>
+<span class="fc" id="L194">            return leaf;</span>
+        } else {
+<span class="fc" id="L196">            return left.first();</span>
+        }
+    }
+
+    /**
+     * Iteratres through all groups in the tree.
+     */
+    public Iterator&lt;Centroid&gt; iterator() {
+<span class="fc" id="L204">        return iterator(null);</span>
+    }
+
+    /**
+     * Iterates through all of the Groups in this tree in ascending order of means
+     * @param start  The place to start this subset.  Remember that Groups are ordered by mean *and* id.
+     * @return An iterator that goes through the groups in order of mean and id starting at or after the
+     * specified Centroid.
+     */
+    private Iterator&lt;Centroid&gt; iterator(final Centroid start) {
+<span class="fc" id="L214">        return new Iterator&lt;Centroid&gt;() {</span>
+            {
+<span class="fc" id="L216">                stack = new ArrayDeque&lt;GroupTree&gt;();</span>
+<span class="fc" id="L217">                push(GroupTree.this, start);</span>
+            }
+
+<span class="fc" id="L220">            Centroid end = new Centroid(0, 0, -1);</span>
+<span class="fc" id="L221">            Centroid next = null;</span>
+
+            Deque&lt;GroupTree&gt; stack;
+
+            @Override
+            public boolean hasNext() {
+<span class="fc bfc" id="L227" title="All 2 branches covered.">                if (next == null) {</span>
+<span class="fc" id="L228">                    next = computeNext();</span>
+                }
+<span class="fc bfc" id="L230" title="All 4 branches covered.">                return next != null &amp;&amp; next != end;</span>
+            }
+
+            @Override
+            public Centroid next() {
+<span class="pc bpc" id="L235" title="1 of 2 branches missed.">                if (hasNext()) {</span>
+<span class="fc" id="L236">                    Centroid r = next;</span>
+<span class="fc" id="L237">                    next = null;</span>
+<span class="fc" id="L238">                    return r;</span>
+                } else {
+<span class="nc" id="L240">                    throw new NoSuchElementException(&quot;Can't iterate past end of data&quot;);</span>
+                }
+            }
+
+            @Override
+            public void remove() {
+<span class="nc" id="L246">                throw new UnsupportedOperationException(&quot;Default operation&quot;);</span>
+            }
+
+            // recurses down to the leaf that is &gt;= start
+            // pending right hand branches on the way are put on the stack
+            private void push(GroupTree z, Centroid start) {
+<span class="fc bfc" id="L252" title="All 2 branches covered.">                while (z.left != null) {</span>
+<span class="fc bfc" id="L253" title="All 4 branches covered.">                    if (start == null || start.compareTo(z.leaf) &lt; 0) {</span>
+                        // remember we will have to process the right hand branch later
+<span class="fc" id="L255">                        stack.push(z.right);</span>
+                        // note that there is no guarantee that z.left has any good data
+<span class="fc" id="L257">                        z = z.left;</span>
+                    } else {
+                        // if the left hand branch doesn't contain start, then no push
+<span class="fc" id="L260">                        z = z.right;</span>
+                    }
+                }
+                // put the leaf value on the stack if it is valid
+<span class="pc bpc" id="L264" title="1 of 4 branches missed.">                if (start == null || z.leaf.compareTo(start) &gt;= 0) {</span>
+<span class="fc" id="L265">                    stack.push(z);</span>
+                }
+<span class="fc" id="L267">            }</span>
+
+            protected Centroid computeNext() {
+<span class="fc" id="L270">                GroupTree r = stack.poll();</span>
+<span class="fc bfc" id="L271" title="All 4 branches covered.">                while (r != null &amp;&amp; r.left != null) {</span>
+                    // unpack r onto the stack
+<span class="fc" id="L273">                    push(r, start);</span>
+<span class="fc" id="L274">                    r = stack.poll();</span>
+                }
+
+                // at this point, r == null or r.left == null
+                // if r == null, stack is empty and we are done
+                // if r != null, then r.left != null and we have a result
+<span class="fc bfc" id="L280" title="All 2 branches covered.">                if (r != null) {</span>
+<span class="fc" id="L281">                    return r.leaf;</span>
+                }
+<span class="fc" id="L283">                return end;</span>
+            }
+        };
+    }
+
+    public void remove(Centroid base) {
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">        if(size &lt;= 0) {</span>
+<span class="nc" id="L290">            throw new IllegalStateException(&quot;Cannot remove from empty set&quot;);</span>
+        }
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">        if (size == 1) {</span>
+<span class="nc bnc" id="L293" title="All 2 branches missed.">            if(base.compareTo(leaf) != 0) {</span>
+<span class="nc" id="L294">                throw new IllegalStateException(String.format(&quot;Element %s not found&quot;, base));</span>
+            }
+<span class="nc" id="L296">            count = size = 0;</span>
+<span class="nc" id="L297">            leaf = null;</span>
+        } else {
+<span class="fc bfc" id="L299" title="All 2 branches covered.">            if (base.compareTo(leaf) &lt; 0) {</span>
+<span class="fc bfc" id="L300" title="All 2 branches covered.">                if (left.size &gt; 1) {</span>
+<span class="fc" id="L301">                    left.remove(base);</span>
+<span class="fc" id="L302">                    count -= base.count();</span>
+<span class="fc" id="L303">                    size--;</span>
+<span class="fc" id="L304">                    rebalance();</span>
+                } else {
+<span class="fc" id="L306">                    size = right.size;</span>
+<span class="fc" id="L307">                    count = right.count;</span>
+<span class="fc" id="L308">                    depth = right.depth;</span>
+<span class="fc" id="L309">                    leaf = right.leaf;</span>
+<span class="fc" id="L310">                    left = right.left;</span>
+<span class="fc" id="L311">                    right = right.right;</span>
+                }
+            } else {
+<span class="fc bfc" id="L314" title="All 2 branches covered.">                if (right.size &gt; 1) {</span>
+<span class="fc" id="L315">                    right.remove(base);</span>
+<span class="fc" id="L316">                    leaf = right.first();</span>
+<span class="fc" id="L317">                    count -= base.count();</span>
+<span class="fc" id="L318">                    size--;</span>
+<span class="fc" id="L319">                    rebalance();</span>
+                } else {
+<span class="fc" id="L321">                    size = left.size;</span>
+<span class="fc" id="L322">                    count = left.count;</span>
+<span class="fc" id="L323">                    depth = left.depth;</span>
+<span class="fc" id="L324">                    leaf = left.leaf;</span>
+<span class="fc" id="L325">                    right = left.right;</span>
+<span class="fc" id="L326">                    left = left.left;</span>
+                }
+            }
+        }
+<span class="fc" id="L330">    }</span>
+
+    /**
+     * @return the largest element less than or equal to base
+     */
+    public Centroid floor(Centroid base) {
+<span class="fc bfc" id="L336" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L337">            return null;</span>
+        } else {
+<span class="fc bfc" id="L339" title="All 2 branches covered.">            if (size == 1) {</span>
+<span class="fc bfc" id="L340" title="All 2 branches covered.">                return base.compareTo(leaf) &gt;= 0 ? leaf : null;</span>
+            } else {
+<span class="fc bfc" id="L342" title="All 2 branches covered.">                if (base.compareTo(leaf) &lt; 0) {</span>
+<span class="fc" id="L343">                    return left.floor(base);</span>
+                } else {
+<span class="fc" id="L345">                    Centroid floor = right.floor(base);</span>
+<span class="pc bpc" id="L346" title="1 of 2 branches missed.">                    if (floor == null) {</span>
+<span class="nc" id="L347">                        floor = left.last();</span>
+                    }
+<span class="fc" id="L349">                    return floor;</span>
+                }
+            }
+        }
+    }
+
+    public Centroid last() {
+<span class="nc bnc" id="L356" title="All 2 branches missed.">        if(size &lt;= 0) {</span>
+<span class="nc" id="L357">            throw new IllegalStateException(&quot;Cannot find last element of empty set&quot;);</span>
+        }
+<span class="nc bnc" id="L359" title="All 2 branches missed.">        if (size == 1) {</span>
+<span class="nc" id="L360">            return leaf;</span>
+        } else {
+<span class="nc" id="L362">            return right.last();</span>
+        }
+    }
+
+    /**
+     * @return the smallest element greater than or equal to base.
+     */
+    public Centroid ceiling(Centroid base) {
+<span class="fc bfc" id="L370" title="All 2 branches covered.">        if (size == 0) {</span>
+<span class="fc" id="L371">            return null;</span>
+<span class="fc bfc" id="L372" title="All 2 branches covered.">        } else if (size == 1) {</span>
+<span class="pc bpc" id="L373" title="1 of 2 branches missed.">            return base.compareTo(leaf) &lt;= 0 ? leaf : null;</span>
+        } else {
+<span class="pc bpc" id="L375" title="1 of 2 branches missed.">            if (base.compareTo(leaf) &lt; 0) {</span>
+<span class="fc" id="L376">                Centroid r = left.ceiling(base);</span>
+<span class="pc bpc" id="L377" title="1 of 2 branches missed.">                if (r == null) {</span>
+<span class="nc" id="L378">                    r = right.first();</span>
+                }
+<span class="fc" id="L380">                return r;</span>
+            } else {
+<span class="nc" id="L382">                return right.ceiling(base);</span>
+            }
+        }
+    }
+
+    /**
+     * @return the subset of elements equal to or greater than base.
+     */
+    public Iterable&lt;Centroid&gt; tailSet(final Centroid start) {
+<span class="fc" id="L391">        return new Iterable&lt;Centroid&gt;() {</span>
+            @Override
+            public Iterator&lt;Centroid&gt; iterator() {
+<span class="fc" id="L394">                return GroupTree.this.iterator(start);</span>
+            }
+        };
+    }
+
+    public long sum() {
+<span class="nc" id="L400">        return count;</span>
+    }
+
+    public void checkBalance() {
+<span class="nc bnc" id="L404" title="All 2 branches missed.">        if (left != null) {</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">            if(Math.abs(left.depth() - right.depth()) &gt;= 2) {</span>
+<span class="nc" id="L406">                throw new IllegalStateException(&quot;Imbalanced&quot;);</span>
+            }
+<span class="nc" id="L408">            int l = left.depth();</span>
+<span class="nc" id="L409">            int r = right.depth();</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">            if(depth != Math.max(l, r) + 1){</span>
+<span class="nc" id="L411">                throw new IllegalStateException( &quot;Depth doesn't match children&quot;);</span>
+            }
+<span class="nc bnc" id="L413" title="All 2 branches missed.">            if(size != left.size + right.size){</span>
+<span class="nc" id="L414">                throw new IllegalStateException( &quot;Sizes don't match children&quot;);</span>
+            }
+<span class="nc bnc" id="L416" title="All 2 branches missed.">            if(count != left.count + right.count){</span>
+<span class="nc" id="L417">                throw new IllegalStateException( &quot;Counts don't match children&quot;);</span>
+            }
+<span class="nc bnc" id="L419" title="All 2 branches missed.">            if(leaf.compareTo(right.first()) != 0){</span>
+<span class="nc" id="L420">                throw new IllegalStateException(String.format( &quot;Split is wrong %.5f != %.5f or %d != %d&quot;, leaf.mean(), right.first().mean(), leaf.id(), right.first().id()));</span>
+            }
+<span class="nc" id="L422">            left.checkBalance();</span>
+<span class="nc" id="L423">            right.checkBalance();</span>
+        }
+<span class="nc" id="L425">    }</span>
+
+    public void print(int depth) {
+<span class="nc bnc" id="L428" title="All 2 branches missed.">        for (int i = 0; i &lt; depth; i++) {</span>
+<span class="nc" id="L429">            System.out.printf(&quot;| &quot;);</span>
+        }
+<span class="nc bnc" id="L431" title="All 4 branches missed.">        int imbalance = Math.abs((left != null ? left.depth : 1) - (right != null ? right.depth : 1));</span>
+<span class="nc bnc" id="L432" title="All 6 branches missed.">        System.out.printf(&quot;%s%s, %d, %d, %d\n&quot;, (imbalance &gt; 1 ? &quot;* &quot; : &quot;&quot;) + (right != null &amp;&amp; leaf.compareTo(right.first()) != 0 ? &quot;+ &quot; : &quot;&quot;), leaf, size, count, this.depth);</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">        if (left != null) {</span>
+<span class="nc" id="L434">            left.print(depth + 1);</span>
+<span class="nc" id="L435">            right.print(depth + 1);</span>
+        }
+<span class="nc" id="L437">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

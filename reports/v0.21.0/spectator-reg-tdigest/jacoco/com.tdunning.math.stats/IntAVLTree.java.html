@@ -1,0 +1,568 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>IntAVLTree.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.tdunning.math.stats</a> &gt; <span class="el_source">IntAVLTree.java</span></div><h1>IntAVLTree.java</h1><pre class="source lang-java linenums">package com.tdunning.math.stats;
+
+import java.util.Arrays;
+
+
+/**
+ * An AVL-tree structure stored in parallel arrays.
+ * This class only stores the tree structure, so you need to extend it if you
+ * want to add data to the nodes, typically by using arrays and node
+ * identifiers as indices.
+ */
+<span class="pc bpc" id="L12" title="1 of 2 branches missed.">abstract class IntAVLTree {</span>
+
+    /**
+     * We use &lt;tt&gt;0&lt;/tt&gt; instead of &lt;tt&gt;-1&lt;/tt&gt; so that left(NIL) works without
+     * condition.
+     */
+    protected static final int NIL = 0;
+
+    /** Grow a size by 1/8. */
+    static int oversize(int size) {
+<span class="fc" id="L22">        return size + (size &gt;&gt;&gt; 3);</span>
+    }
+
+    private final NodeAllocator nodeAllocator;
+    private int root;
+    private int[] parent;
+    private int[] left;
+    private int[] right;
+    private byte[] depth;
+
+<span class="fc" id="L32">    IntAVLTree(int initialCapacity) {</span>
+<span class="fc" id="L33">        nodeAllocator = new NodeAllocator();</span>
+<span class="fc" id="L34">        root = NIL;</span>
+<span class="fc" id="L35">        parent = new int[initialCapacity];</span>
+<span class="fc" id="L36">        left = new int[initialCapacity];</span>
+<span class="fc" id="L37">        right = new int[initialCapacity];</span>
+<span class="fc" id="L38">        depth = new byte[initialCapacity];</span>
+<span class="fc" id="L39">    }</span>
+
+    IntAVLTree() {
+<span class="fc" id="L42">        this(16);</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Return the current root of the tree.
+     */
+    public int root() {
+<span class="fc" id="L49">        return root;</span>
+    }
+
+    /**
+     * Return the current capacity, which is the number of nodes that this tree
+     * can hold.
+     */
+    public int capacity() {
+<span class="fc" id="L57">        return parent.length;</span>
+    }
+
+    /**
+     * Resize internal storage in order to be able to store data for nodes up to
+     * &lt;code&gt;newCapacity&lt;/code&gt; (excluded).
+     */
+    protected void resize(int newCapacity) {
+<span class="fc" id="L65">        parent = Arrays.copyOf(parent, newCapacity);</span>
+<span class="fc" id="L66">        left = Arrays.copyOf(left, newCapacity);</span>
+<span class="fc" id="L67">        right = Arrays.copyOf(right, newCapacity);</span>
+<span class="fc" id="L68">        depth = Arrays.copyOf(depth, newCapacity);</span>
+<span class="fc" id="L69">    }</span>
+
+    /**
+     * Return the size of this tree.
+     */
+    public int size() {
+<span class="fc" id="L75">        return nodeAllocator.size();</span>
+    }
+
+    /**
+     * Return the parent of the provided node.
+     */
+    public int parent(int node) {
+<span class="fc" id="L82">        return parent[node];</span>
+    }
+
+    /**
+     * Return the left child of the provided node.
+     */
+    public int left(int node) {
+<span class="fc" id="L89">        return left[node];</span>
+    }
+
+    /**
+     * Return the right child of the provided node.
+     */
+    public int right(int node) {
+<span class="fc" id="L96">        return right[node];</span>
+    }
+
+    /**
+     * Return the depth nodes that are stored below &lt;code&gt;node&lt;/code&gt; including itself.
+     */
+    public int depth(int node) {
+<span class="fc" id="L103">        return depth[node];</span>
+    }
+
+    /**
+     * Return the least node under &lt;code&gt;node&lt;/code&gt;.
+     */
+    public int first(int node) {
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        if (node == NIL) {</span>
+<span class="fc" id="L111">            return NIL;</span>
+        }
+        while (true) {
+<span class="fc" id="L114">            final int left = left(node);</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if (left == NIL) {</span>
+<span class="fc" id="L116">                break;</span>
+            }
+<span class="fc" id="L118">            node = left;</span>
+<span class="fc" id="L119">        }</span>
+<span class="fc" id="L120">        return node;</span>
+    }
+
+    /**
+     * Return the largest node under &lt;code&gt;node&lt;/code&gt;.
+     */
+    public int last(int node) {
+        while (true) {
+<span class="fc" id="L128">            final int right = right(node);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">            if (right == NIL) {</span>
+<span class="fc" id="L130">                break;</span>
+            }
+<span class="fc" id="L132">            node = right;</span>
+<span class="fc" id="L133">        }</span>
+<span class="fc" id="L134">        return node;</span>
+    }
+
+    /**
+     * Return the least node that is strictly greater than &lt;code&gt;node&lt;/code&gt;.
+     */
+    public final int next(int node) {
+<span class="fc" id="L141">        final int right = right(node);</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        if (right != NIL) {</span>
+<span class="fc" id="L143">            return first(right);</span>
+        } else {
+<span class="fc" id="L145">            int parent = parent(node);</span>
+<span class="fc bfc" id="L146" title="All 4 branches covered.">            while (parent != NIL &amp;&amp; node == right(parent)) {</span>
+<span class="fc" id="L147">                node = parent;</span>
+<span class="fc" id="L148">                parent = parent(parent);</span>
+            }
+<span class="fc" id="L150">            return parent;</span>
+        }
+    }
+
+    /**
+     * Return the highest node that is strictly less than &lt;code&gt;node&lt;/code&gt;.
+     */
+    public final int prev(int node) {
+<span class="fc" id="L158">        final int left = left(node);</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        if (left != NIL) {</span>
+<span class="fc" id="L160">            return last(left);</span>
+        } else {
+<span class="fc" id="L162">            int parent = parent(node);</span>
+<span class="fc bfc" id="L163" title="All 4 branches covered.">            while (parent != NIL &amp;&amp; node == left(parent)) {</span>
+<span class="fc" id="L164">                node = parent;</span>
+<span class="fc" id="L165">                parent = parent(parent);</span>
+            }
+<span class="fc" id="L167">            return parent;</span>
+        }
+    }
+
+    /**
+     * Compare data against data which is stored in &lt;code&gt;node&lt;/code&gt;.
+     */
+    protected abstract int compare(int node);
+
+    /**
+     * Compare data into &lt;code&gt;node&lt;/code&gt;.
+     */
+    protected abstract void copy(int node);
+
+    /**
+     * Merge data into &lt;code&gt;node&lt;/code&gt;.
+     */
+    protected abstract void merge(int node);
+
+
+    /**
+     * Add current data to the tree and return &lt;tt&gt;true&lt;/tt&gt; if a new node was added
+     * to the tree or &lt;tt&gt;false&lt;/tt&gt; if the node was merged into an existing node.
+     */
+    public boolean add() {
+<span class="fc bfc" id="L192" title="All 2 branches covered.">        if (root == NIL) {</span>
+<span class="fc" id="L193">            root = nodeAllocator.newNode();</span>
+<span class="fc" id="L194">            copy(root);</span>
+<span class="fc" id="L195">            fixAggregates(root);</span>
+<span class="fc" id="L196">            return true;</span>
+        } else {
+<span class="pc bpc" id="L198" title="2 of 4 branches missed.">            int node = root; assert parent(root) == NIL;</span>
+<span class="fc" id="L199">            int parent = NIL;</span>
+            int cmp;
+            do {
+<span class="fc" id="L202">                cmp = compare(node);</span>
+<span class="fc bfc" id="L203" title="All 2 branches covered.">                if (cmp &lt; 0) {</span>
+<span class="fc" id="L204">                    parent = node;</span>
+<span class="fc" id="L205">                    node = left(node);</span>
+<span class="pc bpc" id="L206" title="1 of 2 branches missed.">                } else if (cmp &gt; 0) {</span>
+<span class="fc" id="L207">                    parent = node;</span>
+<span class="fc" id="L208">                    node = right(node);</span>
+                } else {
+<span class="nc" id="L210">                    merge(node);</span>
+<span class="nc" id="L211">                    return false;</span>
+                }
+<span class="fc bfc" id="L213" title="All 2 branches covered.">            } while (node != NIL);</span>
+
+<span class="fc" id="L215">            node = nodeAllocator.newNode();</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">            if (node &gt;= capacity()) {</span>
+<span class="fc" id="L217">                resize(oversize(node + 1));</span>
+            }
+<span class="fc" id="L219">            copy(node);</span>
+<span class="fc" id="L220">            parent(node, parent);</span>
+<span class="fc bfc" id="L221" title="All 2 branches covered.">            if (cmp &lt; 0) {</span>
+<span class="fc" id="L222">                left(parent, node);</span>
+            } else {
+<span class="pc bpc" id="L224" title="2 of 4 branches missed.">                assert cmp &gt; 0;</span>
+<span class="fc" id="L225">                right(parent, node);</span>
+            }
+
+<span class="fc" id="L228">            rebalance(node);</span>
+
+<span class="fc" id="L230">            return true;</span>
+        }
+    }
+
+    /**
+     * Find a node in this tree.
+     */
+    public int find() {
+<span class="nc bnc" id="L238" title="All 2 branches missed.">        for (int node = root; node != NIL; ) {</span>
+<span class="nc" id="L239">            final int cmp = compare(node);</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">            if (cmp &lt; 0) {</span>
+<span class="nc" id="L241">                node = left(node);</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">            } else if (cmp &gt; 0) {</span>
+<span class="nc" id="L243">                node = right(node);</span>
+            } else {
+<span class="nc" id="L245">                return node;</span>
+            }
+<span class="nc" id="L247">        }</span>
+<span class="nc" id="L248">        return NIL;</span>
+    }
+
+    /**
+     * Update &lt;code&gt;node&lt;/code&gt; with the current data.
+     */
+    public void update(int node) {
+<span class="fc" id="L255">        final int prev = prev(node);</span>
+<span class="fc" id="L256">        final int next = next(node);</span>
+<span class="pc bpc" id="L257" title="3 of 8 branches missed.">        if ((prev == NIL || compare(prev) &gt; 0) &amp;&amp; (next == NIL || compare(next) &lt; 0)) {</span>
+            // Update can be done in-place
+<span class="fc" id="L259">            copy(node);</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">            for (int n = node; n != NIL; n = parent(n)) {</span>
+<span class="fc" id="L261">                fixAggregates(n);</span>
+            }
+        } else {
+            // TODO: it should be possible to find the new node position without
+            // starting from scratch
+<span class="fc" id="L266">            remove(node);</span>
+<span class="fc" id="L267">            add();</span>
+        }
+<span class="fc" id="L269">    }</span>
+
+    /**
+     * Remove the specified node from the tree.
+     */
+    public void remove(int node) {
+<span class="pc bpc" id="L275" title="1 of 2 branches missed.">        if (node == NIL) {</span>
+<span class="nc" id="L276">            throw new IllegalArgumentException();</span>
+        }
+<span class="pc bpc" id="L278" title="3 of 4 branches missed.">        if (left(node) != NIL &amp;&amp; right(node) != NIL) {</span>
+            // inner node
+<span class="nc" id="L280">            final int next = next(node);</span>
+<span class="nc bnc" id="L281" title="All 4 branches missed.">            assert next != NIL;</span>
+<span class="nc" id="L282">            swap(node, next);</span>
+        }
+<span class="pc bpc" id="L284" title="4 of 6 branches missed.">        assert left(node) == NIL || right(node) == NIL;</span>
+
+<span class="fc" id="L286">        final int parent = parent(node);</span>
+<span class="fc" id="L287">        int child = left(node);</span>
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">        if (child == NIL) {</span>
+<span class="fc" id="L289">            child = right(node);</span>
+        }
+
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">        if (child == NIL) {</span>
+            // no children
+<span class="pc bpc" id="L294" title="1 of 2 branches missed.">            if (node == root) {</span>
+<span class="nc bnc" id="L295" title="All 4 branches missed.">                assert size() == 1 : size();</span>
+<span class="nc" id="L296">                root = NIL;</span>
+            } else {
+<span class="fc bfc" id="L298" title="All 2 branches covered.">                if (node == left(parent)) {</span>
+<span class="fc" id="L299">                    left(parent, NIL);</span>
+                } else {
+<span class="pc bpc" id="L301" title="2 of 4 branches missed.">                    assert node == right(parent);</span>
+<span class="fc" id="L302">                    right(parent, NIL);</span>
+                }
+            }
+        } else {
+            // one single child
+<span class="nc bnc" id="L307" title="All 2 branches missed.">            if (node == root) {</span>
+<span class="nc bnc" id="L308" title="All 4 branches missed.">                assert size() == 2;</span>
+<span class="nc" id="L309">                root = child;</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">            } else if (node == left(parent)) {</span>
+<span class="nc" id="L311">                left(parent, child);</span>
+            } else {
+<span class="nc bnc" id="L313" title="All 4 branches missed.">                assert node == right(parent);</span>
+<span class="nc" id="L314">                right(parent, child);</span>
+            }
+<span class="nc" id="L316">            parent(child, parent);</span>
+        }
+
+<span class="fc" id="L319">        release(node);</span>
+<span class="fc" id="L320">        rebalance(parent);</span>
+<span class="fc" id="L321">    }</span>
+
+    private void release(int node) {
+<span class="fc" id="L324">        left(node, NIL);</span>
+<span class="fc" id="L325">        right(node, NIL);</span>
+<span class="fc" id="L326">        parent(node, NIL);</span>
+<span class="fc" id="L327">        nodeAllocator.release(node);</span>
+<span class="fc" id="L328">    }</span>
+
+    private void swap(int node1, int node2) {
+<span class="nc" id="L331">        final int parent1 = parent(node1);</span>
+<span class="nc" id="L332">        final int parent2 = parent(node2);</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">        if (parent1 != NIL) {</span>
+<span class="nc bnc" id="L334" title="All 2 branches missed.">            if (node1 == left(parent1)) {</span>
+<span class="nc" id="L335">                left(parent1, node2);</span>
+            } else {
+<span class="nc bnc" id="L337" title="All 4 branches missed.">                assert node1 == right(parent1);</span>
+<span class="nc" id="L338">                right(parent1, node2);</span>
+            }
+        } else {
+<span class="nc bnc" id="L341" title="All 4 branches missed.">            assert root == node1;</span>
+<span class="nc" id="L342">            root = node2;</span>
+        }
+<span class="nc bnc" id="L344" title="All 2 branches missed.">        if (parent2 != NIL) {</span>
+<span class="nc bnc" id="L345" title="All 2 branches missed.">            if (node2 == left(parent2)) {</span>
+<span class="nc" id="L346">                left(parent2, node1);</span>
+            } else {
+<span class="nc bnc" id="L348" title="All 4 branches missed.">                assert node2 == right(parent2);</span>
+<span class="nc" id="L349">                right(parent2, node1);</span>
+            }
+        } else {
+<span class="nc bnc" id="L352" title="All 4 branches missed.">            assert root == node2;</span>
+<span class="nc" id="L353">            root = node1;</span>
+        }
+<span class="nc" id="L355">        parent(node1, parent2);</span>
+<span class="nc" id="L356">        parent(node2, parent1);</span>
+
+<span class="nc" id="L358">        final int left1 = left(node1);</span>
+<span class="nc" id="L359">        final int left2 = left(node2);</span>
+<span class="nc" id="L360">        left(node1, left2);</span>
+<span class="nc bnc" id="L361" title="All 2 branches missed.">        if (left2 != NIL) {</span>
+<span class="nc" id="L362">            parent(left2, node1);</span>
+        }
+<span class="nc" id="L364">        left(node2, left1);</span>
+<span class="nc bnc" id="L365" title="All 2 branches missed.">        if (left1 != NIL) {</span>
+<span class="nc" id="L366">            parent(left1, node2);</span>
+        }
+
+<span class="nc" id="L369">        final int right1 = right(node1);</span>
+<span class="nc" id="L370">        final int right2 = right(node2);</span>
+<span class="nc" id="L371">        right(node1, right2);</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">        if (right2 != NIL) {</span>
+<span class="nc" id="L373">            parent(right2, node1);</span>
+        }
+<span class="nc" id="L375">        right(node2, right1);</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">        if (right1 != NIL) {</span>
+<span class="nc" id="L377">            parent(right1, node2);</span>
+        }
+
+<span class="nc" id="L380">        final int depth1 = depth(node1);</span>
+<span class="nc" id="L381">        final int depth2 = depth(node2);</span>
+<span class="nc" id="L382">        depth(node1, depth2);</span>
+<span class="nc" id="L383">        depth(node2, depth1);</span>
+<span class="nc" id="L384">    }</span>
+
+    private int balanceFactor(int node) {
+<span class="fc" id="L387">        return depth(left(node)) - depth(right(node));</span>
+    }
+
+    private void rebalance(int node) {
+<span class="fc bfc" id="L391" title="All 2 branches covered.">        for (int n = node; n != NIL; ) {</span>
+<span class="fc" id="L392">            final int p = parent(n);</span>
+
+<span class="fc" id="L394">            fixAggregates(n);</span>
+
+<span class="pc bpc" id="L396" title="1 of 4 branches missed.">            switch (balanceFactor(n)) {</span>
+            case -2:
+<span class="fc" id="L398">                final int right = right(n);</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">                if (balanceFactor(right) == 1) {</span>
+<span class="fc" id="L400">                    rotateRight(right);</span>
+                }
+<span class="fc" id="L402">                rotateLeft(n);</span>
+<span class="fc" id="L403">                break;</span>
+            case 2:
+<span class="fc" id="L405">                final int left = left(n);</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">                if (balanceFactor(left) == -1) {</span>
+<span class="fc" id="L407">                    rotateLeft(left);</span>
+                }
+<span class="fc" id="L409">                rotateRight(n);</span>
+<span class="fc" id="L410">                break;</span>
+            case -1:
+            case 0:
+            case 1:
+<span class="fc" id="L414">                break; // ok</span>
+            default:
+<span class="nc" id="L416">                throw new AssertionError();</span>
+            }
+
+<span class="fc" id="L419">            n = p;</span>
+<span class="fc" id="L420">        }</span>
+<span class="fc" id="L421">    }</span>
+
+    protected void fixAggregates(int node) {
+<span class="fc" id="L424">        depth(node, 1 + Math.max(depth(left(node)), depth(right(node))));</span>
+<span class="fc" id="L425">    }</span>
+
+    /** Rotate left the subtree under &lt;code&gt;n&lt;/code&gt; */
+    private void rotateLeft(int n) {
+<span class="fc" id="L429">        final int r = right(n);</span>
+<span class="fc" id="L430">        final int lr = left(r);</span>
+<span class="fc" id="L431">        right(n, lr);</span>
+<span class="fc bfc" id="L432" title="All 2 branches covered.">        if (lr != NIL) {</span>
+<span class="fc" id="L433">            parent(lr, n);</span>
+        }
+<span class="fc" id="L435">        final int p = parent(n);</span>
+<span class="fc" id="L436">        parent(r, p);</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">        if (p == NIL) {</span>
+<span class="fc" id="L438">            root = r;</span>
+<span class="fc bfc" id="L439" title="All 2 branches covered.">        } else if (left(p) == n) {</span>
+<span class="fc" id="L440">            left(p, r);</span>
+        } else {
+<span class="pc bpc" id="L442" title="2 of 4 branches missed.">            assert right(p) == n;</span>
+<span class="fc" id="L443">            right(p, r);</span>
+        }
+<span class="fc" id="L445">        left(r, n);</span>
+<span class="fc" id="L446">        parent(n, r);</span>
+<span class="fc" id="L447">        fixAggregates(n);</span>
+<span class="fc" id="L448">        fixAggregates(parent(n));</span>
+<span class="fc" id="L449">    }</span>
+
+    /** Rotate right the subtree under &lt;code&gt;n&lt;/code&gt; */
+    private void rotateRight(int n) {
+<span class="fc" id="L453">        final int l = left(n);</span>
+<span class="fc" id="L454">        final int rl = right(l);</span>
+<span class="fc" id="L455">        left(n, rl);</span>
+<span class="fc bfc" id="L456" title="All 2 branches covered.">        if (rl != NIL) {</span>
+<span class="fc" id="L457">            parent(rl, n);</span>
+        }
+<span class="fc" id="L459">        final int p = parent(n);</span>
+<span class="fc" id="L460">        parent(l, p);</span>
+<span class="fc bfc" id="L461" title="All 2 branches covered.">        if (p == NIL) {</span>
+<span class="fc" id="L462">            root = l;</span>
+<span class="fc bfc" id="L463" title="All 2 branches covered.">        } else if (right(p) == n) {</span>
+<span class="fc" id="L464">            right(p, l);</span>
+        } else {
+<span class="pc bpc" id="L466" title="2 of 4 branches missed.">            assert left(p) == n;</span>
+<span class="fc" id="L467">            left(p, l);</span>
+        }
+<span class="fc" id="L469">        right(l, n);</span>
+<span class="fc" id="L470">        parent(n, l);</span>
+<span class="fc" id="L471">        fixAggregates(n);</span>
+<span class="fc" id="L472">        fixAggregates(parent(n));</span>
+<span class="fc" id="L473">    }</span>
+
+    private void parent(int node, int parent) {
+<span class="pc bpc" id="L476" title="2 of 4 branches missed.">        assert node != NIL;</span>
+<span class="fc" id="L477">        this.parent[node] = parent;</span>
+<span class="fc" id="L478">    }</span>
+
+    private void left(int node, int left) {
+<span class="pc bpc" id="L481" title="2 of 4 branches missed.">        assert node != NIL;</span>
+<span class="fc" id="L482">        this.left[node] = left;</span>
+<span class="fc" id="L483">    }</span>
+
+    private void right(int node, int right) {
+<span class="pc bpc" id="L486" title="2 of 4 branches missed.">        assert node != NIL;</span>
+<span class="fc" id="L487">        this.right[node] = right;</span>
+<span class="fc" id="L488">    }</span>
+
+    private void depth(int node, int depth) {
+<span class="pc bpc" id="L491" title="2 of 4 branches missed.">        assert node != NIL;</span>
+<span class="pc bpc" id="L492" title="3 of 6 branches missed.">        assert depth &gt;= 0 &amp;&amp; depth &lt;= Byte.MAX_VALUE;</span>
+<span class="fc" id="L493">        this.depth[node] = (byte) depth;</span>
+<span class="fc" id="L494">    }</span>
+
+    void checkBalance(int node) {
+<span class="nc bnc" id="L497" title="All 2 branches missed.">        if (node == NIL) {</span>
+<span class="nc bnc" id="L498" title="All 4 branches missed.">            assert depth(node) == 0;</span>
+        } else {
+<span class="nc bnc" id="L500" title="All 4 branches missed.">            assert depth(node) == 1 + Math.max(depth(left(node)), depth(right(node)));</span>
+<span class="nc bnc" id="L501" title="All 4 branches missed.">            assert Math.abs(depth(left(node)) - depth(right(node))) &lt;= 1;</span>
+<span class="nc" id="L502">            checkBalance(left(node));</span>
+<span class="nc" id="L503">            checkBalance(right(node));</span>
+        }
+<span class="nc" id="L505">    }</span>
+
+    /**
+     * A stack of int values.
+     */
+    private static class IntStack {
+
+        private int[] stack;
+        private int size;
+
+<span class="fc" id="L515">        IntStack() {</span>
+<span class="fc" id="L516">            stack = new int[0];</span>
+<span class="fc" id="L517">            size = 0;</span>
+<span class="fc" id="L518">        }</span>
+
+        int size() {
+<span class="fc" id="L521">            return size;</span>
+        }
+
+        int pop() {
+<span class="fc" id="L525">            return stack[--size];</span>
+        }
+
+        void push(int v) {
+<span class="fc bfc" id="L529" title="All 2 branches covered.">            if (size &gt;= stack.length) {</span>
+<span class="fc" id="L530">                final int newLength = oversize(size + 1);</span>
+<span class="fc" id="L531">                stack = Arrays.copyOf(stack, newLength);</span>
+            }
+<span class="fc" id="L533">            stack[size++] = v;</span>
+<span class="fc" id="L534">        }</span>
+
+    }
+
+<span class="pc bpc" id="L538" title="1 of 2 branches missed.">    private static class NodeAllocator {</span>
+
+        private int nextNode;
+        private final IntStack releasedNodes;
+
+<span class="fc" id="L543">        NodeAllocator() {</span>
+<span class="fc" id="L544">            nextNode = NIL + 1;</span>
+<span class="fc" id="L545">            releasedNodes = new IntStack();</span>
+<span class="fc" id="L546">        }</span>
+
+        int newNode() {
+<span class="fc bfc" id="L549" title="All 2 branches covered.">            if (releasedNodes.size() &gt; 0) {</span>
+<span class="fc" id="L550">                return releasedNodes.pop();</span>
+            } else {
+<span class="fc" id="L552">                return nextNode++;</span>
+            }
+        }
+
+        void release(int node) {
+<span class="pc bpc" id="L557" title="2 of 4 branches missed.">            assert node &lt; nextNode;</span>
+<span class="fc" id="L558">            releasedNodes.push(node);</span>
+<span class="fc" id="L559">        }</span>
+
+        int size() {
+<span class="fc" id="L562">            return nextNode - releasedNodes.size() - 1;</span>
+        }
+
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

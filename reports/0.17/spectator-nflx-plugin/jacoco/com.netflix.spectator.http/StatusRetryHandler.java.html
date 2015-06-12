@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>StatusRetryHandler.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.http</a> &gt; <span class="el_source">StatusRetryHandler.java</span></div><h1>StatusRetryHandler.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.http;
+
+import com.netflix.spectator.sandbox.HttpLogEntry;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaders;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientRequest;
+import iep.io.reactivex.netty.protocol.http.client.HttpClientResponse;
+import iep.rx.Observable;
+import iep.rx.functions.Func1;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Helper for handling retries based on the status code of the response.
+ */
+class StatusRetryHandler implements
+    Func1&lt;HttpClientResponse&lt;ByteBuf&gt;, Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt;&gt; {
+
+  private final HttpLogEntry entry;
+  private final ClientConfig config;
+  private final Server server;
+  private final HttpClientRequest&lt;ByteBuf&gt; req;
+
+  private final int attempt;
+  private final long delay;
+
+  /**
+   * Create a new instance.
+   *
+   * @param entry
+   *     Log entry to update for each request.
+   * @param config
+   *     Config settings to use.
+   * @param server
+   *     Server to use for the retry.
+   * @param req
+   *     Original request.
+   * @param attempt
+   *     The number of this attempt.
+   * @param delay
+   *     How long to wait before making another attempt. Unit is in milliseconds. If a
+   *     {@code Retry-After} header is set on the response it will take precedence over the
+   *     default delay.
+   */
+  StatusRetryHandler(
+      HttpLogEntry entry,
+      ClientConfig config,
+      Server server,
+      HttpClientRequest&lt;ByteBuf&gt; req,
+      int attempt,
+<span class="fc" id="L66">      long delay) {</span>
+<span class="fc" id="L67">    this.entry = entry;</span>
+<span class="fc" id="L68">    this.config = config;</span>
+<span class="fc" id="L69">    this.server = server;</span>
+<span class="fc" id="L70">    this.req = req;</span>
+<span class="fc" id="L71">    this.attempt = attempt;</span>
+<span class="fc" id="L72">    this.delay = delay;</span>
+<span class="fc" id="L73">  }</span>
+
+  private static long getRetryDelay(HttpClientResponse&lt;ByteBuf&gt; res, long dflt) {
+    try {
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">      if (res.getHeaders().contains(HttpHeaders.Names.RETRY_AFTER)) {</span>
+        // http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.37
+<span class="nc" id="L79">        int delaySeconds = res.getHeaders().getIntHeader(HttpHeaders.Names.RETRY_AFTER);</span>
+<span class="nc" id="L80">        return TimeUnit.MILLISECONDS.convert(delaySeconds, TimeUnit.SECONDS);</span>
+      }
+<span class="nc" id="L82">    } catch (NumberFormatException e) {</span>
+      // We don't support the date version, so use dflt in this case
+<span class="nc" id="L84">      return dflt;</span>
+<span class="fc" id="L85">    }</span>
+<span class="fc" id="L86">    return dflt;</span>
+  }
+
+  @Override
+  public Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; call(HttpClientResponse&lt;ByteBuf&gt; res) {
+<span class="fc" id="L91">    final int code = res.getStatus().code();</span>
+    Observable&lt;HttpClientResponse&lt;ByteBuf&gt;&gt; resObs;
+<span class="fc bfc" id="L93" title="All 4 branches covered.">    if (code == 429 || code == 503) {</span>
+<span class="fc" id="L94">      final long retryDelay = getRetryDelay(res, delay);</span>
+<span class="fc" id="L95">      res.getContent().subscribe();</span>
+<span class="fc" id="L96">      entry.withAttempt(attempt);</span>
+<span class="fc" id="L97">      resObs = RxHttp.execute(entry, config, server, req);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">      if (retryDelay &gt; 0) {</span>
+<span class="fc" id="L99">        resObs = resObs.delaySubscription(retryDelay, TimeUnit.MILLISECONDS);</span>
+      }
+<span class="fc bfc" id="L101" title="All 2 branches covered.">    } else if (code &gt;= 500) {</span>
+<span class="fc" id="L102">      res.getContent().subscribe();</span>
+<span class="fc" id="L103">      entry.withAttempt(attempt);</span>
+<span class="fc" id="L104">      resObs = RxHttp.execute(entry, config, server, req);</span>
+    } else {
+<span class="fc" id="L106">      resObs = Observable.just(res);</span>
+    }
+<span class="fc" id="L108">    return resObs;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

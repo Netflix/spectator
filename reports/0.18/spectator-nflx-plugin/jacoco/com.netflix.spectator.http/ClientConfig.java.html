@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ClientConfig.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.http</a> &gt; <span class="el_source">ClientConfig.java</span></div><h1>ClientConfig.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.http;
+
+import com.netflix.spectator.api.Spectator;
+
+import java.net.URI;
+
+/** Configuration settings to use for making the request. */
+class ClientConfig {
+
+  private final String name;
+  private final String vipAddress;
+  private final URI originalUri;
+  private final URI uri;
+
+  /** Create a new instance. */
+<span class="fc" id="L31">  ClientConfig(String name, String vipAddress, URI originalUri, URI uri) {</span>
+<span class="fc" id="L32">    this.name = name;</span>
+<span class="fc" id="L33">    this.vipAddress = vipAddress;</span>
+<span class="fc" id="L34">    this.originalUri = originalUri;</span>
+<span class="fc" id="L35">    this.uri = uri;</span>
+<span class="fc" id="L36">  }</span>
+
+  private String prop(String k) {
+<span class="fc" id="L39">    return name + &quot;.niws.client.&quot; + k;</span>
+  }
+
+  /** Name of the client. */
+  String name() {
+<span class="fc" id="L44">    return name;</span>
+  }
+
+  /** Original URI specified before selecting a specific server. */
+  URI originalUri() {
+<span class="fc" id="L49">    return originalUri;</span>
+  }
+
+  /** URI for the request. */
+  URI uri() {
+<span class="fc" id="L54">    return uri;</span>
+  }
+
+  /** Port to use for the connection. */
+  int port(int dflt) {
+<span class="fc" id="L59">    return Spectator.config().getInt(prop(&quot;Port&quot;), dflt);</span>
+  }
+
+  /** Maximum time to wait for a connection attempt in milliseconds. */
+  int connectTimeout() {
+<span class="fc" id="L64">    return Spectator.config().getInt(prop(&quot;ConnectTimeout&quot;), 1000);</span>
+  }
+
+  /** Maximum time to wait for reading data in milliseconds. */
+  int readTimeout() {
+<span class="fc" id="L69">    return Spectator.config().getInt(prop(&quot;ReadTimeout&quot;), 30000);</span>
+  }
+
+  /** Maximum number of redirects to follow. Set to 0 to disable. */
+  int followRedirects() {
+<span class="fc" id="L74">    return Spectator.config().getInt(prop(&quot;FollowRedirects&quot;), 3);</span>
+  }
+
+  /** Should HTTPS be used for the request? */
+  boolean isSecure() {
+<span class="fc" id="L79">    final boolean https = &quot;https&quot;.equals(uri.getScheme());</span>
+<span class="pc bpc" id="L80" title="2 of 4 branches missed.">    return https || Spectator.config().getBoolean(prop(&quot;IsSecure&quot;), false);</span>
+  }
+
+  /**
+   * When getting a server list from eureka should the host name or ip address be used? The
+   * default is to use the ip address and avoid the dns lookup.
+   */
+  boolean useIpAddress() {
+<span class="fc" id="L88">    return Spectator.config().getBoolean(prop(&quot;UseIpAddress&quot;), false);</span>
+  }
+
+  /**
+   * Should it attempt to compress the request body and automatically decompress the response
+   * body?
+   */
+  boolean gzipEnabled() {
+<span class="fc" id="L96">    return Spectator.config().getBoolean(prop(&quot;GzipEnabled&quot;), true);</span>
+  }
+
+  /** Max number of retries. */
+  int numRetries() {
+<span class="fc" id="L101">    return Spectator.config().getInt(prop(&quot;MaxAutoRetriesNextServer&quot;), 2);</span>
+  }
+
+  /**
+   * Initial delay to use between retries if a throttled response (429 or 503) is received. The
+   * delay will be doubled between each throttled attempt.
+   */
+  int retryDelay() {
+<span class="fc" id="L109">    return Spectator.config().getInt(prop(&quot;RetryDelay&quot;), 500);</span>
+  }
+
+  /** Max size of the request body. Defaults to 10MB. */
+  int aggregationLimit() {
+<span class="fc" id="L114">    return Spectator.config().getInt(prop(&quot;AggregationLimit&quot;), 10 * 1024 * 1024);</span>
+  }
+
+  /** User agent string to use when making the request. */
+  String userAgent() {
+<span class="fc" id="L119">    return Spectator.config().get(prop(&quot;UserAgent&quot;), &quot;RxHttp&quot;);</span>
+  }
+
+  /** VIP used to lookup a set of servers in eureka. */
+  String vip() {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">    return (vipAddress == null)</span>
+<span class="nc" id="L125">        ? Spectator.config().get(prop(&quot;DeploymentContextBasedVipAddresses&quot;))</span>
+        : vipAddress;
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>StepLong.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">StepLong.java</span></div><h1>StepLong.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import com.netflix.spectator.api.Clock;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Utility class for managing a set of AtomicLong instances mapped to a particular step interval.
+ * The current implementation keeps an array of with two items where one is the current value
+ * being updated and the other is the value from the previous interval and is only available for
+ * polling.
+ */
+public class StepLong {
+
+  private final long init;
+  private final Clock clock;
+  private final long step;
+
+  private final AtomicLong previous;
+  private final AtomicLong current;
+
+  private final AtomicLong lastInitPos;
+
+  /** Create a new instance. */
+<span class="fc" id="L40">  public StepLong(long init, Clock clock, long step) {</span>
+<span class="fc" id="L41">    this.init = init;</span>
+<span class="fc" id="L42">    this.clock = clock;</span>
+<span class="fc" id="L43">    this.step = step;</span>
+<span class="fc" id="L44">    previous = new AtomicLong(init);</span>
+<span class="fc" id="L45">    current = new AtomicLong(init);</span>
+<span class="fc" id="L46">    lastInitPos = new AtomicLong(clock.wallTime() / step);</span>
+<span class="fc" id="L47">  }</span>
+
+  private void rollCount(long now) {
+<span class="fc" id="L50">    final long stepTime = now / step;</span>
+<span class="fc" id="L51">    final long lastInit = lastInitPos.get();</span>
+<span class="pc bpc" id="L52" title="1 of 4 branches missed.">    if (lastInit &lt; stepTime &amp;&amp; lastInitPos.compareAndSet(lastInit, stepTime)) {</span>
+<span class="fc" id="L53">      final long v = current.getAndSet(init);</span>
+      // Need to check if there was any activity during the previous step interval. If there was
+      // then the init position will move forward by 1, otherwise it will be older. No activity
+      // means the previous interval should be set to the `init` value.
+<span class="fc bfc" id="L57" title="All 2 branches covered.">      previous.set((lastInit == stepTime - 1) ? v : init);</span>
+    }
+<span class="fc" id="L59">  }</span>
+
+  /** Get the AtomicLong for the current bucket. */
+  public AtomicLong getCurrent() {
+<span class="fc" id="L63">    rollCount(clock.wallTime());</span>
+<span class="fc" id="L64">    return current;</span>
+  }
+
+  /** Get the value for the last completed interval. */
+  public long poll() {
+<span class="fc" id="L69">    rollCount(clock.wallTime());</span>
+<span class="fc" id="L70">    return previous.get();</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L74">    return &quot;StepLong{init=&quot;  + init</span>
+<span class="nc" id="L75">        + &quot;, previous=&quot; + previous.get()</span>
+<span class="nc" id="L76">        + &quot;, current=&quot; + current.get()</span>
+<span class="nc" id="L77">        + &quot;, lastInitPos=&quot; + lastInitPos.get() + '}';</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
