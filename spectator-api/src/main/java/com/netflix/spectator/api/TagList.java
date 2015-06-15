@@ -63,11 +63,11 @@ final class TagList implements Iterable<Tag>, Tag {
       private TagList current = root;
 
       public boolean hasNext() {
-        return current != null;
+        return current != EMPTY;
       }
 
       public Tag next() {
-        if (current == null) {
+        if (current == EMPTY) {
           throw new NoSuchElementException();
         }
         Tag tmp = current;
@@ -129,7 +129,7 @@ final class TagList implements Iterable<Tag>, Tag {
     if (tags instanceof TagList) {
       return (TagList) tags;
     } else {
-      TagList head = null;
+      TagList head = EMPTY;
       for (Tag t : tags) {
         head = new TagList(t.key(), t.value(), head);
       }
@@ -146,7 +146,7 @@ final class TagList implements Iterable<Tag>, Tag {
    *     New tag list with a copy of the data.
    */
   static TagList create(Map<String, String> tags) {
-    TagList head = null;
+    TagList head = EMPTY;
     for (Map.Entry<String, String> t : tags.entrySet()) {
       head = new TagList(t.getKey(), t.getValue(), head);
     }

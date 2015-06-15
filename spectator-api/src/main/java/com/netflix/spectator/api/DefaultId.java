@@ -55,7 +55,7 @@ public final class DefaultId implements Id {
   }
 
   @Override public DefaultId withTags(Iterable<Tag> ts) {
-    TagList tmp = (tags == null) ? TagList.create(ts) : tags.prepend(ts);
+    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.prepend(ts);
     return new DefaultId(name, tmp);
   }
 
