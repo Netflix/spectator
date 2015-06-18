@@ -84,6 +84,17 @@ public class SparkNameFunctionTest {
   }
 
   @Test
+  public void driverStreamingTotal() {
+    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.totalCompletedBatches";
+    final Id expected = new DefaultId("spark.streaming.totalCompletedBatches")
+        .withTag("role", "driver")
+        .withTag("driver", "StreamingMetrics")
+        .withTag("appId", "app-20150527224111-0014")
+        .withTag("appName", "SubscriptionEnded");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
   public void driverStreamingDelay() {
     final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
     final Id expected = new DefaultId("spark.streaming.lastReceivedBatch_submissionDelay")

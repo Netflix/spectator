@@ -29,6 +29,7 @@ import java.net.URL;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Sink for exporting spark metrics to a prana sidecar.
@@ -61,6 +62,7 @@ public class SparkSink implements Sink {
     reporter = SpectatorReporter.forRegistry(registry)
         .withNameFunction(SparkNameFunction.fromConfig(config))
         .withValueFunction(SparkValueFunction.fromConfig(config))
+        .withGaugeCounters(Pattern.compile(config.getString("spectator.spark.gauge-counters")))
         .build();
     pollPeriod = getPeriod(properties);
     pollUnit = getUnit(properties);
