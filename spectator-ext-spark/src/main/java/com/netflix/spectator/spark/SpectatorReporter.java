@@ -237,7 +237,7 @@ public final class SpectatorReporter extends ScheduledReporter {
     final long prev = getAndSetPrevious(k, curr);
     final Id id = nameFunction.apply(k);
     if (id != null) {
-      spectatorRegistry.counter(id).increment(prev - curr);
+      spectatorRegistry.counter(id).increment(curr - prev);
     }
   }
 
