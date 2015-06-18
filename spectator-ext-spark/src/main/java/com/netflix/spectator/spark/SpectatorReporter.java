@@ -36,6 +36,7 @@ import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 /**
  * Reporter for mapping data in a metrics3 registry to spectator.
@@ -68,6 +69,12 @@ public final class SpectatorReporter extends ScheduledReporter {
       }
     };
 
+    /**
+     * By default none should match. Note the '$' sign is regex end of line so it cannot be
+     * followed by characters and thus the pattern will not match anything.
+     */
+    private Pattern gaugeCounters = Pattern.compile("$NONE");
+
     /** Create a new instance. */
     Builder(MetricRegistry registry) {
       this.registry = registry;
@@ -91,18 +98,26 @@ public final class SpectatorReporter extends ScheduledReporter {
       return this;
     }
 
+    /** Set the regex for matching names of gauges that should be treated as counters. */
+    public Builder withGaugeCounters(Pattern pattern) {
+      gaugeCounters = pattern;
+      return this;
+    }
+
     /** Create a new instance of the reporter. */
     public SpectatorReporter build() {
       if (spectatorRegistry == null) {
         spectatorRegistry = Spectator.registry();
       }
-      return new SpectatorReporter(registry, spectatorRegistry, nameFunction, valueFunction);
+      return new SpectatorReporter(
+          registry, spectatorRegistry, nameFunction, valueFunction, gaugeCounters);
     }
   }
 
   private final ExtendedRegistry spectatorRegistry;
   private final NameFunction nameFunction;
   private final ValueFunction valueFunction;
+  private final Pattern gaugeCounters;
 
   private final ConcurrentHashMap<String, AtomicDouble> gaugeDoubles = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> previousValues = new ConcurrentHashMap<>();
@@ -112,7 +127,8 @@ public final class SpectatorReporter extends ScheduledReporter {
       MetricRegistry metricRegistry,
       ExtendedRegistry spectatorRegistry,
       NameFunction nameFunction,
-      ValueFunction valueFunction) {
+      ValueFunction valueFunction,
+      Pattern gaugeCounters) {
     super(metricRegistry,
         "spectator",       // name
         MetricFilter.ALL,  // filter
@@ -121,6 +137,7 @@ public final class SpectatorReporter extends ScheduledReporter {
     this.spectatorRegistry = spectatorRegistry;
     this.nameFunction = nameFunction;
     this.valueFunction = valueFunction;
+    this.gaugeCounters = gaugeCounters;
   }
 
   @SuppressWarnings("PMD.NPathComplexity")
@@ -136,13 +153,22 @@ public final class SpectatorReporter extends ScheduledReporter {
     for (Map.Entry<String, Gauge> entry : gauges.entrySet()) {
       final Object obj = entry.getValue().getValue();
       if (obj instanceof Number) {
-        final double v = ((Number) obj).doubleValue();
-        setGaugeValue(entry.getKey(), v);
+        if (gaugeCounters.matcher(entry.getKey()).matches()) {
+          final long v = ((Number) obj).longValue();
+          updateCounter(entry.getKey(), v);
+        } else {
+          final double v = ((Number) obj).doubleValue();
+          setGaugeValue(entry.getKey(), v);
+        }
       }
     }
 
     for (Map.Entry<String, Counter> entry : counters.entrySet()) {
-      setGaugeValue(entry.getKey(), entry.getValue().getCount());
+      if (gaugeCounters.matcher(entry.getKey()).matches()) {
+        updateCounter(entry.getKey(), entry.getValue().getCount());
+      } else {
+        setGaugeValue(entry.getKey(), entry.getValue().getCount());
+      }
     }
 
     for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
@@ -158,12 +184,7 @@ public final class SpectatorReporter extends ScheduledReporter {
     }
 
     for (Map.Entry<String, Meter> entry : meters.entrySet()) {
-      final long curr = entry.getValue().getCount();
-      final long prev = getAndSetPrevious(entry.getKey(), curr);
-      final Id id = nameFunction.apply(entry.getKey());
-      if (id != null) {
-        spectatorRegistry.counter(id).increment(prev - curr);
-      }
+      updateCounter(entry.getKey(), entry.getValue().getCount());
     }
 
     for (Map.Entry<String, Timer> entry : timers.entrySet()) {
@@ -210,6 +231,14 @@ public final class SpectatorReporter extends ScheduledReporter {
       prev = (prev == null) ? tmp : prev;
     }
     return prev.getAndSet(newValue);
+  }
+
+  private void updateCounter(String k, long curr) {
+    final long prev = getAndSetPrevious(k, curr);
+    final Id id = nameFunction.apply(k);
+    if (id != null) {
+      spectatorRegistry.counter(id).increment(prev - curr);
+    }
   }
 
 }
