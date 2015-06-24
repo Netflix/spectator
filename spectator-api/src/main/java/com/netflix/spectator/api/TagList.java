@@ -25,7 +25,7 @@ import java.util.NoSuchElementException;
  * A tag list implemented as a singly linked list. Doesn't automatically dedup keys but supports
  * a cheap prepend at the call site to allow for inexpensive dynamic ids.
  */
-final class TagList implements Iterable<Tag>, Tag {
+public final class TagList implements Iterable<Tag>, Tag {
 
   private final String key;
   private final String value;
