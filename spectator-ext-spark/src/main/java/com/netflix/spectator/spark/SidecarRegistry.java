@@ -27,7 +27,6 @@ import com.netflix.spectator.api.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -223,7 +222,7 @@ public class SidecarRegistry extends AbstractRegistry {
 
         int status = con.getResponseCode();
         if (status != 200) {
-          throw new IOException("post to sidecar failed with status: " + status);
+          LOGGER.error("post to sidecar failed with status: " + status + ", payload: " + json);
         }
       } finally {
         con.disconnect();
