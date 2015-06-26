@@ -43,6 +43,24 @@ public class SparkNameFunctionTest {
   }
 
   @Test
+  public void executorName2() {
+    final String name = "20150626-185518-1776258826-5050-2845-S1.executor.filesystem.file.largeRead_ops";
+    final Id expected = new DefaultId("spark.filesystem.file.largeRead_ops")
+        .withTag("role", "executor")
+        .withTag("appId", "20150626-185518-1776258826-5050-2845-S1");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void executorName3() {
+    final String name = "12345.1.3.executor.filesystem.file.largeRead_ops";
+    final Id expected = new DefaultId("spark.filesystem.file.largeRead_ops")
+        .withTag("role", "executor")
+        .withTag("appId", "12345.1.3");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
   public void driverName() {
     final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
     final Id expected = new DefaultId("spark.disk.diskSpaceUsed")
