@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.spark;
 
+import com.eclipsesource.json.JsonArray;
+import com.eclipsesource.json.JsonObject;
 import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
@@ -112,55 +114,31 @@ public class SidecarRegistry extends AbstractRegistry {
   }
 
   private String toJson(List<Measurement> ms) {
-    StringBuilder buf = new StringBuilder();
-    buf.append('[');
-    appendJson(buf, ms.get(0));
-    for (int i = 1; i < ms.size(); ++i) {
-      buf.append(',');
-      appendJson(buf, ms.get(i));
+    final JsonArray items = new JsonArray();
+    for (Measurement m : ms) {
+      if (!Double.isNaN(m.value()) && !Double.isInfinite(m.value())) {
+        items.add(toJson(m));
+      }
     }
-    buf.append(']');
-    return buf.toString();
+    return items.toString();
   }
 
-  private void appendJson(StringBuilder buf, Measurement m) {
-    if (!Double.isNaN(m.value()) && !Double.isInfinite(m.value())) {
-      buf.append('{');
-      appendJsonString(buf, "timestamp");
-      buf.append(':').append(m.timestamp());
-      buf.append(',');
+  private JsonObject toJson(Measurement m) {
+    final JsonObject obj = new JsonObject();
+    obj.add("timestamp", m.timestamp());
+    obj.add("type",      getType(m.id()));
+    obj.add("name",      m.id().name());
+    obj.add("tags",      toJson(m.id().tags()));
+    obj.add("value",     m.value());
+    return obj;
+  }
 
-      appendJsonString(buf, "type");
-      buf.append(':');
-      appendJsonString(buf, getType(m.id()));
-      buf.append(',');
-
-      appendJsonString(buf, "name");
-      buf.append(':');
-      appendJsonString(buf, m.id().name());
-      buf.append(',');
-
-      appendJsonString(buf, "tags");
-      buf.append(":{");
-      boolean first = true;
-      for (Tag t : m.id().tags()) {
-        if (first) {
-          first = false;
-        } else {
-          buf.append(',');
-        }
-        appendJsonString(buf, t.key());
-        buf.append(':');
-        appendJsonString(buf, t.value());
-      }
-      buf.append("},");
-
-      appendJsonString(buf, "value");
-      buf.append(':');
-      buf.append(m.value());
-
-      buf.append('}');
+  private JsonObject toJson(Iterable<Tag> tags) {
+    final JsonObject obj = new JsonObject();
+    for (Tag t : tags) {
+      obj.add(t.key(), t.value());
     }
+    return obj;
   }
 
   private String getType(Id id) {
@@ -170,38 +148,6 @@ public class SidecarRegistry extends AbstractRegistry {
       }
     }
     return DataType.GAUGE.value();
-  }
-
-  private void appendJsonString(StringBuilder buf, String s) {
-    buf.append('"');
-    final int length = s.length();
-    for (int i = 0; i < length; ++i) {
-      final char c = s.charAt(i);
-      switch (s.charAt(i)) {
-        case '"':
-          buf.append("\\\"");
-          break;
-        case '\b':
-          buf.append("\\b");
-          break;
-        case '\f':
-          buf.append("\\f");
-          break;
-        case '\n':
-          buf.append("\\n");
-          break;
-        case '\r':
-          buf.append("\\r");
-          break;
-        case '\t':
-          buf.append("\\t");
-          break;
-        default:
-          buf.append(c);
-          break;
-      }
-    }
-    buf.append('"');
   }
 
   private void postJson(URL url, List<Measurement> ms) throws Exception {
