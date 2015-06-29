@@ -61,25 +61,6 @@ public class SparkNameFunctionTest {
   }
 
     @Test
-    public void jvmName1() {
-        final String name = "12345-1-2-3-4-5.<driver>.jvm.non-heap.max";
-        final Id expected = new DefaultId("spark.non-heap.max")
-                .withTag("role", "driver")
-                .withTag("source", "jvm")
-                .withTag("appId", "12345-1-2-3-4-5");
-        assertEquals(expected, f.apply(name));
-    }
-
-    @Test
-    public void jvmName2() {
-        final String name = "20150626-185518-1776258826-5050-2845-S1.jvm.non-heap.max";
-        final Id expected = new DefaultId("spark.non-heap.max")
-                .withTag("source", "jvm")
-                .withTag("appId", "20150626-185518-1776258826-5050-2845-S1");
-        assertEquals(expected, f.apply(name));
-    }
-
-    @Test
   public void driverName() {
     final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
     final Id expected = new DefaultId("spark.disk.diskSpaceUsed")
