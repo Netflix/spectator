@@ -17,6 +17,8 @@ package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.gc.GcLogger;
+import com.netflix.spectator.jvm.Jmx;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.spark.metrics.sink.Sink;
@@ -47,6 +49,8 @@ public class SparkSink implements Sink {
   private final TimeUnit pollUnit;
 
   private final URL url;
+
+  private GcLogger gcLogger;
 
   /**
    * Create a new instance. Spark looks for a constructor with all three parameters, so the
@@ -83,6 +87,17 @@ public class SparkSink implements Sink {
     }
   }
 
+  private void startJvmCollection() {
+    try {
+      Jmx.registerStandardMXBeans(Spectator.registry());
+      gcLogger = new GcLogger();
+      gcLogger.start(null);
+    } catch (Exception e) {
+      LOGGER.error("failed to start collection of jvm stats", e);
+      throw e;
+    }
+  }
+
   private long getPeriod(Properties properties) {
     final String v = properties.getProperty("period");
     return (v == null) ? 10L : Long.parseLong(v);
@@ -96,6 +111,7 @@ public class SparkSink implements Sink {
   @Override public void start() {
     LOGGER.info("starting poller");
     reporter.start(pollPeriod, pollUnit);
+    startJvmCollection();
     if (sidecarRegistry != null) {
       sidecarRegistry.start(url, pollPeriod, pollUnit);
     }
@@ -104,6 +120,7 @@ public class SparkSink implements Sink {
   @Override public void stop() {
     LOGGER.info("stopping poller");
     reporter.stop();
+    gcLogger.stop();
     if (sidecarRegistry != null) {
       sidecarRegistry.stop();
     }

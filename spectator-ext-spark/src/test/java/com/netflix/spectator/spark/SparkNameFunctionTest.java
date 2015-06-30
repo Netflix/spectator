@@ -36,9 +36,9 @@ public class SparkNameFunctionTest {
   public void executorName() {
     final String name = "app-20150309231421-0000.0.executor.filesystem.file.largeRead_ops";
     final Id expected = new DefaultId("spark.filesystem.file.largeRead_ops")
-        .withTag("role", "executor")
-        .withTag("appId", "app-20150309231421-0000")
-        .withTag("executorId", "0");
+        .withTag("role", "executor");
+        //.withTag("appId", "app-20150309231421-0000")
+        //.withTag("executorId", "0");
     assertEquals(expected, f.apply(name));
   }
 
@@ -46,8 +46,8 @@ public class SparkNameFunctionTest {
   public void executorName2() {
     final String name = "20150626-185518-1776258826-5050-2845-S1.executor.filesystem.file.largeRead_ops";
     final Id expected = new DefaultId("spark.filesystem.file.largeRead_ops")
-        .withTag("role", "executor")
-        .withTag("appId", "20150626-185518-1776258826-5050-2845-S1");
+        .withTag("role", "executor");
+        //.withTag("appId", "20150626-185518-1776258826-5050-2845-S1");
     assertEquals(expected, f.apply(name));
   }
 
@@ -55,8 +55,8 @@ public class SparkNameFunctionTest {
   public void executorName3() {
     final String name = "12345.1.3.executor.filesystem.file.largeRead_ops";
     final Id expected = new DefaultId("spark.filesystem.file.largeRead_ops")
-        .withTag("role", "executor")
-        .withTag("appId", "12345.1.3");
+        .withTag("role", "executor");
+        //.withTag("appId", "12345.1.3");
     assertEquals(expected, f.apply(name));
   }
 
@@ -65,8 +65,8 @@ public class SparkNameFunctionTest {
     final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
     final Id expected = new DefaultId("spark.disk.diskSpaceUsed")
         .withTag("role", "driver")
-        .withTag("source", "BlockManager")
-        .withTag("appId", "app-20150309231421-0000");
+        .withTag("source", "BlockManager");
+        //.withTag("appId", "app-20150309231421-0000");
     assertEquals(expected, f.apply(name));
   }
 
@@ -75,8 +75,8 @@ public class SparkNameFunctionTest {
     final String name = "app-20150309231421-0000.driver.DAGScheduler.job.activeJobs";
     final Id expected = new DefaultId("spark.job.activeJobs")
         .withTag("role", "driver")
-        .withTag("source", "DAGScheduler")
-        .withTag("appId", "app-20150309231421-0000");
+        .withTag("source", "DAGScheduler");
+        //.withTag("appId", "app-20150309231421-0000");
     assertEquals(expected, f.apply(name));
   }
 
@@ -85,8 +85,8 @@ public class SparkNameFunctionTest {
     final String name = "local-1429219722964.<driver>.DAGScheduler.job.activeJobs";
     final Id expected = new DefaultId("spark.job.activeJobs")
         .withTag("role", "driver")
-        .withTag("source", "DAGScheduler")
-        .withTag("appId", "local-1429219722964");
+        .withTag("source", "DAGScheduler");
+        //.withTag("appId", "local-1429219722964");
     assertEquals(expected, f.apply(name));
   }
 
@@ -95,9 +95,9 @@ public class SparkNameFunctionTest {
     final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.receivers";
     final Id expected = new DefaultId("spark.streaming.receivers")
         .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics")
-        .withTag("appId", "app-20150527224111-0014")
-        .withTag("appName", "SubscriptionEnded");
+        .withTag("source", "StreamingMetrics");
+        //.withTag("appId", "app-20150527224111-0014")
+        //.withTag("appName", "SubscriptionEnded");
     assertEquals(expected, f.apply(name));
   }
 
@@ -106,9 +106,9 @@ public class SparkNameFunctionTest {
     final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.totalCompletedBatches";
     final Id expected = new DefaultId("spark.streaming.totalCompletedBatches")
         .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics")
-        .withTag("appId", "app-20150527224111-0014")
-        .withTag("appName", "SubscriptionEnded");
+        .withTag("source", "StreamingMetrics");
+        //.withTag("appId", "app-20150527224111-0014")
+        //.withTag("appName", "SubscriptionEnded");
     assertEquals(expected, f.apply(name));
   }
 
@@ -117,9 +117,9 @@ public class SparkNameFunctionTest {
     final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
     final Id expected = new DefaultId("spark.streaming.lastReceivedBatch_submissionDelay")
         .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics")
-        .withTag("appId", "app-20150527224111-0014")
-        .withTag("appName", "SubscriptionEnded");
+        .withTag("source", "StreamingMetrics");
+        //.withTag("appId", "app-20150527224111-0014")
+        //.withTag("appName", "SubscriptionEnded");
     assertEquals(expected, f.apply(name));
   }
 

@@ -26,14 +26,21 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
+import org.apache.spark.SparkConf;
+import org.apache.spark.SparkEnv;
+import org.apache.spark.SparkEnv$;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Option;
 
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -46,10 +53,35 @@ public class SidecarRegistry extends AbstractRegistry {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SidecarRegistry.class);
 
+  private static final Callable<Map<String, String>> SPARK = new Callable<Map<String, String>>() {
+    @Override public Map<String, String> call() throws Exception {
+      SparkEnv env = SparkEnv$.MODULE$.get();
+      if (env == null) {
+        return null;
+      } else {
+        Map<String, String> tagMap = new HashMap<>();
+        SparkConf conf = env.conf();
+        put(tagMap, conf, "spark.app.id", "appId");
+        put(tagMap, conf, "spark.app.name", "appName");
+        put(tagMap, conf, "spark.executor.id", "executorId");
+        return tagMap;
+      }
+    }
+
+    private void put(Map<String, String> tags, SparkConf conf, String key, String tagName) {
+      Option<String> opt = conf.getOption(key);
+      if (opt.isDefined() && !"".equals(opt.get())) {
+        tags.put(tagName, opt.get());
+      }
+    }
+  };
+
   private ScheduledExecutorService executor;
 
   private final Counter numMessages;
   private final Counter numMeasurements;
+
+  private final Callable<Map<String, String>> commonTags;
 
   /** Create a new instance. */
   public SidecarRegistry() {
@@ -58,9 +90,15 @@ public class SidecarRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public SidecarRegistry(Clock clock) {
+    this(clock, SPARK);
+  }
+
+  /** Create a new instance. */
+  public SidecarRegistry(Clock clock, Callable<Map<String, String>> commonTags) {
     super(clock);
     numMessages = counter(createId("spectator.sidecar.numMessages"));
     numMeasurements = counter(createId("spectator.sidecar.numMeasurements"));
+    this.commonTags = commonTags;
   }
 
   /**
@@ -113,30 +151,36 @@ public class SidecarRegistry extends AbstractRegistry {
     executor = null;
   }
 
-  private String toJson(List<Measurement> ms) {
+  private String toJson(List<Measurement> ms, Map<String, String> tags) {
     final JsonArray items = new JsonArray();
     for (Measurement m : ms) {
       if (!Double.isNaN(m.value()) && !Double.isInfinite(m.value())) {
-        items.add(toJson(m));
+        items.add(toJson(m, tags));
       }
     }
     return items.toString();
   }
 
-  private JsonObject toJson(Measurement m) {
+  private JsonObject toJson(Measurement m, Map<String, String> tags) {
+    Map<String, String> tagMap = new HashMap<>();
+    for (Tag t : m.id().tags()) {
+      tagMap.put(t.key(), t.value());
+    }
+    tagMap.putAll(tags);
+
     final JsonObject obj = new JsonObject();
     obj.add("timestamp", m.timestamp());
     obj.add("type",      getType(m.id()));
     obj.add("name",      m.id().name());
-    obj.add("tags",      toJson(m.id().tags()));
+    obj.add("tags",      toJson(tagMap));
     obj.add("value",     m.value());
     return obj;
   }
 
-  private JsonObject toJson(Iterable<Tag> tags) {
+  private JsonObject toJson(Map<String, String> tags) {
     final JsonObject obj = new JsonObject();
-    for (Tag t : tags) {
-      obj.add(t.key(), t.value());
+    for (Map.Entry<String, String> entry : tags.entrySet()) {
+      obj.add(entry.getKey(), entry.getValue());
     }
     return obj;
   }
@@ -150,12 +194,22 @@ public class SidecarRegistry extends AbstractRegistry {
     return DataType.GAUGE.value();
   }
 
+  private Map<String, String> getCommonTags() {
+    try {
+      return commonTags.call();
+    } catch (Exception e) {
+      LOGGER.warn("failed to determine common tags", e);
+      return null;
+    }
+  }
+
   private void postJson(URL url, List<Measurement> ms) throws Exception {
-    if (!ms.isEmpty()) {
-      LOGGER.debug("sending {} messages to sidecar {}", ms.size(), url.toString());
+    final Map<String, String> tags = getCommonTags();
+    if (!ms.isEmpty() && tags != null) {
+      LOGGER.info("sending {} messages to sidecar {} with tags {}", ms.size(), url.toString(), tags);
       numMessages.increment();
       numMeasurements.increment(ms.size());
-      String json = toJson(ms);
+      String json = toJson(ms, tags);
       HttpURLConnection con = (HttpURLConnection) url.openConnection();
       try {
         con.setRequestMethod("POST");
