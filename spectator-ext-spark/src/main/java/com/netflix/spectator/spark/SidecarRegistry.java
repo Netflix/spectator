@@ -37,6 +37,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ public class SidecarRegistry extends AbstractRegistry {
     @Override public Map<String, String> call() throws Exception {
       SparkEnv env = SparkEnv$.MODULE$.get();
       if (env == null) {
-        return null;
+        return Collections.emptyMap();
       } else {
         Map<String, String> tagMap = new HashMap<>();
         SparkConf conf = env.conf();
