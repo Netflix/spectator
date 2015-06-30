@@ -126,7 +126,7 @@ final class TagList implements Iterable<Tag>, Tag {
    *     New tag list with a copy of the data.
    */
   static TagList create(Iterable<Tag> tags) {
-    if (tags instanceof TagList) {
+    if (tags == EMPTY || tags instanceof TagList) {
       return (TagList) tags;
     } else {
       TagList head = EMPTY;
