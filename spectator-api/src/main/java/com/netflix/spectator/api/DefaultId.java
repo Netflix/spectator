@@ -64,17 +64,18 @@ public final class DefaultId implements Id {
   }
 
   /**
-   * Returns a new id with the tag list sorted by key and with no duplicate keys. If a duplicate
-   * is found the last entry in the list with a given key will be used.
+   * Returns a new id with the tag list sorted by key and with no duplicate keys.  This is equivalent to
+   * {@code rollup(Collections.<String>emptySet(), false)}.
    */
   public DefaultId normalize() {
     return rollup(EMPTY, false);
   }
 
   /**
-   * Create a new id by removing tags from the list. This operation will 1) sort the list by the
-   * tag keys, 2) dedup entries if multiple have the same key, and 3) remove keys specified by
-   * the parameters.
+   * Create a new id by possibly removing tags from the list.  This operation will:<br/>
+   *     1) remove keys as specified by the parameters<br/>
+   *     2) dedup entries that have the same key, the first value associated with the key will be the one kept,<br/>
+   *     3) sort the list by the tag keys.
    *
    * @param keys
    *     Set of keys to either keep or remove.
@@ -87,7 +88,7 @@ public final class DefaultId implements Id {
   public DefaultId rollup(Set<String> keys, boolean keep) {
     Map<String, String> ts = new TreeMap<>();
     for (Tag t : tags) {
-      if (keys.contains(t.key()) == keep) {
+      if (keys.contains(t.key()) == keep && !ts.containsKey(t.key())) {
         ts.put(t.key(), t.value());
       }
     }
