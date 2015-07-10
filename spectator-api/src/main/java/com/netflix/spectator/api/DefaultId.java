@@ -17,12 +17,13 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Preconditions;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /** Id implementation for the default registry. */
 public final class DefaultId implements Id {
-
-  private static final Set<String> EMPTY = new HashSet<>();
 
   private final String name;
   private final TagList tags;
@@ -68,7 +69,7 @@ public final class DefaultId implements Id {
    * is found the last entry in the list with a given key will be used.
    */
   public DefaultId normalize() {
-    return rollup(EMPTY, false);
+    return rollup(Collections.<String>emptySet(), false);
   }
 
   /**
