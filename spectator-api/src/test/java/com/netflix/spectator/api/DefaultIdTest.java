@@ -87,6 +87,24 @@ public class DefaultIdTest {
   }
 
   @Test
+  public void testRollupDeduping() {
+    Set<String> keys = new HashSet<>();
+    keys.add("k1");
+    DefaultId idWithDupes = (new DefaultId("foo")).withTag("k1", "v1").withTag("k1", "v2");
+    DefaultId expectedId = (new DefaultId("foo")).withTag("k1", "v2");
+    Assert.assertEquals(expectedId, idWithDupes.rollup(keys, true));
+  }
+
+  @Test
+  public void testRollupDedupingOfExcludedKey() {
+    Set<String> keys = new HashSet<>();
+    keys.add("k1");
+    DefaultId idWithDupes = (new DefaultId("foo")).withTag("k1", "v1").withTag("k1", "v2");
+    DefaultId expectedId = new DefaultId("foo");
+    Assert.assertEquals(expectedId, idWithDupes.rollup(keys, false));
+  }
+
+  @Test
   public void testToString() {
     DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
     Assert.assertEquals(id.toString(), "foo:k2=v2:k1=v1");
