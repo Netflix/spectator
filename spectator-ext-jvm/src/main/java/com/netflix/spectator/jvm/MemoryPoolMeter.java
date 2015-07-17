@@ -52,7 +52,7 @@ class MemoryPoolMeter extends AbstractMeter<MemoryPoolMXBean> {
     final List<Measurement> ms = new ArrayList<>();
     if (mbean != null) {
       final String typeKey = "memtype";
-      final String type = mbean.getName();
+      final String type = mbean.getType().name();
 
       final MemoryUsage usage = mbean.getUsage();
       ms.add(new Measurement(usedId.withTag(typeKey, type), timestamp, usage.getUsed()));
