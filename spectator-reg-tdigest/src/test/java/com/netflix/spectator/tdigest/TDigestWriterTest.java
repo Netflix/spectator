@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.tdigest;
 
-import com.netflix.spectator.api.DefaultId;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
 import com.tdunning.math.stats.TDigest;
 import org.junit.Assert;
@@ -37,16 +35,17 @@ import java.util.List;
 public class TDigestWriterTest {
 
   private final Registry registry = new DefaultRegistry();
+  private final Id id = registry.createId("foo");
 
   private ByteArrayOutputStream baos;
   private TDigestWriter writer;
 
   private Id bigId() {
-    Id id = new DefaultId("foo");
+    Id tmp = id;
     for (int i = 0; i < 10000; ++i) {
-      id = id.withTag("" + i, "" + i);
+      tmp = tmp.withTag("" + i, "" + i);
     }
-    return id;
+    return tmp;
   }
 
   @Before
@@ -57,7 +56,6 @@ public class TDigestWriterTest {
 
   @Test
   public void emptyDigest() throws Exception {
-    Id id = new DefaultId("foo");
     TDigestMeasurement m = new TDigestMeasurement(id, 0L, TDigest.createDigest(100.0));
     writer.write(Collections.singletonList(m));
     writer.close();
@@ -71,7 +69,6 @@ public class TDigestWriterTest {
 
   @Test
   public void simpleDigest() throws Exception {
-    Id id = new DefaultId("foo");
     TDigest d = TDigest.createDigest(100.0);
     d.add(1.0);
     TDigestMeasurement m = new TDigestMeasurement(id, 0L, d);
@@ -87,7 +84,6 @@ public class TDigestWriterTest {
 
   @Test
   public void overflow() throws Exception {
-    Id id = new DefaultId("foo");
     TDigestMeasurement m = new TDigestMeasurement(id, 0L, TDigest.createDigest(100.0));
     List<TDigestMeasurement> ms = new ArrayList<>();
     for (int i = 0; i < 50000; ++i) {
