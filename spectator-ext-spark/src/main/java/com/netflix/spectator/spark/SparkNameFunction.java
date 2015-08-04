@@ -15,8 +15,8 @@
  */
 package com.netflix.spectator.spark;
 
-import com.netflix.spectator.api.DefaultId;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 
@@ -40,18 +40,18 @@ public final class SparkNameFunction implements NameFunction {
    * Create a name function based on a config. It will use the key
    * {@code spectator.spark.name-patterns}.
    */
-  public static SparkNameFunction fromConfig(Config config) {
-    return fromConfig(config, "spectator.spark.name-patterns");
+  public static SparkNameFunction fromConfig(Config config, Registry registry) {
+    return fromConfig(config, "spectator.spark.name-patterns", registry);
   }
 
   /**
    * Create a name function based on a config.
    */
-  public static SparkNameFunction fromConfig(Config config, String key) {
-    return fromPatternList(config.getConfigList(key));
+  public static SparkNameFunction fromConfig(Config config, String key, Registry registry) {
+    return fromPatternList(config.getConfigList(key), registry);
   }
 
-  private static SparkNameFunction fromPatternList(List<? extends Config> patterns) {
+  private static SparkNameFunction fromPatternList(List<? extends Config> patterns, Registry registry) {
     final List<NameMatcher> matchers = new ArrayList<>();
     for (Config config : patterns) {
       final Pattern pattern = Pattern.compile(config.getString("pattern"));
@@ -60,18 +60,20 @@ public final class SparkNameFunction implements NameFunction {
       for (Map.Entry<String, ConfigValue> entry : tagsCfg.entrySet()) {
         tagsMap.put(entry.getKey(), (Integer) entry.getValue().unwrapped());
       }
-      matchers.add(new NameMatcher(pattern, config.getInt("name"), tagsMap));
+      matchers.add(new NameMatcher(pattern, registry, config.getInt("name"), tagsMap));
     }
     return new SparkNameFunction(matchers);
   }
 
   private static class NameMatcher {
     private final Pattern pattern;
+    private final Registry registry;
     private final int name;
     private final Map<String, Integer> tags;
 
-    NameMatcher(Pattern pattern, int name, Map<String, Integer> tags) {
+    NameMatcher(Pattern pattern, Registry registry, int name, Map<String, Integer> tags) {
       this.pattern = pattern;
+      this.registry = registry;
       this.name = name;
       this.tags = tags;
     }
@@ -79,7 +81,7 @@ public final class SparkNameFunction implements NameFunction {
     Id apply(String metric) {
       final Matcher m = pattern.matcher(metric);
       if (m.matches()) {
-        Id id = new DefaultId(PREFIX + m.group(name));
+        Id id = registry.createId(PREFIX + m.group(name));
         for (Map.Entry<String, Integer> entry : tags.entrySet()) {
           id = id.withTag(entry.getKey(), m.group(entry.getValue()));
         }
