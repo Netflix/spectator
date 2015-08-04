@@ -27,6 +27,8 @@ import org.junit.runners.JUnit4;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -48,6 +50,18 @@ public class TDigestWriterTest {
     return tmp;
   }
 
+  private List<List<TDigestMeasurement>> readAll(InputStream in) throws IOException {
+    List<List<TDigestMeasurement>> data = new ArrayList<>();
+    try (StreamTDigestReader r = new StreamTDigestReader(registry, in)) {
+      List<TDigestMeasurement> ms = r.read();
+      while (!ms.isEmpty()) {
+        data.add(ms);
+        ms = r.read();
+      }
+    }
+    return data;
+  }
+
   @Before
   public void init() {
     baos = new ByteArrayOutputStream();
@@ -61,7 +75,7 @@ public class TDigestWriterTest {
     writer.close();
 
     ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
-    List<List<TDigestMeasurement>> data = StreamTDigestReader.readAll(registry, in);
+    List<List<TDigestMeasurement>> data = readAll(in);
     Assert.assertEquals(1, data.size());
     Assert.assertEquals(1, data.get(0).size());
     Assert.assertEquals(Double.NaN, data.get(0).get(0).value().quantile(0.5), 0.2);
@@ -76,7 +90,7 @@ public class TDigestWriterTest {
     writer.close();
 
     ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
-    List<List<TDigestMeasurement>> data = StreamTDigestReader.readAll(registry, in);
+    List<List<TDigestMeasurement>> data = readAll(in);
     Assert.assertEquals(1, data.size());
     Assert.assertEquals(1, data.get(0).size());
     Assert.assertEquals(1.0, data.get(0).get(0).value().quantile(0.5), 0.2);
@@ -93,7 +107,7 @@ public class TDigestWriterTest {
     writer.close();
 
     ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
-    List<List<TDigestMeasurement>> data = StreamTDigestReader.readAll(registry, in);
+    List<List<TDigestMeasurement>> data = readAll(in);
     int count = 0;
     for (List<TDigestMeasurement> vs : data) {
       for (TDigestMeasurement v : vs) {
@@ -111,7 +125,7 @@ public class TDigestWriterTest {
     writer.close();
 
     ByteArrayInputStream in = new ByteArrayInputStream(baos.toByteArray());
-    List<List<TDigestMeasurement>> data = StreamTDigestReader.readAll(registry, in);
+    List<List<TDigestMeasurement>> data = readAll(in);
     Assert.assertEquals(0, data.size());
   }
 }
