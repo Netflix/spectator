@@ -16,6 +16,7 @@
 package com.netflix.spectator.tdigest;
 
 import com.amazonaws.services.kinesis.AmazonKinesisClient;
+import com.netflix.spectator.api.Registry;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,13 +36,15 @@ public class KinesisTDigestWriter extends TDigestWriter {
   /**
    * Create a new instance.
    *
+   * @param registry
+   *     Registry for creating metrics.
    * @param client
    *     Client for sending data to Kinesis.
    * @param stream
    *     Name of the stream to use for writing.
    */
-  public KinesisTDigestWriter(AmazonKinesisClient client, String stream) {
-    super();
+  public KinesisTDigestWriter(Registry registry, AmazonKinesisClient client, String stream) {
+    super(registry);
     this.client = client;
     this.stream = stream;
   }

@@ -16,6 +16,7 @@
 package com.netflix.spectator.tdigest;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.netflix.spectator.api.Registry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,13 @@ abstract class TDigestWriter implements AutoCloseable {
   private final ByteBuffer buf = ByteBuffer.allocate(BUFFER_SIZE);
   private final ByteBufferOutputStream out = new ByteBufferOutputStream(buf, 2);
 
+  private final Json json;
+
+  /** Create a new instance. */
+  TDigestWriter(Registry registry) {
+    this.json = new Json(registry);
+  }
+
   /**
    * Writes a buffer of data.
    *
@@ -58,12 +66,12 @@ abstract class TDigestWriter implements AutoCloseable {
    * Write a list of measurements to some underlying storage.
    */
   void write(List<TDigestMeasurement> measurements) throws IOException {
-    JsonGenerator gen = Json.newGenerator(out);
+    JsonGenerator gen = json.newGenerator(out);
     gen.writeStartArray();
     gen.flush();
     int pos = buf.position();
     for (TDigestMeasurement m : measurements) {
-      Json.encode(m, gen);
+      json.encode(m, gen);
       gen.flush();
 
       if (out.overflow()) {
@@ -75,16 +83,16 @@ abstract class TDigestWriter implements AutoCloseable {
 
         // Reuse the buffer and write the current entry
         out.reset();
-        gen = Json.newGenerator(out);
+        gen = json.newGenerator(out);
         gen.writeStartArray();
-        Json.encode(m, gen);
+        json.encode(m, gen);
         gen.flush();
 
         // If a single entry is too big, then drop it
         if (out.overflow()) {
           LOGGER.warn("dropping measurement {}, serialized size exceeds the buffer cap", m.id());
           out.reset();
-          gen = Json.newGenerator(out);
+          gen = json.newGenerator(out);
           gen.writeStartArray();
           gen.flush();
         }
@@ -98,7 +106,7 @@ abstract class TDigestWriter implements AutoCloseable {
 
         // Reuse the buffer
         out.reset();
-        gen = Json.newGenerator(out);
+        gen = json.newGenerator(out);
         gen.writeStartArray();
         gen.flush();
         pos = buf.position();

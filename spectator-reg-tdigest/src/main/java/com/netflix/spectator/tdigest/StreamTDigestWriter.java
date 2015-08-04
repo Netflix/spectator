@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.netflix.spectator.api.Registry;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,13 +31,13 @@ public class StreamTDigestWriter extends TDigestWriter {
   private final byte[] buf = new byte[BUFFER_SIZE];
 
   /** Create a new instance. */
-  public StreamTDigestWriter(OutputStream out) {
-    this(new DataOutputStream(out));
+  public StreamTDigestWriter(Registry registry, OutputStream out) {
+    this(registry, new DataOutputStream(out));
   }
 
   /** Create a new instance. */
-  public StreamTDigestWriter(DataOutputStream out) {
-    super();
+  public StreamTDigestWriter(Registry registry, DataOutputStream out) {
+    super(registry);
     this.out = out;
   }
 

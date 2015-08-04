@@ -50,7 +50,7 @@ public class TDigestPluginTest {
 
   private Map<Long, List<TDigestMeasurement>> readFromFile(File f) throws IOException {
     Map<Long, List<TDigestMeasurement>> result = new HashMap<>();
-    try (TDigestReader in = new FileTDigestReader(f)) {
+    try (TDigestReader in = new FileTDigestReader(new DefaultRegistry(), f)) {
       List<TDigestMeasurement> ms;
       while (!(ms = in.read()).isEmpty()) {
         for (TDigestMeasurement m : ms) {
@@ -72,7 +72,7 @@ public class TDigestPluginTest {
     f.getParentFile().mkdirs();
     final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
     final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
-    final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(f), config);
+    final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(new DefaultRegistry(), f), config);
 
     // Adding a bunch of tags to test the effect of setting
     // SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES.

@@ -20,6 +20,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
@@ -48,10 +49,10 @@ public class TDigestModule extends AbstractModule {
 
   @Provides
   @Singleton
-  private TDigestWriter providesWriter(TDigestConfig config) {
+  private TDigestWriter providesWriter(Registry registry, TDigestConfig config) {
     AmazonKinesisClient client = new AmazonKinesisClient();
     client.setEndpoint(config.getEndpoint());
-    return new KinesisTDigestWriter(client, config.getStream());
+    return new KinesisTDigestWriter(registry, client, config.getStream());
   }
 
   private static class OptionalInjections {

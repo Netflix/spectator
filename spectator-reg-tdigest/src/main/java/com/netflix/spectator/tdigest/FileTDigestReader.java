@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.netflix.spectator.api.Registry;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -24,7 +26,7 @@ import java.io.FileNotFoundException;
  */
 public class FileTDigestReader extends StreamTDigestReader {
   /** Create a new instance. */
-  public FileTDigestReader(File f) throws FileNotFoundException {
-    super(new FileInputStream(f));
+  public FileTDigestReader(Registry registry, File f) throws FileNotFoundException {
+    super(registry, new FileInputStream(f));
   }
 }
