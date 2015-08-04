@@ -16,6 +16,7 @@
 package com.netflix.spectator.spark;
 
 import com.netflix.spectator.api.DefaultId;
+import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
@@ -26,7 +27,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class SparkNameFunctionTest {
 
-  private final SparkNameFunction f = SparkNameFunction.fromConfig(ConfigFactory.load());
+  private final SparkNameFunction f = SparkNameFunction.fromConfig(ConfigFactory.load(), new DefaultRegistry());
 
   private void assertEquals(Id expected, Id actual) {
     Assert.assertEquals(((DefaultId) expected).normalize(), ((DefaultId) actual).normalize());
