@@ -23,6 +23,7 @@ import com.amazonaws.services.kinesis.model.GetShardIteratorResult;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ public class KinesisTDigestReader implements TDigestReader {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(KinesisTDigestReader.class);
 
+  private final Json json;
   private final AmazonKinesisClient client;
   private final GetShardIteratorRequest iterRequest;
 
@@ -53,6 +55,8 @@ public class KinesisTDigestReader implements TDigestReader {
    * Create a new instance that reads from the beginning of the shard. The iterator type is
    * set to {@code TRIM_HORIZON}.
    *
+   * @param registry
+   *     Registry for creating metrics.
    * @param client
    *     Client for interacting with the Kinesis service.
    * @param stream
@@ -60,8 +64,9 @@ public class KinesisTDigestReader implements TDigestReader {
    * @param shard
    *     Id of the shard to consume.
    */
-  public KinesisTDigestReader(AmazonKinesisClient client, String stream, String shard) {
-    this(client, new GetShardIteratorRequest()
+  public KinesisTDigestReader(
+      Registry registry, AmazonKinesisClient client, String stream, String shard) {
+    this(registry, client, new GetShardIteratorRequest()
         .withStreamName(stream)
         .withShardId(shard)
         .withShardIteratorType(ShardIteratorType.TRIM_HORIZON));
@@ -70,12 +75,16 @@ public class KinesisTDigestReader implements TDigestReader {
   /**
    * Create a new instance.
    *
+   * @param registry
+   *     Registry for creating metrics.
    * @param client
    *     Client for interacting with the Kinesis service.
    * @param iterRequest
    *     Request for getting the initial shard iterator.
    */
-  public KinesisTDigestReader(AmazonKinesisClient client, GetShardIteratorRequest iterRequest) {
+  public KinesisTDigestReader(
+      Registry registry, AmazonKinesisClient client, GetShardIteratorRequest iterRequest) {
+    this.json = new Json(registry);
     this.client = client;
     this.iterRequest = iterRequest;
     this.recordsProcessed = counter("recordsProcessed", iterRequest);
@@ -110,7 +119,7 @@ public class KinesisTDigestReader implements TDigestReader {
         recordsProcessed.increment();
         ByteBuffer data = r.getData();
         try {
-          ms.addAll(Json.decode(data.array()));
+          ms.addAll(json.decode(data.array()));
         } catch (Exception e) {
           recordsSkipped.increment();
           LOGGER.warn("failed to decode record, skipping (" + iterRequest + ")", e);

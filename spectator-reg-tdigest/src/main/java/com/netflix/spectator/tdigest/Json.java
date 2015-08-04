@@ -21,7 +21,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.fasterxml.jackson.dataformat.smile.SmileParser;
-import com.netflix.spectator.api.DefaultId;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.tdunning.math.stats.AVLTreeDigest;
 import com.tdunning.math.stats.TDigest;
@@ -49,16 +50,23 @@ final class Json {
        .disable(SmileParser.Feature.REQUIRE_HEADER);
   }
 
-  private Json() {
+  private final Registry registry;
+
+  /**
+   * Create a new instance that will use the specified registry to create id objects during
+   * deserialization.
+   */
+  Json(Registry registry) {
+    this.registry = registry;
   }
 
   /** Create a new generator for the output stream. */
-  static JsonGenerator newGenerator(OutputStream out) throws IOException {
+  JsonGenerator newGenerator(OutputStream out) throws IOException {
     return FACTORY.createGenerator(out);
   }
 
   /** Encode the measurement using the generator. */
-  static void encode(TDigestMeasurement m, JsonGenerator gen) throws IOException {
+  void encode(TDigestMeasurement m, JsonGenerator gen) throws IOException {
     TDigest digest = m.value();
     digest.compress();
     ByteBuffer buf = ByteBuffer.allocate(digest.byteSize());
@@ -77,7 +85,7 @@ final class Json {
   }
 
   /** Encode the measurements using the generator. */
-  static void encode(List<TDigestMeasurement> ms, JsonGenerator gen) throws IOException {
+  void encode(List<TDigestMeasurement> ms, JsonGenerator gen) throws IOException {
     gen.writeStartArray();
     for (TDigestMeasurement m : ms) {
       encode(m, gen);
@@ -86,7 +94,7 @@ final class Json {
   }
 
   /** Return a byte-array with the encoded measurements. */
-  static byte[] encode(List<TDigestMeasurement> ms) throws IOException {
+  byte[] encode(List<TDigestMeasurement> ms) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (JsonGenerator gen = FACTORY.createGenerator(baos)) {
       encode(ms, gen);
@@ -94,13 +102,13 @@ final class Json {
     return baos.toByteArray();
   }
 
-  private static void require(boolean condition, String msg) {
+  private void require(boolean condition, String msg) {
     if (!condition) {
       throw new IllegalArgumentException(msg);
     }
   }
 
-  private static void expect(JsonParser parser, JsonToken expected) throws IOException {
+  private void expect(JsonParser parser, JsonToken expected) throws IOException {
     JsonToken t = parser.nextToken();
     if (t != expected) {
       String msg = String.format("expected %s, but found %s", expected, t);
@@ -108,10 +116,10 @@ final class Json {
     }
   }
 
-  private static TDigestMeasurement decode(JsonParser parser) throws IOException {
+  private TDigestMeasurement decode(JsonParser parser) throws IOException {
     expect(parser, JsonToken.START_OBJECT);
     require("name".equals(parser.nextFieldName()), "expected name");
-    DefaultId id = new DefaultId(parser.nextTextValue());
+    Id id = registry.createId(parser.nextTextValue());
     while (parser.nextToken() == JsonToken.FIELD_NAME) {
       id = id.withTag(parser.getText(), parser.nextTextValue());
     }
@@ -123,12 +131,12 @@ final class Json {
   }
 
   /** Decode a list of measurements from a byte array. */
-  static List<TDigestMeasurement> decode(byte[] data) throws IOException {
+  List<TDigestMeasurement> decode(byte[] data) throws IOException {
     return decode(data, 0, data.length);
   }
 
   /** Decode a list of measurements from a range of a byte array. */
-  static List<TDigestMeasurement> decode(byte[] data, int offset, int length) throws IOException {
+  List<TDigestMeasurement> decode(byte[] data, int offset, int length) throws IOException {
     JsonParser parser = FACTORY.createParser(data, offset, length);
     List<TDigestMeasurement> ms = new ArrayList<>();
     expect(parser, JsonToken.START_ARRAY);

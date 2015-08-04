@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.netflix.spectator.api.Registry;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -25,7 +27,7 @@ import java.io.FileOutputStream;
 public class FileTDigestWriter extends StreamTDigestWriter {
 
   /** Create a new instance. */
-  public FileTDigestWriter(File file) throws FileNotFoundException {
-    super(new FileOutputStream(file));
+  public FileTDigestWriter(Registry registry, File file) throws FileNotFoundException {
+    super(registry, new FileOutputStream(file));
   }
 }
