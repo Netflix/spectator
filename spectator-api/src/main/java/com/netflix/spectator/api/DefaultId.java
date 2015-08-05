@@ -23,7 +23,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /** Id implementation for the default registry. */
-public final class DefaultId implements Id {
+final class DefaultId implements Id {
 
   private final String name;
   private final TagList tags;
@@ -68,7 +68,7 @@ public final class DefaultId implements Id {
    * Returns a new id with the tag list sorted by key and with no duplicate keys.  This is equivalent to
    * {@code rollup(Collections.<String>emptySet(), false)}.
    */
-  public DefaultId normalize() {
+  DefaultId normalize() {
     return rollup(Collections.<String>emptySet(), false);
   }
 
@@ -86,7 +86,7 @@ public final class DefaultId implements Id {
    * @return
    *     New identifier after applying the rollup.
    */
-  public DefaultId rollup(Set<String> keys, boolean keep) {
+  DefaultId rollup(Set<String> keys, boolean keep) {
     Map<String, String> ts = new TreeMap<>();
     for (Tag t : tags) {
       if (keys.contains(t.key()) == keep && !ts.containsKey(t.key())) {

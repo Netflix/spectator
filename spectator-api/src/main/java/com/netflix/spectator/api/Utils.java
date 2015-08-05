@@ -29,6 +29,13 @@ public final class Utils {
   }
 
   /**
+   * Returns a new id with the tag list sorted by key and with no duplicate keys.
+   */
+  public static Id normalize(Id id) {
+    return (new DefaultId(id.name())).withTags(id.tags()).normalize();
+  }
+
+  /**
    * Returns the value associated with with a given key or null if no such key is present in the
    * set of tags.
    *
