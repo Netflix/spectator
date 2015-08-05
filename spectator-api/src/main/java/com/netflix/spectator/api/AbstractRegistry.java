@@ -97,37 +97,21 @@ public abstract class AbstractRegistry implements Registry {
     }
   }
 
-  private Meter putIfAbsent(Id id, Meter m, Meter fallback) {
-    return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : meters.putIfAbsent(id, m);
+  private Meter compute(Meter m, Meter fallback) {
+    return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : m;
   }
 
   @Override public final void register(Meter meter) {
-    Meter m = meters.get(meter.id());
-    if (m == null) {
-      if (meters.size() >= Config.maxNumberOfMeters()) {
-        return;
-      }
-      AggrMeter aggr = new AggrMeter(meter.id());
-      m = meters.putIfAbsent(meter.id(), aggr);
-      if (m == null) {
-        aggr.add(meter);
-      } else {
-        addToAggr(m, meter);
-      }
-    } else {
-      addToAggr(m, meter);
+    Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
+      ? meters.get(meter.id())
+      : meters.computeIfAbsent(meter.id(), id -> new AggrMeter(id));
+    if (aggr != null) {
+      addToAggr(aggr, meter);
     }
   }
 
   @Override public final Counter counter(Id id) {
-    Meter m = meters.get(id);
-    if (m == null) {
-      Counter c = newCounter(id);
-      m = putIfAbsent(id, c, NoopCounter.INSTANCE);
-      if (m == null) {
-        m = c;
-      }
-    }
+    Meter m = meters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
     if (!(m instanceof Counter)) {
       logTypeError(id, Counter.class, m.getClass());
       m = NoopCounter.INSTANCE;
@@ -136,14 +120,8 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
-    Meter m = meters.get(id);
-    if (m == null) {
-      DistributionSummary s = newDistributionSummary(id);
-      m = putIfAbsent(id, s, NoopDistributionSummary.INSTANCE);
-      if (m == null) {
-        m = s;
-      }
-    }
+    Meter m = meters.computeIfAbsent(id, i ->
+        compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
     if (!(m instanceof DistributionSummary)) {
       logTypeError(id, DistributionSummary.class, m.getClass());
       m = NoopDistributionSummary.INSTANCE;
@@ -152,14 +130,7 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Timer timer(Id id) {
-    Meter m = meters.get(id);
-    if (m == null) {
-      Timer t = newTimer(id);
-      m = putIfAbsent(id, t, NoopTimer.INSTANCE);
-      if (m == null) {
-        m = t;
-      }
-    }
+    Meter m = meters.computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
     if (!(m instanceof Timer)) {
       logTypeError(id, Timer.class, m.getClass());
       m = NoopTimer.INSTANCE;
