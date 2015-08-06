@@ -19,7 +19,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.netflix.spectator.api.Counter;
-import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,7 +34,7 @@ public class TestModuleTest {
     private final Counter counter;
 
     @Inject
-    public Foo(ExtendedRegistry registry) {
+    public Foo(Registry registry) {
       counter = registry.counter("foo.doSomething");
     }
 
@@ -52,7 +52,7 @@ public class TestModuleTest {
 
   @Test
   public void checkCount() {
-    ExtendedRegistry r = injector.getInstance(ExtendedRegistry.class);
+    Registry r = injector.getInstance(Registry.class);
     Counter c = r.counter("foo.doSomething");
     Assert.assertEquals(0, c.count());
 
@@ -63,7 +63,7 @@ public class TestModuleTest {
 
   @Test
   public void notGlobal() {
-    ExtendedRegistry r = injector.getInstance(ExtendedRegistry.class);
+    Registry r = injector.getInstance(Registry.class);
     Assert.assertNotSame(Spectator.registry(), r);
   }
 }

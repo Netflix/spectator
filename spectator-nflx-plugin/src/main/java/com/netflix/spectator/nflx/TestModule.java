@@ -32,8 +32,8 @@ import com.netflix.spectator.api.Registry;
  */
 public final class TestModule extends AbstractModule {
   @Override protected void configure() {
-    final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
-    bind(ExtendedRegistry.class).toInstance(registry);
+    final Registry registry = new DefaultRegistry();
+    bind(ExtendedRegistry.class).toInstance(new ExtendedRegistry(registry));
     bind(Registry.class).toInstance(registry);
 
     // Allows auto-plugin to come up without needing to get DiscoveryClient to work

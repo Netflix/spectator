@@ -201,7 +201,7 @@ public class DefaultRegistryTest {
   public void testMaxLimitExceededRegister() {
     System.setProperty("spectator.api.maxNumberOfMeters", "1");
     final AtomicInteger one = new AtomicInteger(1);
-    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry(clock));
+    Registry r = new DefaultRegistry(clock);
 
     Assert.assertEquals(sum(r), 0.0, 1e-12);
     r.gauge(r.createId("c1"), one);

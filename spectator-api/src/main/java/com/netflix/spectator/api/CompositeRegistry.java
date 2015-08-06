@@ -39,6 +39,7 @@ final class CompositeRegistry implements Registry {
    * Find the first registry in the composite that is an instance of {@code c}. If no match is
    * found then null will be returned.
    */
+  @SuppressWarnings("unchecked")
   <T extends Registry> T find(Class<T> c) {
     for (Registry r : registries) {
       if (c.isAssignableFrom(r.getClass())) {
