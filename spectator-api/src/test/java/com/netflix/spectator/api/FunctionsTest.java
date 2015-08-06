@@ -24,7 +24,7 @@ import org.junit.runners.JUnit4;
 public class FunctionsTest {
 
   private final ManualClock clock = new ManualClock();
-  private final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
+  private final Registry registry = new DefaultRegistry();
 
   @Test
   public void ageFunction() {
@@ -39,7 +39,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodByte() throws Exception {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(getClass(), "byteMethod"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
     Assert.assertEquals(f.apply(this), 1.0, 1e-12);
   }
 
@@ -49,7 +49,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodShort() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(getClass(), "shortMethod"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
     Assert.assertEquals(f.apply(this), 2.0, 1e-12);
   }
 
@@ -59,7 +59,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodInt() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(getClass(), "intMethod"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
     Assert.assertEquals(f.apply(this), 3.0, 1e-12);
   }
 
@@ -69,7 +69,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodLong() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(getClass(), "longMethod"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
     Assert.assertEquals(f.apply(this), 4.0, 1e-12);
   }
 
@@ -80,7 +80,7 @@ public class FunctionsTest {
   @Test
   public void invokeMethodWrapperLong() throws Exception  {
     final ValueFunction f = Functions.invokeMethod(
-        registry.getMethod(getClass(), "wrapperLongMethod"));
+        Utils.getMethod(getClass(), "wrapperLongMethod"));
     Assert.assertEquals(f.apply(this), 5.0, 1e-12);
   }
 
@@ -90,30 +90,30 @@ public class FunctionsTest {
 
   @Test
   public void invokeBadMethod() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(getClass(), "throwsMethod"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
     Assert.assertEquals(f.apply(this), Double.NaN, 1e-12);
   }
 
   @Test(expected = NoSuchMethodException.class)
   public void invokeNoSuchMethod() throws Exception  {
-    Functions.invokeMethod(registry.getMethod(getClass(), "unknownMethod"));
+    Functions.invokeMethod(Utils.getMethod(getClass(), "unknownMethod"));
   }
 
   @Test
   public void invokeOnSubclass() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(B.class, "two"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
     Assert.assertEquals(f.apply(new B()), 2.0, 1e-12);
   }
 
   @Test
   public void invokeOneA() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(A.class, "one"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
     Assert.assertEquals(f.apply(new A()), 1.0, 1e-12);
   }
 
   @Test
   public void invokeOneB() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(registry.getMethod(B.class, "one"));
+    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
     Assert.assertEquals(f.apply(new B()), -1.0, 1e-12);
   }
 

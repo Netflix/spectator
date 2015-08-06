@@ -16,8 +16,8 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
+import com.netflix.spectator.api.Registry;
 import iep.com.netflix.iep.http.RxHttp;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
@@ -95,13 +95,13 @@ public class ChronosGcEventListenerTest {
   }
 
   private long reqCount(int status) {
-    ExtendedRegistry r = Spectator.registry();
+    Registry r = Spectator.registry();
     Id requests = r.createId("spectator.gc.chronosPost", "status", "" + status);
     return r.timer(requests).count();
   }
 
   private long reqCount(String status) {
-    ExtendedRegistry r = Spectator.registry();
+    Registry r = Spectator.registry();
     Id requests = r.createId("spectator.gc.chronosPost", "status", status);
     return r.timer(requests).count();
   }

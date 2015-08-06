@@ -19,7 +19,6 @@ import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -43,7 +42,7 @@ public class TDigestModule extends AbstractModule {
 
   @Provides
   @Singleton
-  private TDigestRegistry providesRegistry(ExtendedRegistry registry, TDigestConfig config) {
+  private TDigestRegistry providesRegistry(Registry registry, TDigestConfig config) {
     return new TDigestRegistry(registry, config);
   }
 

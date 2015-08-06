@@ -16,7 +16,10 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,7 +28,48 @@ import java.util.List;
  * Helper functions for working with a sequence of measurements.
  */
 public final class Utils {
+
+  private static final Logger REGISTRY_LOGGER = LoggerFactory.getLogger(Registry.class);
+
   private Utils() {
+  }
+
+  /** Search for a method in the class and all superclasses. */
+  static Method getMethod(Class<?> cls, String name) throws NoSuchMethodException {
+    NoSuchMethodException firstExc = null;
+    for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
+      try {
+        return c.getDeclaredMethod(name);
+      } catch (NoSuchMethodException e) {
+        if (firstExc == null) {
+          firstExc = e;
+        }
+      }
+    }
+    throw firstExc;
+  }
+
+  /** Return a method supplying a value for a gauge. */
+  static Method getGaugeMethod(Id id, Object obj, String method) {
+    try {
+      final Method m = Utils.getMethod(obj.getClass(), method);
+      try {
+        // Make sure we can cast the response to a Number
+        final Number n = (Number) m.invoke(obj);
+        REGISTRY_LOGGER.debug(
+            "registering gauge {}, using method [{}], with initial value {}", id, m, n);
+        return m;
+      } catch (Exception e) {
+        final String msg = "exception thrown invoking method [" + m
+            + "], skipping registration of gauge " + id;
+        Throwables.propagate(msg, e);
+      }
+    } catch (NoSuchMethodException e) {
+      final String mname = obj.getClass().getName() + "." + method;
+      final String msg = "invalid method [" + mname + "], skipping registration of gauge " + id;
+      Throwables.propagate(msg, e);
+    }
+    return null;
   }
 
   /**
@@ -196,5 +240,19 @@ public final class Utils {
       buf.add(iter.next());
     }
     return buf;
+  }
+
+  /**
+   * Returns an iterable of tags based on a string array.
+   */
+  static Iterable<Tag> toIterable(String[] tags) {
+    if (tags.length % 2 == 1) {
+      throw new IllegalArgumentException("size must be even, it is a set of key=value pairs");
+    }
+    TagList ts = TagList.EMPTY;
+    for (int i = 0; i < tags.length; i += 2) {
+      ts = new TagList(tags[i], tags[i + 1], ts);
+    }
+    return ts;
   }
 }

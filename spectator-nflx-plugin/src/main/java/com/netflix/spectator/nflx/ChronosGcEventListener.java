@@ -19,8 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.config.DynamicBooleanProperty;
 import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.config.DynamicStringProperty;
+import com.netflix.spectator.api.Registry;
 import iep.com.netflix.iep.http.RxHttp;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
@@ -55,7 +55,7 @@ class ChronosGcEventListener implements GcEventListener {
 
   private final Logger logger = LoggerFactory.getLogger(getClass());
 
-  private final ExtendedRegistry registry = Spectator.registry();
+  private final Registry registry = Spectator.registry();
   private final Id requestCount = registry.createId("spectator.gc.chronosPost");
 
   private final ObjectMapper mapper = new ObjectMapper();
