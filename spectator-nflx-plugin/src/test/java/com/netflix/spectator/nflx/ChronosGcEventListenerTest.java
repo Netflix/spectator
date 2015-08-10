@@ -100,12 +100,6 @@ public class ChronosGcEventListenerTest {
     return r.timer(requests).count();
   }
 
-  private long reqCount(String status) {
-    Registry r = Spectator.registry();
-    Id requests = r.createId("spectator.gc.chronosPost", "status", status);
-    return r.timer(requests).count();
-  }
-
   private GcEvent newGcEvent() {
     GcInfo gcInfo = null;
     for (java.lang.management.GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
@@ -129,46 +123,7 @@ public class ChronosGcEventListenerTest {
     listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 
-    Assert.assertEquals(before + 1, reqCount(200));
-  }
-
-  private void errorTest(int status, int attempts) throws Exception {
-    errorTest(status, attempts, "" + status);
-  }
-
-  private void errorTest(int status, int attempts, String statusStr) throws Exception {
-    statusCode.set(status);
-    long before2xx = reqCount(200);
-    long beforeError = reqCount(statusStr);
-    int errorCount = statusCounts.get(status);
-
-    final ChronosGcEventListener listener = newListener();
-    listener.onComplete(newGcEvent(), true);
-    listener.shutdown();
-
-    Assert.assertEquals(errorCount + attempts, statusCounts.get(status));
-    Assert.assertEquals(before2xx, reqCount(200));
-    Assert.assertEquals(beforeError + 1, reqCount(statusStr));
-  }
-
-  @Test
-  public void clientError() throws Exception {
-    errorTest(400, 1);
-  }
-
-  @Test
-  public void serverError() throws Exception {
-    errorTest(500, retries + 1);
-  }
-
-  @Test
-  public void serverThrottle429() throws Exception {
-    errorTest(429, retries + 1);
-  }
-
-  @Test
-  public void serverThrottle503() throws Exception {
-    errorTest(503, retries + 1);
+    Assert.assertTrue(reqCount(200) > before);
   }
 }
 
