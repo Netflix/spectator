@@ -64,6 +64,6 @@ public class TestModuleTest {
   @Test
   public void notGlobal() {
     Registry r = injector.getInstance(Registry.class);
-    Assert.assertNotSame(Spectator.registry(), r);
+    Assert.assertNotSame(Spectator.globalRegistry(), r);
   }
 }

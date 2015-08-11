@@ -29,13 +29,14 @@ public class SpectatorTest {
 
   @Test
   public void testNewInstanceBadClass() {
+    Spectator.globalRegistry().removeAll();
     System.setProperty("spectator.api.propagateWarnings", "false");
-    Assert.assertTrue(Spectator.newInstance("fubar") instanceof DefaultRegistry);
+    Spectator.addRegistries("fubar");
   }
 
   @Test(expected = RuntimeException.class)
   public void testNewInstanceBadClassPropagate() {
     System.setProperty("spectator.api.propagateWarnings", "true");
-    Spectator.newInstance("fubar");
+    Spectator.addRegistries("fubar");
   }
 }

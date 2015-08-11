@@ -22,7 +22,6 @@ import com.netflix.config.DynamicStringProperty;
 import com.netflix.spectator.api.Registry;
 import iep.com.netflix.iep.http.RxHttp;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
 import com.netflix.spectator.gc.GcEventListener;
 import com.sun.management.GcInfo;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import rx.functions.Action0;
 import rx.functions.Action1;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
@@ -55,8 +55,8 @@ class ChronosGcEventListener implements GcEventListener {
 
   private final Logger logger = LoggerFactory.getLogger(getClass());
 
-  private final Registry registry = Spectator.registry();
-  private final Id requestCount = registry.createId("spectator.gc.chronosPost");
+  private final Registry registry;
+  private final Id requestCount;
 
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -68,8 +68,11 @@ class ChronosGcEventListener implements GcEventListener {
   private final RxHttp rxHttp;
 
   /** Create a new instance. */
-  ChronosGcEventListener(RxHttp rxHttp) {
+  @Inject
+  ChronosGcEventListener(RxHttp rxHttp, Registry registry) {
     this.rxHttp = rxHttp;
+    this.registry = registry;
+    requestCount = registry.createId("spectator.gc.chronosPost");
   }
 
   private String getenv(String k) {

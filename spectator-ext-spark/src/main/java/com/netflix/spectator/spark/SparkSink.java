@@ -16,7 +16,6 @@
 package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
-import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
 import com.typesafe.config.Config;
@@ -62,7 +61,7 @@ public class SparkSink implements Sink {
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) throws MalformedURLException {
     final Config config = loadConfig();
-    sidecarRegistry = Spectator.registry().underlying(SidecarRegistry.class);
+    sidecarRegistry = new SidecarRegistry();
     reporter = SpectatorReporter.forRegistry(registry)
         .withNameFunction(SparkNameFunction.fromConfig(config, sidecarRegistry))
         .withValueFunction(SparkValueFunction.fromConfig(config))
@@ -89,7 +88,7 @@ public class SparkSink implements Sink {
 
   private void startJvmCollection() {
     try {
-      Jmx.registerStandardMXBeans(Spectator.registry());
+      Jmx.registerStandardMXBeans(sidecarRegistry);
       gcLogger = new GcLogger();
       gcLogger.start(null);
     } catch (Exception e) {

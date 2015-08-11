@@ -25,7 +25,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
  * registry. Otherwise activity will be sent to all registries that are part of the composite.
  */
-final class CompositeRegistry implements Registry {
+public final class CompositeRegistry implements Registry {
 
   /**
    * Id used for a meter storing all gauges registered with the composite. Since there is no
@@ -69,6 +69,11 @@ final class CompositeRegistry implements Registry {
   /** Remove a registry from the composite. */
   public void remove(Registry registry) {
     registries.remove(registry);
+  }
+
+  /** Remove all registries from the composite. */
+  public void removeAll() {
+    registries.clear();
   }
 
   @Override public Clock clock() {

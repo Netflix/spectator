@@ -112,7 +112,7 @@ public final class SpectatorAppender extends AbstractAppender {
       return null;
     }
 
-    return new SpectatorAppender(Spectator.registry(), name, filter, layout, ignoreExceptions);
+    return new SpectatorAppender(Spectator.globalRegistry(), name, filter, layout, ignoreExceptions);
   }
 
   @Override public void start() {
