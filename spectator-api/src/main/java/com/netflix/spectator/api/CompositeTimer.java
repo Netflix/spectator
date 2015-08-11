@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -22,22 +24,16 @@ import java.util.concurrent.TimeUnit;
 final class CompositeTimer extends CompositeMeter implements Timer {
 
   private final Clock clock;
-  private final Timer[] timers;
 
   /** Create a new instance. */
-  CompositeTimer(Id id, Clock clock, Timer[] timers) {
-    super(id);
+  CompositeTimer(Id id, Clock clock, Collection<Registry> registries) {
+    super(id, registries);
     this.clock = clock;
-    this.timers = timers;
-  }
-
-  @Override protected Meter[] meters() {
-    return timers;
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    for (Timer t : timers) {
-      t.record(amount, unit);
+    for (Registry r : registries) {
+      r.timer(id).record(amount, unit);
     }
   }
 
@@ -62,10 +58,12 @@ final class CompositeTimer extends CompositeMeter implements Timer {
   }
 
   @Override public long count() {
-    return (timers.length == 0) ? 0L : timers[0].count();
+    Iterator<Registry> it = registries.iterator();
+    return it.hasNext() ? it.next().timer(id).count() : 0L;
   }
 
   @Override public long totalTime() {
-    return (timers.length == 0) ? 0L : timers[0].totalTime();
+    Iterator<Registry> it = registries.iterator();
+    return it.hasNext() ? it.next().timer(id).totalTime() : 0L;
   }
 }

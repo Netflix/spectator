@@ -15,34 +15,31 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 /** Counter implementation for the composite registry. */
 final class CompositeCounter extends CompositeMeter implements Counter {
 
-  private final Counter[] counters;
-
   /** Create a new instance. */
-  CompositeCounter(Id id, Counter[] counters) {
-    super(id);
-    this.counters = counters;
-  }
-
-  @Override protected Meter[] meters() {
-    return counters;
+  CompositeCounter(Id id, Collection<Registry> registries) {
+    super(id, registries);
   }
 
   @Override public void increment() {
-    for (Counter c : counters) {
-      c.increment();
+    for (Registry r : registries) {
+      r.counter(id).increment();
     }
   }
 
   @Override public void increment(long amount) {
-    for (Counter c : counters) {
-      c.increment(amount);
+    for (Registry r : registries) {
+      r.counter(id).increment(amount);
     }
   }
 
   @Override public long count() {
-    return (counters.length == 0) ? 0L : counters[0].count();
+    Iterator<Registry> it = registries.iterator();
+    return it.hasNext() ? it.next().counter(id).count() : 0L;
   }
 }
