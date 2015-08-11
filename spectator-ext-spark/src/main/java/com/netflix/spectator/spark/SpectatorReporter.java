@@ -107,7 +107,7 @@ public final class SpectatorReporter extends ScheduledReporter {
     /** Create a new instance of the reporter. */
     public SpectatorReporter build() {
       if (spectatorRegistry == null) {
-        spectatorRegistry = Spectator.registry();
+        spectatorRegistry = Spectator.globalRegistry();
       }
       return new SpectatorReporter(
           registry, spectatorRegistry, nameFunction, valueFunction, gaugeCounters);

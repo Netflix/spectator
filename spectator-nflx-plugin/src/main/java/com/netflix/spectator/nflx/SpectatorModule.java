@@ -15,8 +15,11 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.netflix.spectator.servo.ServoRegistry;
 import iep.com.netflix.iep.rxnetty.RxNettyModule;
 
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.google.inject.AbstractModule;
@@ -62,6 +65,7 @@ public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
     install(new RxNettyModule());
     bind(Plugin.class).asEagerSingleton();
+    bind(StaticManager.class).asEagerSingleton();
   }
 
   @Provides
@@ -69,18 +73,33 @@ public final class SpectatorModule extends AbstractModule {
   ExtendedRegistry getExtendedRegistry() {
     return Spectator.registry();
   }
-  
+
   @Provides
   @Singleton
   Registry getRegistry() {
-    return Spectator.registry();
+    return new ServoRegistry();
   }
-  
+
   @Override public boolean equals(Object obj) {
     return obj != null && getClass().equals(obj.getClass());
   }
 
   @Override public int hashCode() {
     return getClass().hashCode();
+  }
+
+  private static class StaticManager {
+    private final Registry registry;
+
+    @Inject
+    StaticManager(Registry registry) {
+      this.registry = registry;
+      Spectator.globalRegistry().add(registry);
+    }
+
+    @PreDestroy
+    void onShutdown() {
+      Spectator.globalRegistry().remove(registry);
+    }
   }
 }

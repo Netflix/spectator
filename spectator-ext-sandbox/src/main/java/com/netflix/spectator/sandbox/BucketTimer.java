@@ -41,7 +41,7 @@ public final class BucketTimer implements Timer {
    *     Timer that manages sub-timers based on the bucket function.
    */
   public static BucketTimer get(Id id, BucketFunction f) {
-    return get(Spectator.registry(), id, f);
+    return get(Spectator.globalRegistry(), id, f);
   }
 
   /**

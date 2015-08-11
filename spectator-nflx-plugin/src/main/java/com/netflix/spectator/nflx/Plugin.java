@@ -16,15 +16,13 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
-import iep.com.netflix.iep.http.RxHttp;
-import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
@@ -33,7 +31,7 @@ import java.io.IOException;
  * Plugin for setting up spectator to report correctly into the standard Netflix stack.
  */
 @Singleton
-public final class Plugin {
+final class Plugin {
 
   private static final String CONFIG_FILE = "spectator.properties";
 
@@ -43,28 +41,22 @@ public final class Plugin {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Plugin.class);
 
-  private final RxHttp rxHttp;
-
   /** Create a new instance. */
   @Inject
-  public Plugin(RxHttp rxHttp) {
-    this.rxHttp = rxHttp;
-  }
+  Plugin(Registry registry, ChronosGcEventListener listener) throws IOException {
 
-  @PostConstruct
-  private void init() throws IOException {
     AbstractConfiguration config = ConfigurationManager.getConfigInstance();
     final boolean enabled = config.getBoolean(ENABLED_PROP, true);
     if (enabled) {
       ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
       if (config.getBoolean("spectator.gc.loggingEnabled")) {
-        GC_LOGGER.start(new ChronosGcEventListener(rxHttp));
+        GC_LOGGER.start(listener);
         LOGGER.info("gc logging started");
       } else {
         LOGGER.info("gc logging is not enabled");
       }
 
-      Jmx.registerStandardMXBeans(Spectator.registry());
+      Jmx.registerStandardMXBeans(registry);
     } else {
       LOGGER.debug("plugin not enabled, set " + ENABLED_PROP + "=true to enable");
     }

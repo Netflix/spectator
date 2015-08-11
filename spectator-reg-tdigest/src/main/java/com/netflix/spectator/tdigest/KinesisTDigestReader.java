@@ -24,7 +24,6 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ShardIteratorType;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Spectator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,13 +86,13 @@ public class KinesisTDigestReader implements TDigestReader {
     this.json = new Json(registry);
     this.client = client;
     this.iterRequest = iterRequest;
-    this.recordsProcessed = counter("recordsProcessed", iterRequest);
-    this.recordsSkipped = counter("recordsSkipped", iterRequest);
+    this.recordsProcessed = counter(registry, "recordsProcessed", iterRequest);
+    this.recordsSkipped = counter(registry, "recordsSkipped", iterRequest);
     this.recRequest = null;
   }
 
-  private Counter counter(String name, GetShardIteratorRequest req) {
-    return Spectator.registry().counter("spectator.tdigest." + name,
+  private Counter counter(Registry registry, String name, GetShardIteratorRequest req) {
+    return registry.counter("spectator.tdigest." + name,
         "stream", req.getStreamName(),
         "shard", req.getShardId());
   }
