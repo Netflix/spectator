@@ -16,41 +16,53 @@
 package com.netflix.spectator.api;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @RunWith(JUnit4.class)
 public class CompositeDistributionSummaryTest {
 
   private final ManualClock clock = new ManualClock();
 
-  private DistributionSummary newDistributionSummary(int n) {
-    DistributionSummary[] ms = new DistributionSummary[n];
-    for (int i = 0; i < n; ++i) {
-      ms[i] = new DefaultDistributionSummary(clock, new DefaultId("foo"));
-    }
-    return new CompositeDistributionSummary(new DefaultId("foo"), ms);
+  private final Id id = new DefaultId("foo");
+  private List<Registry> registries;
+
+  private DistributionSummary newDistributionSummary() {
+    return new CompositeDistributionSummary(id, registries);
   }
 
   private void assertCountEquals(DistributionSummary t, long expected) {
     Assert.assertEquals(t.count(), expected);
-    for (Meter m : ((CompositeDistributionSummary) t).meters()) {
-      Assert.assertEquals(((DistributionSummary) m).count(), expected);
+    for (Registry r : registries) {
+      Assert.assertEquals(r.distributionSummary(id).count(), expected);
     }
   }
 
   private void assertTotalEquals(DistributionSummary t, long expected) {
     Assert.assertEquals(t.totalAmount(), expected);
-    for (Meter m : ((CompositeDistributionSummary) t).meters()) {
-      Assert.assertEquals(((DistributionSummary) m).totalAmount(), expected);
+    for (Registry r : registries) {
+      Assert.assertEquals(r.distributionSummary(id).totalAmount(), expected);
+    }
+  }
+
+  @Before
+  public void init() {
+    registries = new ArrayList<>();
+    for (int i = 0; i < 5; ++i) {
+      registries.add(new DefaultRegistry(clock));
     }
   }
 
   @Test
   public void empty() {
     DistributionSummary t = new CompositeDistributionSummary(
-      NoopId.INSTANCE, new DistributionSummary[] {});
+      NoopId.INSTANCE, Collections.<Registry>emptyList());
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
     t.record(1L);
@@ -60,14 +72,14 @@ public class CompositeDistributionSummaryTest {
 
   @Test
   public void testInit() {
-    DistributionSummary t = newDistributionSummary(5);
+    DistributionSummary t = newDistributionSummary();
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
   }
 
   @Test
   public void testRecord() {
-    DistributionSummary t = newDistributionSummary(5);
+    DistributionSummary t = newDistributionSummary();
     t.record(42);
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 42L);
@@ -75,7 +87,7 @@ public class CompositeDistributionSummaryTest {
 
   @Test
   public void testMeasure() {
-    DistributionSummary t = newDistributionSummary(5);
+    DistributionSummary t = newDistributionSummary();
     t.record(42);
     clock.setWallTime(3712345L);
     for (Measurement m : t.measure()) {

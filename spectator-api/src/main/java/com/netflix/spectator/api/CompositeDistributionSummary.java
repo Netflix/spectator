@@ -15,32 +15,30 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.Collection;
+import java.util.Iterator;
+
 /** Distribution summary implementation for the composite registry. */
 final class CompositeDistributionSummary extends CompositeMeter implements DistributionSummary {
 
-  private final DistributionSummary[] summaries;
-
   /** Create a new instance. */
-  CompositeDistributionSummary(Id id, DistributionSummary[] summaries) {
-    super(id);
-    this.summaries = summaries;
-  }
-
-  @Override protected Meter[] meters() {
-    return summaries;
+  CompositeDistributionSummary(Id id, Collection<Registry> registries) {
+    super(id, registries);
   }
 
   @Override public void record(long amount) {
-    for (DistributionSummary t : summaries) {
-      t.record(amount);
+    for (Registry r : registries) {
+      r.distributionSummary(id).record(amount);
     }
   }
 
   @Override public long count() {
-    return (summaries.length == 0) ? 0L : summaries[0].count();
+    Iterator<Registry> it = registries.iterator();
+    return it.hasNext() ? it.next().distributionSummary(id).count() : 0L;
   }
 
   @Override public long totalAmount() {
-    return (summaries.length == 0) ? 0L : summaries[0].totalAmount();
+    Iterator<Registry> it = registries.iterator();
+    return it.hasNext() ? it.next().distributionSummary(id).totalAmount() : 0L;
   }
 }

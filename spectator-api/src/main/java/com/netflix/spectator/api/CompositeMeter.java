@@ -16,16 +16,20 @@
 package com.netflix.spectator.api;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 
 /**
  * Base class for composite implementations of core meter types.
  */
-abstract class CompositeMeter implements Meter {
+class CompositeMeter implements Meter {
 
   /** Identifier for the meter. */
   protected final Id id;
+
+  /** Underlying registries that are keeping the data. */
+  protected final Collection<Registry> registries;
 
   /**
    * Create a new instance.
@@ -33,19 +37,18 @@ abstract class CompositeMeter implements Meter {
    * @param id
    *     Identifier for the meter.
    */
-  public CompositeMeter(Id id) {
+  public CompositeMeter(Id id, Collection<Registry> registries) {
     this.id = id;
+    this.registries = registries;
   }
-
-  /** Subclasses should define this method to specify the list of meters for the composite. */
-  protected abstract Meter[] meters();
 
   @Override public Id id() {
     return this.id;
   }
 
   @Override public boolean hasExpired() {
-    for (Meter m : meters()) {
+    for (Registry r : registries) {
+      Meter m = r.get(id);
       if (!m.hasExpired()) return false;
     }
     return true;
@@ -53,9 +56,12 @@ abstract class CompositeMeter implements Meter {
 
   @Override public Iterable<Measurement> measure() {
     final List<Measurement> ms = new ArrayList<>();
-    for (Meter meter : meters()) {
-      for (Measurement measurement : meter.measure()) {
-        ms.add(measurement);
+    for (Registry r : registries) {
+      Meter m = r.get(id);
+      if (m != null) {
+        for (Measurement measurement : m.measure()) {
+          ms.add(measurement);
+        }
       }
     }
     return ms;

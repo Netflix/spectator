@@ -16,33 +16,45 @@
 package com.netflix.spectator.api;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @RunWith(JUnit4.class)
 public class CompositeCounterTest {
 
   private final ManualClock clock = new ManualClock();
 
-  private Counter newCounter(int n) {
-    Counter[] ms = new Counter[n];
-    for (int i = 0; i < n; ++i) {
-      ms[i] = new DefaultCounter(clock, NoopId.INSTANCE);
-    }
-    return new CompositeCounter(NoopId.INSTANCE, ms);
+  private final Id id = new DefaultId("foo");
+  private List<Registry> registries;
+
+  private Counter newCounter() {
+    return new CompositeCounter(id, registries);
   }
 
   private void assertCountEquals(Counter c, long expected) {
     Assert.assertEquals(c.count(), expected);
-    for (Meter m : ((CompositeCounter) c).meters()) {
-      Assert.assertEquals(((Counter) m).count(), expected);
+    for (Registry r : registries) {
+      Assert.assertEquals(r.counter(id).count(), expected);
+    }
+  }
+
+  @Before
+  public void before() {
+    registries = new ArrayList<>();
+    for (int i = 0; i < 5; ++i) {
+      registries.add(new DefaultRegistry(clock));
     }
   }
 
   @Test
   public void empty() {
-    Counter c = new CompositeCounter(NoopId.INSTANCE, new Counter[] {});
+    Counter c = new CompositeCounter(NoopId.INSTANCE, Collections.<Registry>emptyList());
     assertCountEquals(c, 0L);
     c.increment();
     assertCountEquals(c, 0L);
@@ -50,13 +62,13 @@ public class CompositeCounterTest {
 
   @Test
   public void init() {
-    Counter c = newCounter(5);
+    Counter c = newCounter();
     assertCountEquals(c, 0L);
   }
 
   @Test
   public void increment() {
-    Counter c = newCounter(5);
+    Counter c = newCounter();
     c.increment();
     assertCountEquals(c, 1L);
     c.increment();
@@ -66,14 +78,14 @@ public class CompositeCounterTest {
 
   @Test
   public void incrementAmount() {
-    Counter c = newCounter(5);
+    Counter c = newCounter();
     c.increment(42);
     assertCountEquals(c, 42L);
   }
 
   @Test
   public void measure() {
-    Counter c = newCounter(5);
+    Counter c = newCounter();
     c.increment(42);
     clock.setWallTime(3712345L);
     for (Measurement m : c.measure()) {

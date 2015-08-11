@@ -77,11 +77,12 @@ public final class Spectator {
       if (rs.isEmpty()) {
         return new DefaultRegistry();
       } else {
-        Registry r = (rs.size() == 1)
-            ? rs.get(0)
-            : new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));
+        CompositeRegistry composite = new CompositeRegistry(Clock.SYSTEM);
+        for (Registry r : rs) {
+          composite.add(r);
+        }
         LOGGER.info("using registries found in classpath: {}", desc.toString());
-        return r;
+        return composite;
       }
     } else {
       LOGGER.warn("no registry impl found in classpath, using default");

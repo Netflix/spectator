@@ -16,10 +16,14 @@
 package com.netflix.spectator.api;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -28,31 +32,38 @@ public class CompositeTimerTest {
 
   private final ManualClock clock = new ManualClock();
 
-  private Timer newTimer(int n) {
-    Timer[] ms = new Timer[n];
-    for (int i = 0; i < n; ++i) {
-      ms[i] = new DefaultTimer(clock, new DefaultId("foo"));
-    }
-    return new CompositeTimer(new DefaultId("foo"), clock, ms);
+  private final Id id = new DefaultId("foo");
+  private List<Registry> registries;
+
+  private Timer newTimer() {
+    return new CompositeTimer(new DefaultId("foo"), clock, registries);
   }
 
   private void assertCountEquals(Timer t, long expected) {
     Assert.assertEquals(t.count(), expected);
-    for (Meter m : ((CompositeTimer) t).meters()) {
-      Assert.assertEquals(((Timer) m).count(), expected);
+    for (Registry r : registries) {
+      Assert.assertEquals(r.timer(id).count(), expected);
     }
   }
 
   private void assertTotalEquals(Timer t, long expected) {
     Assert.assertEquals(t.totalTime(), expected);
-    for (Meter m : ((CompositeTimer) t).meters()) {
-      Assert.assertEquals(((Timer) m).totalTime(), expected);
+    for (Registry r : registries) {
+      Assert.assertEquals(r.timer(id).totalTime(), expected);
+    }
+  }
+
+  @Before
+  public void init() {
+    registries = new ArrayList<>();
+    for (int i = 0; i < 5; ++i) {
+      registries.add(new DefaultRegistry(clock));
     }
   }
 
   @Test
   public void empty() {
-    Timer t = new CompositeTimer(NoopId.INSTANCE, clock, new Timer[] {});
+    Timer t = new CompositeTimer(NoopId.INSTANCE, clock, Collections.<Registry>emptyList());
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
     t.record(1L, TimeUnit.SECONDS);
@@ -62,14 +73,14 @@ public class CompositeTimerTest {
 
   @Test
   public void testInit() {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
   }
 
   @Test
   public void testRecord() {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     t.record(42, TimeUnit.MILLISECONDS);
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 42000000L);
@@ -77,7 +88,7 @@ public class CompositeTimerTest {
 
   @Test
   public void testRecordCallable() throws Exception {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     clock.setMonotonicTime(100L);
     int v = t.record(new Callable<Integer>() {
       public Integer call() throws Exception {
@@ -92,7 +103,7 @@ public class CompositeTimerTest {
 
   @Test
   public void testRecordCallableException() throws Exception {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
@@ -112,7 +123,7 @@ public class CompositeTimerTest {
 
   @Test
   public void testRecordRunnable() throws Exception {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     clock.setMonotonicTime(100L);
     t.record(new Runnable() {
       public void run() {
@@ -125,7 +136,7 @@ public class CompositeTimerTest {
 
   @Test
   public void testRecordRunnableException() throws Exception {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
@@ -145,7 +156,7 @@ public class CompositeTimerTest {
 
   @Test
   public void testMeasure() {
-    Timer t = newTimer(5);
+    Timer t = newTimer();
     t.record(42, TimeUnit.MILLISECONDS);
     clock.setWallTime(3712345L);
     for (Measurement m : t.measure()) {
