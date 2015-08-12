@@ -19,26 +19,23 @@ import com.netflix.servo.monitor.MaxGauge;
 import com.netflix.servo.monitor.Monitor;
 import com.netflix.servo.monitor.NumericMonitor;
 import com.netflix.servo.monitor.StepCounter;
-import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.AbstractTimer;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Tag;
-import com.netflix.spectator.api.Timer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Timer implementation for the servo registry. */
-class ServoTimer implements Timer, ServoMeter {
+class ServoTimer extends AbstractTimer implements ServoMeter {
 
   private static final double CNV_SECONDS = 1.0 / TimeUnit.SECONDS.toNanos(1L);
   private static final double CNV_SQUARES = CNV_SECONDS * CNV_SECONDS;
 
-  private final Clock clock;
   private final Id id;
 
   // Local count so that we have more flexibility on servo counter impl without changing the
@@ -55,7 +52,7 @@ class ServoTimer implements Timer, ServoMeter {
 
   /** Create a new instance. */
   ServoTimer(ServoRegistry r, Id id) {
-    this.clock = r.clock();
+    super(r.clock());
     this.id = id;
     count = new AtomicLong(0L);
     totalTime = new AtomicLong(0L);
@@ -118,26 +115,6 @@ class ServoTimer implements Timer, ServoMeter {
     ms.add(newMeasurement(Statistic.totalOfSquares, now, getValue(servoTotalOfSquares, CNV_SQUARES)));
     ms.add(newMeasurement(Statistic.max, now, getValue(servoMax, CNV_SECONDS)));
     return ms;
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   @Override public long count() {

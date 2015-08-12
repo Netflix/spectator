@@ -17,21 +17,19 @@ package com.netflix.spectator.api;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Timer implementation for the default registry. */
-final class DefaultTimer implements Timer {
+final class DefaultTimer extends AbstractTimer {
 
-  private final Clock clock;
   private final Id id;
   private final AtomicLong count;
   private final AtomicLong totalTime;
 
   /** Create a new instance. */
   DefaultTimer(Clock clock, Id id) {
-    this.clock = clock;
+    super(clock);
     this.id = id;
     count = new AtomicLong(0L);
     totalTime = new AtomicLong(0L);
@@ -59,26 +57,6 @@ final class DefaultTimer implements Timer {
     ms.add(new Measurement(id.withTag(Statistic.count), now, count.get()));
     ms.add(new Measurement(id.withTag(Statistic.totalTime), now, totalTime.get()));
     return ms;
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   @Override public long count() {
