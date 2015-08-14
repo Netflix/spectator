@@ -19,6 +19,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
 /**
  * Registry to manage a set of meters.
@@ -327,7 +328,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Number> T gauge(Id id, T number) {
-    return gauge(id, number, Functions.IDENTITY);
+    return (T) gauge(id, number, (ToDoubleFunction<T>) Functions.IDENTITY);
   }
 
   /**
@@ -379,14 +380,14 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
-  default <T> T gauge(Id id, T obj, ValueFunction f) {
+  default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
     register(new ObjectGauge(clock(), id, obj, f));
     return obj;
   }
 
   /**
    * Register a gauge that reports the value of the object. See
-   * {@link #gauge(Id, Object, ValueFunction)}.
+   * {@link #gauge(Id, Object, ToDoubleFunction)}.
    *
    * @param name
    *     Name of the metric being registered.
@@ -398,7 +399,7 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
-  default <T> T gauge(String name, T obj, ValueFunction f) {
+  default <T> T gauge(String name, T obj, ToDoubleFunction<T> f) {
     return gauge(createId(name), obj, f);
   }
 
@@ -418,7 +419,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
-    return gauge(id, collection, Functions.COLLECTION_SIZE);
+    return gauge(id, collection, Collection::size);
   }
 
   /**
@@ -456,7 +457,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
-    return gauge(id, collection, Functions.MAP_SIZE);
+    return gauge(id, collection, Map::size);
   }
 
   /**
