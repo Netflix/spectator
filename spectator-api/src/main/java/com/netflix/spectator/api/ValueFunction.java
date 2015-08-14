@@ -15,10 +15,15 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.function.ToDoubleFunction;
+
 /**
  * Function to extract a double value from an object.
+ *
+ * @deprecated Use {@link ToDoubleFunction} instead.
  */
-public interface ValueFunction {
+@Deprecated
+public interface ValueFunction<T> extends ToDoubleFunction<T> {
   /**
    * Returns a double value based on the object {@code ref}.
    *
@@ -27,5 +32,9 @@ public interface ValueFunction {
    * @return
    *     Double value based on the object.
    */
-  double apply(Object ref);
+  double apply(T ref);
+
+  @Override default double applyAsDouble(T ref) {
+    return apply(ref);
+  }
 }

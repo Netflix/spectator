@@ -16,13 +16,14 @@
 package com.netflix.spectator.api;
 
 import java.util.Collections;
+import java.util.function.ToDoubleFunction;
 
 /**
  * Gauge that is defined by executing a {@link ValueFunction} on an object.
  */
 class ObjectGauge extends AbstractMeter<Object> implements Gauge {
 
-  private final ValueFunction f;
+  private final ToDoubleFunction f;
 
   /**
    * Create a gauge that samples the provided number for the value.
@@ -37,7 +38,7 @@ class ObjectGauge extends AbstractMeter<Object> implements Gauge {
    *     Function that is applied on the value for the number. The operation {@code f.apply(obj)}
    *     should be thread-safe.
    */
-  ObjectGauge(Clock clock, Id id, Object obj, ValueFunction f) {
+  ObjectGauge(Clock clock, Id id, Object obj, ToDoubleFunction f) {
     super(clock, id, obj);
     this.f = f;
   }
@@ -48,6 +49,6 @@ class ObjectGauge extends AbstractMeter<Object> implements Gauge {
 
   @Override public double value() {
     final Object obj = ref.get();
-    return (obj == null) ? Double.NaN : f.apply(obj);
+    return (obj == null) ? Double.NaN : f.applyAsDouble(obj);
   }
 }

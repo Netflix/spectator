@@ -146,6 +146,39 @@ public class ExtendedRegistryTest {
   }
 
   @Test
+  public void testGaugeHelpersWithCustomFunction() {
+    AtomicLong al1 = new AtomicLong(1L);
+    Registry r = new DefaultRegistry(new ManualClock(40, 0));
+    DoubleFunction f = new DoubleFunction() {
+      @Override
+      public double apply(double v) {
+        return (r.clock().wallTime() - v) / 1000.0;
+      }
+    };
+    AtomicLong v1 = r.gauge("foo", al1, f);
+    Assert.assertSame(v1, al1);
+    Id id1 = r.createId("foo");
+    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 39.0 / 1000.0, 1e-12);
+  }
+
+  @Test
+  public void testGaugeHelpersWithCustomFunction2() {
+    AtomicLong al1 = new AtomicLong(1L);
+    Registry r = new DefaultRegistry(new ManualClock(40, 0));
+    ValueFunction f = new ValueFunction() {
+      @Override
+      public double apply(Object obj) {
+        double v = ((Number) obj).doubleValue();
+        return (r.clock().wallTime() - v) / 1000.0;
+      }
+    };
+    AtomicLong v1 = r.gauge("foo", al1, f);
+    Assert.assertSame(v1, al1);
+    Id id1 = r.createId("foo");
+    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 39.0 / 1000.0, 1e-12);
+  }
+
+  @Test
   public void testCollectionSizeHelpers() {
     Registry r = new DefaultRegistry();
     LinkedBlockingDeque<String> q1 = new LinkedBlockingDeque<>();
@@ -208,5 +241,26 @@ public class ExtendedRegistryTest {
     Registry r = new DefaultRegistry();
     r.methodValue("queueSize", this, "unknownMethod");
     Assert.assertNull(r.get(r.createId("queueSize")));
+  }
+
+  @Test
+  public void gaugeUsingLambda() {
+    Registry r = new DefaultRegistry();
+    GaugeUsingLambda g = new GaugeUsingLambda(r);
+    for (Measurement m : r.get(r.createId("test")).measure()) {
+      Assert.assertEquals(84.0, m.value(), 1e-12);
+    }
+  }
+
+  public static class GaugeUsingLambda {
+
+    public GaugeUsingLambda(Registry r) {
+      r.gauge("test", this, (obj) -> obj.getValue());
+      r.gauge("test", this, GaugeUsingLambda::getValue);
+    }
+
+    private int getValue() {
+      return 42;
+    }
   }
 }

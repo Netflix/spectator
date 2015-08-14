@@ -15,15 +15,15 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.function.ToDoubleFunction;
+
 /**
  * Function to extract a double value from an object.
  */
-public abstract class DoubleFunction implements ValueFunction {
+public abstract class DoubleFunction<T extends Number> implements ToDoubleFunction<T> {
 
-  @Override public double apply(Object obj) {
-    return (obj instanceof Number)
-      ? apply(((Number) obj).doubleValue())
-      : Double.NaN;
+  @Override public double applyAsDouble(T n) {
+    return apply(n.doubleValue());
   }
 
   /**
@@ -34,5 +34,5 @@ public abstract class DoubleFunction implements ValueFunction {
    * @return
    *     Result of applying this function to `v`.
    */
-  public abstract double apply(double v);
+  abstract double apply(double v);
 }

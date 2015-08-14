@@ -20,6 +20,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.function.ToDoubleFunction;
+
 @RunWith(JUnit4.class)
 public class FunctionsTest {
 
@@ -39,8 +41,8 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodByte() throws Exception {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
-    Assert.assertEquals(f.apply(this), 1.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
+    Assert.assertEquals(f.applyAsDouble(this), 1.0, 1e-12);
   }
 
   private short shortMethod() {
@@ -49,8 +51,8 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodShort() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
-    Assert.assertEquals(f.apply(this), 2.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
+    Assert.assertEquals(f.applyAsDouble(this), 2.0, 1e-12);
   }
 
   private int intMethod() {
@@ -59,8 +61,8 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodInt() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
-    Assert.assertEquals(f.apply(this), 3.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
+    Assert.assertEquals(f.applyAsDouble(this), 3.0, 1e-12);
   }
 
   private long longMethod() {
@@ -69,8 +71,8 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodLong() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
-    Assert.assertEquals(f.apply(this), 4.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
+    Assert.assertEquals(f.applyAsDouble(this), 4.0, 1e-12);
   }
 
   private Long wrapperLongMethod() {
@@ -79,9 +81,9 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodWrapperLong() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(
+    final ToDoubleFunction f = Functions.invokeMethod(
         Utils.getMethod(getClass(), "wrapperLongMethod"));
-    Assert.assertEquals(f.apply(this), 5.0, 1e-12);
+    Assert.assertEquals(f.applyAsDouble(this), 5.0, 1e-12);
   }
 
   private Long throwsMethod() {
@@ -90,8 +92,8 @@ public class FunctionsTest {
 
   @Test
   public void invokeBadMethod() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
-    Assert.assertEquals(f.apply(this), Double.NaN, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
+    Assert.assertEquals(f.applyAsDouble(this), Double.NaN, 1e-12);
   }
 
   @Test(expected = NoSuchMethodException.class)
@@ -101,20 +103,20 @@ public class FunctionsTest {
 
   @Test
   public void invokeOnSubclass() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
-    Assert.assertEquals(f.apply(new B()), 2.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
+    Assert.assertEquals(f.applyAsDouble(new B()), 2.0, 1e-12);
   }
 
   @Test
   public void invokeOneA() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
-    Assert.assertEquals(f.apply(new A()), 1.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
+    Assert.assertEquals(f.applyAsDouble(new A()), 1.0, 1e-12);
   }
 
   @Test
   public void invokeOneB() throws Exception  {
-    final ValueFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
-    Assert.assertEquals(f.apply(new B()), -1.0, 1e-12);
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
+    Assert.assertEquals(f.applyAsDouble(new B()), -1.0, 1e-12);
   }
 
   private static class A {
