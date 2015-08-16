@@ -17,20 +17,20 @@
  * Primary interfaces for working with spectator. To get started, here is a small code sample:
  *
  * <pre>
- * Server s = new Server(Spectator.registry());
+ * Server s = new Server(new DefaultRegistry());
  *
  * class Server {
- *   private final ExtendedRegistry registry;
+ *   private final Registry registry;
  *   private final Id requestCountId;
  *   private final Timer requestLatency;
  *   private final DistributionSummary responseSizes;
  *
- *   public Server(ExtendedRegistry registry) {
+ *   public Server(Registry registry) {
  *     this.registry = registry;
  *     requestCountId = registry.createId("server.requestCount");
  *     requestLatency = registry.timer("server.requestLatency");
  *     responseSizes = registry.distributionSummary("server.responseSizes");
- *     registry.methodValue("server.numConnections", this, "getNumConnections");
+ *     registry.gauge("server.numConnections", this, Server::getNumConnections);
  *   }
  *
  *   public Response handle(Request req) {
@@ -68,8 +68,7 @@
  *
  * <ul>
  *   <li>{@link com.netflix.spectator.api.Spectator}: static entrypoint to access the registry.</li>
- *   <li>{@link com.netflix.spectator.api.ExtendedRegistry}: registry class used to create
- *       meters.</li>
+ *   <li>{@link com.netflix.spectator.api.Registry}: registry class used to create meters.</li>
  *   <li>{@link com.netflix.spectator.api.Counter}: meter type for measuring a rate of change.</li>
  *   <li>{@link com.netflix.spectator.api.Timer}: meter type for measuring the time for many short
  *       events.</li>
