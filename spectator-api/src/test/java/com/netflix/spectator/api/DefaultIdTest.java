@@ -87,6 +87,12 @@ public class DefaultIdTest {
   }
 
   @Test
+  public void testRollupJustName() {
+    DefaultId id = new DefaultId("foo");
+    Assert.assertSame(id, id.normalize());
+  }
+
+  @Test
   public void testRollupDeduping() {
     Set<String> keys = new HashSet<>();
     keys.add("k1");

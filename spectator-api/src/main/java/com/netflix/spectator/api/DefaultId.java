@@ -87,13 +87,17 @@ final class DefaultId implements Id {
    *     New identifier after applying the rollup.
    */
   DefaultId rollup(Set<String> keys, boolean keep) {
-    Map<String, String> ts = new TreeMap<>();
-    for (Tag t : tags) {
-      if (keys.contains(t.key()) == keep && !ts.containsKey(t.key())) {
-        ts.put(t.key(), t.value());
+    if (tags == TagList.EMPTY) {
+      return this;
+    } else {
+      Map<String, String> ts = new TreeMap<>();
+      for (Tag t : tags) {
+        if (keys.contains(t.key()) == keep && !ts.containsKey(t.key())) {
+          ts.put(t.key(), t.value());
+        }
       }
+      return new DefaultId(name, TagList.create(ts));
     }
-    return new DefaultId(name, TagList.create(ts));
   }
 
   @Override public boolean equals(Object obj) {
