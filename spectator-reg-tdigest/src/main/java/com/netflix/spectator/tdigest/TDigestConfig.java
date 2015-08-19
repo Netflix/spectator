@@ -17,6 +17,9 @@ package com.netflix.spectator.tdigest;
 
 import com.typesafe.config.Config;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,5 +49,14 @@ public final class TDigestConfig {
   /** Polling frequency for digest data. */
   public long getPollingFrequency(TimeUnit unit) {
     return cfg.getDuration("polling-frequency", unit);
+  }
+
+  /** Common tags to add on when pushing to the writer. */
+  public Map<String, String> getCommonTags() {
+    Map<String, String> tags = new HashMap<>();
+    for (Config t : cfg.getConfigList("tags")) {
+      tags.put(t.getString("key"), t.getString("value"));
+    }
+    return Collections.unmodifiableMap(tags);
   }
 }
