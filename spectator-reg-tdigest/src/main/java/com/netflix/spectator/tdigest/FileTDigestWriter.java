@@ -27,7 +27,8 @@ import java.io.FileOutputStream;
 public class FileTDigestWriter extends StreamTDigestWriter {
 
   /** Create a new instance. */
-  public FileTDigestWriter(Registry registry, File file) throws FileNotFoundException {
-    super(registry, new FileOutputStream(file));
+  public FileTDigestWriter(Registry registry, TDigestConfig config, File file)
+      throws FileNotFoundException {
+    super(registry, config, new FileOutputStream(file));
   }
 }

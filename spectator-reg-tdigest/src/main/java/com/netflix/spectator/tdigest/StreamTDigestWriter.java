@@ -31,13 +31,13 @@ public class StreamTDigestWriter extends TDigestWriter {
   private final byte[] buf = new byte[BUFFER_SIZE];
 
   /** Create a new instance. */
-  public StreamTDigestWriter(Registry registry, OutputStream out) {
-    this(registry, new DataOutputStream(out));
+  public StreamTDigestWriter(Registry registry, TDigestConfig config, OutputStream out) {
+    this(registry, config, new DataOutputStream(out));
   }
 
   /** Create a new instance. */
-  public StreamTDigestWriter(Registry registry, DataOutputStream out) {
-    super(registry);
+  public StreamTDigestWriter(Registry registry, TDigestConfig config, DataOutputStream out) {
+    super(registry, config);
     this.out = out;
   }
 

@@ -51,7 +51,7 @@ public class TDigestModule extends AbstractModule {
   private TDigestWriter providesWriter(Registry registry, TDigestConfig config) {
     AmazonKinesisClient client = new AmazonKinesisClient();
     client.setEndpoint(config.getEndpoint());
-    return new KinesisTDigestWriter(registry, client, config.getStream());
+    return new KinesisTDigestWriter(registry, client, config);
   }
 
   private static class OptionalInjections {

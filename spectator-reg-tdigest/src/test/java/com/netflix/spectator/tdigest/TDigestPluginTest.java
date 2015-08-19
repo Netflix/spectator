@@ -72,7 +72,8 @@ public class TDigestPluginTest {
     f.getParentFile().mkdirs();
     final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
     final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
-    final TDigestPlugin p = new TDigestPlugin(r, new FileTDigestWriter(new DefaultRegistry(), f), config);
+    final TDigestWriter w = new FileTDigestWriter(new DefaultRegistry(), config, f);
+    final TDigestPlugin p = new TDigestPlugin(r, w, config);
 
     // Adding a bunch of tags to test the effect of setting
     // SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES.
