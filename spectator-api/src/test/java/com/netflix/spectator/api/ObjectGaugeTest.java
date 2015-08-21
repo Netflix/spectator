@@ -30,7 +30,7 @@ public class ObjectGaugeTest {
   @Test
   public void testGC() {
     ObjectGauge g = new ObjectGauge(
-      clock, NoopId.INSTANCE, new AtomicLong(42L), Functions.IDENTITY);
+      clock, NoopId.INSTANCE, new AtomicLong(42L), );
     for (Measurement m : g.measure()) {
       Assert.assertEquals(m.value(), 42.0, 1e-12);
     }
