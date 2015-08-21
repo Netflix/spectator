@@ -404,6 +404,50 @@ public interface Registry extends Iterable<Meter> {
   }
 
   /**
+   * Register a gauge that reports the value of the object after the function
+   * {@code f} is applied. The registration will keep a weak reference to the number so it will
+   * not prevent garbage collection. The number implementation used should be thread safe.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   *
+   * @deprecated Use {@link #gauge(Id, Object, ToDoubleFunction)}.
+   */
+  @Deprecated
+  default <T> T gauge(Id id, T obj, ValueFunction<T> f) {
+    register(new ObjectGauge(clock(), id, obj, f));
+    return obj;
+  }
+
+  /**
+   * Register a gauge that reports the value of the object. See
+   * {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   *
+   * @deprecated Use {@link #gauge(String, Object, ToDoubleFunction)}.
+   */
+  @Deprecated
+  default <T> T gauge(String name, T obj, ValueFunction<T> f) {
+    return gauge(createId(name), obj, f);
+  }
+
+  /**
    * Register a gauge that reports the size of the {@link java.util.Collection}. The registration
    * will keep a weak reference to the collection so it will not prevent garbage collection.
    * The collection implementation used should be thread safe. Note that calling
