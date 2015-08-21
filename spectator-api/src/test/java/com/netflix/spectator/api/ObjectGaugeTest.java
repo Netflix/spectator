@@ -29,8 +29,8 @@ public class ObjectGaugeTest {
 
   @Test
   public void testGC() {
-    ObjectGauge g = new ObjectGauge(
-      clock, NoopId.INSTANCE, new AtomicLong(42L), );
+    ObjectGauge<AtomicLong> g = new ObjectGauge<>(
+      clock, NoopId.INSTANCE, new AtomicLong(42L), Number::doubleValue);
     for (Measurement m : g.measure()) {
       Assert.assertEquals(m.value(), 42.0, 1e-12);
     }
