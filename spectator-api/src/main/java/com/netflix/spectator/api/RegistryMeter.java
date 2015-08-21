@@ -52,8 +52,12 @@ class RegistryMeter implements Meter {
   @Override public Iterable<Measurement> measure() {
     List<Measurement> ms = new ArrayList<>();
     for (Meter m : registry) {
-      for (Measurement measurement : m.measure()) {
-        ms.add(measurement);
+      try {
+        for (Measurement measurement : m.measure()) {
+          ms.add(measurement);
+        }
+      } catch (Exception e) {
+        Throwables.propagate("failed to measure " + m.id(), e);
       }
     }
     return ms;
