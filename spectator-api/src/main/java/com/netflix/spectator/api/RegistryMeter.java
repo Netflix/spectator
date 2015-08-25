@@ -56,7 +56,10 @@ class RegistryMeter implements Meter {
         for (Measurement measurement : m.measure()) {
           ms.add(measurement);
         }
-      } catch (Exception e) {
+      } catch (Exception | LinkageError e) {
+        // Linkage errors sometimes happen due to compatibility issues. If it is a problem for
+        // the application, then it can fail elsewhere. If it happens for monitoring, then the
+        // additional context of the id is typically helpful.
         Throwables.propagate("failed to measure " + m.id(), e);
       }
     }
