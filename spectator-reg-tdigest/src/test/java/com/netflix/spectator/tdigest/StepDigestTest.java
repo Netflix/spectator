@@ -18,6 +18,7 @@ package com.netflix.spectator.tdigest;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +29,8 @@ import org.junit.runners.JUnit4;
 public class StepDigestTest {
 
   private final ManualClock clock = new ManualClock();
-  private final Id id = (new DefaultRegistry()).createId("foo");
+  private final Registry registry = new DefaultRegistry(clock);
+  private final Id id = registry.createId("foo");
 
   @Before
   public void init() {
@@ -37,14 +39,14 @@ public class StepDigestTest {
 
   @Test
   public void none() throws Exception {
-    StepDigest digest = new StepDigest(id, 100.0, clock, 10);
+    StepDigest digest = new StepDigest(registry, id, 100.0, 10);
     clock.setWallTime(10);
     Assert.assertEquals(Double.NaN, digest.poll().quantile(0.5), 0.2);
   }
 
   @Test
   public void addOne() throws Exception {
-    StepDigest digest = new StepDigest(id, 100.0, clock, 10);
+    StepDigest digest = new StepDigest(registry, id, 100.0, 10);
     digest.add(1.0);
     clock.setWallTime(10);
     Assert.assertEquals(1.0, digest.poll().quantile(0.5), 0.2);
@@ -52,7 +54,7 @@ public class StepDigestTest {
 
   @Test
   public void addTwoValues() throws Exception {
-    StepDigest digest = new StepDigest(id, 100.0, clock, 10);
+    StepDigest digest = new StepDigest(registry, id, 100.0, 10);
     digest.add(1.0);
     digest.add(100.0);
     clock.setWallTime(10);
