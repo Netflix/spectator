@@ -34,5 +34,5 @@ public abstract class DoubleFunction<T extends Number> implements ToDoubleFuncti
    * @return
    *     Result of applying this function to `v`.
    */
-  abstract double apply(double v);
+  public abstract double apply(double v);
 }

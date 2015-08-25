@@ -43,7 +43,7 @@ public class CompatibilityTest {
     EXPECTED.add("Measurement(dist:statistic=totalAmount:a=b,1234567890,504.0)");
     EXPECTED.add("Measurement(gauge,1234567890,49.0)");
     EXPECTED.add("Measurement(gauge-age,1234567890,0.049)");
-    EXPECTED.add("Measurement(gauge-function,1234567890,35.0)");
+    EXPECTED.add("Measurement(gauge-function,1234567890,65.0)");
     EXPECTED.add("Measurement(gauge:node=i-12345:asg=foo-dev-v001:cluster=foo-dev:app=foo,1234567890,7.0)");
     EXPECTED.add("Measurement(long-timer:statistic=activeTasks,1234567890,1.0)");
     EXPECTED.add("Measurement(long-timer:statistic=activeTasks:a=b,1234567890,3.0)");
