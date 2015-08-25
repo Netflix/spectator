@@ -39,7 +39,7 @@ public final class Functions {
    * {@link java.lang.Number} interface.
    */
   public static final DoubleFunction<? extends Number> IDENTITY = new DoubleFunction<Number>() {
-    @Override double apply(double v) {
+    @Override public double apply(double v) {
       return v;
     }
   };
