@@ -16,10 +16,10 @@
 package com.netflix.spectator.tdigest;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.tdunning.math.stats.TDigest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,15 +33,15 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 class StepDigest {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(StepDigest.class);
+  private final Counter recorded;
+  private final Counter dropped;
+  private final Clock clock;
 
   private final Id id;
   private final double init;
-  private final Clock clock;
   private final long step;
 
   private final ReentrantLock lock = new ReentrantLock();
-  private final AtomicLong droppedSamples = new AtomicLong(0L);
 
   private final AtomicReference<TDigest> previous;
   private final AtomicReference<TDigest> current;
@@ -52,19 +52,21 @@ class StepDigest {
   /**
    * Create a new instance.
    *
+   * @param registry
+   *     Underlying registry.
    * @param id
    *     Id for the meter using the digest.
    * @param init
    *     Initial compression value to use when creating the digest.
-   * @param clock
-   *     Clock for checking when a step boundary has been crossed.
    * @param step
    *     Step size in milliseconds.
    */
-  StepDigest(Id id, double init, Clock clock, long step) {
+  StepDigest(Registry registry, Id id, double init, long step) {
+    this.recorded = registry.counter("spectator.tdigest.samples", "id", "recorded");
+    this.dropped = registry.counter("spectator.tdigest.samples", "id", "dropped");
+    this.clock = registry.clock();
     this.id = id;
     this.init = init;
-    this.clock = clock;
     this.step = step;
     lastInitPos = new AtomicLong(0L);
     lastPollTime = new AtomicLong(0L);
@@ -77,10 +79,6 @@ class StepDigest {
     final long lastInit = lastInitPos.get();
     if (lastInit < stepTime && lastInitPos.compareAndSet(lastInit, stepTime)) {
       previous.set(current.getAndSet(TDigest.createDigest(init)));
-      final long dropped = droppedSamples.getAndSet(0L);
-      if (dropped > 0L) {
-        LOGGER.debug("dropped {} samples for {}", dropped, id.toString());
-      }
     }
   }
 
@@ -114,13 +112,14 @@ class StepDigest {
    */
   void add(double v) {
     if (lock.tryLock()) {
+      recorded.increment();
       try {
         current().add(v);
       } finally {
         lock.unlock();
       }
     } else {
-      droppedSamples.incrementAndGet();
+      dropped.increment();
     }
   }
 
