@@ -111,8 +111,8 @@ final class DefaultId implements Id {
   @Override public String toString() {
     StringBuilder buf = new StringBuilder();
     buf.append(name);
-    for (Tag t : tags()) {
-      buf.append(":").append(t.key()).append("=").append(t.value());
+    if (tags != TagList.EMPTY) {
+      buf.append(':').append(tags);
     }
     return buf.toString();
   }
