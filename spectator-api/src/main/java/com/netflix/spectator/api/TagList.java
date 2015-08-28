@@ -101,6 +101,19 @@ final class TagList implements Iterable<Tag>, Tag {
     return hc;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder buf = new StringBuilder();
+    TagList cur = next;
+
+    buf.append(key).append('=').append(value);
+    while (cur != null) {
+      buf.append(":").append(cur.key()).append("=").append(cur.value());
+      cur = cur.next;
+    }
+    return buf.toString();
+  }
+
   /**
    * Create a new list with the tags prepended to this list.
    *
