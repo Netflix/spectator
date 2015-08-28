@@ -69,7 +69,7 @@ final class DefaultId implements Id {
    * {@code rollup(Collections.<String>emptySet(), false)}.
    */
   DefaultId normalize() {
-    return rollup(Collections.<String>emptySet(), false);
+    return rollup(Collections.emptySet(), false);
   }
 
   /**
