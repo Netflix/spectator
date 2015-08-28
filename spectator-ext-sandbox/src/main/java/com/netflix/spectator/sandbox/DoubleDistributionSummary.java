@@ -50,7 +50,7 @@ public class DoubleDistributionSummary implements Meter {
    *     Distribution summary corresponding to the id.
    */
   public static DoubleDistributionSummary get(Id id) {
-    return get(Spectator.registry(), id);
+    return get(Spectator.globalRegistry(), id);
   }
 
   /**

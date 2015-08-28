@@ -15,8 +15,8 @@
  */
 package com.netflix.spectator.sandbox;
 
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ public class HttpLogEntry {
   private static final Marker CLIENT = MarkerFactory.getMarker("http-client");
   private static final Marker SERVER = MarkerFactory.getMarker("http-server");
 
-  private static final ExtendedRegistry REGISTRY = Spectator.registry();
+  private static final Registry REGISTRY = Spectator.globalRegistry();
   private static final Id COMPLETE = REGISTRY.createId("http.req.complete");
   private static final Id ATTEMPT = REGISTRY.createId("http.req.attempt");
   private static final Id REQ_HEADER_SIZE = REGISTRY.createId("http.req.headerSize");

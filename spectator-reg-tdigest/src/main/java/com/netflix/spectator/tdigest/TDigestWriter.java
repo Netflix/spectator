@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base-class for TDigestWriter implementations. This class will take care of mapping a set of
@@ -45,10 +46,12 @@ abstract class TDigestWriter implements AutoCloseable {
   private final ByteBufferOutputStream out = new ByteBufferOutputStream(buf, 2);
 
   private final Json json;
+  private final Map<String, String> commonTags;
 
   /** Create a new instance. */
-  TDigestWriter(Registry registry) {
+  TDigestWriter(Registry registry, TDigestConfig config) {
     this.json = new Json(registry);
+    this.commonTags = config.getCommonTags();
   }
 
   /**
@@ -71,7 +74,7 @@ abstract class TDigestWriter implements AutoCloseable {
     gen.flush();
     int pos = buf.position();
     for (TDigestMeasurement m : measurements) {
-      json.encode(m, gen);
+      json.encode(commonTags, m, gen);
       gen.flush();
 
       if (out.overflow()) {
@@ -85,7 +88,7 @@ abstract class TDigestWriter implements AutoCloseable {
         out.reset();
         gen = json.newGenerator(out);
         gen.writeStartArray();
-        json.encode(m, gen);
+        json.encode(commonTags, m, gen);
         gen.flush();
 
         // If a single entry is too big, then drop it

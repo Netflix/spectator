@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
 
 /**
@@ -37,29 +38,27 @@ public final class Functions {
    * Identity function that just returns the passed in value if it implements the
    * {@link java.lang.Number} interface.
    */
-  public static final DoubleFunction IDENTITY = new DoubleFunction() {
-    public double apply(double v) {
+  public static final DoubleFunction<? extends Number> IDENTITY = new DoubleFunction<Number>() {
+    @Override public double apply(double v) {
       return v;
     }
   };
 
   /**
    * Returns the size of the collection.
+   *
+   * @deprecated Use {@code Collection::size} instead.
    */
-  public static final ValueFunction COLLECTION_SIZE = new ValueFunction() {
-    public double apply(Object obj) {
-      return (obj instanceof Collection) ? ((Collection) obj).size() : Double.NaN;
-    }
-  };
+  @Deprecated
+  public static final ValueFunction<Collection<?>> COLLECTION_SIZE = Collection::size;
 
   /**
    * Returns the size of the map.
+   *
+   * @deprecated Use {@code Map::size} instead.
    */
-  public static final ValueFunction MAP_SIZE = new ValueFunction() {
-    public double apply(Object obj) {
-      return (obj instanceof Map) ? ((Map) obj).size() : Double.NaN;
-    }
-  };
+  @Deprecated
+  public static final ValueFunction<Map<?, ?>> MAP_SIZE = Map::size;
 
   /**
    * Age function based on the system clock. See {@link #age(Clock)} for more details.
@@ -96,17 +95,15 @@ public final class Functions {
    * @return
    *     Value returned by the method or NaN if an exception is thrown.
    */
-  public static ValueFunction invokeMethod(final Method method) {
+  public static ToDoubleFunction invokeMethod(final Method method) {
     method.setAccessible(true);
-    return new ValueFunction() {
-      public double apply(Object obj) {
-        try {
-          final Number n = (Number) method.invoke(obj);
-          return n.doubleValue();
-        } catch (Exception e) {
-          LOGGER.warn("exception from method registered as a gauge [" + method + "]", e);
-          return Double.NaN;
-        }
+    return (obj) -> {
+      try {
+        final Number n = (Number) method.invoke(obj);
+        return n.doubleValue();
+      } catch (Exception e) {
+        LOGGER.warn("exception from method registered as a gauge [" + method + "]", e);
+        return Double.NaN;
       }
     };
   }

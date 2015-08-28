@@ -19,6 +19,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.tdunning.math.stats.TDigest;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,8 +65,9 @@ public class TDigestWriterTest {
 
   @Before
   public void init() {
+    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
     baos = new ByteArrayOutputStream();
-    writer = new StreamTDigestWriter(registry, baos);
+    writer = new StreamTDigestWriter(registry, config, baos);
   }
 
   @Test

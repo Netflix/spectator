@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Helper for encoding and decoding digest measurements.
@@ -66,7 +67,8 @@ final class Json {
   }
 
   /** Encode the measurement using the generator. */
-  void encode(TDigestMeasurement m, JsonGenerator gen) throws IOException {
+  void encode(Map<String, String> commonTags, TDigestMeasurement m, JsonGenerator gen)
+      throws IOException {
     TDigest digest = m.value();
     digest.compress();
     ByteBuffer buf = ByteBuffer.allocate(digest.byteSize());
@@ -75,6 +77,9 @@ final class Json {
     gen.writeStartArray();
     gen.writeStartObject();
     gen.writeStringField("name", m.id().name());
+    for (Map.Entry<String, String> e : commonTags.entrySet()) {
+      gen.writeStringField(e.getKey(), e.getValue());
+    }
     for (Tag t : m.id().tags()) {
       gen.writeStringField(t.key(), t.value());
     }
@@ -85,19 +90,20 @@ final class Json {
   }
 
   /** Encode the measurements using the generator. */
-  void encode(List<TDigestMeasurement> ms, JsonGenerator gen) throws IOException {
+  void encode(Map<String, String> commonTags, List<TDigestMeasurement> ms, JsonGenerator gen)
+      throws IOException {
     gen.writeStartArray();
     for (TDigestMeasurement m : ms) {
-      encode(m, gen);
+      encode(commonTags, m, gen);
     }
     gen.writeEndArray();
   }
 
   /** Return a byte-array with the encoded measurements. */
-  byte[] encode(List<TDigestMeasurement> ms) throws IOException {
+  byte[] encode(Map<String, String> commonTags, List<TDigestMeasurement> ms) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (JsonGenerator gen = FACTORY.createGenerator(baos)) {
-      encode(ms, gen);
+      encode(commonTags, ms, gen);
     }
     return baos.toByteArray();
   }

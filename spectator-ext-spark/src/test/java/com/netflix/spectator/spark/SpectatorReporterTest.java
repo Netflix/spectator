@@ -18,9 +18,9 @@ package com.netflix.spectator.spark;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.DefaultRegistry;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 public class SpectatorReporterTest {
 
   private final MetricRegistry metricsRegistry = new MetricRegistry();
-  private final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
+  private final Registry registry = new DefaultRegistry();
   private final SpectatorReporter reporter = SpectatorReporter.forRegistry(metricsRegistry)
       .withSpectatorRegistry(registry)
       .withGaugeCounters(Pattern.compile("^gaugeCounter.*$"))

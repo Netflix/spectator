@@ -40,13 +40,13 @@ public class KinesisTDigestWriter extends TDigestWriter {
    *     Registry for creating metrics.
    * @param client
    *     Client for sending data to Kinesis.
-   * @param stream
-   *     Name of the stream to use for writing.
+   * @param config
+   *     Digest configuration settings.
    */
-  public KinesisTDigestWriter(Registry registry, AmazonKinesisClient client, String stream) {
-    super(registry);
+  public KinesisTDigestWriter(Registry registry, AmazonKinesisClient client, TDigestConfig config) {
+    super(registry, config);
     this.client = client;
-    this.stream = stream;
+    this.stream = config.getStream();
   }
 
   private String partitionKey() {

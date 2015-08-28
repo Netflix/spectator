@@ -55,7 +55,7 @@ public class UtilsTest {
   };
 
   private List<Measurement> newList(int size) {
-    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry());
+    Registry r = new DefaultRegistry();
     List<Measurement> data = new ArrayList<>();
     for (int i = 0; i < size; ++i) {
       data.add(new Measurement(r.createId("foo", "i", "" + i), 0L, i));
@@ -65,14 +65,14 @@ public class UtilsTest {
 
   @Test
   public void getTagValueIdNoTags() {
-    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry());
+    Registry r = new DefaultRegistry();
     Id id = r.createId("foo");
     Assert.assertEquals(null, Utils.getTagValue(id, "abc"));
   }
 
   @Test
   public void getTagValueId() {
-    ExtendedRegistry r = new ExtendedRegistry(new DefaultRegistry());
+    Registry r = new DefaultRegistry();
     Id id = r.createId("foo", "bar", "baz", "abc", "def");
     Assert.assertEquals("def", Utils.getTagValue(id, "abc"));
     Assert.assertEquals("baz", Utils.getTagValue(id, "bar"));

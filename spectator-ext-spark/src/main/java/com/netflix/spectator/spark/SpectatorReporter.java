@@ -24,8 +24,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Timer;
 import com.netflix.spectator.api.DistributionSummary;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.impl.AtomicDouble;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public final class SpectatorReporter extends ScheduledReporter {
    */
   public static final class Builder {
     private final MetricRegistry registry;
-    private ExtendedRegistry spectatorRegistry;
+    private Registry spectatorRegistry;
     private NameFunction nameFunction = new NameFunction() {
       @Override public Id apply(String name) {
         return spectatorRegistry.createId(name);
@@ -81,7 +81,7 @@ public final class SpectatorReporter extends ScheduledReporter {
     }
 
     /** Set the spectator registry to use. */
-    public Builder withSpectatorRegistry(ExtendedRegistry r) {
+    public Builder withSpectatorRegistry(Registry r) {
       spectatorRegistry = r;
       return this;
     }
@@ -107,14 +107,14 @@ public final class SpectatorReporter extends ScheduledReporter {
     /** Create a new instance of the reporter. */
     public SpectatorReporter build() {
       if (spectatorRegistry == null) {
-        spectatorRegistry = Spectator.registry();
+        spectatorRegistry = Spectator.globalRegistry();
       }
       return new SpectatorReporter(
           registry, spectatorRegistry, nameFunction, valueFunction, gaugeCounters);
     }
   }
 
-  private final ExtendedRegistry spectatorRegistry;
+  private final Registry spectatorRegistry;
   private final NameFunction nameFunction;
   private final ValueFunction valueFunction;
   private final Pattern gaugeCounters;
@@ -125,7 +125,7 @@ public final class SpectatorReporter extends ScheduledReporter {
   /** Create a new instance. */
   SpectatorReporter(
       MetricRegistry metricRegistry,
-      ExtendedRegistry spectatorRegistry,
+      Registry spectatorRegistry,
       NameFunction nameFunction,
       ValueFunction valueFunction,
       Pattern gaugeCounters) {

@@ -31,11 +31,11 @@ public class CompositeRegistryTest {
   private final ManualClock clock = new ManualClock();
 
   private Registry newRegistry(int n) {
-    Registry[] rs = new Registry[n];
+    CompositeRegistry registry = new CompositeRegistry(clock);
     for (int i = 0; i < n; ++i) {
-      rs[i] = new DefaultRegistry(clock);
+      registry.add(new DefaultRegistry(clock));
     }
-    return new CompositeRegistry(clock, rs);
+    return registry;
   }
 
   @Before
@@ -105,32 +105,24 @@ public class CompositeRegistryTest {
   }
 
   @Test(expected = IllegalStateException.class)
-  public void testRegisterBadTypeAccess() {
-    Registry r = newRegistry(5);
-    Counter c = new DefaultCounter(clock, r.createId("foo"));
-    r.register(c);
-    r.counter(c.id());
-  }
-
-  @Test(expected = IllegalStateException.class)
   public void testCounterBadTypeAccess() {
     Registry r = newRegistry(5);
-    r.counter(r.createId("foo"));
-    r.distributionSummary(r.createId("foo"));
+    r.counter(r.createId("foo")).count();
+    r.distributionSummary(r.createId("foo")).count();
   }
 
   @Test(expected = IllegalStateException.class)
   public void testTimerBadTypeAccess() {
     Registry r = newRegistry(5);
-    r.timer(r.createId("foo"));
-    r.counter(r.createId("foo"));
+    r.timer(r.createId("foo")).count();
+    r.counter(r.createId("foo")).count();
   }
 
   @Test(expected = IllegalStateException.class)
   public void testDistributionSummaryBadTypeAccess() {
     Registry r = newRegistry(5);
-    r.distributionSummary(r.createId("foo"));
-    r.timer(r.createId("foo"));
+    r.distributionSummary(r.createId("foo")).count();
+    r.timer(r.createId("foo")).count();
   }
 
   @Test
@@ -147,7 +139,7 @@ public class CompositeRegistryTest {
   public void testCounterBadTypeAccessNoThrow() {
     System.setProperty("spectator.api.propagateWarnings", "false");
     Registry r = newRegistry(5);
-    r.counter(r.createId("foo"));
+    r.counter(r.createId("foo")).count();
     DistributionSummary ds = r.distributionSummary(r.createId("foo"));
     ds.record(42);
     Assert.assertEquals(ds.count(), 0L);
@@ -157,7 +149,7 @@ public class CompositeRegistryTest {
   public void testTimerBadTypeAccessNoThrow() {
     System.setProperty("spectator.api.propagateWarnings", "false");
     Registry r = newRegistry(5);
-    r.timer(r.createId("foo"));
+    r.timer(r.createId("foo")).count();
     Counter c = r.counter(r.createId("foo"));
     c.increment();
     Assert.assertEquals(c.count(), 0L);
@@ -167,7 +159,7 @@ public class CompositeRegistryTest {
   public void testDistributionSummaryBadTypeAccessNoThrow() {
     System.setProperty("spectator.api.propagateWarnings", "false");
     Registry r = newRegistry(5);
-    r.distributionSummary(r.createId("foo"));
+    r.distributionSummary(r.createId("foo")).count();
     Counter c = r.counter(r.createId("foo"));
     c.increment();
     Assert.assertEquals(c.count(), 0L);
@@ -186,15 +178,21 @@ public class CompositeRegistryTest {
   public void testIteratorEmpty() {
     Registry r = newRegistry(5);
     for (Meter m : r) {
-      Assert.fail("should be empty, but found " + m.id());
+      // There is always one composite in the registry used for gauges.
+      if (m.id() != CompositeRegistry.GAUGES_ID) {
+        Assert.fail("should be empty, but found " + m.id());
+      }
     }
   }
 
   @Test
   public void testIterator() {
+    // We need to increment because forwarding the registration to sub-registries is lazy and
+    // will not occur if there is no activity
     Registry r = newRegistry(5);
-    r.counter(r.createId("foo"));
-    r.counter(r.createId("bar"));
+    r.counter(r.createId("foo")).increment();
+    r.counter(r.createId("bar")).increment();
+
     Set<Id> expected = new HashSet<>();
     expected.add(r.createId("foo"));
     expected.add(r.createId("bar"));
@@ -202,5 +200,58 @@ public class CompositeRegistryTest {
       expected.remove(m.id());
     }
     Assert.assertTrue(expected.isEmpty());
+  }
+
+  @Test
+  public void testIteratorNoRegistries() {
+    Registry r = newRegistry(0);
+    r.counter(r.createId("foo")).increment();
+    Assert.assertTrue(!r.iterator().hasNext());
+  }
+
+  @Test
+  public void testAddAndRemove() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+
+    Counter c1 = r.counter("id1");
+    c1.increment();
+    Assert.assertEquals(0, c1.count());
+
+    Registry r1 = new DefaultRegistry(clock);
+    r.add(r1);
+
+    c1.increment();
+    Assert.assertEquals(1, c1.count());
+
+    Registry r2 = new DefaultRegistry(clock);
+    r.add(r2);
+
+    c1.increment();
+    Assert.assertEquals(2, r1.counter("id1").count());
+    Assert.assertEquals(1, r2.counter("id1").count());
+
+    r.remove(r1);
+
+    c1.increment(5);
+    Assert.assertEquals(2, r1.counter("id1").count());
+    Assert.assertEquals(6, r2.counter("id1").count());
+  }
+
+  @Test
+  public void testAddGauges() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+
+    Id id = r.createId("id1");
+    DefaultCounter c1 = new DefaultCounter(clock, id);
+    c1.increment();
+
+    Registry r1 = new DefaultRegistry(clock);
+    r.add(r1);
+
+    for (Meter meter : r1) {
+      for (Measurement m : meter.measure()) {
+        Assert.assertEquals(id, m.id());
+      }
+    }
   }
 }

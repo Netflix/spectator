@@ -19,26 +19,38 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
  * registry. Otherwise activity will be sent to all registries that are part of the composite.
  */
-final class CompositeRegistry implements Registry {
+public final class CompositeRegistry implements Registry {
+
+  /**
+   * Id used for a meter storing all gauges registered with the composite. Since there is no
+   * activity on a gauge, all gauges will get registered with a sub-registry when it is added
+   * by including the meter with this id.
+   */
+  static final Id GAUGES_ID = new DefaultId("spectator.composite.gauges");
 
   private final Clock clock;
-  private final Registry[] registries;
+  private final CopyOnWriteArraySet<Registry> registries;
+
+  private final RegistryMeter gauges;
 
   /** Creates a new instance. */
-  CompositeRegistry(Clock clock, Registry[] registries) {
+  CompositeRegistry(Clock clock) {
     this.clock = clock;
-    this.registries = registries;
+    this.registries = new CopyOnWriteArraySet<>();
+    this.gauges = new RegistryMeter(GAUGES_ID);
   }
 
   /**
    * Find the first registry in the composite that is an instance of {@code c}. If no match is
    * found then null will be returned.
    */
+  @SuppressWarnings("unchecked")
   <T extends Registry> T find(Class<T> c) {
     for (Registry r : registries) {
       if (c.isAssignableFrom(r.getClass())) {
@@ -46,6 +58,22 @@ final class CompositeRegistry implements Registry {
       }
     }
     return null;
+  }
+
+  /** Add a registry to the composite. */
+  public void add(Registry registry) {
+    registries.add(registry);
+    registry.register(gauges);
+  }
+
+  /** Remove a registry from the composite. */
+  public void remove(Registry registry) {
+    registries.remove(registry);
+  }
+
+  /** Remove all registries from the composite. */
+  public void removeAll() {
+    registries.clear();
   }
 
   @Override public Clock clock() {
@@ -61,69 +89,27 @@ final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    for (Registry r : registries) {
-      r.register(meter);
-    }
+    gauges.register(meter);
   }
 
   @Override public Counter counter(Id id) {
-    final int n = registries.length;
-    if (n == 0) {
-      return NoopCounter.INSTANCE;
-    } else {
-      final Counter[] meters = new Counter[n];
-      for (int i = 0; i < n; ++i) {
-        meters[i] = registries[i].counter(registries[i].createId(id.name(), id.tags()));
-      }
-      return new CompositeCounter(id, meters);
-    }
+    return new CompositeCounter(id, registries);
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
-    final int n = registries.length;
-    if (n == 0) {
-      return NoopDistributionSummary.INSTANCE;
-    } else {
-      final DistributionSummary[] meters = new DistributionSummary[n];
-      for (int i = 0; i < n; ++i) {
-        meters[i] = registries[i].distributionSummary(registries[i].createId(id.name(), id.tags()));
-      }
-      return new CompositeDistributionSummary(id, meters);
-    }
+    return new CompositeDistributionSummary(id, registries);
   }
 
   @Override public Timer timer(Id id) {
-    final int n = registries.length;
-    if (n == 0) {
-      return NoopTimer.INSTANCE;
-    } else {
-      final Timer[] meters = new Timer[n];
-      for (int i = 0; i < n; ++i) {
-        meters[i] = registries[i].timer(registries[i].createId(id.name(), id.tags()));
-      }
-      return new CompositeTimer(id, clock, meters);
-    }
+    return new CompositeTimer(id, clock, registries);
   }
 
   @Override public Meter get(Id id) {
-    final int n = registries.length;
-    if (n == 0) {
-      return null;
-    } else {
-      final Meter[] meters = new Meter[n];
-      for (int i = 0; i < n; ++i) {
-        meters[i] = registries[i].get(registries[i].createId(id.name(), id.tags()));
-      }
-      return new CompositeMeter(id) {
-        @Override protected Meter[] meters() {
-          return meters;
-        }
-      };
-    }
+    return new CompositeMeter(id, registries);
   }
 
   @Override public Iterator<Meter> iterator() {
-    if (registries.length == 0) {
+    if (registries.isEmpty()) {
       return Collections.<Meter>emptyList().iterator();
     } else {
       final Set<Id> ids = new HashSet<>();

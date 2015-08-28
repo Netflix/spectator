@@ -1,3 +1,8 @@
+
+dependencies {
+  testCompile files("$projectDir/src/test/lib/compatibility-0.29.0.jar")
+}
+
 javadoc {
   options.memberLevel = org.gradle.external.javadoc.JavadocMemberLevel.PROTECTED
   title "Spectator"

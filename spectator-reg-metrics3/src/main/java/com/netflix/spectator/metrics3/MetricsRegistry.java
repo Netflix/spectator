@@ -34,10 +34,11 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   private String toMetricName(Id id) {
+    Id normalized = Utils.normalize(id);
     StringBuilder buf = new StringBuilder();
-    buf.append(id.name());
-    for (Tag t : id.tags()) {
-      buf.append(t.key()).append("-").append(t.value());
+    buf.append(normalized.name());
+    for (Tag t : normalized.tags()) {
+      buf.append('.').append(t.key()).append('-').append(t.value());
     }
     return buf.toString();
   }

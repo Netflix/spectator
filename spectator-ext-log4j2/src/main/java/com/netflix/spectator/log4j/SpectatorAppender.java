@@ -15,8 +15,8 @@
  */
 package com.netflix.spectator.log4j;
 
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -65,7 +65,7 @@ public final class SpectatorAppender extends AbstractAppender {
    *     If set to true then the stack trace metrics are disabled.
    */
   public static void addToRootLogger(
-      ExtendedRegistry registry,
+      Registry registry,
       String name,
       boolean ignoreExceptions) {
     final Appender appender = new SpectatorAppender(registry, name, null, null, ignoreExceptions);
@@ -84,13 +84,13 @@ public final class SpectatorAppender extends AbstractAppender {
 
   private static final long serialVersionUID = 42L;
 
-  private final transient ExtendedRegistry registry;
+  private final transient Registry registry;
   private transient Id[] numMessages;
   private transient Id[] numStackTraces;
 
   /** Create a new instance of the appender. */
   SpectatorAppender(
-      ExtendedRegistry registry,
+      Registry registry,
       String name,
       Filter filter,
       Layout<? extends Serializable> layout,
@@ -112,7 +112,7 @@ public final class SpectatorAppender extends AbstractAppender {
       return null;
     }
 
-    return new SpectatorAppender(Spectator.registry(), name, filter, layout, ignoreExceptions);
+    return new SpectatorAppender(Spectator.globalRegistry(), name, filter, layout, ignoreExceptions);
   }
 
   @Override public void start() {

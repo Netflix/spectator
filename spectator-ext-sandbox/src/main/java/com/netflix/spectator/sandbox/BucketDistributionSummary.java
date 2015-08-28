@@ -39,7 +39,7 @@ public final class BucketDistributionSummary implements DistributionSummary {
    *     Distribution summary that manages sub-counters based on the bucket function.
    */
   public static BucketDistributionSummary get(Id id, BucketFunction f) {
-    return get(Spectator.registry(), id, f);
+    return get(Spectator.globalRegistry(), id, f);
   }
 
   /**

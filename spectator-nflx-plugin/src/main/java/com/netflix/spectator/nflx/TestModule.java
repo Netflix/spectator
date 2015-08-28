@@ -27,13 +27,13 @@ import com.netflix.spectator.api.Registry;
  * create a registry that only keeps data in-memory and is scoped to the injector. If used when
  * running the application you will not be able to see the data and it will not get reported off
  * the instance. In particular, it is completely independent of the main registry accessed by
- * calling {@link com.netflix.spectator.api.Spectator#registry()}. Use the
+ * calling {@link com.netflix.spectator.api.Spectator#globalRegistry()}. Use the
  * {@link com.netflix.spectator.nflx.SpectatorModule} when running code outside of unit tests.
  */
 public final class TestModule extends AbstractModule {
   @Override protected void configure() {
-    final ExtendedRegistry registry = new ExtendedRegistry(new DefaultRegistry());
-    bind(ExtendedRegistry.class).toInstance(registry);
+    final Registry registry = new DefaultRegistry();
+    bind(ExtendedRegistry.class).toInstance(new ExtendedRegistry(registry));
     bind(Registry.class).toInstance(registry);
 
     // Allows auto-plugin to come up without needing to get DiscoveryClient to work

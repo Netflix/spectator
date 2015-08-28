@@ -15,25 +15,23 @@
  */
 package com.netflix.spectator.metrics2;
 
+import com.netflix.spectator.api.AbstractTimer;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Timer;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /** Timer implementation for the metrics2 registry. */
-class MetricsTimer implements Timer {
+class MetricsTimer extends AbstractTimer {
 
-  private final Clock clock;
   private final Id id;
   private final com.yammer.metrics.core.Timer impl;
 
   /** Create a new instance. */
   MetricsTimer(Clock clock, Id id, com.yammer.metrics.core.Timer impl) {
-    this.clock = clock;
+    super(clock);
     this.id = id;
     this.impl = impl;
   }
@@ -53,26 +51,6 @@ class MetricsTimer implements Timer {
   @Override public Iterable<Measurement> measure() {
     final long now = clock.wallTime();
     return Collections.singleton(new Measurement(id, now, impl.meanRate()));
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   @Override public long count() {

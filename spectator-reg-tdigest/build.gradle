@@ -6,6 +6,5 @@ dependencies {
   compile "com.fasterxml.jackson.core:jackson-core:$version_jackson"
   compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:$version_jackson"
   compile "com.typesafe:config:$version_config"
-  // Older version
-  //compile 'com.tdunning:t-digest:3.0'
+  compile 'com.tdunning:t-digest:3.1'
 }

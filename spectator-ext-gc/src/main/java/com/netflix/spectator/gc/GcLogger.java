@@ -55,24 +55,24 @@ public final class GcLogger {
 
   // Max size of old generation memory pool
   private static final AtomicLong MAX_DATA_SIZE =
-    Spectator.registry().gauge("jvm.gc.maxDataSize", new AtomicLong(0L));
+    Spectator.globalRegistry().gauge("jvm.gc.maxDataSize", new AtomicLong(0L));
 
   // Size of old generation memory pool after a full GC
   private static final AtomicLong LIVE_DATA_SIZE =
-    Spectator.registry().gauge("jvm.gc.liveDataSize", new AtomicLong(0L));
+    Spectator.globalRegistry().gauge("jvm.gc.liveDataSize", new AtomicLong(0L));
 
   // Incremented for any positive increases in the size of the old generation memory pool
   // before GC to after GC
   private static final Counter PROMOTION_RATE =
-    Spectator.registry().counter("jvm.gc.promotionRate");
+    Spectator.globalRegistry().counter("jvm.gc.promotionRate");
 
   // Incremented for the increase in the size of the young generation memory pool after one GC
   // to before the next
   private static final Counter ALLOCATION_RATE =
-    Spectator.registry().counter("jvm.gc.allocationRate");
+    Spectator.globalRegistry().counter("jvm.gc.allocationRate");
 
   // Pause time due to GC event
-  private static final Id PAUSE_TIME = Spectator.registry().createId("jvm.gc.pause");
+  private static final Id PAUSE_TIME = Spectator.globalRegistry().createId("jvm.gc.pause");
 
   private final long jvmStartTime;
 
@@ -200,7 +200,7 @@ public final class GcLogger {
     Id eventId = PAUSE_TIME
       .withTag("action", info.getGcAction())
       .withTag("cause", info.getGcCause());
-    Timer timer = Spectator.registry().timer(eventId);
+    Timer timer = Spectator.globalRegistry().timer(eventId);
     timer.record(info.getGcInfo().getDuration(), TimeUnit.MILLISECONDS);
 
     // Update promotion and allocation counters

@@ -17,7 +17,7 @@ package com.netflix.spectator.log4j;
 
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
-import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
@@ -30,7 +30,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class SpectatorAppenderTest {
 
-  private ExtendedRegistry registry;
+  private Registry registry;
   private SpectatorAppender appender;
 
   private LogEvent newEvent(Level level, Throwable t) {
@@ -45,7 +45,7 @@ public class SpectatorAppenderTest {
 
   @Before
   public void before() {
-    registry = new ExtendedRegistry(new DefaultRegistry());
+    registry = new DefaultRegistry();
     appender = new SpectatorAppender(registry, "foo", null, null, false);
     appender.start();
   }

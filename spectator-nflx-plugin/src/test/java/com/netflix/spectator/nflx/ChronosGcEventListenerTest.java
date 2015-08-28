@@ -16,8 +16,9 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.config.ConfigurationManager;
+import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.Registry;
 import iep.com.netflix.iep.http.RxHttp;
-import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcEvent;
@@ -50,6 +51,8 @@ public class ChronosGcEventListenerTest {
 
   private static HttpServer server;
   private static int port;
+
+  private static Registry registry = new DefaultRegistry();
 
   private static AtomicInteger statusCode = new AtomicInteger(200);
   private static AtomicIntegerArray statusCounts = new AtomicIntegerArray(600);
@@ -91,19 +94,12 @@ public class ChronosGcEventListenerTest {
   }
 
   private ChronosGcEventListener newListener() {
-    return new ChronosGcEventListener(new RxHttp(null));
+    return new ChronosGcEventListener(new RxHttp(null), registry);
   }
 
   private long reqCount(int status) {
-    ExtendedRegistry r = Spectator.registry();
-    Id requests = r.createId("spectator.gc.chronosPost", "status", "" + status);
-    return r.timer(requests).count();
-  }
-
-  private long reqCount(String status) {
-    ExtendedRegistry r = Spectator.registry();
-    Id requests = r.createId("spectator.gc.chronosPost", "status", status);
-    return r.timer(requests).count();
+    Id requests = registry.createId("spectator.gc.chronosPost", "status", "" + status);
+    return registry.timer(requests).count();
   }
 
   private GcEvent newGcEvent() {
@@ -129,46 +125,7 @@ public class ChronosGcEventListenerTest {
     listener.onComplete(newGcEvent(), true);
     listener.shutdown();
 
-    Assert.assertEquals(before + 1, reqCount(200));
-  }
-
-  private void errorTest(int status, int attempts) throws Exception {
-    errorTest(status, attempts, "" + status);
-  }
-
-  private void errorTest(int status, int attempts, String statusStr) throws Exception {
-    statusCode.set(status);
-    long before2xx = reqCount(200);
-    long beforeError = reqCount(statusStr);
-    int errorCount = statusCounts.get(status);
-
-    final ChronosGcEventListener listener = newListener();
-    listener.onComplete(newGcEvent(), true);
-    listener.shutdown();
-
-    Assert.assertEquals(errorCount + attempts, statusCounts.get(status));
-    Assert.assertEquals(before2xx, reqCount(200));
-    Assert.assertEquals(beforeError + 1, reqCount(statusStr));
-  }
-
-  @Test
-  public void clientError() throws Exception {
-    errorTest(400, 1);
-  }
-
-  @Test
-  public void serverError() throws Exception {
-    errorTest(500, retries + 1);
-  }
-
-  @Test
-  public void serverThrottle429() throws Exception {
-    errorTest(429, retries + 1);
-  }
-
-  @Test
-  public void serverThrottle503() throws Exception {
-    errorTest(503, retries + 1);
+    Assert.assertTrue(reqCount(200) > before);
   }
 }
 
