@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -88,4 +89,24 @@ public class TagListTest {
     TagList ts2 = new TagList("k", "v");
     Assert.assertEquals(ts1, ts2);
   }
+
+    @Test
+    public void testPrependSingleValue() {
+        Iterable<Tag> prefix = Collections.singletonList(new TagList("k1", "v1"));
+        TagList initial = new TagList("k2", "v2");
+        TagList expected = new TagList("k1", "v1", new TagList("k2", "v2"));
+        Assert.assertEquals(expected, initial.prepend(prefix));
+    }
+
+    @Test
+    public void testPrependMultipleValues() {
+        ArrayList<Tag> prefix = new ArrayList<>();
+        TagList initial = new TagList("k3", "v3");
+        TagList expected = new TagList("k1", "v1", new TagList("k2", "v2", new TagList("k3", "v3")));
+
+        prefix.add(new TagList("k1", "v1"));
+        prefix.add(new TagList("k2", "v2"));
+        TagList actual = initial.prepend(prefix);
+        Assert.assertEquals(expected, actual);
+    }
 }
