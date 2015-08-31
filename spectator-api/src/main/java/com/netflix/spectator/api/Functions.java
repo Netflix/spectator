@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToDoubleFunction;
 
 
@@ -63,7 +64,7 @@ public final class Functions {
   /**
    * Age function based on the system clock. See {@link #age(Clock)} for more details.
    */
-  public static final DoubleFunction AGE = age(Clock.SYSTEM);
+  public static final DoubleFunction<AtomicLong> AGE = age(Clock.SYSTEM);
 
   /**
    * Returns a function that computes the age in seconds. The value passed into the function
@@ -75,8 +76,8 @@ public final class Functions {
    * @return
    *     Function that computes the age.
    */
-  public static DoubleFunction age(final Clock clock) {
-    return new DoubleFunction() {
+  public static DoubleFunction<AtomicLong> age(final Clock clock) {
+    return new DoubleFunction<AtomicLong>() {
       public double apply(double t) {
         return (clock.wallTime() - t) / 1000.0;
       }
