@@ -1,0 +1,4 @@
+dependencies {
+  compile project(":spectator-api")
+  compile "com.amazonaws:aws-java-sdk-core:$version_aws"
+}
