@@ -24,8 +24,11 @@ import com.amazonaws.util.TimingInfo;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.beans.Introspector;
+import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -34,6 +37,10 @@ import java.util.function.Function;
  * A {@link RequestMetricCollector} that captures request level metrics for AWS clients.
  */
 public class SpectatorRequestMetricCollector extends RequestMetricCollector {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
+
+  private static final String UNKNOWN = "UNKNOWN";
 
   private static final Field[] TIMERS = {
       Field.ClientExecuteTime,
@@ -55,7 +62,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static final TagField[] TAGS = {
       new TagField(Field.ServiceEndpoint),
-      new TagField(Field.ServiceName),
+      new TagField(Field.ServiceName, SpectatorRequestMetricCollector::getHost),
       new TagField(Field.StatusCode)
   };
 
@@ -115,13 +122,13 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     final AWSRequestMetrics metrics = request.getAWSRequestMetrics();
     final Map<String, String> baseTags = new HashMap<>();
     for (TagField tag : TAGS) {
-      baseTags.put(tag.getName(), tag.getValue(metrics).orElse("UNKNOWN"));
+      baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
     }
     baseTags.put("requestType", request.getOriginalRequest().getClass().getSimpleName());
     final boolean error = isError(metrics);
     if (error) {
       for (TagField tag : ERRORS) {
-        baseTags.put(tag.getName(), tag.getValue(metrics).orElse("UNKNOWN"));
+        baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
       }
     }
     baseTags.put("error", Boolean.toString(error));
@@ -157,6 +164,15 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       }
     }
     return false;
+  }
+
+  private static String getHost(Object u) {
+    try {
+      return URI.create(u.toString()).getHost();
+    } catch (Exception e) {
+      LOGGER.debug("failed to parse endpoint uri: " + u, e);
+      return UNKNOWN;
+    }
   }
 
   private static class TagField {
