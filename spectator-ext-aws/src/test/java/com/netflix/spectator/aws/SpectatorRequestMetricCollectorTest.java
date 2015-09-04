@@ -50,8 +50,10 @@ public class SpectatorRequestMetricCollectorTest {
     public void testMetricCollection() {
         //setup
         AWSRequestMetrics metrics = new AWSRequestMetricsFullSupport();
-        metrics.setCounter("testGauge", 12345);
-        metrics.getTimingInfo().addSubMeasurement("testTimer", TimingInfo.unmodifiableTimingInfo(100000L, 200000L));
+        String counterName = "BytesProcessed";
+        String timerName = "ClientExecuteTime";
+        metrics.setCounter(counterName, 12345);
+        metrics.getTimingInfo().addSubMeasurement(timerName, TimingInfo.unmodifiableTimingInfo(100000L, 200000L));
 
         Request<?> req = new DefaultRequest("foo");
         req.setAWSRequestMetrics(metrics);
@@ -71,7 +73,7 @@ public class SpectatorRequestMetricCollectorTest {
         assertEquals(2, allMetrics.size());
         Optional<Timer> expectedTimer = allMetrics
                 .stream()
-                .filter(m -> m instanceof Timer && m.id().name().equals("AWS_testTimer"))
+                .filter(m -> m instanceof Timer && m.id().name().equals(SpectatorRequestMetricCollector.idName(timerName)))
                 .map(m -> (Timer) m)
                 .findFirst();
         assertTrue(expectedTimer.isPresent());
@@ -79,11 +81,12 @@ public class SpectatorRequestMetricCollectorTest {
         assertEquals(1, timer.count());
         assertEquals(100000, timer.totalTime());
 
-        Optional<Meter> expectedGauge = allMetrics
+        Optional<Counter> expectedCounter = allMetrics
                 .stream()
-                .filter(m -> m.id().name().equals("AWS_testGauge"))
+                .filter(m -> m.id().name().equals(SpectatorRequestMetricCollector.idName(counterName)))
+                .map(m -> (Counter) m)
                 .findFirst();
-        assertTrue(expectedGauge.isPresent());
-        assertEquals(12345L, Double.valueOf(expectedGauge.get().measure().iterator().next().value()).longValue());
+        assertTrue(expectedCounter.isPresent());
+        assertEquals(12345L, expectedCounter.get().count());
     }
 }

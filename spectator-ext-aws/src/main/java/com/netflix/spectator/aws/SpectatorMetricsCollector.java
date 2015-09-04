@@ -29,7 +29,6 @@ import com.netflix.spectator.impl.Preconditions;
  */
 public class SpectatorMetricsCollector extends MetricCollector {
     private final RequestMetricCollector requestMetricCollector;
-    private final ServiceMetricCollector serviceMetricCollector;
 
     /**
      * Constructs a new SpectatorMetricsCollector.
@@ -41,7 +40,6 @@ public class SpectatorMetricsCollector extends MetricCollector {
         Preconditions.checkNotNull(registry, "registry");
 
         this.requestMetricCollector = new SpectatorRequestMetricCollector(registry);
-        this.serviceMetricCollector = new SpectatorServiceMetricCollector(registry);
     }
 
     @Override
@@ -66,6 +64,6 @@ public class SpectatorMetricsCollector extends MetricCollector {
 
     @Override
     public ServiceMetricCollector getServiceMetricCollector() {
-        return serviceMetricCollector;
+        return ServiceMetricCollector.NONE;
     }
 }
