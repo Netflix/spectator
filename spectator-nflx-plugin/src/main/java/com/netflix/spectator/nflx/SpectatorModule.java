@@ -16,7 +16,6 @@
 package com.netflix.spectator.nflx;
 
 import com.netflix.spectator.servo.ServoRegistry;
-import iep.com.netflix.iep.rxnetty.RxNettyModule;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
@@ -63,7 +62,6 @@ import com.netflix.spectator.api.Spectator;
  */
 public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
-    install(new RxNettyModule());
     bind(Plugin.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
   }

@@ -16,8 +16,6 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.AbstractModule;
-import iep.com.netflix.iep.http.BasicServerRegistry;
-import iep.com.netflix.iep.http.ServerRegistry;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
@@ -35,8 +33,5 @@ public final class TestModule extends AbstractModule {
     final Registry registry = new DefaultRegistry();
     bind(ExtendedRegistry.class).toInstance(new ExtendedRegistry(registry));
     bind(Registry.class).toInstance(registry);
-
-    // Allows auto-plugin to come up without needing to get DiscoveryClient to work
-    bind(ServerRegistry.class).toInstance(new BasicServerRegistry());
   }
 }
