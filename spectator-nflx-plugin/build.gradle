@@ -4,11 +4,7 @@ dependencies {
   compile project(':spectator-ext-jvm')
   compile project(':spectator-ext-sandbox')
   compile project(':spectator-reg-servo')
-  compile "com.fasterxml.jackson.core:jackson-databind:$version_jackson"
   compile "com.google.inject:guice:$version_guice"
   compile "com.netflix.archaius:archaius-core:$version_archaius1"
-  compile "com.netflix.eureka:eureka-client:$version_eureka"
-  compile "com.netflix.iep-shadow:iepshadow-iep-module-rxnetty:$version_iep"
-  compile "com.netflix.iep-shadow:iepshadow-iep-rxhttp:$version_iep"
   testCompile "com.netflix.governator:governator:$version_governator"
 }
