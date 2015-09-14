@@ -56,7 +56,7 @@ subprojects {
     iterations = 10
     fork = 5
     profilers = ['STACK']
-    include '.*Merge.*'
+    include '.*'
   }
 
   jacoco {
