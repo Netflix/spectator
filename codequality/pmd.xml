@@ -13,6 +13,7 @@
     <exclude name="AddEmptyString"/>
     <exclude name="AppendCharacterWithChar"/>
     <exclude name="ArrayIsStoredDirectly"/>
+    <exclude name="AtLeastOneConstructor"/>
     <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidDuplicateLiterals"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>
@@ -51,6 +52,7 @@
     <exclude name="LoosePackageCoupling"/>
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="MethodReturnsInternalArray"/>
+    <exclude name="ModifiedCyclomaticComplexity"/>
     <exclude name="NullAssignment"/>
     <exclude name="OneDeclarationPerLine"/>
     <exclude name="OnlyOneReturn"/>
@@ -60,12 +62,13 @@
     <exclude name="SimpleDateFormatNeedsLocale"/>
     <exclude name="SimplifyConditional"/>
     <exclude name="ShortClassName"/>
-    <exclude name="ShortMethod"/>
+    <exclude name="ShortMethodName"/>
     <exclude name="ShortMethodName"/>
     <exclude name="ShortVariable"/>
+    <exclude name="StdCyclomaticComplexity"/>
     <exclude name="TooManyFields"/>
     <exclude name="TooManyMethods"/>
-    <exclude name="UncommentedEmptyMethod"/>
+    <exclude name="UncommentedEmptyMethodBody"/>
     <exclude name="UnusedPrivateMethod"/>
     <exclude name="UnnecessaryConstructor"/>
     <exclude name="UnnecessaryParentheses"/>
@@ -73,5 +76,6 @@
     <exclude name="UseIndexOfChar"/>
     <exclude name="UselessParentheses"/>
     <exclude name="UseStringBufferForStringAppends"/>
+    <exclude name="UseVarargs"/>
   </rule>
 </ruleset>

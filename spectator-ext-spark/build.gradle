@@ -27,6 +27,11 @@ shadowJar {
   }
 }
 
-import nebula.plugin.publishing.component.CustomComponentPlugin
-CustomComponentPlugin.addArtifact(project, 'shadow', shadowJar)
+publishing {
+  publications {
+    nebula(MavenPublication) {
+      artifact shadowJar
+    }
+  }
+}
 
