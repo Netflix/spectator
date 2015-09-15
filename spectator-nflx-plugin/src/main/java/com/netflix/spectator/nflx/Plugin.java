@@ -43,14 +43,14 @@ final class Plugin {
 
   /** Create a new instance. */
   @Inject
-  Plugin(Registry registry, ChronosGcEventListener listener) throws IOException {
+  Plugin(Registry registry) throws IOException {
 
     AbstractConfiguration config = ConfigurationManager.getConfigInstance();
     final boolean enabled = config.getBoolean(ENABLED_PROP, true);
     if (enabled) {
       ConfigurationManager.loadPropertiesFromResources(CONFIG_FILE);
       if (config.getBoolean("spectator.gc.loggingEnabled")) {
-        GC_LOGGER.start(listener);
+        GC_LOGGER.start(null);
         LOGGER.info("gc logging started");
       } else {
         LOGGER.info("gc logging is not enabled");

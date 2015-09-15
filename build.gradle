@@ -6,7 +6,7 @@ buildscript {
 }
 
 plugins {
-  id 'nebula.netflixoss' version '2.2.9'
+  id 'nebula.netflixoss' version '3.1.1'
   id 'me.champeau.gradle.jmh' version '0.2.0'
 }
 
@@ -17,6 +17,10 @@ allprojects {
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
+
+  task wrapper(type: Wrapper) {
+    gradleVersion = '2.6'
+  }
 }
 
 subprojects {
@@ -38,6 +42,11 @@ subprojects {
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
 
+  project.tasks.withType(Javadoc) {
+    if (JavaVersion.current().isJava8Compatible()) {
+      options.addStringOption('Xdoclint:none', '-quiet')
+    }
+  }
   javadoc {
     options {
       links = ['http://docs.oracle.com/javase/7/docs/api/']
@@ -96,6 +105,7 @@ subprojects {
   }
 
   pmd {
+    toolVersion = '5.3.3'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
