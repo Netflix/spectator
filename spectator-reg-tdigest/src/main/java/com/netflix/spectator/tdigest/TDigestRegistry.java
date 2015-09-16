@@ -50,6 +50,6 @@ public class TDigestRegistry extends AbstractRegistry {
 
   private StepDigest newDigest(Id id) {
     final long step = config.getPollingFrequency(TimeUnit.MILLISECONDS);
-    return new StepDigest(underlying, id, 100.0, step);
+    return new StepDigest(underlying, id, config.getCompressionFactor(), step);
   }
 }
