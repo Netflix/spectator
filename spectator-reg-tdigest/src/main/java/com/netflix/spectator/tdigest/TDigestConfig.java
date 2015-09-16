@@ -36,6 +36,11 @@ public final class TDigestConfig {
     this.cfg = cfg;
   }
 
+  /** Returns the compression factor to use when creating the digests. */
+  public double getCompressionFactor() {
+    return cfg.getDouble("compression-factor");
+  }
+
   /** Kinesis endpoint to use. */
   public String getEndpoint() {
     return cfg.getString("kinesis.endpoint");
