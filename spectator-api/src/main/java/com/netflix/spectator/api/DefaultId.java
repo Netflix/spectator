@@ -48,20 +48,22 @@ final class DefaultId implements Id {
   }
 
   @Override public DefaultId withTag(Tag tag) {
-    return new DefaultId(name, new TagList(tag.key(), tag.value(), tags));
+    return new DefaultId(name, tags == TagList.EMPTY ? new TagList(tag.key(), tag.value()) : tags.mergeTag(tag));
   }
 
   @Override public DefaultId withTag(String key, String value) {
-    return new DefaultId(name, new TagList(key, value, tags));
+    TagList tag = new TagList(key, value);
+    return new DefaultId(name, tags == TagList.EMPTY ? tag : tags.mergeTag(tag));
   }
 
   @Override public DefaultId withTags(Iterable<Tag> ts) {
-    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.prepend(ts);
+    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.mergeList(ts);
     return new DefaultId(name, tmp);
   }
 
   @Override public DefaultId withTags(Map<String, String> ts) {
-    return withTags(TagList.create(ts));
+    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.mergeMap(ts);
+    return new DefaultId(name, tmp);
   }
 
   /**
@@ -69,7 +71,7 @@ final class DefaultId implements Id {
    * {@code rollup(Collections.<String>emptySet(), false)}.
    */
   DefaultId normalize() {
-    return rollup(Collections.<String>emptySet(), false);
+    return rollup(Collections.emptySet(), false);
   }
 
   /**
@@ -115,8 +117,8 @@ final class DefaultId implements Id {
   @Override public String toString() {
     StringBuilder buf = new StringBuilder();
     buf.append(name);
-    for (Tag t : tags()) {
-      buf.append(":").append(t.key()).append("=").append(t.value());
+    if (tags != TagList.EMPTY) {
+      buf.append(':').append(tags);
     }
     return buf.toString();
   }

@@ -17,15 +17,81 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Preconditions;
 
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.TreeMap;
 
 /**
- * A tag list implemented as a singly linked list. Doesn't automatically dedup keys but supports
- * a cheap prepend at the call site to allow for inexpensive dynamic ids.
+ * A tag list implemented as a singly linked list.  The contents of the list are maintained in sorted order by
+ * key with no duplicates.
  */
 final class TagList implements Iterable<Tag>, Tag {
+  /**
+   * Utility class for sorting and deduplicating lists of tags.
+   */
+  private static class TagSorterAndDeduplicator {
+    private static final Comparator<String> REVERSE_STRING_COMPARATOR = new Comparator<String>() {
+      @Override
+      public int compare(String left, String right) {
+        return right.compareTo(left);
+      }
+    };
+
+    /** Map used to sort and deduplicate the presented tags. */
+    private final Map<String, Tag> map;
+
+    /**
+     * Construct a new instance with no tags in it.
+     */
+    TagSorterAndDeduplicator() {
+      map  = new TreeMap<>(REVERSE_STRING_COMPARATOR);
+    }
+
+    /**
+     * Adds the specified tag to the collected tags.  It will overwrite any existing value associated the key
+     * in the specified tag.
+     *
+     * @param tag the tag to add to the collection
+     */
+    void addTag(Tag tag) {
+      map.put(tag.key(), tag);
+    }
+
+    /**
+     * Adds the tags in the iterable to the collected tags.  Any values associated with the tags in the iterable
+     * will overwrite any existing values with the same key that are already in the collection.
+     *
+     * @param tags the set of tags to add
+     */
+    void addTags(Iterable<Tag> tags) {
+      for (Tag t : tags) {
+        map.put(t.key(), t);
+      }
+    }
+
+    /**
+     * Adds the tags (key, value)-pairs to the collected tags.  Any values associated with the tags in the map
+     * will overwrite any existing values with the same key that are already in the collection.
+     *
+     * @param tags the set of tags to add
+     */
+    void addTags(Map<String, String> tags) {
+      for (Map.Entry<String, String> t : tags.entrySet()) {
+        map.put(t.getKey(), new TagList(t.getKey(), t.getValue()));
+      }
+    }
+
+    /**
+     * Returns the sorted set of deduplicated tags.
+     *
+     * @return the sorted tags
+     */
+    Iterable<Tag> sortedTags() {
+      return map.values();
+    }
+  }
 
   private final String key;
   private final String value;
@@ -40,9 +106,10 @@ final class TagList implements Iterable<Tag>, Tag {
   }
 
   /**
-   * Create a new instance with a new tag prepended to the list {@code next}.
+   * Create a new instance with a new tag prepended to the list {@code next}.  Any entries in next should have keys
+   * that are lexicographically after the specified key.
    */
-  TagList(String key, String value, TagList next) {
+  private TagList(String key, String value, TagList next) {
     this.key = Preconditions.checkNotNull(key, "key");
     this.value = Preconditions.checkNotNull(value, "value");
     this.next = next;
@@ -101,20 +168,115 @@ final class TagList implements Iterable<Tag>, Tag {
     return hc;
   }
 
+  @Override
+  public String toString() {
+    StringBuilder buf = new StringBuilder();
+    TagList cur = next;
+
+    buf.append(key).append('=').append(value);
+    while (cur != null) {
+      buf.append(":").append(cur.key()).append("=").append(cur.value());
+      cur = cur.next;
+    }
+    return buf.toString();
+  }
+
   /**
-   * Create a new list with the tags prepended to this list.
+   * Produces a list with with the specified tag merged with the existing values in this list.  If the key of the
+   * specified tag matches an existing list entry, then the value of the specified tag will replace the existing
+   * value.
+   *
+   * @param tag th possibly null tag to merge into the list
+   * @return A tag list with merged values.
+   */
+  TagList mergeTag(Tag tag) {
+    if (tag == null) {
+      return this;
+    } else if (next == null) {
+      int comparison = key.compareTo(tag.key());
+
+      if (comparison == 0) { // Same key, so the specified value replaces the current value.
+        return new TagList(tag.key(), tag.value(), EMPTY);
+      } else if (comparison < 0) { // The key in this list is before the key in the specified list.
+        return new TagList(key, value, new TagList(tag.key(), tag.value(), EMPTY));
+      } else { // The key in this list is after the key in the specified list.
+        return new TagList(tag.key(), tag.value(), this);
+      }
+    } else {
+      // Is it possible to optimize this case so as to reuse the tail of the existing TagList?
+      TagSorterAndDeduplicator entries = new TagSorterAndDeduplicator();
+
+      entries.addTags(this);
+      entries.addTag(tag);
+
+      return createFromSortedTags(entries.sortedTags());
+    }
+  }
+
+  /**
+   * Produces a list with the tags from this list merged with the tags in the specified list.  For any keys present in
+   * both lists, the value from the specified list will replace the existing value.
    *
    * @param tags
-   *     A set of tags to prepend.
+   *     A set of tags to merge.
    * @return
-   *     New tag list with the tags prepended.
+   *     A tag list with the merged values.  Based on the inputs the result may be this, tags, or a new object.
    */
-  TagList prepend(Iterable<Tag> tags) {
-    TagList head = this;
-    for (Tag t : tags) {
-      head = new TagList(t.key(), t.value(), head);
+  TagList mergeList(Iterable<Tag> tags) {
+    if (tags == null) {
+      return this;
     }
-    return head;
+
+    Iterator<Tag> iter = tags.iterator();
+
+    if (iter.hasNext()) {
+      Tag firstTag = iter.next();
+
+      if (iter.hasNext()) {
+        // Iterator has multiple entries so we need to sort them and remove any duplicates.
+        TagSorterAndDeduplicator entries = new TagSorterAndDeduplicator();
+
+        entries.addTags(this);
+        entries.addTags(tags);
+
+        return createFromSortedTags(entries.sortedTags());
+      } else {
+        // Single entry iterator.
+        return mergeTag(firstTag);
+      }
+    } else {
+      // Empty iterator
+      return this;
+    }
+  }
+
+  /**
+   * Produces a list with the tags from this list merged with the tags in the specified list.  For any keys present in
+   * both lists, the value from the specified list will replace the existing value.
+   *
+   * @param tags
+   *     A set of tags to merge.
+   * @return
+   *     A tag list with the merged values.  Based on the inputs the result may be this or a new object.
+   */
+  TagList mergeMap(Map<String, String> tags) {
+    if (tags == null || tags.isEmpty()) {
+      return this;
+    }
+
+    if (tags.size() == 1) {
+      Map.Entry<String, String> entry = tags.entrySet().iterator().next();
+
+      return mergeTag(new TagList(entry.getKey(), entry.getValue(), EMPTY));
+    } else {
+        // Iterator has multiple entries so we need to sort them and remove any duplicates.
+        TagSorterAndDeduplicator entries = new TagSorterAndDeduplicator();
+
+        entries.addTags(this);
+        entries.addTags(tags);
+
+      return createFromSortedTags(entries.sortedTags());
+    }
   }
 
   /**
@@ -129,11 +291,26 @@ final class TagList implements Iterable<Tag>, Tag {
     if (tags == EMPTY || tags instanceof TagList) {
       return (TagList) tags;
     } else {
-      TagList head = EMPTY;
-      for (Tag t : tags) {
-        head = new TagList(t.key(), t.value(), head);
+      Iterator<Tag> iter = tags.iterator();
+
+      if (iter.hasNext()) {
+        Tag firstTag = iter.next();
+
+        if (iter.hasNext()) {
+          // Iterator has multiple entries so we need to sort them and remove any duplicates.
+          TagSorterAndDeduplicator entries = new TagSorterAndDeduplicator();
+
+          entries.addTags(tags);
+
+          return createFromSortedTags(entries.sortedTags());
+        } else {
+          // Single entry iterator.
+          return new TagList(firstTag.key(), firstTag.value(), EMPTY);
+        }
+      } else {
+        // Empty iterator
+        return EMPTY;
       }
-      return head;
     }
   }
 
@@ -147,8 +324,35 @@ final class TagList implements Iterable<Tag>, Tag {
    */
   static TagList create(Map<String, String> tags) {
     TagList head = EMPTY;
-    for (Map.Entry<String, String> t : tags.entrySet()) {
-      head = new TagList(t.getKey(), t.getValue(), head);
+
+    if (tags.size() >= 2) {
+      TagSorterAndDeduplicator entries = new TagSorterAndDeduplicator();
+
+      for (Map.Entry<String, String> t : tags.entrySet()) {
+        entries.addTag(new TagList(t.getKey(), t.getValue()));
+      }
+      head = createFromSortedTags(entries.sortedTags());
+    } else {
+      for (Map.Entry<String, String> t : tags.entrySet()) {
+        head = new TagList(t.getKey(), t.getValue(), head);
+      }
+    }
+
+    return head;
+  }
+
+  /**
+   * Create a tag list from a sorted, deduplicated list of tags.  The TagList is created with the entries in the
+   * reverse order of the entries in the provided argument.
+   *
+   * @param sortedTags the sorted collection of tags to use to create the list
+   * @return the newly constructed tag list or {@code EMPTY} if the iterable contains no entries
+   */
+  private static TagList createFromSortedTags(Iterable<Tag> sortedTags) {
+    TagList head = EMPTY;
+
+    for (Tag t : sortedTags) {
+      head = new TagList(t.key(), t.value(), head);
     }
     return head;
   }
