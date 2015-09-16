@@ -84,7 +84,9 @@ final class TagList implements Iterable<Tag>, Tag {
     }
 
     /**
-     * @return the sorted set of deduplicated tags
+     * Returns the sorted set of deduplicated tags.
+     *
+     * @return the sorted tags
      */
     Iterable<Tag> sortedTags() {
       return map.values();
