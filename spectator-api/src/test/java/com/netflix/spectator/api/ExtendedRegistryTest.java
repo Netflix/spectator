@@ -40,7 +40,7 @@ public class ExtendedRegistryTest {
   public void testCreateIdArray() {
     Registry r = new DefaultRegistry();
     Id id1 = r.createId("foo", "bar", "baz", "k", "v");
-    Id id2 = r.createId("foo", new TagList("k", "v", new TagList("bar", "baz")));
+    Id id2 = r.createId("foo", new TagList("k", "v").mergeTag(new TagList("bar", "baz")));
     Assert.assertEquals(id1, id2);
   }
 
@@ -65,7 +65,7 @@ public class ExtendedRegistryTest {
   public void testCounterHelpers() {
     Registry r = new DefaultRegistry();
     Counter c1 = r.counter("foo", "bar", "baz", "k", "v");
-    Counter c2 = r.counter("foo", new TagList("k", "v", new TagList("bar", "baz")));
+    Counter c2 = r.counter("foo", new TagList("k", "v").mergeTag(new TagList("bar", "baz")));
     Counter c3 = r.counter("foo");
     Assert.assertSame(c1, c2);
     Assert.assertNotSame(c1, c3);
@@ -76,7 +76,7 @@ public class ExtendedRegistryTest {
     Registry r = new DefaultRegistry();
     DistributionSummary c1 = r.distributionSummary("foo", "bar", "baz", "k", "v");
     DistributionSummary c2 = r.distributionSummary("foo",
-        new TagList("k", "v", new TagList("bar", "baz")));
+        new TagList("k", "v").mergeTag(new TagList("bar", "baz")));
     DistributionSummary c3 = r.distributionSummary("foo");
     Assert.assertSame(c1, c2);
     Assert.assertNotSame(c1, c3);
@@ -86,7 +86,7 @@ public class ExtendedRegistryTest {
   public void testTimerHelpers() {
     Registry r = new DefaultRegistry();
     Timer c1 = r.timer("foo", "bar", "baz", "k", "v");
-    Timer c2 = r.timer("foo", new TagList("k", "v", new TagList("bar", "baz")));
+    Timer c2 = r.timer("foo", new TagList("k", "v").mergeTag(new TagList("bar", "baz")));
     Timer c3 = r.timer("foo");
     Assert.assertSame(c1, c2);
     Assert.assertNotSame(c1, c3);
@@ -100,7 +100,7 @@ public class ExtendedRegistryTest {
     Meter m1 = r.get(c1.id());
     Assert.assertEquals(c1.id(), m1.id()); // registration
 
-    LongTaskTimer c2 = r.longTaskTimer("foo", new TagList("k", "v", new TagList("bar", "baz")));
+    LongTaskTimer c2 = r.longTaskTimer("foo", new TagList("k", "v").mergeTag(new TagList("bar", "baz")));
     Assert.assertEquals(c1.id(), c2.id());
 
     long t1 = c1.start();
@@ -123,7 +123,7 @@ public class ExtendedRegistryTest {
     AtomicLong al4 = new AtomicLong(4L);
     Registry r = new DefaultRegistry();
     AtomicLong v1 = r.gauge(r.createId("foo", "bar", "baz", "k", "v"), al1);
-    AtomicLong v2 = r.gauge("foo", new TagList("k", "v", new TagList("bar", "baz")), al2);
+    AtomicLong v2 = r.gauge("foo", new TagList("k", "v").mergeTag(new TagList("bar", "baz")), al2);
     AtomicLong v3 = r.gauge("foo", al4);
     Assert.assertSame(v1, al1);
     Assert.assertSame(v2, al2);

@@ -58,7 +58,7 @@ public class DefaultIdTest {
   @Test
   public void equalsContractTest() {
     TagList ts1 = new TagList("k1", "v1");
-    TagList ts2 = new TagList("k2", "v2", ts1);
+    TagList ts2 = new TagList("k2", "v2").mergeTag(ts1);
     EqualsVerifier
       .forClass(DefaultId.class)
       .withPrefabValues(TagList.class, ts1, ts2)
@@ -70,7 +70,7 @@ public class DefaultIdTest {
   public void testNormalize() {
     DefaultId id12 = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
     DefaultId id21 = (new DefaultId("foo")).withTag("k1", "v1").withTags(id12.tags());
-    Assert.assertTrue(!id12.equals(id21));
+    Assert.assertEquals(id12, id21);
     Assert.assertEquals(id12, id21.normalize());
   }
 
@@ -113,7 +113,7 @@ public class DefaultIdTest {
   @Test
   public void testToString() {
     DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
-    Assert.assertEquals(id.toString(), "foo:k2=v2:k1=v1");
+    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
@@ -128,6 +128,6 @@ public class DefaultIdTest {
     map.put("k1", "v1");
     map.put("k2", "v2");
     DefaultId id = (new DefaultId("foo")).withTags(map);
-    Assert.assertEquals(id.toString(), "foo:k2=v2:k1=v1");
+    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 }

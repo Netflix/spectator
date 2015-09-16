@@ -37,24 +37,24 @@ public class CompatibilityTest {
     EXPECTED.add("Measurement(collection-size,1234567890,8.0)");
     EXPECTED.add("Measurement(counter,1234567890,127.0)");
     EXPECTED.add("Measurement(counter:a=b,1234567890,381.0)");
+    EXPECTED.add("Measurement(dist:a=b:statistic=count,1234567890,15.0)");
+    EXPECTED.add("Measurement(dist:a=b:statistic=totalAmount,1234567890,504.0)");
     EXPECTED.add("Measurement(dist:statistic=count,1234567890,5.0)");
-    EXPECTED.add("Measurement(dist:statistic=count:a=b,1234567890,15.0)");
     EXPECTED.add("Measurement(dist:statistic=totalAmount,1234567890,168.0)");
-    EXPECTED.add("Measurement(dist:statistic=totalAmount:a=b,1234567890,504.0)");
     EXPECTED.add("Measurement(gauge,1234567890,49.0)");
     EXPECTED.add("Measurement(gauge-age,1234567890,0.049)");
     EXPECTED.add("Measurement(gauge-function,1234567890,65.0)");
-    EXPECTED.add("Measurement(gauge:node=i-12345:asg=foo-dev-v001:cluster=foo-dev:app=foo,1234567890,7.0)");
+    EXPECTED.add("Measurement(gauge:app=foo:asg=foo-dev-v001:cluster=foo-dev:node=i-12345,1234567890,7.0)");
+    EXPECTED.add("Measurement(long-timer:a=b:statistic=activeTasks,1234567890,3.0)");
+    EXPECTED.add("Measurement(long-timer:a=b:statistic=duration,1234567890,15120.0)");
     EXPECTED.add("Measurement(long-timer:statistic=activeTasks,1234567890,1.0)");
-    EXPECTED.add("Measurement(long-timer:statistic=activeTasks:a=b,1234567890,3.0)");
     EXPECTED.add("Measurement(long-timer:statistic=duration,1234567890,10080.0)");
-    EXPECTED.add("Measurement(long-timer:statistic=duration:a=b,1234567890,15120.0)");
     EXPECTED.add("Measurement(map-size,1234567890,8.0)");
     EXPECTED.add("Measurement(method-value,1234567890,22.0)");
+    EXPECTED.add("Measurement(timer:a=b:statistic=count,1234567890,24.0)");
+    EXPECTED.add("Measurement(timer:a=b:statistic=totalTime,1234567890,4.53852000126E14)");
     EXPECTED.add("Measurement(timer:statistic=count,1234567890,8.0)");
-    EXPECTED.add("Measurement(timer:statistic=count:a=b,1234567890,24.0)");
     EXPECTED.add("Measurement(timer:statistic=totalTime,1234567890,1.51284000042E14)");
-    EXPECTED.add("Measurement(timer:statistic=totalTime:a=b,1234567890,4.53852000126E14)");
   }
 
   @Test

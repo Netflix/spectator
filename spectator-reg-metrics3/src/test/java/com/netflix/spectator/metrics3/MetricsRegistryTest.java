@@ -36,7 +36,7 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     r.counter("foo", "id", "bar", "a", "b", "a", "c").increment();
-    Assert.assertTrue(codaRegistry.getMeters().containsKey("foo.id-bar.a-c"));
+    Assert.assertTrue(codaRegistry.getMeters().containsKey("foo.a-c.id-bar"));
   }
 
   @Test
