@@ -65,7 +65,8 @@ public class TDigestWriterTest {
 
   @Before
   public void init() {
-    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
+    final TDigestConfig config = new TDigestConfig(
+        ConfigFactory.parseResources("test.conf").getConfig("spectator.tdigest"));
     baos = new ByteArrayOutputStream();
     writer = new StreamTDigestWriter(registry, config, baos);
   }

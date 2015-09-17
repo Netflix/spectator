@@ -15,8 +15,12 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Registry;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,8 +37,16 @@ public class TDigestTimerTest {
   private final ManualClock clock = new ManualClock();
 
   private TDigestTimer newTimer(String name) {
-    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
-    final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
+    final Injector injector = Guice.createInjector(
+        TDigestTestModule.create(),
+        new AbstractModule() {
+          @Override
+          protected void configure() {
+            bind(Registry.class).toInstance(new DefaultRegistry(clock));
+          }
+        }
+    );
+    final TDigestRegistry r = injector.getInstance(TDigestRegistry.class);
     return (TDigestTimer) r.timer(r.createId(name));
   }
 

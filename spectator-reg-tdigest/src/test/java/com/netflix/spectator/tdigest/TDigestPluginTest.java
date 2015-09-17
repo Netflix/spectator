@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.tdigest;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
@@ -70,10 +73,18 @@ public class TDigestPluginTest {
   public void writeData() throws Exception {
     final File f = new File("build/TDigestPlugin_writeData.out");
     f.getParentFile().mkdirs();
-    final TDigestConfig config = new TDigestConfig(ConfigFactory.load().getConfig("spectator.tdigest"));
-    final TDigestRegistry r = new TDigestRegistry(new DefaultRegistry(clock), config);
-    final TDigestWriter w = new FileTDigestWriter(new DefaultRegistry(), config, f);
-    final TDigestPlugin p = new TDigestPlugin(r, w, config);
+
+    Injector injector = Guice.createInjector(
+        TDigestTestModule.file(f),
+        new AbstractModule() {
+          @Override protected void configure() {
+            bind(Registry.class).toInstance(new DefaultRegistry(clock));
+          }
+        }
+    );
+
+    final TDigestRegistry r = injector.getInstance(TDigestRegistry.class);
+    final TDigestPlugin p = injector.getInstance(TDigestPlugin.class);
 
     // Adding a bunch of tags to test the effect of setting
     // SmileGenerator.Feature.CHECK_SHARED_STRING_VALUES.
