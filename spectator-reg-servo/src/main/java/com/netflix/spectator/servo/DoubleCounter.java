@@ -75,7 +75,8 @@ class DoubleCounter extends AbstractMonitor<Number> implements NumericMonitor<Nu
 
   @Override public Number getValue(int pollerIndex) {
     final Long dp = count.poll(pollerIndex);
-    return (dp == null) ? Double.NaN : Double.longBitsToDouble(dp.longValue());
+    final double stepSeconds = ServoPollers.POLLING_INTERVALS[pollerIndex] / 1000.0;
+    return (dp == null) ? Double.NaN : Double.longBitsToDouble(dp.longValue()) / stepSeconds;
   }
 
   @Override public String toString() {

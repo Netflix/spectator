@@ -92,11 +92,11 @@ class StepLong {
     final long missed = (now - last) / step - 1;
 
     if (last / step == now / step) {
-      return Long.valueOf(value);
+      return value;
     } else if (last > 0L && missed > 0L) {
       return null;
     } else {
-      return Long.valueOf(value);
+      return value;
     }
   }
 
