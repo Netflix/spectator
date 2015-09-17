@@ -174,7 +174,8 @@ public class ServoTimerTest {
     final double v = Utils.first(t.measure(), Statistic.totalOfSquares).value();
 
     final double factor = 1e9 * 1e9;
-    Assert.assertEquals(s2.doubleValue() / factor, v, 1e-12);
+    final BigInteger perSec = s2.divide(BigInteger.valueOf(60));
+    Assert.assertEquals(perSec.doubleValue() / factor, v, 1e-12);
   }
 
   @Test
@@ -193,6 +194,7 @@ public class ServoTimerTest {
     final double v = Utils.first(t.measure(), Statistic.totalOfSquares).value();
 
     final double factor = 1e9 * 1e9;
+    sumOfSq = sumOfSq.divide(BigInteger.valueOf(60));
     Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 1e-12);
   }
 
@@ -214,6 +216,7 @@ public class ServoTimerTest {
     // Expected :3.3332833335E14
     // Actual   :3.3332833334999825E14
     final double factor = 1e9 * 1e9;
+    sumOfSq = sumOfSq.divide(BigInteger.valueOf(60));
     Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 2.0);
   }
 
