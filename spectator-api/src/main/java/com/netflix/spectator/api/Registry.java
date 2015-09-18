@@ -52,6 +52,28 @@ public interface Registry extends Iterable<Meter> {
   Id createId(String name, Iterable<Tag> tags);
 
   /**
+   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     The newly created dynamic identifier.
+   */
+  DynamicId createDynamicId(String name);
+
+  /**
+   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tagFactories
+   *     Other factories that can generate other dimensions that can be used to classify the measurement.
+   * @return
+   *     The newly created dynamic identifier.
+   */
+  DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories);
+
+  /**
    * Add a custom meter to the registry.
    */
   void register(Meter meter);

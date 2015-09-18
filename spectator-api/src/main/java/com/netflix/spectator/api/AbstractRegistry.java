@@ -74,11 +74,21 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Id createId(String name) {
-    return new DefaultId(name, TagList.EMPTY);
+    return new DefaultId(name);
   }
 
   @Override public final Id createId(String name, Iterable<Tag> tags) {
     return new DefaultId(name, TagList.create(tags));
+  }
+
+  @Override
+  public DynamicId createDynamicId(String name) {
+    return new DefaultDynamicId(name);
+  }
+
+  @Override
+  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return DefaultDynamicId.createWithFactories(name, tagFactories);
   }
 
   private void logTypeError(Id id, Class<?> desired, Class<?> found) {

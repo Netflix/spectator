@@ -51,6 +51,12 @@ public class DefaultRegistryTest {
   }
 
   @Test
+  public void testCreateDynamicId() {
+    Registry r = new DefaultRegistry(clock);
+    Assert.assertEquals(r.createDynamicId("foo"), new DefaultDynamicId("foo"));
+  }
+
+  @Test
   public void testRegister() {
     Registry r = new DefaultRegistry(clock);
     Counter c = new DefaultCounter(clock, r.createId("foo"));

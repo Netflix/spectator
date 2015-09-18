@@ -88,6 +88,16 @@ public final class CompositeRegistry implements Registry {
     return new DefaultId(name, TagList.create(tags));
   }
 
+  @Override
+  public DynamicId createDynamicId(String name) {
+    return new DefaultDynamicId(name);
+  }
+
+  @Override
+  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return DefaultDynamicId.createWithFactories(name, tagFactories);
+  }
+
   @Override public void register(Meter meter) {
     gauges.register(meter);
   }

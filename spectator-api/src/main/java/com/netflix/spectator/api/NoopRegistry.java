@@ -37,6 +37,16 @@ public final class NoopRegistry implements Registry {
     return NoopId.INSTANCE;
   }
 
+  @Override
+  public DynamicId createDynamicId(String name) {
+    return NoopDynamicId.INSTANCE;
+  }
+
+  @Override
+  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return NoopDynamicId.INSTANCE;
+  }
+
   @Override public void register(Meter meter) {
   }
 

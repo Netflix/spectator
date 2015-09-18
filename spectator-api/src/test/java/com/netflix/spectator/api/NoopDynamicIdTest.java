@@ -21,19 +21,24 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class NoopIdTest {
+public class NoopDynamicIdTest {
   @Test
   public void testTags() {
-    Assert.assertFalse(NoopId.INSTANCE.tags().iterator().hasNext());
+    Assert.assertFalse(NoopDynamicId.INSTANCE.tags().iterator().hasNext());
   }
 
   @Test
   public void testWithTag() {
-    Assert.assertSame(NoopId.INSTANCE.withTag(new TagList("k", "v")), NoopId.INSTANCE);
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTag(new TagList("k", "v")), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
+  public void testWithTagFactory() {
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactory(new BasicTagFactory("unused")), NoopDynamicId.INSTANCE);
   }
 
   @Test
   public void testToString() {
-    Assert.assertEquals(NoopId.INSTANCE.toString(), "noop");
+    Assert.assertEquals(NoopDynamicId.INSTANCE.toString(), "noop");
   }
 }

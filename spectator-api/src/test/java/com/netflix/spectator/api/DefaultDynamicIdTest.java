@@ -15,25 +15,21 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+/**
+ * Unit tests for the DefaultDynamicId class.
+ *
+ * Created by pstout on 9/17/15.
+ */
 @RunWith(JUnit4.class)
-public class NoopIdTest {
-  @Test
-  public void testTags() {
-    Assert.assertFalse(NoopId.INSTANCE.tags().iterator().hasNext());
+public class DefaultDynamicIdTest {
+
+  @Test(expected = NullPointerException.class)
+  public void testNullName() {
+    new DefaultDynamicId(null);
   }
 
-  @Test
-  public void testWithTag() {
-    Assert.assertSame(NoopId.INSTANCE.withTag(new TagList("k", "v")), NoopId.INSTANCE);
-  }
-
-  @Test
-  public void testToString() {
-    Assert.assertEquals(NoopId.INSTANCE.toString(), "noop");
-  }
 }
