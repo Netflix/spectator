@@ -153,8 +153,24 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     return Optional.ofNullable(properties).filter(v -> !v.isEmpty());
   }
 
-  private static <R> Optional<R> firstValue(List<Object> properties, Function<Object, R> transform) {
-    return notEmpty(properties).map(v -> transform.apply(v.get(0)));
+  /**
+   * Extracts and transforms the first item from a list.
+   *
+   * @param properties
+   *     The list of properties to filter, may be null or empty
+   * @param transform
+   *     The transform to apply to the extracted list item. The
+   *     transform is only applied if the list contains a non-null
+   *     item at index 0.
+   * @param <R>
+   *     The transform return type
+   * @return
+   *     The transformed value, or Optional.empty() if there is no
+   *     non-null item at index 0 of the list.
+   */
+  //VisibleForTesting
+  static <R> Optional<R> firstValue(List<Object> properties, Function<Object, R> transform) {
+    return notEmpty(properties).map(v -> v.get(0)).map(transform::apply);
   }
 
   private static boolean isError(AWSRequestMetrics metrics) {
