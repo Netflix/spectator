@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -87,5 +88,13 @@ public class SpectatorRequestMetricCollectorTest {
         .findFirst();
     assertTrue(expectedCounter.isPresent());
     assertEquals(12345L, expectedCounter.get().count());
+  }
+
+  @Test
+  public void testListFiltering() {
+    assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(null, Object::toString));
+    assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.emptyList(), Object::toString));
+    assertEquals(Optional.of("1"), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(1L), Object::toString));
+    assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(null), Object::toString));
   }
 }
