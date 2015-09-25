@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 

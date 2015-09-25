@@ -77,6 +77,7 @@ final class DefaultDynamicId implements DynamicId {
   static class ConstantTagFactory implements TagFactory { // Visible for testing
     private final Tag tag;
 
+    /** Construct a new instance that will always return the specified tag. */
     ConstantTagFactory(Tag tag) {
       this.tag = tag;
     }
@@ -192,8 +193,8 @@ final class DefaultDynamicId implements DynamicId {
 
     // We cannot use tagFactories.equals(that.tagFactories) below, because Java
     // unmodifiable collections do not override equals appropriately.
-    return name.equals(that.name) && tagFactories.size() == that.tagFactories.size() &&
-            tagFactories.containsAll(that.tagFactories);
+    return name.equals(that.name) && tagFactories.size() == that.tagFactories.size()
+        && tagFactories.containsAll(that.tagFactories);
   }
 
   @Override

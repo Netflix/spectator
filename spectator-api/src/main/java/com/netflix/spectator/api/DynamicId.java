@@ -15,8 +15,6 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.Collection;
-
 /**
  * An extension of the {@link Id} interface that allows the list of tag names to attached to the Id
  * to be declared in advance of the use of the metric.
