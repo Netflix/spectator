@@ -20,6 +20,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 @RunWith(JUnit4.class)
 public class NoopDynamicIdTest {
   @Test
@@ -28,13 +32,36 @@ public class NoopDynamicIdTest {
   }
 
   @Test
+  public void testWithKeyValueTag() {
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTag("k", "v"), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
   public void testWithTag() {
     Assert.assertSame(NoopDynamicId.INSTANCE.withTag(new TagList("k", "v")), NoopDynamicId.INSTANCE);
   }
 
   @Test
+  public void testWithTags() {
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTags(new TagList("k", "v")), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
+  public void testWithTagsMap() {
+    Map<String, String> tags = new HashMap<>();
+
+    tags.put("key", "value");
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTags(tags), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
   public void testWithTagFactory() {
     Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactory(new BasicTagFactory("unused")), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
+  public void testWithTagFactories() {
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactories(Arrays.asList(new BasicTagFactory("unused"))), NoopDynamicId.INSTANCE);
   }
 
   @Test

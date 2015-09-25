@@ -60,21 +60,6 @@ final class NoopDynamicId  implements DynamicId {
   }
 
   @Override
-  public Collection<TagFactory> tagFactories() {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DynamicId withTagName(String tagName) {
-    return this;
-  }
-
-  @Override
-  public DynamicId withTagNames(Iterable<String> tagNames) {
-    return this;
-  }
-
-  @Override
   public DynamicId withTagFactory(TagFactory factory) {
     return this;
   }

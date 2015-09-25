@@ -58,6 +58,22 @@ public class CompositeRegistryTest {
   }
 
   @Test
+  public void testCreateDynamicId() {
+    Registry r = newRegistry(5);
+    Assert.assertEquals(r.createDynamicId("foo"), new DefaultDynamicId("foo"));
+  }
+
+  @Test
+  public void testCreateDynamicIdWithTagFactories() {
+    Registry r = newRegistry(5);
+    Set<TagFactory> factories = new HashSet<>();
+
+    factories.add(new BasicTagFactory("key"));
+    Assert.assertEquals(r.createDynamicId("foo", factories),
+            new DefaultDynamicId("foo").withTagFactories(factories));
+  }
+
+  @Test
   public void testRegister() {
     Registry r = newRegistry(5);
     Counter c = new DefaultCounter(clock, r.createId("foo"));

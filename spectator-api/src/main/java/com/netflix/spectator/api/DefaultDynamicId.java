@@ -19,7 +19,6 @@ import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
@@ -35,11 +34,8 @@ final class DefaultDynamicId implements DynamicId {
    * Utility class for sorting and deduplicating lists of tag factories.
    */
   private static final class FactorySorterAndDeduplicator {
-    private static final Comparator<String> REVERSE_STRING_COMPARATOR =
-      (String left, String right) -> right.compareTo(left);
-
     /** Map used to sort and deduplicate the presented tag factories. */
-    private final Map<String, TagFactory> map = new TreeMap<>(REVERSE_STRING_COMPARATOR);
+    private final Map<String, TagFactory> map = new TreeMap<>();
 
     /** Construct a new instance with the specified factories in it. */
     FactorySorterAndDeduplicator(Iterable<TagFactory> tagFactories) {
@@ -78,7 +74,7 @@ final class DefaultDynamicId implements DynamicId {
   }
 
   /** Implementation that always produces the same tag. */
-  private static class ConstantTagFactory implements TagFactory {
+  static class ConstantTagFactory implements TagFactory { // Visible for testing
     private final Tag tag;
 
     ConstantTagFactory(Tag tag) {
@@ -95,19 +91,6 @@ final class DefaultDynamicId implements DynamicId {
       return tag;
     }
   }
-
-  /** Implementation that always returns null, which result in the tag being omitted. */
-  private static final TagFactory NOOP_TAG_FACTORY = new TagFactory() {
-    @Override
-    public String name() {
-      return "noopTagFactory";
-    }
-
-    @Override
-    public Tag createTag(String value) {
-        return null;
-    }
-  };
 
   private final String name;
   private final Collection<TagFactory> tagFactories;
@@ -166,43 +149,28 @@ final class DefaultDynamicId implements DynamicId {
   }
 
   @Override
-  public Collection<TagFactory> tagFactories() {
-    return tagFactories;
-  }
-
-  @Override
-  public Id withTag(String k, String v) {
+  public DefaultDynamicId withTag(String k, String v) {
     return withTagFactory(new ConstantTagFactory(new TagList(k, v)));
   }
 
   @Override
-  public Id withTag(Tag t) {
+  public DefaultDynamicId withTag(Tag t) {
     return withTagFactory(new ConstantTagFactory(t));
   }
 
   @Override
-  public Id withTags(Iterable<Tag> tags) {
+  public DefaultDynamicId withTags(Iterable<Tag> tags) {
     return createNewId(sorter -> tags.forEach(tag -> sorter.addFactory(new ConstantTagFactory(tag))));
   }
 
   @Override
-  public Id withTags(Map<String, String> tags) {
+  public DefaultDynamicId withTags(Map<String, String> tags) {
     return createNewId(sorter ->
-      tags.forEach((key, value) -> sorter.addFactory(new ConstantTagFactory(new TagList(key, value)))));
+            tags.forEach((key, value) -> sorter.addFactory(new ConstantTagFactory(new TagList(key, value)))));
   }
 
   @Override
-  public DynamicId withTagName(String tagName) {
-    return withTagFactory(NOOP_TAG_FACTORY);
-  }
-
-  @Override
-  public DynamicId withTagNames(Iterable<String> tagNames) {
-    return createNewId(sorter -> tagNames.forEach(tagName -> sorter.addFactory(NOOP_TAG_FACTORY)));
-  }
-
-  @Override
-  public DynamicId withTagFactory(TagFactory factory) {
+  public DefaultDynamicId withTagFactory(TagFactory factory) {
     if (tagFactories.isEmpty()) {
       return new DefaultDynamicId(name, Collections.singleton(factory));
     } else {
@@ -211,7 +179,7 @@ final class DefaultDynamicId implements DynamicId {
   }
 
   @Override
-  public DynamicId withTagFactories(Iterable<TagFactory> factories) {
+  public DefaultDynamicId withTagFactories(Iterable<TagFactory> factories) {
     return createNewId(sorter -> sorter.addFactories(factories));
   }
 
@@ -222,7 +190,10 @@ final class DefaultDynamicId implements DynamicId {
 
     DefaultDynamicId that = (DefaultDynamicId) o;
 
-    return name.equals(that.name) && tagFactories.equals(that.tagFactories);
+    // We cannot use tagFactories.equals(that.tagFactories) below, because Java
+    // unmodifiable collections do not override equals appropriately.
+    return name.equals(that.name) && tagFactories.size() == that.tagFactories.size() &&
+            tagFactories.containsAll(that.tagFactories);
   }
 
   @Override
@@ -235,7 +206,9 @@ final class DefaultDynamicId implements DynamicId {
     StringBuilder buf = new StringBuilder();
     buf.append(name);
     if (!tagFactories.isEmpty()) {
-      buf.append(':').append(tags());
+      for (Tag cur: tags()) {
+        buf.append(":").append(cur.key()).append("=").append(cur.value());
+      }
     }
     return buf.toString();
   }
@@ -249,7 +222,7 @@ final class DefaultDynamicId implements DynamicId {
    * @return
    *      the newly created id
    */
-  private DynamicId createNewId(Consumer<FactorySorterAndDeduplicator> consumer) {
+  private DefaultDynamicId createNewId(Consumer<FactorySorterAndDeduplicator> consumer) {
     FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);
 
     consumer.accept(sorter);

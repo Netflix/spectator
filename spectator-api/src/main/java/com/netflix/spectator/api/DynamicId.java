@@ -22,15 +22,6 @@ import java.util.Collection;
  * to be declared in advance of the use of the metric.
  */
 public interface DynamicId extends Id {
-  /** Immutable map of tag names to tag factories. */
-  Collection<TagFactory> tagFactories();
-
-  /** New id with an additional tag name. */
-  DynamicId withTagName(String tagName);
-
-  /** New id with additional tag names. */
-  DynamicId withTagNames(Iterable<String> tagNames);
-
   /** New id with an additional tag factory.
    * @param factory the factory to use to generate the values for the tag
    */

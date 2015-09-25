@@ -20,12 +20,18 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
 public class NoopRegistryTest {
 
   private final ManualClock clock = new ManualClock();
+
+  @Test
+  public void testClock() {
+    Assert.assertEquals(Clock.SYSTEM, new NoopRegistry().clock());
+  }
 
   @Test
   public void testCreateId() {
@@ -38,6 +44,18 @@ public class NoopRegistryTest {
     Registry r = new NoopRegistry();
     TagList ts = new TagList("k", "v");
     Assert.assertEquals(r.createId("foo", ts), NoopId.INSTANCE);
+  }
+
+  @Test
+  public void testCreateDynamicId() {
+    Registry r = new NoopRegistry();
+    Assert.assertEquals(r.createDynamicId("foo"), NoopDynamicId.INSTANCE);
+  }
+
+  @Test
+  public void testCreateDynamicIdWithTags() {
+    Registry r = new NoopRegistry();
+    Assert.assertEquals(r.createDynamicId("foo", Collections.emptyList()), NoopDynamicId.INSTANCE);
   }
 
   @Test

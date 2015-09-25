@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,5 +67,13 @@ public class BasicTagFactoryTest {
     Tag tag = factory.createTag(expected);
 
     Assert.assertEquals(expected, tag.value());
+  }
+
+  @Test
+  public void equalsContractTest() {
+    EqualsVerifier
+            .forClass(BasicTagFactory.class)
+            .suppress(Warning.NULL_FIELDS)
+            .verify();
   }
 }

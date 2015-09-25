@@ -21,6 +21,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +56,23 @@ public class DefaultRegistryTest {
   public void testCreateDynamicId() {
     Registry r = new DefaultRegistry(clock);
     Assert.assertEquals(r.createDynamicId("foo"), new DefaultDynamicId("foo"));
+  }
+
+  @Test
+  public void testCreateDynamicIdWithFactories() {
+    Registry r = new DefaultRegistry(clock);
+    Collection<TagFactory> factories = Arrays.asList(new TagFactory() {
+      @Override
+      public String name() {
+        return "unused";
+      }
+
+      @Override
+      public Tag createTag(String value) {
+        return null;
+      }
+    });
+    Assert.assertEquals(r.createDynamicId("foo", factories), new DefaultDynamicId("foo").withTagFactories(factories));
   }
 
   @Test
