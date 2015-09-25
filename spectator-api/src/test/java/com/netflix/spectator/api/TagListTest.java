@@ -185,12 +185,36 @@ public class TagListTest {
 
   @Test
   public void testMergeTagWithSameKey() {
-    Iterable<Tag> prefix = Collections.singletonList(new TagList("k1", "v1"));
     TagList initial = new TagList("k1", "v1");
     TagList expected = new TagList("k1", "v2");
     TagList actual = initial.mergeTag(expected);
 
     Assert.assertNotSame(expected, actual);
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testMergeNullList() {
+    TagList expected = new TagList("k3", "v3");
+    TagList actual = expected.mergeList(null);
+    Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testMergeEmptyList() {
+    TagList expected = new TagList("k3", "v3");
+    TagList actual = expected.mergeList(new ArrayList<>());
+    Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testMergeSingleValueAsList() {
+    ArrayList<Tag> prefix = new ArrayList<>();
+    TagList initial = new TagList("k3", "v3");
+    TagList expected = new TagList("k1", "v1").mergeTag(new TagList("k3", "v3"));
+
+    prefix.add(new TagList("k1", "v1"));
+    TagList actual = initial.mergeList(prefix);
     Assert.assertEquals(expected, actual);
   }
 
@@ -203,6 +227,31 @@ public class TagListTest {
     prefix.add(new TagList("k1", "v1"));
     prefix.add(new TagList("k2", "v2"));
     TagList actual = initial.mergeList(prefix);
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testMergeNullMap() {
+    TagList expected = new TagList("k3", "v3");
+    TagList actual = expected.mergeMap(null);
+    Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testMergeEmptyMap() {
+    TagList expected = new TagList("k3", "v3");
+    TagList actual = expected.mergeMap(new HashMap<>());
+    Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testMergeSingleValueAsMap() {
+    Map<String, String> extra = new HashMap<>();
+    TagList initial = new TagList("k3", "v3");
+    TagList expected = new TagList("k1", "v1").mergeTag(new TagList("k3", "v3"));
+
+    extra.put("k1", "v1");
+    TagList actual = initial.mergeMap(extra);
     Assert.assertEquals(expected, actual);
   }
 
