@@ -24,7 +24,6 @@ import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -132,7 +131,7 @@ public class DefaultDynamicIdTest {
   @Test
   public void testWithTagFactory() {
     Tag expected = new TagList("key", "value");
-    DefaultDynamicId id = new DefaultDynamicId("foo").withTagFactory(new DefaultDynamicId.ConstantTagFactory(expected));
+    DefaultDynamicId id = new DefaultDynamicId("foo").withTagFactory(new ConstantTagFactory(expected));
     Iterator<Tag> tags = id.tags().iterator();
 
     Assert.assertTrue("tags empty", tags.hasNext());
@@ -143,7 +142,7 @@ public class DefaultDynamicIdTest {
   public void testWithTagFactories() {
     Tag tags1 = new TagList("k1", "v1");
     Tag tags2 = new TagList("k2", "v2");
-    List<TagFactory> factories = Arrays.asList(new DefaultDynamicId.ConstantTagFactory(tags1), new DefaultDynamicId.ConstantTagFactory(tags2));
+    List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
     DefaultDynamicId id = new DefaultDynamicId("foo").withTagFactories(factories);
     Iterator<Tag> tags = id.tags().iterator();
 
@@ -156,7 +155,7 @@ public class DefaultDynamicIdTest {
   public void testCreateWithFactories() {
     Tag tags1 = new TagList("k1", "v1");
     Tag tags2 = new TagList("k2", "v2");
-    List<TagFactory> factories = Arrays.asList(new DefaultDynamicId.ConstantTagFactory(tags1), new DefaultDynamicId.ConstantTagFactory(tags2));
+    List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
     DefaultDynamicId id = DefaultDynamicId.createWithFactories("foo", factories);
     Iterator<Tag> tags = id.tags().iterator();
 

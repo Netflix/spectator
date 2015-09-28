@@ -56,12 +56,12 @@ public class NoopDynamicIdTest {
 
   @Test
   public void testWithTagFactory() {
-    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactory(new BasicTagFactory("unused")), NoopDynamicId.INSTANCE);
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactory(new ConstantTagFactory("k", "v")), NoopDynamicId.INSTANCE);
   }
 
   @Test
   public void testWithTagFactories() {
-    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactories(Arrays.asList(new BasicTagFactory("unused"))), NoopDynamicId.INSTANCE);
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTagFactories(Arrays.asList(new ConstantTagFactory("k", "v"))), NoopDynamicId.INSTANCE);
   }
 
   @Test

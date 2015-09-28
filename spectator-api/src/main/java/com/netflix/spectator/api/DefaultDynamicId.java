@@ -73,26 +73,6 @@ final class DefaultDynamicId implements DynamicId {
     }
   }
 
-  /** Implementation that always produces the same tag. */
-  static class ConstantTagFactory implements TagFactory { // Visible for testing
-    private final Tag tag;
-
-    /** Construct a new instance that will always return the specified tag. */
-    ConstantTagFactory(Tag tag) {
-      this.tag = tag;
-    }
-
-    @Override
-    public String name() {
-      return tag.key();
-    }
-
-    @Override
-    public Tag createTag(String value) {
-      return tag;
-    }
-  }
-
   private final String name;
   private final Collection<TagFactory> tagFactories;
 

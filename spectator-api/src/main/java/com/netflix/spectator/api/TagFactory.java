@@ -30,8 +30,8 @@ public interface TagFactory {
    *
    * @param value
    *      possibly null input to the factory for producing a tag.  The semantics
-   *      of the are specific the TagFactory implementation.  If the value is
-   *      null, then an implementation may compute a value based on information
+   *      are specific to the TagFactory implementation.  If the value is null,
+   *      then an implementation may compute a value based on information
    *      available in the runtime state of the thread.
    * @return
    *      the appropriate tag given the specified input value, possibly null

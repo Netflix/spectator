@@ -68,7 +68,7 @@ public class CompositeRegistryTest {
     Registry r = newRegistry(5);
     Set<TagFactory> factories = new HashSet<>();
 
-    factories.add(new BasicTagFactory("key"));
+    factories.add(new ConstantTagFactory("key", "value"));
     Assert.assertEquals(r.createDynamicId("foo", factories),
             new DefaultDynamicId("foo").withTagFactories(factories));
   }
