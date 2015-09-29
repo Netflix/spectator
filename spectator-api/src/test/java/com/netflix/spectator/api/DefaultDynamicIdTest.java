@@ -119,7 +119,7 @@ public class DefaultDynamicIdTest {
 
       @Override
       /** Implementation that always returns null, which should result in the tag being omitted. */
-      public Tag createTag(String value) {
+      public Tag createTag() {
         return null;
       }
     });

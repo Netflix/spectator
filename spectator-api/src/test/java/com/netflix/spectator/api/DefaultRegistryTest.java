@@ -68,7 +68,7 @@ public class DefaultRegistryTest {
       }
 
       @Override
-      public Tag createTag(String value) {
+      public Tag createTag() {
         return null;
       }
     });

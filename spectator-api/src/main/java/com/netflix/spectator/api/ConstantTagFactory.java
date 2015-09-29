@@ -52,7 +52,7 @@ public final class ConstantTagFactory implements TagFactory {
   }
 
   @Override
-  public Tag createTag(String value) {
+  public Tag createTag() {
     return tag;
   }
 }

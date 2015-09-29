@@ -26,15 +26,10 @@ public interface TagFactory {
   String name();
 
   /**
-   * Produces a tag based on the specified input value.
+   * Produces a tag based on the runtime context available to the factory.
    *
-   * @param value
-   *      possibly null input to the factory for producing a tag.  The semantics
-   *      are specific to the TagFactory implementation.  If the value is null,
-   *      then an implementation may compute a value based on information
-   *      available in the runtime state of the thread.
    * @return
-   *      the appropriate tag given the specified input value, possibly null
+   *      the appropriate tag given the available context data, possibly null
    */
-  Tag createTag(String value);
+  Tag createTag();
 }

@@ -65,7 +65,7 @@ public class ConstantTagFactoryTest {
   public void testCreateTagUsingTagConstructor() throws Exception {
     Tag expected = new TagList("key", "value");
     TagFactory factory = new ConstantTagFactory(expected);
-    Tag actual = factory.createTag(null);
+    Tag actual = factory.createTag();
 
     Assert.assertSame(expected, actual);
   }
@@ -75,7 +75,7 @@ public class ConstantTagFactoryTest {
     String expectedKey = "key";
     String expectedValue = "value";
     TagFactory factory = new ConstantTagFactory(expectedKey, expectedValue);
-    Tag actual = factory.createTag(null);
+    Tag actual = factory.createTag();
 
     Assert.assertEquals(expectedKey, actual.key());
     Assert.assertEquals(expectedValue, actual.value());
