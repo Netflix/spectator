@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /** Id implementation for the servo registry. */
-class ServoId implements Id {
+final class ServoId implements Id {
 
   private final MonitorConfig config;
 
@@ -85,5 +85,25 @@ class ServoId implements Id {
       builder.withTag(t.getKey(), t.getValue());
     }
     return new ServoId(builder.build());
+  }
+
+  @Override public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || !(obj instanceof ServoId)) return false;
+    ServoId other = (ServoId) obj;
+    return config.equals(other.config);
+  }
+
+  @Override public int hashCode() {
+    return config.hashCode();
+  }
+
+  @Override public String toString() {
+    StringBuilder buf = new StringBuilder();
+    buf.append(config.getName());
+    for (com.netflix.servo.tag.Tag t : config.getTags()) {
+      buf.append(':').append(t.getKey()).append('=').append(t.getValue());
+    }
+    return buf.toString();
   }
 }
