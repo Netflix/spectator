@@ -25,7 +25,7 @@ import org.junit.runners.JUnit4;
 /**
  * Unit tests for the ConstantTagFactory.
  *
- * Created by pstout on 9/17/15.
+ * Created on 9/17/15.
  */
 @RunWith(JUnit4.class)
 public class ConstantTagFactoryTest {

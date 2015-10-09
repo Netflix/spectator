@@ -32,6 +32,10 @@ public final class DefaultRegistry extends AbstractRegistry {
     return new DefaultCounter(clock(), id);
   }
 
+  @Override protected Counter newCounter(DynamicId id) {
+    return new DefaultDynamicCounter(id, this);
+  }
+
   @Override protected DistributionSummary newDistributionSummary(Id id) {
     return new DefaultDistributionSummary(clock(), id);
   }

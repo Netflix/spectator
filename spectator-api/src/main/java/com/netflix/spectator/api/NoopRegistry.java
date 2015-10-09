@@ -54,6 +54,10 @@ public final class NoopRegistry implements Registry {
     return NoopCounter.INSTANCE;
   }
 
+  @Override public Counter counter(DynamicId id) {
+    return NoopCounter.INSTANCE;
+  }
+
   @Override public DistributionSummary distributionSummary(Id id) {
     return NoopDistributionSummary.INSTANCE;
   }

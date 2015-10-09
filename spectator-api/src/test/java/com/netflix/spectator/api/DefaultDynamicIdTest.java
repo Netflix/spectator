@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Unit tests for the DefaultDynamicId class.
  *
- * Created by pstout on 9/17/15.
+ * Created on 9/17/15.
  */
 @RunWith(JUnit4.class)
 public class DefaultDynamicIdTest {
@@ -44,15 +44,15 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testName() {
-    Id id = new DefaultDynamicId("foo");
+    DynamicId id = new DefaultDynamicId("foo");
     Assert.assertEquals(id.name(), "foo");
   }
 
   @Test
   public void testTags() {
-    TagList tags = new TagList("k1", "v1").mergeTag(new TagList("k2", "v2"));
+    TagList tags = new TagList("k1", "v1").mergeTag(new BasicTag("k2", "v2"));
     List<Tag> expected = new ArrayList<>();
-    Id id = new DefaultDynamicId("foo").withTags(tags);
+    DynamicId id = new DefaultDynamicId("foo").withTags(tags);
 
     Assert.assertEquals(id.name(), "foo");
     for (Tag tag: tags) {
@@ -63,7 +63,7 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testTagsEmpty() {
-    Id id = new DefaultDynamicId("foo");
+    DynamicId id = new DefaultDynamicId("foo");
     Assert.assertTrue(!id.tags().iterator().hasNext());
   }
 
@@ -92,7 +92,7 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testWithTag() {
-    Tag expected = new TagList("key", "value");
+    Tag expected = new BasicTag("key", "value");
     DefaultDynamicId id = new DefaultDynamicId("foo").withTag(expected);
     Iterator<Tag> tags = id.tags().iterator();
 
@@ -130,7 +130,7 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testWithTagFactory() {
-    Tag expected = new TagList("key", "value");
+    Tag expected = new BasicTag("key", "value");
     DefaultDynamicId id = new DefaultDynamicId("foo").withTagFactory(new ConstantTagFactory(expected));
     Iterator<Tag> tags = id.tags().iterator();
 
@@ -140,8 +140,8 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testWithTagFactories() {
-    Tag tags1 = new TagList("k1", "v1");
-    Tag tags2 = new TagList("k2", "v2");
+    Tag tags1 = new BasicTag("k1", "v1");
+    Tag tags2 = new BasicTag("k2", "v2");
     List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
     DefaultDynamicId id = new DefaultDynamicId("foo").withTagFactories(factories);
     Iterator<Tag> tags = id.tags().iterator();
@@ -152,9 +152,17 @@ public class DefaultDynamicIdTest {
   }
 
   @Test
+  public void testResolveToId() {
+    Tag tag = new BasicTag("key", "value");
+    Id expected = new DefaultId("foo").withTag(tag);
+    DynamicId dynamicId = new DefaultDynamicId("foo").withTag(tag);
+    Assert.assertEquals(expected, dynamicId.resolveToId());
+  }
+
+  @Test
   public void testCreateWithFactories() {
-    Tag tags1 = new TagList("k1", "v1");
-    Tag tags2 = new TagList("k2", "v2");
+    Tag tags1 = new BasicTag("k1", "v1");
+    Tag tags2 = new BasicTag("k2", "v2");
     List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
     DefaultDynamicId id = DefaultDynamicId.createWithFactories("foo", factories);
     Iterator<Tag> tags = id.tags().iterator();

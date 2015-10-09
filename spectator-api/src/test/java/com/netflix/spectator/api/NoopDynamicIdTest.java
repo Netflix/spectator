@@ -65,6 +65,11 @@ public class NoopDynamicIdTest {
   }
 
   @Test
+  public void testResolveToId() {
+    Assert.assertSame(NoopId.INSTANCE, NoopDynamicId.INSTANCE.resolveToId());
+  }
+
+  @Test
   public void testToString() {
     Assert.assertEquals(NoopDynamicId.INSTANCE.toString(), "noop");
   }

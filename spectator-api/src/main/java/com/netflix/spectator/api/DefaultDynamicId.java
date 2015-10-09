@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 /**
  * Default/standard implementation of the DynamicId interface.
  *
- * Created by pstout on 8/3/15.
+ * Created on 8/3/15.
  */
 final class DefaultDynamicId implements DynamicId {
   /**
@@ -162,6 +162,11 @@ final class DefaultDynamicId implements DynamicId {
   @Override
   public DefaultDynamicId withTagFactories(Iterable<TagFactory> factories) {
     return createNewId(sorter -> sorter.addFactories(factories));
+  }
+
+  @Override
+  public Id resolveToId() {
+    return new DefaultId(name, TagList.create(tags()));
   }
 
   @Override

@@ -106,6 +106,10 @@ public final class CompositeRegistry implements Registry {
     return new CompositeCounter(id, registries);
   }
 
+  @Override public Counter counter(DynamicId id) {
+    return new CompositeCounter(id.resolveToId(), registries);
+  } // FIXME
+
   @Override public DistributionSummary distributionSummary(Id id) {
     return new CompositeDistributionSummary(id, registries);
   }

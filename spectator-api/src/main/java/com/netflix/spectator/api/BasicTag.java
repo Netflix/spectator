@@ -20,7 +20,7 @@ import com.netflix.spectator.impl.Preconditions;
 /**
  * Basic container for Tag data.
  *
- * Created by pstout on 10/1/15.
+ * Created on 10/1/15.
  */
 public final class BasicTag implements Tag {
   private final String key;

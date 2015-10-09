@@ -23,7 +23,7 @@ import org.junit.runners.JUnit4;
 /**
  * Unit tests for the BasicTag class.
  * 
- * Created by pstout on 10/1/15.
+ * Created on 10/1/15.
  */
 @RunWith(JUnit4.class)
 public class BasicTagTest {

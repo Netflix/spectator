@@ -88,6 +88,15 @@ public interface Registry extends Iterable<Meter> {
   Counter counter(Id id);
 
   /**
+   * Measures the rate of some activity.  A counter is for continuously incrementing sources like
+   * the number of requests that are coming into a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  Counter counter(DynamicId id);
+
+  /**
    * Measures the rate and variation in amount for some activity. For example, it could be used to
    * get insight into the variation in response sizes for requests to a server.
    *

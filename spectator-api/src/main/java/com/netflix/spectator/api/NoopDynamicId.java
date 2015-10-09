@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * DynamicId implementation for the no-op registry.
  *
- * Created by pstout on 8/27/15.
+ * Created on 8/27/15.
  */
 final class NoopDynamicId  implements DynamicId {
   /** Singleton instance. */
@@ -38,19 +38,19 @@ final class NoopDynamicId  implements DynamicId {
     return Collections.emptyList();
   }
 
-  @Override public Id withTag(String k, String v) {
+  @Override public DynamicId withTag(String k, String v) {
     return this;
   }
 
-  @Override public Id withTag(Tag tag) {
+  @Override public DynamicId withTag(Tag tag) {
     return this;
   }
 
-  @Override public Id withTags(Iterable<Tag> tags) {
+  @Override public DynamicId withTags(Iterable<Tag> tags) {
     return this;
   }
 
-  @Override public Id withTags(Map<String, String> tags) {
+  @Override public DynamicId withTags(Map<String, String> tags) {
     return this;
   }
 
@@ -58,13 +58,15 @@ final class NoopDynamicId  implements DynamicId {
     return name();
   }
 
-  @Override
-  public DynamicId withTagFactory(TagFactory factory) {
+  @Override public DynamicId withTagFactory(TagFactory factory) {
     return this;
   }
 
-  @Override
-  public DynamicId withTagFactories(Iterable<TagFactory> factories) {
+  @Override public DynamicId withTagFactories(Iterable<TagFactory> factories) {
     return this;
+  }
+
+  @Override public Id resolveToId() {
+    return NoopId.INSTANCE;
   }
 }

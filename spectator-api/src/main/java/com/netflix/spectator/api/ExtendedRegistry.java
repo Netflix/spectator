@@ -53,13 +53,11 @@ public final class ExtendedRegistry implements Registry {
     return impl.createId(name, tags);
   }
 
-  @Override
-  public DynamicId createDynamicId(String name) {
+  @Override public DynamicId createDynamicId(String name) {
     return impl.createDynamicId(name);
   }
 
-  @Override
-  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+  @Override public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
     return impl.createDynamicId(name, tagFactories);
   }
 
@@ -68,6 +66,10 @@ public final class ExtendedRegistry implements Registry {
   }
 
   @Override public Counter counter(Id id) {
+    return impl.counter(id);
+  }
+
+  @Override public Counter counter(DynamicId id) {
     return impl.counter(id);
   }
 
