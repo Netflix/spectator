@@ -49,7 +49,7 @@ class CompositeMeter implements Meter {
   @Override public boolean hasExpired() {
     for (Registry r : registries) {
       Meter m = r.get(id);
-      if (!m.hasExpired()) return false;
+      if (m != null && !m.hasExpired()) return false;
     }
     return true;
   }
