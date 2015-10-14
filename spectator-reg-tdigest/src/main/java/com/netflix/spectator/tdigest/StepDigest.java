@@ -70,8 +70,8 @@ class StepDigest {
     this.step = step;
     lastInitPos = new AtomicLong(0L);
     lastPollTime = new AtomicLong(0L);
-    previous = new AtomicReference<TDigest>(TDigest.createDigest(init));
-    current = new AtomicReference<TDigest>(TDigest.createDigest(init));
+    previous = new AtomicReference<>(TDigest.createDigest(init));
+    current = new AtomicReference<>(TDigest.createDigest(init));
   }
 
   private void roll(long now) {
