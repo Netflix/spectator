@@ -254,6 +254,21 @@ public class CompositeRegistryTest {
   }
 
   @Test
+  public void testHasExpired() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+
+    Counter c1 = r.counter("id1");
+    Assert.assertTrue(c1.hasExpired());
+
+    Registry r1 = new DefaultRegistry(clock);
+    r.add(r1);
+    Assert.assertTrue(c1.hasExpired());
+
+    c1.increment();
+    Assert.assertFalse(c1.hasExpired());
+  }
+
+  @Test
   public void testAddGauges() {
     CompositeRegistry r = new CompositeRegistry(clock);
 
