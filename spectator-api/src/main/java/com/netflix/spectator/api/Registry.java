@@ -59,7 +59,9 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The newly created dynamic identifier.
    */
-  DynamicId createDynamicId(String name);
+  default DynamicId createDynamicId(String name) {
+    return new DefaultDynamicId(name);
+  }
 
   /**
    * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
@@ -71,7 +73,9 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The newly created dynamic identifier.
    */
-  DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories);
+  default DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return DefaultDynamicId.createWithFactories(name, tagFactories);
+  }
 
   /**
    * Add a custom meter to the registry.
@@ -94,7 +98,9 @@ public interface Registry extends Iterable<Meter> {
    * @param id
    *     Identifier created by a call to {@link #createDynamicId}
    */
-  Counter counter(DynamicId id);
+  default Counter counter(DynamicId id) {
+    return new DefaultDynamicCounter(id, this);
+  }
 
   /**
    * Measures the rate and variation in amount for some activity. For example, it could be used to

@@ -28,8 +28,6 @@ public abstract class AbstractRegistry implements Registry {
 
   private final ConcurrentHashMap<Id, Meter> meters;
 
-  private final ConcurrentHashMap<DynamicId, Meter> dynamicMeters;
-
   /**
    * Create a new instance.
    *
@@ -39,7 +37,6 @@ public abstract class AbstractRegistry implements Registry {
   public AbstractRegistry(Clock clock) {
     this.clock = clock;
     meters = new ConcurrentHashMap<>();
-    dynamicMeters = new ConcurrentHashMap<>();
   }
 
   /**
@@ -51,16 +48,6 @@ public abstract class AbstractRegistry implements Registry {
    *     New counter instance.
    */
   protected abstract Counter newCounter(Id id);
-
-  /**
-   * Create a new counter instance for a given dynamic id.
-   *
-   * @param id
-   *     Dynamic identifier used to lookup this meter in the registry.
-   * @return
-   *     New counter instance.
-   */
-  protected abstract Counter newCounter(DynamicId id);
 
   /**
    * Create a new distribution summary instance for a given id.
@@ -94,29 +81,11 @@ public abstract class AbstractRegistry implements Registry {
     return new DefaultId(name, TagList.create(tags));
   }
 
-  @Override
-  public DynamicId createDynamicId(String name) {
-    return new DefaultDynamicId(name);
-  }
-
-  @Override
-  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
-    return DefaultDynamicId.createWithFactories(name, tagFactories);
-  }
-
   private void logTypeError(Id id, Class<?> desired, Class<?> found) {
     final String dtype = desired.getName();
     final String ftype = found.getName();
     final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
       id, dtype, ftype);
-    Throwables.propagate(new IllegalStateException(msg));
-  }
-
-  private void logTypeError(DynamicId id, Class<?> desired, Class<?> found) {
-    final String dtype = desired.getName();
-    final String ftype = found.getName();
-    final String msg = String.format("cannot access dynamic '%s' as a %s, it already exists as a %s",
-            id, dtype, ftype);
     Throwables.propagate(new IllegalStateException(msg));
   }
 
@@ -135,7 +104,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final void register(Meter meter) {
     Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
       ? meters.get(meter.id())
-      : meters.computeIfAbsent(meter.id(), id -> new AggrMeter(id));
+      : meters.computeIfAbsent(meter.id(), AggrMeter::new);
     if (aggr != null) {
       addToAggr(aggr, meter);
     }
@@ -143,15 +112,6 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Counter counter(Id id) {
     Meter m = meters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
-    if (!(m instanceof Counter)) {
-      logTypeError(id, Counter.class, m.getClass());
-      m = NoopCounter.INSTANCE;
-    }
-    return (Counter) m;
-  }
-
-  @Override public final Counter counter(DynamicId id) {
-    Meter m = dynamicMeters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
     if (!(m instanceof Counter)) {
       logTypeError(id, Counter.class, m.getClass());
       m = NoopCounter.INSTANCE;

@@ -9,6 +9,13 @@ class DefaultDynamicCounter implements Counter {
   private final DynamicId id;
   private final Registry registry;
 
+  /**
+   * Constructs a new counter with the specified dynamic id.
+   *
+   * @param id the dynamic (template) id for generating the individual counters
+   *           tracking metrics
+   * @param registry the registry to use to instantiate the individual counters
+   */
   DefaultDynamicCounter(DynamicId id, Registry registry) {
     this.id = id;
     this.registry = registry;
