@@ -5,57 +5,29 @@ package com.netflix.spectator.api;
  * based on the current value of the tags associated with the DynamicId when the
  * increment methods are called.
  */
-class DefaultDynamicCounter implements Counter {
-  private final DynamicId id;
-  private final Registry registry;
-
+class DefaultDynamicCounter extends AbstractDefaultDynamicMeter<Counter> implements Counter {
   /**
    * Constructs a new counter with the specified dynamic id.
    *
    * @param id the dynamic (template) id for generating the individual counters
-   *           tracking metrics
    * @param registry the registry to use to instantiate the individual counters
    */
   DefaultDynamicCounter(DynamicId id, Registry registry) {
-    this.id = id;
-    this.registry = registry;
-  }
-
-  private Counter resolveToCurrentCounter() {
-    return registry.counter(id.resolveToId());
+    super(id, registry::counter);
   }
 
   @Override
   public void increment() {
-    resolveToCurrentCounter().increment();
+    resolveToCurrentMeter().increment();
   }
 
   @Override
   public void increment(long amount) {
-    resolveToCurrentCounter().increment(amount);
+    resolveToCurrentMeter().increment(amount);
   }
 
   @Override
   public long count() {
-    return resolveToCurrentCounter().count();
-  }
-
-  @Override
-  public Id id() {
-    return resolveToCurrentCounter().id();
-  }
-
-  @Override
-  public Iterable<Measurement> measure() {
-    return resolveToCurrentCounter().measure();
-  }
-
-  @Override
-  public boolean hasExpired() {
-    // Without tracking all of the regular counters that are created from this
-    // dynamic counter we don't have any way of knowing whether the "master"
-    // counter has expired.  Instead of adding the tracking, we choose to
-    // rely on the regular expiration mechanism for the underlying counters.
-    return false;
+    return resolveToCurrentMeter().count();
   }
 }

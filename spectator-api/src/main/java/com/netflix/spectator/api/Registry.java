@@ -120,6 +120,16 @@ public interface Registry extends Iterable<Meter> {
   Timer timer(Id id);
 
   /**
+   * Measures the rate and time taken for short running tasks.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  default Timer timer(DynamicId id) {
+    return new DefaultDynamicTimer(id, this);
+  }
+
+  /**
    * Returns the meter associated with a given id.
    *
    * @param id

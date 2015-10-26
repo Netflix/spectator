@@ -66,6 +66,10 @@ public final class NoopRegistry implements Registry {
     return NoopTimer.INSTANCE;
   }
 
+  @Override public Timer timer(DynamicId id) {
+    return NoopTimer.INSTANCE;
+  }
+
   @Override public Meter get(Id id) {
     return null;
   }

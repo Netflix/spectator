@@ -96,6 +96,13 @@ public class NoopRegistryTest {
   }
 
   @Test
+  public void testDynamicTimer() {
+    Registry r = new NoopRegistry();
+
+    Assert.assertSame(NoopTimer.INSTANCE, r.timer(r.createDynamicId("foo")));
+  }
+
+  @Test
   public void testDistributionSummary() {
     Registry r = new NoopRegistry();
     DistributionSummary t = r.distributionSummary(r.createId("foo"));

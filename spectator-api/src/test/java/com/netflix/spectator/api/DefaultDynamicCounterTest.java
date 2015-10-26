@@ -30,36 +30,12 @@ import java.util.List;
  */
 @RunWith(JUnit4.class)
 public class DefaultDynamicCounterTest {
-  private static class TestTagFactory implements TagFactory {
-    private final String name;
-    private final String[] valueHolder;
-
-    TestTagFactory(String[] valueHolder) {
-      this("tag", valueHolder);
-    }
-
-    TestTagFactory(String name, String[] valueHolder) {
-      this.name = name;
-      this.valueHolder = valueHolder;
-    }
-
-    @Override
-    public String name() {
-      return name;
-    }
-
-    @Override
-    public Tag createTag() {
-      return new BasicTag(name, valueHolder[0]);
-    }
-  }
-
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
 
   @Test
   public void testInit() {
-    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    Counter c = new DefaultDynamicCounter(NoopDynamicId.INSTANCE, registry);
     Assert.assertEquals(c.count(), 0L);
   }
 
