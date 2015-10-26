@@ -32,6 +32,7 @@ public class DefaultTimerTest {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     Assert.assertEquals(t.count(), 0L);
     Assert.assertEquals(t.totalTime(), 0L);
+    Assert.assertFalse(t.hasExpired());
   }
 
   @Test

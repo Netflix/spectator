@@ -78,6 +78,13 @@ public class NoopRegistryTest {
   }
 
   @Test
+  public void testDynamicCounter() {
+    Registry r = new NoopRegistry();
+
+    Assert.assertSame(NoopCounter.INSTANCE, r.counter(r.createDynamicId("foo")));
+  }
+
+  @Test
   public void testTimer() {
     Registry r = new NoopRegistry();
     Timer t = r.timer(r.createId("foo"));

@@ -21,8 +21,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -61,7 +61,7 @@ public class DefaultRegistryTest {
   @Test
   public void testCreateDynamicIdWithFactories() {
     Registry r = new DefaultRegistry(clock);
-    Collection<TagFactory> factories = Arrays.asList(new TagFactory() {
+    Collection<TagFactory> factories = Collections.singletonList(new TagFactory() {
       @Override
       public String name() {
         return "unused";

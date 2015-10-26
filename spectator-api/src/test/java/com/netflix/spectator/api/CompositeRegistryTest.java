@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +43,13 @@ public class CompositeRegistryTest {
   public void init() {
     System.setProperty("spectator.api.propagateWarnings", "true");
     System.setProperty("spectator.api.maxNumberOfMeters", "10000");
+  }
+
+  @Test
+  public void testInit() {
+    CompositeRegistry registry = new CompositeRegistry(clock);
+
+    Assert.assertSame(clock, registry.clock());
   }
 
   @Test
@@ -199,6 +207,17 @@ public class CompositeRegistryTest {
         Assert.fail("should be empty, but found " + m.id());
       }
     }
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testIteratorDoesNotAllowRemove() {
+    Registry r = newRegistry(5);
+    Iterator<Meter> iter = r.iterator();
+
+    // There is always one composite in the registry used for gauges.
+    Assert.assertTrue(iter.hasNext());
+    iter.next();
+    iter.remove();
   }
 
   @Test

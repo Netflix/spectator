@@ -20,6 +20,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RunWith(JUnit4.class)
 public class NoopIdTest {
   @Test
@@ -28,8 +31,25 @@ public class NoopIdTest {
   }
 
   @Test
+  public void testWithKeyValue() {
+    Assert.assertSame(NoopId.INSTANCE.withTag("k", "v"), NoopId.INSTANCE);
+  }
+
+  @Test
   public void testWithTag() {
     Assert.assertSame(NoopId.INSTANCE.withTag(new TagList("k", "v")), NoopId.INSTANCE);
+  }
+
+  @Test
+  public void testWithTags() {
+    Assert.assertSame(NoopId.INSTANCE.withTags(new TagList("k", "v")), NoopId.INSTANCE);
+  }
+
+  @Test
+  public void testWithTagMap() {
+    Map<String, String> tags = new HashMap<>();
+    tags.put("k", "v");
+    Assert.assertSame(NoopId.INSTANCE.withTags(tags), NoopId.INSTANCE);
   }
 
   @Test
