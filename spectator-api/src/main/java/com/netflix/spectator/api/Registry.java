@@ -112,6 +112,17 @@ public interface Registry extends Iterable<Meter> {
   DistributionSummary distributionSummary(Id id);
 
   /**
+   * Measures the rate and variation in amount for some activity. For example, it could be used to
+   * get insight into the variation in response sizes for requests to a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  default DistributionSummary distributionSummary(DynamicId id) {
+    return new DefaultDynamicDistributionSummary(id, this);
+  }
+
+  /**
    * Measures the rate and time taken for short running tasks.
    *
    * @param id

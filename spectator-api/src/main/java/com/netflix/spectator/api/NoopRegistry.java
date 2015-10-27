@@ -62,6 +62,10 @@ public final class NoopRegistry implements Registry {
     return NoopDistributionSummary.INSTANCE;
   }
 
+  @Override public DistributionSummary distributionSummary(DynamicId id) {
+    return NoopDistributionSummary.INSTANCE;
+  }
+
   @Override public Timer timer(Id id) {
     return NoopTimer.INSTANCE;
   }

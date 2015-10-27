@@ -30,6 +30,7 @@ public class DefaultDistributionSummaryTest {
     DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
     Assert.assertEquals(t.count(), 0L);
     Assert.assertEquals(t.totalAmount(), 0L);
+    Assert.assertFalse(t.hasExpired());
   }
 
   @Test
