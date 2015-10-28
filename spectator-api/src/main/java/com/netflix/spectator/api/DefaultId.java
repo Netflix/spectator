@@ -111,7 +111,7 @@ final class DefaultId implements Id {
   }
 
   @Override public int hashCode() {
-    return name.hashCode() + (tags == null ? 0 : tags.hashCode());
+    return name.hashCode() + (tags == TagList.EMPTY ? 0 : tags.hashCode());
   }
 
   @Override public String toString() {

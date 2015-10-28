@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -45,6 +46,13 @@ public class CompositeRegistryTest {
   }
 
   @Test
+  public void testInit() {
+    CompositeRegistry registry = new CompositeRegistry(clock);
+
+    Assert.assertSame(clock, registry.clock());
+  }
+
+  @Test
   public void testCreateId() {
     Registry r = newRegistry(5);
     Assert.assertEquals(r.createId("foo"), new DefaultId("foo"));
@@ -55,6 +63,22 @@ public class CompositeRegistryTest {
     Registry r = newRegistry(5);
     TagList ts = new TagList("k", "v");
     Assert.assertEquals(r.createId("foo", ts), new DefaultId("foo", ts));
+  }
+
+  @Test
+  public void testCreateDynamicId() {
+    Registry r = newRegistry(5);
+    Assert.assertEquals(r.createDynamicId("foo"), new DefaultDynamicId("foo"));
+  }
+
+  @Test
+  public void testCreateDynamicIdWithTagFactories() {
+    Registry r = newRegistry(5);
+    Set<TagFactory> factories = new HashSet<>();
+
+    factories.add(new ConstantTagFactory("key", "value"));
+    Assert.assertEquals(r.createDynamicId("foo", factories),
+            new DefaultDynamicId("foo").withTagFactories(factories));
   }
 
   @Test
@@ -183,6 +207,17 @@ public class CompositeRegistryTest {
         Assert.fail("should be empty, but found " + m.id());
       }
     }
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testIteratorDoesNotAllowRemove() {
+    Registry r = newRegistry(5);
+    Iterator<Meter> iter = r.iterator();
+
+    // There is always one composite in the registry used for gauges.
+    Assert.assertTrue(iter.hasNext());
+    iter.next();
+    iter.remove();
   }
 
   @Test

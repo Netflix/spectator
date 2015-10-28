@@ -56,6 +56,8 @@ public class DefaultLongTaskTimerTest {
     Assert.assertEquals(t.duration(), 10L);
 
     long elapsed1 = t.stop(task1);
+
+    Assert.assertEquals(-1L, t.stop(task1));  // second call to stop should return an error
     Assert.assertEquals(elapsed1, 5L);
     Assert.assertEquals(t.duration(task2), 5L);
     Assert.assertEquals(t.duration(task1), -1L); // task is gone, should return default

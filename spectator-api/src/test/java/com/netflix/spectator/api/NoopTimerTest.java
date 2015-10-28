@@ -21,6 +21,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(JUnit4.class)
 public class NoopTimerTest {
@@ -31,11 +32,34 @@ public class NoopTimerTest {
   }
 
   @Test
-  public void testIncrement() {
+  public void testRecord() {
     NoopTimer t = NoopTimer.INSTANCE;
     t.record(42, TimeUnit.MILLISECONDS);
     Assert.assertEquals(t.count(), 0L);
     Assert.assertEquals(t.totalTime(), 0L);
+  }
+
+  @Test
+  public void testRecordCallableException() throws Exception {
+    NoopTimer t = NoopTimer.INSTANCE;
+    boolean seen = false;
+    try {
+      t.record(() -> {
+        throw new Exception("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assert.assertTrue(seen);
+  }
+
+  @Test
+  public void testRecordRunnable() throws Exception {
+    NoopTimer t = NoopTimer.INSTANCE;
+    AtomicBoolean run = new AtomicBoolean();
+
+    t.record(() -> run.set(true));
+    Assert.assertTrue(run.get());
   }
 
   @Test
