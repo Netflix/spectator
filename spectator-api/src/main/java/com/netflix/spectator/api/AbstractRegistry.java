@@ -74,7 +74,7 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Id createId(String name) {
-    return new DefaultId(name, TagList.EMPTY);
+    return new DefaultId(name);
   }
 
   @Override public final Id createId(String name, Iterable<Tag> tags) {
@@ -104,7 +104,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final void register(Meter meter) {
     Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
       ? meters.get(meter.id())
-      : meters.computeIfAbsent(meter.id(), id -> new AggrMeter(id));
+      : meters.computeIfAbsent(meter.id(), AggrMeter::new);
     if (aggr != null) {
       addToAggr(aggr, meter);
     }

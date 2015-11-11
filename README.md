@@ -20,7 +20,7 @@ To instrument your code you need to depend on the api library. This provides the
 for you to code against and build test cases. The only dependency is slf4j.
 
 ```
-com.netflix.spectator:spectator-api:0.29.0
+com.netflix.spectator:spectator-api:0.33.0
 ```
 
 If running at Netflix with the standard platform, see the

@@ -19,7 +19,6 @@ import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Iterator;
 
-
 /**
  * Wraps a registry and provides additional helper methods to make it easier to use.
  *
@@ -54,11 +53,23 @@ public final class ExtendedRegistry implements Registry {
     return impl.createId(name, tags);
   }
 
+  @Override public DynamicId createDynamicId(String name) {
+    return impl.createDynamicId(name);
+  }
+
+  @Override public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return impl.createDynamicId(name, tagFactories);
+  }
+
   @Override public void register(Meter meter) {
     impl.register(meter);
   }
 
   @Override public Counter counter(Id id) {
+    return impl.counter(id);
+  }
+
+  @Override public Counter counter(DynamicId id) {
     return impl.counter(id);
   }
 

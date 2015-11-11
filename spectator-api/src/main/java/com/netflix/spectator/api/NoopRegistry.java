@@ -37,6 +37,16 @@ public final class NoopRegistry implements Registry {
     return NoopId.INSTANCE;
   }
 
+  @Override
+  public DynamicId createDynamicId(String name) {
+    return NoopDynamicId.INSTANCE;
+  }
+
+  @Override
+  public DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
+    return NoopDynamicId.INSTANCE;
+  }
+
   @Override public void register(Meter meter) {
   }
 
@@ -44,11 +54,23 @@ public final class NoopRegistry implements Registry {
     return NoopCounter.INSTANCE;
   }
 
+  @Override public Counter counter(DynamicId id) {
+    return NoopCounter.INSTANCE;
+  }
+
   @Override public DistributionSummary distributionSummary(Id id) {
     return NoopDistributionSummary.INSTANCE;
   }
 
+  @Override public DistributionSummary distributionSummary(DynamicId id) {
+    return NoopDistributionSummary.INSTANCE;
+  }
+
   @Override public Timer timer(Id id) {
+    return NoopTimer.INSTANCE;
+  }
+
+  @Override public Timer timer(DynamicId id) {
     return NoopTimer.INSTANCE;
   }
 
