@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -58,20 +57,15 @@ class TDigestPlugin {
    * writer. The thread names will start with {@code TDigestPlugin}.
    */
   @PostConstruct
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   public void init() {
-    executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-        @Override public Thread newThread(Runnable r) {
-          return new Thread(r, "TDigestPlugin");
-        }
-      });
+    executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "TDigestPlugin"));
 
-    Runnable task = new Runnable() {
-      @Override public void run() {
-        try {
-          writeData();
-        } catch (Exception e) {
-          LOGGER.error("failed to publish percentile data", e);
-        }
+    Runnable task = () -> {
+      try {
+        writeData();
+      } catch (Throwable t) {
+        LOGGER.error("failed to publish percentile data", t);
       }
     };
 
