@@ -42,24 +42,25 @@ import java.util.Random;
 @State(Scope.Benchmark)
 public class Merge {
 
-  private final List<TDigest> treeValues = new ArrayList<TDigest>();
-  private final List<TDigest> avlValues = new ArrayList<TDigest>();
+  private final List<TDigest> treeValues = new ArrayList<>();
+  private final List<TDigest> avlValues = new ArrayList<>();
   private final Random random = new Random();
 
   @Setup(Level.Iteration)
   public void setup() {
+    treeValues.clear();
+    avlValues.clear();
     Random random = new Random();
     for (int i = 0; i < 2; ++i) {
       TDigest tree = new TreeDigest(100.0);
       TDigest avl = new AVLTreeDigest(100.0);
-      int num = random.nextInt(1000);
-      for (int j = 0; j < num; ++j) {
+      for (int j = 0; j < 1000; ++j) {
         double v = random.nextDouble();
         tree.add(v);
         avl.add(v);
       }
       treeValues.add(tree);
-      avlValues.add(tree);
+      avlValues.add(avl);
     }
   }
 
@@ -81,6 +82,20 @@ public class Merge {
   @Benchmark
   public void treeMerge_1000(Blackhole bh) {
     TDigest merged = TreeDigest.merge(1000.0, treeValues, random);
+    bh.consume(merged);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void avlMerge_02(Blackhole bh) {
+    TDigest merged = TreeDigest.merge(2.0, avlValues, random);
+    bh.consume(merged);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void avlMerge_05(Blackhole bh) {
+    TDigest merged = TreeDigest.merge(5.0, avlValues, random);
     bh.consume(merged);
   }
 
