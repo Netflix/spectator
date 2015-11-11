@@ -57,6 +57,7 @@ class TDigestPlugin {
    * writer. The thread names will start with {@code TDigestPlugin}.
    */
   @PostConstruct
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   public void init() {
     executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "TDigestPlugin"));
 
