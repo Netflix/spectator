@@ -59,19 +59,13 @@ class TDigestPlugin {
    */
   @PostConstruct
   public void init() {
-    executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-        @Override public Thread newThread(Runnable r) {
-          return new Thread(r, "TDigestPlugin");
-        }
-      });
+    executor = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "TDigestPlugin"));
 
-    Runnable task = new Runnable() {
-      @Override public void run() {
-        try {
-          writeData();
-        } catch (Exception e) {
-          LOGGER.error("failed to publish percentile data", e);
-        }
+    Runnable task = () -> {
+      try {
+        writeData();
+      } catch (Throwable t) {
+        LOGGER.error("failed to publish percentile data", t);
       }
     };
 
