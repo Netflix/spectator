@@ -22,10 +22,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.LinkedHashMap;
+import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class ExtendedRegistryTest {
@@ -262,5 +265,75 @@ public class ExtendedRegistryTest {
     private int getValue() {
       return 42;
     }
+  }
+
+  @Test
+  public void counters() {
+    Registry r = new DefaultRegistry();
+    r.counter("foo").increment();
+    r.counter("foo", "a", "1", "b", "2").increment();
+    r.counter("foo", "a", "1", "b", "3").increment(13L);
+    r.counter("foo", "a", "1", "b", "2").increment();
+    r.counter("bar", "a", "1", "b", "2").increment();
+
+    Assert.assertEquals(4, r.counters().count());
+    final LongSummaryStatistics summary = r.counters()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingLong(Counter::count));
+    Assert.assertEquals(3L, summary.getCount());
+    Assert.assertEquals(16L, summary.getSum());
+    Assert.assertEquals(13L, summary.getMax());
+  }
+
+  @Test
+  public void timers() {
+    Registry r = new DefaultRegistry();
+    r.timer("foo").record(1L, TimeUnit.NANOSECONDS);
+    r.timer("foo", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
+    r.timer("foo", "a", "1", "b", "3").record(13L, TimeUnit.NANOSECONDS);
+    r.timer("foo", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
+    r.timer("bar", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
+
+    Assert.assertEquals(4, r.timers().count());
+
+    final LongSummaryStatistics countSummary = r.timers()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingLong(Timer::count));
+    Assert.assertEquals(3L, countSummary.getCount());
+    Assert.assertEquals(4L, countSummary.getSum());
+    Assert.assertEquals(2L, countSummary.getMax());
+
+    final LongSummaryStatistics totalSummary = r.timers()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingLong(Timer::totalTime));
+    Assert.assertEquals(3L, totalSummary.getCount());
+    Assert.assertEquals(16L, totalSummary.getSum());
+    Assert.assertEquals(13L, totalSummary.getMax());
+  }
+
+  @Test
+  public void distributionSummaries() {
+    Registry r = new DefaultRegistry();
+    r.distributionSummary("foo").record(1L);
+    r.distributionSummary("foo", "a", "1", "b", "2").record(1L);
+    r.distributionSummary("foo", "a", "1", "b", "3").record(13L);
+    r.distributionSummary("foo", "a", "1", "b", "2").record(1L);
+    r.distributionSummary("bar", "a", "1", "b", "2").record(1L);
+
+    Assert.assertEquals(4, r.distributionSummaries().count());
+
+    final LongSummaryStatistics countSummary = r.distributionSummaries()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingLong(DistributionSummary::count));
+    Assert.assertEquals(3L, countSummary.getCount());
+    Assert.assertEquals(4L, countSummary.getSum());
+    Assert.assertEquals(2L, countSummary.getMax());
+
+    final LongSummaryStatistics totalSummary = r.distributionSummaries()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingLong(DistributionSummary::totalAmount));
+    Assert.assertEquals(3L, totalSummary.getCount());
+    Assert.assertEquals(16L, totalSummary.getSum());
+    Assert.assertEquals(13L, totalSummary.getMax());
   }
 }
