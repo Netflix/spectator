@@ -21,7 +21,7 @@ import java.util.List;
 
 /**
  * Wraps a registry as a meter that can be added to another registry. This is currently used to
- * manage the gauges for the composite registry. Since there is no activity gauges should get
+ * manage the gauges for the composite registry. Since there is no activity, gauges should get
  * polled and must get tracked as a group and added to each sub-registry.
  */
 class RegistryMeter implements Meter {

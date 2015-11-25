@@ -15,16 +15,22 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class SpectatorTest {
+public class ThrowablesTest {
+
   @Test
-  public void testRegistry() {
-    Assert.assertNotNull(Spectator.registry());
+  public void propagateWarningsFalse() {
+    System.setProperty("spectator.api.propagateWarnings", "false");
+    Throwables.propagate("foo", new RuntimeException("test"));
   }
 
+  @Test(expected = RuntimeException.class)
+  public void propagateWarningsTrue() {
+    System.setProperty("spectator.api.propagateWarnings", "true");
+    Throwables.propagate("foo", new RuntimeException("test"));
+  }
 }

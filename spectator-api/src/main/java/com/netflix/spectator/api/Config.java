@@ -44,11 +44,6 @@ final class Config {
     return Boolean.valueOf(get(PREFIX + "propagateWarnings", "false"));
   }
 
-  /** Class implementing the {@link Registry} interface that should be loaded. */
-  static String registryClass() {
-    return get(PREFIX + "registryClass", SERVICE_LOADER);
-  }
-
   /**
    * For classes based on {@link AbstractRegistry} this setting is used to determine the maximum
    * number of registered meters permitted. This limit is used to help protect the system from a
