@@ -20,9 +20,6 @@ final class Config {
 
   private static final String PREFIX = "spectator.api.";
 
-  /** Value for registry class to explicitly indicate the service loader should be used. */
-  static final String SERVICE_LOADER = "service-loader";
-
   private Config() {
   }
 
