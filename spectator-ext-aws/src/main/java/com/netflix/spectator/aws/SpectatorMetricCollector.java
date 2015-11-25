@@ -26,13 +26,13 @@ import com.netflix.spectator.impl.Preconditions;
 /**
  * A MetricCollector that captures SDK metrics.
  */
-public class SpectatorMetricsCollector extends MetricCollector {
+public class SpectatorMetricCollector extends MetricCollector {
     private final RequestMetricCollector requestMetricCollector;
 
     /**
      * Constructs a new instance.
      */
-    public SpectatorMetricsCollector(Registry registry) {
+    public SpectatorMetricCollector(Registry registry) {
         super();
         Preconditions.checkNotNull(registry, "registry");
 
