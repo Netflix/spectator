@@ -20,9 +20,6 @@ final class Config {
 
   private static final String PREFIX = "spectator.api.";
 
-  /** Value for registry class to explicitly indicate the service loader should be used. */
-  static final String SERVICE_LOADER = "service-loader";
-
   private Config() {
   }
 
@@ -42,11 +39,6 @@ final class Config {
   /** Should an exception be thrown for warnings? */
   static boolean propagateWarnings() {
     return Boolean.valueOf(get(PREFIX + "propagateWarnings", "false"));
-  }
-
-  /** Class implementing the {@link Registry} interface that should be loaded. */
-  static String registryClass() {
-    return get(PREFIX + "registryClass", SERVICE_LOADER);
   }
 
   /**

@@ -18,15 +18,11 @@ package com.netflix.spectator.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 
 /**
- * Static factory used to access the main global registry. The registry class to use can be
- * set with the system property <code>spectator.api.registryClass</code>.
+ * Static factory used to access the main global registry.
  */
 public final class Spectator {
 
@@ -55,99 +51,10 @@ public final class Spectator {
   }
 
   /**
-   * Create a new registry instance using {@link java.util.ServiceLoader}. If no implementations
-   * are found the default will be used.
-   */
-  static void addRegistriesFromServiceLoader() {
-    final ClassLoader cl = pickClassLoader();
-    final ServiceLoader<Registry> loader = ServiceLoader.load(Registry.class, cl);
-    final Iterator<Registry> registryIterator = loader.iterator();
-    if (registryIterator.hasNext()) {
-      StringBuilder desc = new StringBuilder();
-      List<Registry> rs = new ArrayList<>();
-      while (registryIterator.hasNext()) {
-        try {
-          Registry r = registryIterator.next();
-          desc.append(' ').append(r.getClass().getName());
-          rs.add(r);
-        } catch (ServiceConfigurationError e) {
-          LOGGER.warn("failed to load registry, it will be skipped", e);
-        }
-      }
-      if (rs.isEmpty()) {
-        COMPOSITE_REGISTRY.add(new DefaultRegistry());
-      } else {
-        for (Registry r : rs) {
-          COMPOSITE_REGISTRY.add(r);
-        }
-        LOGGER.info("using registries found in classpath: {}", desc.toString());
-      }
-    } else {
-      LOGGER.warn("no registry impl found in classpath, using default");
-      COMPOSITE_REGISTRY.add(new DefaultRegistry());
-    }
-  }
-
-  @SuppressWarnings("PMD.UseProperClassLoader")
-  private static ClassLoader pickClassLoader() {
-    final ClassLoader cl = Thread.currentThread().getContextClassLoader();
-    if (cl == null) {
-      LOGGER.info("Thread.currentThread().getContextClassLoader() is null,"
-          + " using Spectator.class.getClassLoader()");
-      return Spectator.class.getClassLoader();
-    } else {
-      return cl;
-    }
-  }
-
-  /**
-   * Create a new registry instance using the class name specified by the system property
-   * {@code spectator.api.registryClass}. If no implementations are found the default will be used.
-   */
-  static void addRegistryUsingClassName(String name) {
-    try {
-      final Class<?> c = Class.forName(name);
-      COMPOSITE_REGISTRY.add((Registry) c.newInstance());
-    } catch (Exception e) {
-      final String msg = "failed to instantiate registry class '" + name
-        + "', falling back to default implementation";
-      Throwables.propagate(new RuntimeException(msg, e));
-      COMPOSITE_REGISTRY.add(new DefaultRegistry());
-    }
-  }
-
-  /** Create a new instance of the registry. */
-  static void addRegistries(String name) {
-    if (Config.SERVICE_LOADER.equals(name)) {
-      addRegistriesFromServiceLoader();
-    } else {
-      addRegistryUsingClassName(name);
-    }
-  }
-
-  /**
    * Return the config implementation being used.
    */
   public static ConfigMap config() {
     return CONFIG;
-  }
-
-  /**
-   * Setup the default global registry implementation. The implementation used will depend on the
-   * system property {@code spectator.api.registryClass}. If not set or set to
-   * {@code service-loader} the registry class will be determined by scanning the classpath using
-   * {@link java.util.ServiceLoader}. Otherwise an instance of the classname specified will be
-   * used. If a registry cannot be loaded the fallback is to use the {@link DefaultRegistry}.
-   * When {@code spectator.api.propagateWarnings} is set to {@code true} and an explicit class name
-   * is specified a {@link java.lang.RuntimeException} will be thrown if the specified class cannot
-   * be used.
-   *
-   * @deprecated This provides the legacy behavior if needed. It is preferred to setup a registry
-   * and inject. If the static
-   */
-  @Deprecated
-  public static void initializeUsingServiceLoader() {
-    addRegistries(Config.registryClass());
   }
 
   /**
