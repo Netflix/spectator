@@ -22,37 +22,10 @@ import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 @RunWith(JUnit4.class)
 public class UtilsTest {
-
-  private static final Predicate<String> ALL = new Predicate<String>() {
-    @Override
-    public boolean apply(String value) {
-      return true;
-    }
-  };
-
-  private static final Predicate<String> NONE = new Predicate<String>() {
-    @Override
-    public boolean apply(String value) {
-      return false;
-    }
-  };
-
-  private static final Predicate<String> EVEN = new Predicate<String>() {
-    @Override
-    public boolean apply(String value) {
-      return Integer.parseInt(value) % 2 == 0;
-    }
-  };
-
-  private static final Predicate<String> ODD = new Predicate<String>() {
-    @Override
-    public boolean apply(String value) {
-      return !EVEN.apply(value);
-    }
-  };
 
   private List<Measurement> newList(int size) {
     Registry r = new DefaultRegistry();
@@ -98,22 +71,14 @@ public class UtilsTest {
   public void firstPredicate() {
     List<Measurement> ms = newList(10);
     Tag t = new TagList("i", "7");
-    Measurement m = Utils.first(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return value.value() == 7.0;
-      }
-    });
+    Measurement m = Utils.first(ms, v -> v.value() == 7.0);
     Assert.assertEquals(m.id().tags(), t);
   }
 
   @Test
   public void firstPredicateEmpty() {
     List<Measurement> ms = newList(10);
-    Measurement m = Utils.first(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return false;
-      }
-    });
+    Measurement m = Utils.first(ms, v -> false);
     Assert.assertEquals(null, m);
   }
 
@@ -139,11 +104,7 @@ public class UtilsTest {
   public void filterPredicate() {
     List<Measurement> ms = newList(10);
     Tag t = new TagList("i", "7");
-    List<Measurement> out = Utils.toList(Utils.filter(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return value.value() == 7.0;
-      }
-    }));
+    List<Measurement> out = Utils.toList(Utils.filter(ms, v -> v.value() == 7.0));
     Assert.assertEquals(1, out.size());
     Assert.assertEquals(out.get(0).id().tags(), t);
   }
@@ -151,12 +112,7 @@ public class UtilsTest {
   @Test
   public void filterPredicateEmpty() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
-    List<Measurement> out = Utils.toList(Utils.filter(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return false;
-      }
-    }));
+    List<Measurement> out = Utils.toList(Utils.filter(ms, v -> false));
     Assert.assertEquals(0, out.size());
   }
 }

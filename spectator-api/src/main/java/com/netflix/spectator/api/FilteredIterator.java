@@ -17,6 +17,7 @@ package com.netflix.spectator.api;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.Predicate;
 
 /**
  * Wraps an iterator with one that will filter the values using the specified predicate.
@@ -44,7 +45,7 @@ class FilteredIterator<T> implements Iterator<T> {
   private void findNext() {
     while (it.hasNext()) {
       item = it.next();
-      if (p.apply(item)) {
+      if (p.test(item)) {
         return;
       }
     }

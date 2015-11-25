@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Helper functions for working with a sequence of measurements.
@@ -144,11 +145,7 @@ public final class Utils {
    *     Measurement or null if no matches are found.
    */
   public static Measurement first(final Iterable<Measurement> ms, final String k, final String v) {
-    return first(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return v.equals(getTagValue(value.id(), k));
-      }
-    });
+    return first(ms, value -> v.equals(getTagValue(value.id(), k)));
   }
 
   /**
@@ -194,11 +191,7 @@ public final class Utils {
    */
   public static Iterable<Measurement> filter(
       final Iterable<Measurement> ms, final String k, final String v) {
-    return filter(ms, new Predicate<Measurement>() {
-      @Override public boolean apply(Measurement value) {
-        return v.equals(getTagValue(value.id(), k));
-      }
-    });
+    return filter(ms, value -> v.equals(getTagValue(value.id(), k)));
   }
 
   /**
@@ -213,11 +206,7 @@ public final class Utils {
    */
   public static Iterable<Measurement> filter(
       final Iterable<Measurement> ms, final Predicate<Measurement> p) {
-    return new Iterable<Measurement>() {
-      @Override public Iterator<Measurement> iterator() {
-        return new FilteredIterator<>(ms.iterator(), p);
-      }
-    };
+    return () -> new FilteredIterator<>(ms.iterator(), p);
   }
 
   /**

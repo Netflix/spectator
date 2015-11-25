@@ -22,33 +22,18 @@ import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 @RunWith(JUnit4.class)
 public class FilteredIteratorTest {
 
-  private static final Predicate<String> ALL = new Predicate<String>() {
-    @Override public boolean apply(String value) {
-      return true;
-    }
-  };
+  private static final Predicate<String> ALL = v -> true;
 
-  private static final Predicate<String> NONE = new Predicate<String>() {
-    @Override public boolean apply(String value) {
-      return false;
-    }
-  };
+  private static final Predicate<String> NONE = v -> false;
 
-  private static final Predicate<String> EVEN = new Predicate<String>() {
-    @Override public boolean apply(String value) {
-      return Integer.parseInt(value) % 2 == 0;
-    }
-  };
+  private static final Predicate<String> EVEN = v -> Integer.parseInt(v) % 2 == 0;
 
-  private static final Predicate<String> ODD = new Predicate<String>() {
-    @Override public boolean apply(String value) {
-      return !EVEN.apply(value);
-    }
-  };
+  private static final Predicate<String> ODD = v -> !EVEN.test(v);
 
   private List<String> newList(String... vs) {
     List<String> data = new ArrayList<>();
