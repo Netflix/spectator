@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
 
@@ -107,5 +109,23 @@ public final class Functions {
         return Double.NaN;
       }
     };
+  }
+
+  /**
+   * Returns a predicate that matches if the {code}id.name(){code} value for the input meter
+   * is equal to {code}name{code}. Example of usage:
+   *
+   * <pre>
+   * long numberOfMatches = registry.stream().filter(Functions.nameEquals("foo")).count();
+   * </pre>
+   *
+   * @param name
+   *     The name to use for finding matching meter instances. Cannot be null.
+   * @return
+   *     A predicate function that can be used to filter a stream.
+   */
+  public static Predicate<Meter> nameEquals(String name) {
+    Preconditions.checkNotNull(name, "name");
+    return m -> name.equals(m.id().name());
   }
 }

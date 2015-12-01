@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.ToDoubleFunction;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Registry to manage a set of meters.
@@ -616,5 +618,67 @@ public interface Registry extends Iterable<Meter> {
    */
   default void methodValue(String name, Object obj, String method) {
     methodValue(createId(name), obj, method);
+  }
+
+  /** Returns a stream of all registered meters. */
+  default Stream<Meter> stream() {
+    return StreamSupport.stream(spliterator(), false);
+  }
+
+  /**
+   * Returns a stream of all registered counters. This operation is mainly used for testing as
+   * a convenient way to get an aggregated value. For example, to generate a summary of all
+   * counters with name "foo":
+   *
+   * <pre>
+   * LongSummaryStatistics summary = r.counters()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingLong(Counter::count));
+   * </pre>
+   */
+  default Stream<Counter> counters() {
+    return stream().filter(m -> m instanceof Counter).map(m -> (Counter) m);
+  }
+
+  /**
+   * Returns a stream of all registered distribution summaries. This operation is mainly used for
+   * testing as a convenient way to get an aggregated value. For example, to generate a summary of
+   * the counts and total amounts for all distribution summaries with name "foo":
+   *
+   * <pre>
+   * LongSummaryStatistics countSummary = r.distributionSummaries()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingLong(DistributionSummary::count));
+   *
+   * LongSummaryStatistics totalSummary = r.distributionSummaries()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingLong(DistributionSummary::totalAmount));
+   *
+   * double avgAmount = (double) totalSummary.getSum() / countSummary.getSum();
+   * </pre>
+   */
+  default Stream<DistributionSummary> distributionSummaries() {
+    return stream().filter(m -> m instanceof DistributionSummary).map(m -> (DistributionSummary) m);
+  }
+
+  /**
+   * Returns a stream of all registered timers. This operation is mainly used for testing as a
+   * convenient way to get an aggregated value. For example, to generate a summary of
+   * the counts and total amounts for all timers with name "foo":
+   *
+   * <pre>
+   * LongSummaryStatistics countSummary = r.timers()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingLong(Timer::count));
+   *
+   * LongSummaryStatistics totalSummary = r.timers()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingLong(Timer::totalTime));
+   *
+   * double avgTime = (double) totalSummary.getSum() / countSummary.getSum();
+   * </pre>
+   */
+  default Stream<Timer> timers() {
+    return stream().filter(m -> m instanceof Timer).map(m -> (Timer) m);
   }
 }

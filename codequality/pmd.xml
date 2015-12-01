@@ -37,6 +37,7 @@
     <exclude name="DuplicateImports"/>
     <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
     <exclude name="ExcessiveImports"/>
+    <exclude name="ExcessivePublicCount"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
     <exclude name="ForLoopsMustUseBraces"/>
     <exclude name="GodClass"/>
