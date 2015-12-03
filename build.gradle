@@ -1,7 +1,7 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.5'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
   }
 }
 
@@ -56,7 +56,7 @@ subprojects {
   dependencies {
     compile "org.slf4j:slf4j-api:$version_slf4j"
     testCompile 'junit:junit:4.12'
-    testCompile 'nl.jqno.equalsverifier:equalsverifier:1.7.2'
+    testCompile 'nl.jqno.equalsverifier:equalsverifier:1.7.5'
     jmh "org.slf4j:slf4j-simple:$version_slf4j"
   }
 
