@@ -15,47 +15,13 @@
  */
 package com.netflix.spectator.api;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Iterator;
-import java.util.ServiceLoader;
-
 /**
  * Static factory used to access the main global registry.
  */
 public final class Spectator {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(Spectator.class);
-
-  private static final ConfigMap CONFIG = newConfigMapUsingServiceLoader();
-
   private static final CompositeRegistry COMPOSITE_REGISTRY = new CompositeRegistry(Clock.SYSTEM);
   private static final ExtendedRegistry REGISTRY = new ExtendedRegistry(COMPOSITE_REGISTRY);
-
-  /**
-   * Create a new config map instance using {@link java.util.ServiceLoader}. If no implementations
-   * are found the default will be used.
-   */
-  static ConfigMap newConfigMapUsingServiceLoader() {
-    final ServiceLoader<ConfigMap> loader = ServiceLoader.load(ConfigMap.class);
-    final Iterator<ConfigMap> cfgIterator = loader.iterator();
-    if (cfgIterator.hasNext()) {
-      ConfigMap cfg = cfgIterator.next();
-      LOGGER.info("using config impl found in classpath: {}", cfg.getClass().getName());
-      return cfg;
-    } else {
-      LOGGER.warn("no config impl found in classpath, using default");
-      return new SystemConfigMap();
-    }
-  }
-
-  /**
-   * Return the config implementation being used.
-   */
-  public static ConfigMap config() {
-    return CONFIG;
-  }
 
   /**
    * Returns the global registry.

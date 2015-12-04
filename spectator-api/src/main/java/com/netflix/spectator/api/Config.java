@@ -24,11 +24,7 @@ final class Config {
   }
 
   private static String get(String k) {
-    ConfigMap cfg = Spectator.config();
-    if (cfg == null) {
-      cfg = new SystemConfigMap();
-    }
-    return cfg.get(k);
+    return System.getProperty(k);
   }
 
   private static String get(String k, String dflt) {
