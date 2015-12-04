@@ -20,7 +20,6 @@ import com.amazonaws.metrics.MetricCollector;
 import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.metrics.ServiceMetricCollector;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.impl.Preconditions;
 
 /**
@@ -48,7 +47,7 @@ public class SpectatorMetricCollector extends MetricCollector {
     }
 
     @Override public boolean isEnabled() {
-        return Spectator.config().getBoolean("spectator.ext.aws.enabled", true);
+        return Boolean.valueOf(System.getProperty("spectator.ext.aws.enabled", "true"));
     }
 
     @Override public RequestMetricCollector getRequestMetricCollector() {
