@@ -1,10 +1,10 @@
 dependencies {
   compile project(':spectator-api')
   compile project(':spectator-nflx-plugin')
-  compile "com.amazonaws:aws-java-sdk-kinesis:$version_aws"
-  compile "com.google.inject:guice:$version_guice"
-  compile "com.fasterxml.jackson.core:jackson-core:$version_jackson"
-  compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile:$version_jackson"
-  compile "com.typesafe:config:$version_config"
-  compile 'com.tdunning:t-digest:3.1'
+  compile "com.amazonaws:aws-java-sdk-kinesis"
+  compile "com.google.inject:guice"
+  compile "com.fasterxml.jackson.core:jackson-core"
+  compile "com.fasterxml.jackson.dataformat:jackson-dataformat-smile"
+  compile "com.typesafe:config"
+  compile 'com.tdunning:t-digest'
 }

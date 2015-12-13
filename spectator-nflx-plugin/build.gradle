@@ -4,7 +4,7 @@ dependencies {
   compile project(':spectator-ext-jvm')
   compile project(':spectator-ext-sandbox')
   compile project(':spectator-reg-servo')
-  compile "com.google.inject:guice:$version_guice"
-  compile "com.netflix.archaius:archaius-core:$version_archaius1"
-  testCompile "com.netflix.governator:governator:$version_governator"
+  compile "com.google.inject:guice"
+  compile "com.netflix.archaius:archaius-core"
+  testCompile "com.netflix.governator:governator"
 }

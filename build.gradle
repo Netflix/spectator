@@ -2,6 +2,7 @@ buildscript {
   repositories { jcenter() }
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
+    classpath 'com.netflix.nebula:nebula-dependency-recommender:3.1.0'
   }
 }
 
@@ -14,6 +15,7 @@ plugins {
 ext.githubProjectName = 'spectator'
 
 allprojects {
+  apply plugin: 'nebula.dependency-recommender'
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
@@ -53,11 +55,15 @@ subprojects {
     }
   }
 
+  dependencyRecommendations {
+    propertiesFile file: new File(rootProject.projectDir, 'dependencies.properties')
+  }
+
   dependencies {
-    compile "org.slf4j:slf4j-api:$version_slf4j"
-    testCompile 'junit:junit:4.12'
-    testCompile 'nl.jqno.equalsverifier:equalsverifier:1.7.5'
-    jmh "org.slf4j:slf4j-simple:$version_slf4j"
+    compile "org.slf4j:slf4j-api"
+    testCompile 'junit:junit'
+    testCompile 'nl.jqno.equalsverifier:equalsverifier'
+    jmh "org.slf4j:slf4j-simple"
   }
 
   jmh {

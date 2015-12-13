@@ -1,4 +1,4 @@
 dependencies {
   compile project(':spectator-nflx-plugin')
-  compile "com.netflix.governator:governator:$version_governator"
+  compile "com.netflix.governator:governator"
 }
