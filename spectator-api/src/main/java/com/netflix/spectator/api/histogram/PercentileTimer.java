@@ -26,19 +26,21 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-/** Timers that get updated based on the bucket for recorded values. */
+/**
+ * Timer that buckets the counts to allow for estimating percentiles.
+ */
 public final class PercentileTimer implements Timer {
 
   /**
-   * Creates a timer object that manages a set of timers based on the bucket
-   * function supplied. Calling record will be mapped to the record on the appropriate timer.
+   * Creates a timer object that can be used for estimating percentiles.
    *
    * @param registry
    *     Registry to use.
    * @param id
    *     Identifier for the metric being registered.
    * @return
-   *     Timer that manages sub-timers based on the bucket function.
+   *     Timer that keeps track of counts by buckets that can be used to estimate
+   *     the percentiles for the distribution.
    */
   public static PercentileTimer get(Registry registry, Id id) {
     return new PercentileTimer(registry, id);
