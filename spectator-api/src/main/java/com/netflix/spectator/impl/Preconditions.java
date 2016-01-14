@@ -38,6 +38,15 @@ public final class Preconditions {
   /**
    * Ensures the truth of an expression involving the state of the calling instance.
    */
+  public static void checkArg(boolean expression, String errMsg) {
+    if (!expression) {
+      throw new IllegalArgumentException(errMsg);
+    }
+  }
+
+  /**
+   * Ensures the truth of an expression involving the state of the calling instance.
+   */
   public static void checkState(boolean expression, String errMsg) {
     if (!expression) {
       throw new IllegalStateException(errMsg);
