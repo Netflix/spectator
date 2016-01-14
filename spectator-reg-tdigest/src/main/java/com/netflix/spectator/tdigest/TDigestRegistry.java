@@ -17,6 +17,8 @@ package com.netflix.spectator.tdigest;
 
 import com.netflix.spectator.api.*;
 import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.histogram.PercentileDistributionSummary;
+import com.netflix.spectator.api.histogram.PercentileTimer;
 
 import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
@@ -41,11 +43,13 @@ public class TDigestRegistry extends AbstractRegistry {
   }
 
   @Override protected TDigestDistributionSummary newDistributionSummary(Id id) {
-    return new TDigestDistributionSummary(newDigest(id), underlying.distributionSummary(id));
+    DistributionSummary summary = PercentileDistributionSummary.get(underlying, id);
+    return new TDigestDistributionSummary(newDigest(id), summary);
   }
 
   @Override protected TDigestTimer newTimer(Id id) {
-    return new TDigestTimer(newDigest(id), underlying.timer(id));
+    Timer timer = PercentileTimer.get(underlying, id);
+    return new TDigestTimer(newDigest(id), timer);
   }
 
   private StepDigest newDigest(Id id) {
