@@ -23,19 +23,21 @@ import com.netflix.spectator.api.Registry;
 
 import java.util.Collections;
 
-/** Timers that get updated based on the bucket for recorded values. */
+/**
+ * Distribution summary that buckets the counts to allow for estimating percentiles.
+ */
 public class PercentileDistributionSummary implements DistributionSummary {
 
   /**
-   * Creates a timer object that manages a set of timers based on the bucket
-   * function supplied. Calling record will be mapped to the record on the appropriate timer.
+   * Creates a distribution summary object that can be used for estimating percentiles.
    *
    * @param registry
    *     Registry to use.
    * @param id
    *     Identifier for the metric being registered.
    * @return
-   *     Timer that manages sub-timers based on the bucket function.
+   *     Distribution summary that keeps track of counts by buckets that can be used to estimate
+   *     the percentiles for the distribution.
    */
   public static PercentileDistributionSummary get(Registry registry, Id id) {
     return new PercentileDistributionSummary(registry, id);
@@ -76,7 +78,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
   }
 
   /**
-   * Computes the specified percentile for this timer. The unit will be seconds.
+   * Computes the specified percentile for this distribution summary.
    *
    * @param p
    *     Percentile to compute, value must be {@code 0.0 <= p <= 100.0}.
