@@ -58,7 +58,7 @@ public final class PercentileTimer implements Timer {
     this.timer = registry.timer(id);
     this.counters = new Counter[PercentileBuckets.length()];
     for (int i = 0; i < counters.length; ++i) {
-      Id counterId = id.withTag("percentile", String.format("%4X", i));
+      Id counterId = id.withTag("percentile", String.format("%04X", i));
       counters[i] = registry.counter(counterId);
     }
   }
