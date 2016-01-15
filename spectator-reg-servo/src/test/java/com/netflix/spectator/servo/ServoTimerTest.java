@@ -222,13 +222,18 @@ public class ServoTimerTest {
 
   @Test
   public void expiration() {
-    // Not expired on init
-    clock.setWallTime(0L);
+    final long initTime = TimeUnit.MINUTES.toMillis(30);
+    final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);
+
+    // Expired on init, wait for activity to mark as active
+    clock.setWallTime(initTime);
     Timer t = newTimer("foo");
+    Assert.assertTrue(t.hasExpired());
+    t.record(1, TimeUnit.SECONDS);
     Assert.assertTrue(!t.hasExpired());
 
     // Expires with inactivity
-    clock.setWallTime(TimeUnit.MINUTES.toMillis(16));
+    clock.setWallTime(initTime + fifteenMinutes + 1);
     Assert.assertTrue(t.hasExpired());
 
     // Activity brings it back

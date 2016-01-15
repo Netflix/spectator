@@ -38,7 +38,7 @@ class ServoCounter implements Counter, ServoMeter {
     this.clock = clock;
     this.impl = impl;
     this.count = new AtomicLong(0L);
-    this.lastUpdated = new AtomicLong(clock.wallTime());
+    this.lastUpdated = new AtomicLong(0L);
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
