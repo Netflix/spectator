@@ -52,18 +52,22 @@ public class ServoCounterTest {
 
   @Test
   public void expiration() {
-    // Not expired on init
-    clock.setWallTime(0L);
+    final long initTime = TimeUnit.MINUTES.toMillis(30);
+    final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);
+
+    // Expired on init, wait for activity to mark as active
+    clock.setWallTime(initTime);
     Counter c = newCounter("foo");
-    Assert.assertTrue(!c.hasExpired());
+    Assert.assertTrue(c.hasExpired());
     c.increment(42);
-
-    // Expires with inactivity, total count in memory is maintained
-    clock.setWallTime(TimeUnit.MINUTES.toMillis(15));
     Assert.assertTrue(!c.hasExpired());
 
     // Expires with inactivity, total count in memory is maintained
-    clock.setWallTime(TimeUnit.MINUTES.toMillis(15) + 1);
+    clock.setWallTime(initTime + fifteenMinutes);
+    Assert.assertTrue(!c.hasExpired());
+
+    // Expires with inactivity, total count in memory is maintained
+    clock.setWallTime(initTime + fifteenMinutes + 1);
     Assert.assertEquals(c.count(), 42);
     Assert.assertTrue(c.hasExpired());
 
