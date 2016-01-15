@@ -53,7 +53,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
     this.summary = registry.distributionSummary(id);
     this.counters = new Counter[PercentileBuckets.length()];
     for (int i = 0; i < counters.length; ++i) {
-      Id counterId = id.withTag("percentile", String.format("%4X", i));
+      Id counterId = id.withTag("percentile", String.format("%04X", i));
       counters[i] = registry.counter(counterId);
     }
   }
