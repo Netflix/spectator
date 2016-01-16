@@ -13,37 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.sandbox;
+package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Spectator;
 
-/**
- * Counters that get incremented based on the bucket for recorded values.
- *
- * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
- * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
- */
-@Deprecated
+import java.util.Collections;
+import java.util.function.LongFunction;
+
+/** Counters that get incremented based on the bucket for recorded values. */
 public final class BucketCounter implements DistributionSummary {
-
-  /**
-   * Creates a distribution summary object that manages a set of counters based on the bucket
-   * function supplied. Calling record will increment the appropriate counter.
-   *
-   * @param id
-   *     Identifier for the metric being registered.
-   * @param f
-   *     Function to map values to buckets.
-   * @return
-   *     Distribution summary that manages sub-counters based on the bucket function.
-   */
-  public static BucketCounter get(Id id, BucketFunction f) {
-    return get(Spectator.globalRegistry(), id, f);
-  }
 
   /**
    * Creates a distribution summary object that manages a set of counters based on the bucket
@@ -54,43 +36,53 @@ public final class BucketCounter implements DistributionSummary {
    * @param id
    *     Identifier for the metric being registered.
    * @param f
-   *     Function to map values to buckets.
+   *     Function to map values to buckets. See {@link BucketFunctions} for more information.
    * @return
    *     Distribution summary that manages sub-counters based on the bucket function.
    */
-  public static BucketCounter get(Registry registry, Id id, BucketFunction f) {
-    return new BucketCounter(
-        com.netflix.spectator.api.histogram.BucketCounter.get(registry, id, f));
+  public static BucketCounter get(Registry registry, Id id, LongFunction<String> f) {
+    return new BucketCounter(registry, id, f);
   }
 
-  private final com.netflix.spectator.api.histogram.BucketCounter c;
+  private final Registry registry;
+  private final Id id;
+  private final LongFunction<String> f;
 
   /** Create a new instance. */
-  BucketCounter(com.netflix.spectator.api.histogram.BucketCounter c) {
-    this.c = c;
+  BucketCounter(Registry registry, Id id, LongFunction<String> f) {
+    this.registry = registry;
+    this.id = id;
+    this.f = f;
   }
 
   @Override public Id id() {
-    return c.id();
+    return id;
   }
 
   @Override public Iterable<Measurement> measure() {
-    return c.measure();
+    return Collections.emptyList();
   }
 
   @Override public boolean hasExpired() {
-    return c.hasExpired();
+    return false;
   }
 
   @Override public void record(long amount) {
-    c.record(amount);
+    counter(f.apply(amount)).increment();
+  }
+
+  /**
+   * Return the count for a given bucket.
+   */
+  Counter counter(String bucket) {
+    return registry.counter(id.withTag("bucket", bucket));
   }
 
   @Override public long count() {
-    return c.count();
+    return 0L;
   }
 
   @Override public long totalAmount() {
-    return c.totalAmount();
+    return 0L;
   }
 }
