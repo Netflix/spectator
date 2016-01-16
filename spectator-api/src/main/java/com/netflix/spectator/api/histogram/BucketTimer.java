@@ -96,17 +96,17 @@ public final class BucketTimer implements Timer {
     }
   }
 
-  /**
-   * Return the timer for a given bucket.
-   */
+  /** Return the timer for a given bucket. */
   Timer timer(String bucket) {
     return registry.timer(id.withTag("bucket", bucket));
   }
 
+  /** Not supported, will always return 0. */
   @Override public long count() {
     return 0L;
   }
 
+  /** Not supported, will always return 0. */
   @Override public long totalTime() {
     return 0L;
   }

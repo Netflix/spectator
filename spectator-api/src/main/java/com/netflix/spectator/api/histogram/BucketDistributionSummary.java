@@ -71,17 +71,17 @@ public final class BucketDistributionSummary implements DistributionSummary {
     distributionSummary(f.apply(amount)).record(amount);
   }
 
-  /**
-   * Return the distribution summary for a given bucket.
-   */
+  /** Return the distribution summary for a given bucket. */
   DistributionSummary distributionSummary(String bucket) {
     return registry.distributionSummary(id.withTag("bucket", bucket));
   }
 
+  /** Not supported, will always return 0. */
   @Override public long count() {
     return 0L;
   }
 
+  /** Not supported, will always return 0. */
   @Override public long totalAmount() {
     return 0L;
   }

@@ -71,17 +71,17 @@ public final class BucketCounter implements DistributionSummary {
     counter(f.apply(amount)).increment();
   }
 
-  /**
-   * Return the count for a given bucket.
-   */
+  /** Return the count for a given bucket. */
   Counter counter(String bucket) {
     return registry.counter(id.withTag("bucket", bucket));
   }
 
+  /** Not supported, will always return 0. */
   @Override public long count() {
     return 0L;
   }
 
+  /** Not supported, will always return 0. */
   @Override public long totalAmount() {
     return 0L;
   }
