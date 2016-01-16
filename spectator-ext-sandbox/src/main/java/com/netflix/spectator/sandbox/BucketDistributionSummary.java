@@ -21,9 +21,12 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 
-import java.util.Collections;
-
-/** Distribution summaries that get updated based on the bucket for recorded values. */
+/**
+ * Distribution summaries that get updated based on the bucket for recorded values.
+ *
+ * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
+ * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
+ */
 public final class BucketDistributionSummary implements DistributionSummary {
 
   /**
@@ -57,48 +60,38 @@ public final class BucketDistributionSummary implements DistributionSummary {
    *     Distribution summary that manages sub-counters based on the bucket function.
    */
   public static BucketDistributionSummary get(Registry registry, Id id, BucketFunction f) {
-    return new BucketDistributionSummary(registry, id, f);
+    return new BucketDistributionSummary(
+        com.netflix.spectator.api.histogram.BucketDistributionSummary.get(registry, id, f));
   }
 
-  private final Registry registry;
-  private final Id id;
-  private final BucketFunction f;
+  private final com.netflix.spectator.api.histogram.BucketDistributionSummary s;
 
   /** Create a new instance. */
-  BucketDistributionSummary(Registry registry, Id id, BucketFunction f) {
-    this.registry = registry;
-    this.id = id;
-    this.f = f;
+  BucketDistributionSummary(com.netflix.spectator.api.histogram.BucketDistributionSummary s) {
+    this.s = s;
   }
 
   @Override public Id id() {
-    return id;
+    return s.id();
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
+    return s.measure();
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    return s.hasExpired();
   }
 
   @Override public void record(long amount) {
-    distributionSummary(f.apply(amount)).record(amount);
-  }
-
-  /**
-   * Return the count for a given bucket.
-   */
-  public DistributionSummary distributionSummary(String bucket) {
-    return registry.distributionSummary(id.withTag("bucket", bucket));
+    s.record(amount);
   }
 
   @Override public long count() {
-    return 0L;
+    return s.count();
   }
 
   @Override public long totalAmount() {
-    return 0L;
+    return s.totalAmount();
   }
 }

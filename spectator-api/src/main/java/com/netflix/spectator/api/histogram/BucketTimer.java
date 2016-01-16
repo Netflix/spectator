@@ -13,39 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.sandbox;
+package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.api.Timer;
 
+import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongFunction;
 
-/**
- * Timers that get updated based on the bucket for recorded values.
- *
- * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
- * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
- */
+/** Timers that get updated based on the bucket for recorded values. */
 public final class BucketTimer implements Timer {
-
-  /**
-   * Creates a timer object that manages a set of timers based on the bucket
-   * function supplied. Calling record will be mapped to the record on the appropriate timer.
-   *
-   * @param id
-   *     Identifier for the metric being registered.
-   * @param f
-   *     Function to map values to buckets.
-   * @return
-   *     Timer that manages sub-timers based on the bucket function.
-   */
-  public static BucketTimer get(Id id, BucketFunction f) {
-    return get(Spectator.globalRegistry(), id, f);
-  }
 
   /**
    * Creates a timer object that manages a set of timers based on the bucket
@@ -56,51 +38,76 @@ public final class BucketTimer implements Timer {
    * @param id
    *     Identifier for the metric being registered.
    * @param f
-   *     Function to map values to buckets.
+   *     Function to map values to buckets. See {@link BucketFunctions} for more information.
    * @return
    *     Timer that manages sub-timers based on the bucket function.
    */
-  public static BucketTimer get(Registry registry, Id id, BucketFunction f) {
-    return new BucketTimer(
-        com.netflix.spectator.api.histogram.BucketTimer.get(registry, id, f));
+  public static BucketTimer get(Registry registry, Id id, LongFunction<String> f) {
+    return new BucketTimer(registry, id, f);
   }
 
-  private final com.netflix.spectator.api.histogram.BucketTimer t;
+  private final Registry registry;
+  private final Id id;
+  private final LongFunction<String> f;
 
   /** Create a new instance. */
-  BucketTimer(com.netflix.spectator.api.histogram.BucketTimer t) {
-    this.t = t;
+  BucketTimer(Registry registry, Id id, LongFunction<String> f) {
+    this.registry = registry;
+    this.id = id;
+    this.f = f;
   }
 
   @Override public Id id() {
-    return t.id();
+    return id;
   }
 
   @Override public Iterable<Measurement> measure() {
-    return t.measure();
+    return Collections.emptyList();
   }
 
   @Override public boolean hasExpired() {
-    return t.hasExpired();
+    return false;
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    t.record(amount, unit);
+    final long nanos = unit.toNanos(amount);
+    timer(f.apply(nanos)).record(amount, unit);
   }
 
   @Override public <T> T record(Callable<T> rf) throws Exception {
-    return t.record(rf);
+    final Clock clock = registry.clock();
+    final long s = clock.monotonicTime();
+    try {
+      return rf.call();
+    } finally {
+      final long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
   }
 
   @Override public void record(Runnable rf) {
-    t.record(rf);
+    final Clock clock = registry.clock();
+    final long s = clock.monotonicTime();
+    try {
+      rf.run();
+    } finally {
+      final long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
   }
 
+  /** Return the timer for a given bucket. */
+  Timer timer(String bucket) {
+    return registry.timer(id.withTag("bucket", bucket));
+  }
+
+  /** Not supported, will always return 0. */
   @Override public long count() {
-    return t.count();
+    return 0L;
   }
 
+  /** Not supported, will always return 0. */
   @Override public long totalTime() {
-    return t.totalTime();
+    return 0L;
   }
 }

@@ -13,21 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.sandbox;
+package com.netflix.spectator.api.histogram;
 
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongFunction;
 
 @RunWith(JUnit4.class)
 public class BucketFunctionsTest {
 
   @Test
   public void age60s() {
-    BucketFunction f = BucketFunctions.age(60, TimeUnit.SECONDS);
+    LongFunction<String> f = BucketFunctions.age(60, TimeUnit.SECONDS);
     Assert.assertEquals("future", f.apply(TimeUnit.SECONDS.toNanos(-1)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(1)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(6)));
@@ -42,7 +45,7 @@ public class BucketFunctionsTest {
 
   @Test
   public void age60sBiasOld() {
-    BucketFunction f = BucketFunctions.ageBiasOld(60, TimeUnit.SECONDS);
+    LongFunction<String> f = BucketFunctions.ageBiasOld(60, TimeUnit.SECONDS);
     Assert.assertEquals("future", f.apply(TimeUnit.SECONDS.toNanos(-1)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(1)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(6)));
@@ -59,7 +62,7 @@ public class BucketFunctionsTest {
 
   @Test
   public void latency100ms() {
-    BucketFunction f = BucketFunctions.latency(100, TimeUnit.MILLISECONDS);
+    LongFunction<String> f = BucketFunctions.latency(100, TimeUnit.MILLISECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
     Assert.assertEquals("012ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1)));
     Assert.assertEquals("025ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
@@ -70,7 +73,7 @@ public class BucketFunctionsTest {
 
   @Test
   public void latency100msBiasSlow() {
-    BucketFunction f = BucketFunctions.latencyBiasSlow(100, TimeUnit.MILLISECONDS);
+    LongFunction<String> f = BucketFunctions.latencyBiasSlow(100, TimeUnit.MILLISECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
@@ -83,7 +86,7 @@ public class BucketFunctionsTest {
 
   @Test
   public void latency3s() {
-    BucketFunction f = BucketFunctions.latency(3, TimeUnit.SECONDS);
+    LongFunction<String> f = BucketFunctions.latency(3, TimeUnit.SECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
     Assert.assertEquals("0375ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
     Assert.assertEquals("0750ms", f.apply(TimeUnit.MILLISECONDS.toNanos(740)));
@@ -91,4 +94,35 @@ public class BucketFunctionsTest {
     Assert.assertEquals("3000ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1567)));
     Assert.assertEquals("slow", f.apply(TimeUnit.MILLISECONDS.toNanos(3001)));
   }
+
+  @Test
+  public void latencyRange() {
+    for (BucketFunctions.ValueFormatter fmt : BucketFunctions.FORMATTERS) {
+      final long max = fmt.max();
+      LongFunction<String> f = BucketFunctions.latency(max, TimeUnit.NANOSECONDS);
+      Set<String> keys = new HashSet<>();
+      final long step = (max > 37) ? max / 37 : 1;
+      for (long j = 0L; max - j > step; j += step) {
+        keys.add(f.apply(j));
+      }
+      keys.add(f.apply(max));
+      Assert.assertEquals(5, keys.size());
+    }
+  }
+
+  @Test
+  public void latencyBiasSlowRange() {
+    for (BucketFunctions.ValueFormatter fmt : BucketFunctions.FORMATTERS) {
+      final long max = fmt.max();
+      LongFunction<String> f = BucketFunctions.latencyBiasSlow(max, TimeUnit.NANOSECONDS);
+      Set<String> keys = new HashSet<>();
+      final long step = (max > 37) ? max / 37 : 1;
+      for (long j = 0L; max - j >= step; j += step) {
+        keys.add(f.apply(j));
+      }
+      keys.add(f.apply(max));
+      Assert.assertEquals(5, keys.size());
+    }
+  }
+
 }
