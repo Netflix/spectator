@@ -24,6 +24,13 @@ public final class Spectator {
   private static final ExtendedRegistry REGISTRY = new ExtendedRegistry(COMPOSITE_REGISTRY);
 
   /**
+   * Return the config implementation being used.
+   */
+  public static ConfigMap config() {
+    return new SystemConfigMap();
+  }
+
+  /**
    * Returns the global registry.
    *
    * @deprecated Use injection or {@link #globalRegistry()} instead.
