@@ -101,7 +101,7 @@ public abstract class AbstractRegistry implements Registry {
     return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : m;
   }
 
-  @Override public final void register(Meter meter) {
+  @Override public void register(Meter meter) {
     Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
       ? meters.get(meter.id())
       : meters.computeIfAbsent(meter.id(), AggrMeter::new);

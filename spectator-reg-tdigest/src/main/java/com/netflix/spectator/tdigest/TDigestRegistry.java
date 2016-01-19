@@ -56,4 +56,8 @@ public class TDigestRegistry extends AbstractRegistry {
     final long step = config.getPollingFrequency(TimeUnit.MILLISECONDS);
     return new StepDigest(underlying, id, config.getCompressionFactor(), step);
   }
+
+  @Override public void register(Meter meter) {
+    underlying.register(meter);
+  }
 }
