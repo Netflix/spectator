@@ -31,12 +31,12 @@ public class BucketFunctionsTest {
     Assert.assertEquals("future", f.apply(TimeUnit.SECONDS.toNanos(-1)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(1)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(6)));
-    Assert.assertEquals("15s", f.apply(TimeUnit.SECONDS.toNanos(7)));
+    Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(7)));
     Assert.assertEquals("15s", f.apply(TimeUnit.SECONDS.toNanos(10)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(20)));
-    Assert.assertEquals("60s", f.apply(TimeUnit.SECONDS.toNanos(30)));
+    Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(30)));
     Assert.assertEquals("60s", f.apply(TimeUnit.SECONDS.toNanos(42)));
-    Assert.assertEquals("old", f.apply(TimeUnit.SECONDS.toNanos(60)));
+    Assert.assertEquals("60s", f.apply(TimeUnit.SECONDS.toNanos(60)));
     Assert.assertEquals("old", f.apply(TimeUnit.SECONDS.toNanos(61)));
   }
 
@@ -49,11 +49,11 @@ public class BucketFunctionsTest {
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(7)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(10)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(20)));
-    Assert.assertEquals("45s", f.apply(TimeUnit.SECONDS.toNanos(30)));
+    Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(30)));
     Assert.assertEquals("45s", f.apply(TimeUnit.SECONDS.toNanos(42)));
-    Assert.assertEquals("53s", f.apply(TimeUnit.SECONDS.toNanos(48)));
+    Assert.assertEquals("52s", f.apply(TimeUnit.SECONDS.toNanos(48)));
     Assert.assertEquals("60s", f.apply(TimeUnit.SECONDS.toNanos(59)));
-    Assert.assertEquals("old", f.apply(TimeUnit.SECONDS.toNanos(60)));
+    Assert.assertEquals("60s", f.apply(TimeUnit.SECONDS.toNanos(60)));
     Assert.assertEquals("old", f.apply(TimeUnit.SECONDS.toNanos(61)));
   }
 
@@ -63,7 +63,7 @@ public class BucketFunctionsTest {
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
     Assert.assertEquals("012ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1)));
     Assert.assertEquals("025ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
-    Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
+    Assert.assertEquals("025ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
     Assert.assertEquals("100ms", f.apply(TimeUnit.MILLISECONDS.toNanos(99)));
     Assert.assertEquals("slow", f.apply(TimeUnit.MILLISECONDS.toNanos(101)));
   }
@@ -76,7 +76,7 @@ public class BucketFunctionsTest {
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
     Assert.assertEquals("075ms", f.apply(TimeUnit.MILLISECONDS.toNanos(74)));
-    Assert.assertEquals("088ms", f.apply(TimeUnit.MILLISECONDS.toNanos(75)));
+    Assert.assertEquals("075ms", f.apply(TimeUnit.MILLISECONDS.toNanos(75)));
     Assert.assertEquals("100ms", f.apply(TimeUnit.MILLISECONDS.toNanos(99)));
     Assert.assertEquals("slow", f.apply(TimeUnit.MILLISECONDS.toNanos(101)));
   }
