@@ -41,7 +41,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodByte() throws Exception {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
     Assert.assertEquals(f.applyAsDouble(this), 1.0, 1e-12);
   }
 
@@ -51,7 +51,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodShort() throws Exception  {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
     Assert.assertEquals(f.applyAsDouble(this), 2.0, 1e-12);
   }
 
@@ -61,7 +61,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodInt() throws Exception  {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
     Assert.assertEquals(f.applyAsDouble(this), 3.0, 1e-12);
   }
 
@@ -71,7 +71,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodLong() throws Exception  {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
     Assert.assertEquals(f.applyAsDouble(this), 4.0, 1e-12);
   }
 
@@ -81,7 +81,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeMethodWrapperLong() throws Exception  {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(
+    final ToDoubleFunction f = Functions.invokeMethod(
         Utils.getMethod(getClass(), "wrapperLongMethod"));
     Assert.assertEquals(f.applyAsDouble(this), 5.0, 1e-12);
   }
@@ -92,7 +92,7 @@ public class FunctionsTest {
 
   @Test
   public void invokeBadMethod() throws Exception  {
-    final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
     Assert.assertEquals(f.applyAsDouble(this), Double.NaN, 1e-12);
   }
 
@@ -103,19 +103,19 @@ public class FunctionsTest {
 
   @Test
   public void invokeOnSubclass() throws Exception  {
-    final ToDoubleFunction<B> f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
     Assert.assertEquals(f.applyAsDouble(new B()), 2.0, 1e-12);
   }
 
   @Test
   public void invokeOneA() throws Exception  {
-    final ToDoubleFunction<A> f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
     Assert.assertEquals(f.applyAsDouble(new A()), 1.0, 1e-12);
   }
 
   @Test
   public void invokeOneB() throws Exception  {
-    final ToDoubleFunction<B> f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
+    final ToDoubleFunction f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
     Assert.assertEquals(f.applyAsDouble(new B()), -1.0, 1e-12);
   }
 

@@ -388,7 +388,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Number> T gauge(Id id, T number) {
-    return gauge(id, number, (ToDoubleFunction<T>) Number::doubleValue);
+    return (T) gauge(id, number, (ToDoubleFunction<T>) Functions.IDENTITY);
   }
 
   /**
@@ -441,7 +441,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    register(new ObjectGauge<>(clock(), id, obj, f));
+    register(new ObjectGauge(clock(), id, obj, f));
     return obj;
   }
 
@@ -482,7 +482,7 @@ public interface Registry extends Iterable<Meter> {
    */
   @Deprecated
   default <T> T gauge(Id id, T obj, ValueFunction<T> f) {
-    register(new ObjectGauge<>(clock(), id, obj, f));
+    register(new ObjectGauge(clock(), id, obj, f));
     return obj;
   }
 
