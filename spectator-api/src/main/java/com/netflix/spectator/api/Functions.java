@@ -98,7 +98,7 @@ public final class Functions {
    * @return
    *     Value returned by the method or NaN if an exception is thrown.
    */
-  public static ToDoubleFunction invokeMethod(final Method method) {
+  public static <T> ToDoubleFunction<T> invokeMethod(final Method method) {
     method.setAccessible(true);
     return (obj) -> {
       try {
