@@ -17,6 +17,12 @@ package com.netflix.spectator.metrics3;
 
 import com.netflix.spectator.api.*;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.ToDoubleFunction;
+
+import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
+
 /** Registry implementation that maps spectator types to the metrics3 library. */
 public class MetricsRegistry extends AbstractRegistry {
 
@@ -33,16 +39,6 @@ public class MetricsRegistry extends AbstractRegistry {
     this.impl = impl;
   }
 
-  private String toMetricName(Id id) {
-    Id normalized = Utils.normalize(id);
-    StringBuilder buf = new StringBuilder();
-    buf.append(normalized.name());
-    for (Tag t : normalized.tags()) {
-      buf.append('.').append(t.key()).append('-').append(t.value());
-    }
-    return buf.toString();
-  }
-
   @Override protected Counter newCounter(Id id) {
     final String name = toMetricName(id);
     return new MetricsCounter(clock(), id, impl.meter(name));
@@ -56,5 +52,28 @@ public class MetricsRegistry extends AbstractRegistry {
   @Override protected Timer newTimer(Id id) {
     final String name = toMetricName(id);
     return new MetricsTimer(clock(), id, impl.timer(name));
+  }
+
+  @Override public <T extends Number> T gauge(Id id, T number) {
+    return gauge(id, number, (ToDoubleFunction<T>) value -> number.doubleValue());
+  }
+
+  @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
+    MetricsGauge<T> gauge = new MetricsGauge<>(clock(), id, obj, impl, f);
+    register(gauge);
+    return obj;
+  }
+
+  @Override
+  public <T> T gauge(Id id, T obj, ValueFunction<T> f) {
+    return gauge(id, obj, ((ToDoubleFunction<T>) f));
+  }
+
+  @Override public <T extends Collection<?>> T collectionSize(Id id, T collection) {
+    return gauge(id, collection, (ToDoubleFunction<T>) Collection::size);
+  }
+
+  @Override public <T extends Map<?, ?>> T mapSize(Id id, T collection) {
+    return gauge(id, collection, (ToDoubleFunction<T>) Map::size);
   }
 }
