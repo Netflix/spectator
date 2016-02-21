@@ -15,12 +15,16 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 
 
 /**
@@ -28,43 +32,41 @@ import java.util.Map;
  */
 public final class Functions {
 
-<span class="fc" id="L31">  private static final Logger LOGGER = LoggerFactory.getLogger(Functions.class);</span>
+<span class="fc" id="L35">  private static final Logger LOGGER = LoggerFactory.getLogger(Functions.class);</span>
 
-<span class="nc" id="L33">  private Functions() {</span>
-<span class="nc" id="L34">  }</span>
+<span class="nc" id="L37">  private Functions() {</span>
+<span class="nc" id="L38">  }</span>
 
   /**
    * Identity function that just returns the passed in value if it implements the
    * {@link java.lang.Number} interface.
    */
-<span class="fc" id="L40">  public static final DoubleFunction IDENTITY = new DoubleFunction() {</span>
-    public double apply(double v) {
-<span class="fc" id="L42">      return v;</span>
+<span class="fc" id="L44">  public static final DoubleFunction&lt;? extends Number&gt; IDENTITY = new DoubleFunction&lt;Number&gt;() {</span>
+    @Override public double apply(double v) {
+<span class="fc" id="L46">      return v;</span>
     }
   };
 
   /**
    * Returns the size of the collection.
+   *
+   * @deprecated Use {@code Collection::size} instead.
    */
-<span class="fc" id="L49">  public static final ValueFunction COLLECTION_SIZE = new ValueFunction() {</span>
-    public double apply(Object obj) {
-<span class="pc bpc" id="L51" title="1 of 2 branches missed.">      return (obj instanceof Collection) ? ((Collection) obj).size() : Double.NaN;</span>
-    }
-  };
+  @Deprecated
+<span class="fc" id="L56">  public static final ValueFunction&lt;Collection&lt;?&gt;&gt; COLLECTION_SIZE = Collection::size;</span>
 
   /**
    * Returns the size of the map.
+   *
+   * @deprecated Use {@code Map::size} instead.
    */
-<span class="fc" id="L58">  public static final ValueFunction MAP_SIZE = new ValueFunction() {</span>
-    public double apply(Object obj) {
-<span class="pc bpc" id="L60" title="1 of 2 branches missed.">      return (obj instanceof Map) ? ((Map) obj).size() : Double.NaN;</span>
-    }
-  };
+  @Deprecated
+<span class="fc" id="L64">  public static final ValueFunction&lt;Map&lt;?, ?&gt;&gt; MAP_SIZE = Map::size;</span>
 
   /**
    * Age function based on the system clock. See {@link #age(Clock)} for more details.
    */
-<span class="fc" id="L67">  public static final DoubleFunction AGE = age(Clock.SYSTEM);</span>
+<span class="fc" id="L69">  public static final DoubleFunction&lt;AtomicLong&gt; AGE = age(Clock.SYSTEM);</span>
 
   /**
    * Returns a function that computes the age in seconds. The value passed into the function
@@ -76,10 +78,10 @@ public final class Functions {
    * @return
    *     Function that computes the age.
    */
-  public static DoubleFunction age(final Clock clock) {
-<span class="fc" id="L80">    return new DoubleFunction() {</span>
+  public static DoubleFunction&lt;AtomicLong&gt; age(final Clock clock) {
+<span class="fc" id="L82">    return new DoubleFunction&lt;AtomicLong&gt;() {</span>
       public double apply(double t) {
-<span class="fc" id="L82">        return (clock.wallTime() - t) / 1000.0;</span>
+<span class="fc" id="L84">        return (clock.wallTime() - t) / 1000.0;</span>
       }
     };
   }
@@ -96,19 +98,35 @@ public final class Functions {
    * @return
    *     Value returned by the method or NaN if an exception is thrown.
    */
-  public static ValueFunction invokeMethod(final Method method) {
-<span class="fc" id="L100">    method.setAccessible(true);</span>
-<span class="fc" id="L101">    return new ValueFunction() {</span>
-      public double apply(Object obj) {
-        try {
-<span class="fc" id="L104">          final Number n = (Number) method.invoke(obj);</span>
-<span class="fc" id="L105">          return n.doubleValue();</span>
-<span class="fc" id="L106">        } catch (Exception e) {</span>
-<span class="fc" id="L107">          LOGGER.warn(&quot;exception from method registered as a gauge [&quot; + method + &quot;]&quot;, e);</span>
-<span class="fc" id="L108">          return Double.NaN;</span>
-        }
+  public static &lt;T&gt; ToDoubleFunction&lt;T&gt; invokeMethod(final Method method) {
+<span class="fc" id="L102">    method.setAccessible(true);</span>
+<span class="fc" id="L103">    return (obj) -&gt; {</span>
+      try {
+        final Number n = (Number) method.invoke(obj);
+        return n.doubleValue();
+      } catch (Exception e) {
+        LOGGER.warn(&quot;exception from method registered as a gauge [&quot; + method + &quot;]&quot;, e);
+        return Double.NaN;
       }
     };
+  }
+
+  /**
+   * Returns a predicate that matches if the {code}id.name(){code} value for the input meter
+   * is equal to {code}name{code}. Example of usage:
+   *
+   * &lt;pre&gt;
+   * long numberOfMatches = registry.stream().filter(Functions.nameEquals(&quot;foo&quot;)).count();
+   * &lt;/pre&gt;
+   *
+   * @param name
+   *     The name to use for finding matching meter instances. Cannot be null.
+   * @return
+   *     A predicate function that can be used to filter a stream.
+   */
+  public static Predicate&lt;Meter&gt; nameEquals(String name) {
+<span class="fc" id="L128">    Preconditions.checkNotNull(name, &quot;name&quot;);</span>
+<span class="fc" id="L129">    return m -&gt; name.equals(m.id().name());</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

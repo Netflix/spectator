@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/ByteBufferOutputStream.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/FileTDigestReader.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/FileTDigestWriter.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/Json.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/KinesisTDigestReader.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/KinesisTDigestWriter.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/StepDigest.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/StreamTDigestReader.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/StreamTDigestWriter.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestConfig.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestDistributionSummary.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestMeasurement.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestMeter.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestModule.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestPlugin.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestReader.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestRegistry.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestTimer.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-reg-tdigest/src/main/java/com/netflix/spectator/tdigest/TDigestWriter.java">
+</file>
+</checkstyle>

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DefaultDynamicId.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">DefaultDynamicId.java</span></div><h1>DefaultDynamicId.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+/**
+ * Default/standard implementation of the DynamicId interface.
+ *
+ * Created on 8/3/15.
+ */
+final class DefaultDynamicId implements DynamicId {
+  /**
+   * Utility class for sorting and deduplicating lists of tag factories.
+   */
+  private static final class FactorySorterAndDeduplicator {
+    /** Map used to sort and deduplicate the presented tag factories. */
+<span class="fc" id="L38">    private final Map&lt;String, TagFactory&gt; map = new TreeMap&lt;&gt;();</span>
+
+    /** Construct a new instance with the specified factories in it. */
+<span class="fc" id="L41">    FactorySorterAndDeduplicator(Iterable&lt;TagFactory&gt; tagFactories) {</span>
+<span class="fc" id="L42">      addFactories(tagFactories);</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Adds the specified tag to the collected tags. It will overwrite any existing value
+     * associated the key in the specified tag.
+     *
+     * @param factory
+     *      The tag factory to add to the collection
+     */
+    void addFactory(TagFactory factory) {
+<span class="fc" id="L53">      map.put(factory.name(), factory);</span>
+<span class="fc" id="L54">    }</span>
+
+    /**
+     * Adds the tags (key, value)-pairs to the collected tags. Any values associated with the tags
+     * in the map will overwrite any existing values with the same key that are already in the
+     * collection.
+     *
+     * @param factories
+     *     The set of tag factories to add.
+     */
+    void addFactories(Iterable&lt;TagFactory&gt; factories) {
+<span class="fc bfc" id="L65" title="All 2 branches covered.">      for (TagFactory factory : factories) {</span>
+<span class="fc" id="L66">          map.put(factory.name(), factory);</span>
+<span class="fc" id="L67">      }</span>
+<span class="fc" id="L68">    }</span>
+
+    /** Returns the sorted set of tag factories as an unmodifiable collection. */
+    Collection&lt;TagFactory&gt; asCollection() {
+<span class="fc" id="L72">      return Collections.unmodifiableCollection(map.values());</span>
+    }
+  }
+
+  private final String name;
+  private final Collection&lt;TagFactory&gt; tagFactories;
+
+  /**
+   * Creates a new id with the specified name and collection of factories.
+   *
+   * @param name
+   *      the name of the new id
+   * @param tagFactories
+   *      the possibly empty collection of factories to be attached to the new id
+   * @return
+   *      the newly created id
+   */
+  static DefaultDynamicId createWithFactories(String name, Iterable&lt;TagFactory&gt; tagFactories) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">    if (tagFactories == null) {</span>
+<span class="fc" id="L91">      return new DefaultDynamicId(name);</span>
+    } else {
+<span class="fc" id="L93">      FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);</span>
+
+<span class="fc" id="L95">      return new DefaultDynamicId(name, sorter.asCollection());</span>
+    }
+  }
+
+  /**
+   * Constructs a new id with the specified name and no associated tag factories.
+   */
+  DefaultDynamicId(String name) {
+<span class="fc" id="L103">    this(name, Collections.emptyList());</span>
+<span class="fc" id="L104">  }</span>
+
+  /**
+   * Constructs a new id with the specified name and tag factories.
+   *
+   * @param name
+   *      the name of the new id
+   * @param tagFactories
+   *      the possibly empty, immutable collection of tag factories to use
+   */
+<span class="fc" id="L114">  private DefaultDynamicId(String name, Collection&lt;TagFactory&gt; tagFactories) {</span>
+<span class="fc" id="L115">    this.name = Preconditions.checkNotNull(name, &quot;name&quot;);</span>
+<span class="fc" id="L116">    this.tagFactories = tagFactories;</span>
+<span class="fc" id="L117">  }</span>
+
+  @Override
+  public String name() {
+<span class="fc" id="L121">    return name;</span>
+  }
+
+  @Override
+  public Iterable&lt;Tag&gt; tags() {
+<span class="fc" id="L126">    return tagFactories.stream()</span>
+<span class="fc" id="L127">      .map(factory -&gt; factory.createTag())</span>
+<span class="fc" id="L128">      .filter(tag -&gt; tag != null)</span>
+<span class="fc" id="L129">      .collect(Collectors.toList());</span>
+  }
+
+  @Override
+  public DefaultDynamicId withTag(String k, String v) {
+<span class="fc" id="L134">    return withTagFactory(new ConstantTagFactory(new TagList(k, v)));</span>
+  }
+
+  @Override
+  public DefaultDynamicId withTag(Tag t) {
+<span class="fc" id="L139">    return withTagFactory(new ConstantTagFactory(t));</span>
+  }
+
+  @Override
+  public DefaultDynamicId withTags(Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L144">    return createNewId(sorter -&gt; tags.forEach(tag -&gt; sorter.addFactory(new ConstantTagFactory(tag))));</span>
+  }
+
+  @Override
+  public DefaultDynamicId withTags(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L149">    return createNewId(sorter -&gt;</span>
+            tags.forEach((key, value) -&gt; sorter.addFactory(new ConstantTagFactory(new TagList(key, value)))));
+  }
+
+  @Override
+  public DefaultDynamicId withTagFactory(TagFactory factory) {
+<span class="fc bfc" id="L155" title="All 2 branches covered.">    if (tagFactories.isEmpty()) {</span>
+<span class="fc" id="L156">      return new DefaultDynamicId(name, Collections.singleton(factory));</span>
+    } else {
+<span class="fc" id="L158">      return createNewId(sorter -&gt; sorter.addFactory(factory));</span>
+    }
+  }
+
+  @Override
+  public DefaultDynamicId withTagFactories(Iterable&lt;TagFactory&gt; factories) {
+<span class="fc" id="L164">    return createNewId(sorter -&gt; sorter.addFactories(factories));</span>
+  }
+
+  @Override
+  public Id resolveToId() {
+<span class="fc" id="L169">    return new DefaultId(name, TagList.create(tags()));</span>
+  }
+
+  @Override
+  public boolean equals(Object o) {
+<span class="fc bfc" id="L174" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L175" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="fc" id="L177">    DefaultDynamicId that = (DefaultDynamicId) o;</span>
+
+    // We cannot use tagFactories.equals(that.tagFactories) below, because Java
+    // unmodifiable collections do not override equals appropriately.
+<span class="pc bpc" id="L181" title="1 of 4 branches missed.">    return name.equals(that.name) &amp;&amp; tagFactories.size() == that.tagFactories.size()</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">        &amp;&amp; tagFactories.containsAll(that.tagFactories);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="fc" id="L187">    return 31 * name.hashCode() + tagFactories.hashCode();</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="fc" id="L192">    StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L193">    buf.append(name);</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">    if (!tagFactories.isEmpty()) {</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">      for (Tag cur: tags()) {</span>
+<span class="fc" id="L196">        buf.append(&quot;:&quot;).append(cur.key()).append(&quot;=&quot;).append(cur.value());</span>
+<span class="fc" id="L197">      }</span>
+    }
+<span class="fc" id="L199">    return buf.toString();</span>
+  }
+
+  /**
+   * Creates a new dynamic id based on the factories associated with this id
+   * and whatever additions are made by the specified consumer.
+   *
+   * @param consumer
+   *      lambda that can update the sorter with additional tag factories
+   * @return
+   *      the newly created id
+   */
+  private DefaultDynamicId createNewId(Consumer&lt;FactorySorterAndDeduplicator&gt; consumer) {
+<span class="fc" id="L212">    FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);</span>
+
+<span class="fc" id="L214">    consumer.accept(sorter);</span>
+<span class="fc" id="L215">    return new DefaultDynamicId(name, sorter.asCollection());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

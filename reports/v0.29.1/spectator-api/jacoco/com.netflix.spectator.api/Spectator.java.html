@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Spectator.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Spectator.java</span></div><h1>Spectator.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
+
+/**
+ * Static factory used to access the main global registry. The registry class to use can be
+ * set with the system property &lt;code&gt;spectator.api.registryClass&lt;/code&gt;.
+ */
+public final class Spectator {
+
+<span class="fc" id="L33">  private static final Logger LOGGER = LoggerFactory.getLogger(Spectator.class);</span>
+
+<span class="fc" id="L35">  private static final ConfigMap CONFIG = newConfigMapUsingServiceLoader();</span>
+
+<span class="fc" id="L37">  private static final ExtendedRegistry REGISTRY =</span>
+<span class="fc" id="L38">    new ExtendedRegistry(newInstance(Config.registryClass()));</span>
+
+  /**
+   * Create a new config map instance using {@link java.util.ServiceLoader}. If no implementations
+   * are found the default will be used.
+   */
+  static ConfigMap newConfigMapUsingServiceLoader() {
+<span class="fc" id="L45">    final ServiceLoader&lt;ConfigMap&gt; loader = ServiceLoader.load(ConfigMap.class);</span>
+<span class="fc" id="L46">    final Iterator&lt;ConfigMap&gt; cfgIterator = loader.iterator();</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">    if (cfgIterator.hasNext()) {</span>
+<span class="nc" id="L48">      ConfigMap cfg = cfgIterator.next();</span>
+<span class="nc" id="L49">      LOGGER.info(&quot;using config impl found in classpath: {}&quot;, cfg.getClass().getName());</span>
+<span class="nc" id="L50">      return cfg;</span>
+    } else {
+<span class="fc" id="L52">      LOGGER.warn(&quot;no config impl found in classpath, using default&quot;);</span>
+<span class="fc" id="L53">      return new SystemConfigMap();</span>
+    }
+  }
+
+  /**
+   * Create a new registry instance using {@link java.util.ServiceLoader}. If no implementations
+   * are found the default will be used.
+   */
+  static Registry newInstanceUsingServiceLoader() {
+<span class="fc" id="L62">    final ClassLoader cl = pickClassLoader();</span>
+<span class="fc" id="L63">    final ServiceLoader&lt;Registry&gt; loader = ServiceLoader.load(Registry.class, cl);</span>
+<span class="fc" id="L64">    final Iterator&lt;Registry&gt; registryIterator = loader.iterator();</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">    if (registryIterator.hasNext()) {</span>
+<span class="nc" id="L66">      StringBuilder desc = new StringBuilder();</span>
+<span class="nc" id="L67">      List&lt;Registry&gt; rs = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">      while (registryIterator.hasNext()) {</span>
+        try {
+<span class="nc" id="L70">          Registry r = registryIterator.next();</span>
+<span class="nc" id="L71">          desc.append(' ').append(r.getClass().getName());</span>
+<span class="nc" id="L72">          rs.add(r);</span>
+<span class="nc" id="L73">        } catch (ServiceConfigurationError e) {</span>
+<span class="nc" id="L74">          LOGGER.warn(&quot;failed to load registry, it will be skipped&quot;, e);</span>
+<span class="nc" id="L75">        }</span>
+      }
+<span class="nc bnc" id="L77" title="All 2 branches missed.">      if (rs.isEmpty()) {</span>
+<span class="nc" id="L78">        return new DefaultRegistry();</span>
+      } else {
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        Registry r = (rs.size() == 1)</span>
+<span class="nc" id="L81">            ? rs.get(0)</span>
+<span class="nc" id="L82">            : new CompositeRegistry(Clock.SYSTEM, rs.toArray(new Registry[rs.size()]));</span>
+<span class="nc" id="L83">        LOGGER.info(&quot;using registries found in classpath: {}&quot;, desc.toString());</span>
+<span class="nc" id="L84">        return r;</span>
+      }
+    } else {
+<span class="fc" id="L87">      LOGGER.warn(&quot;no registry impl found in classpath, using default&quot;);</span>
+<span class="fc" id="L88">      return new DefaultRegistry();</span>
+    }
+  }
+
+  @SuppressWarnings(&quot;PMD.UseProperClassLoader&quot;)
+  private static ClassLoader pickClassLoader() {
+<span class="fc" id="L94">    final ClassLoader cl = Thread.currentThread().getContextClassLoader();</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">    if (cl == null) {</span>
+<span class="nc" id="L96">      LOGGER.info(&quot;Thread.currentThread().getContextClassLoader() is null,&quot;</span>
+          + &quot; using Spectator.class.getClassLoader()&quot;);
+<span class="nc" id="L98">      return Spectator.class.getClassLoader();</span>
+    } else {
+<span class="fc" id="L100">      return cl;</span>
+    }
+  }
+
+  /**
+   * Create a new registry instance using the class name specified by the system property
+   * {@code spectator.api.registryClass}. If no implementations are found the default will be used.
+   */
+  static Registry newInstanceUsingClassName(String name) {
+    try {
+<span class="nc" id="L110">      final Class&lt;?&gt; c = Class.forName(name);</span>
+<span class="nc" id="L111">      return (Registry) c.newInstance();</span>
+<span class="fc" id="L112">    } catch (Exception e) {</span>
+<span class="fc" id="L113">      final String msg = &quot;failed to instantiate registry class '&quot; + name</span>
+        + &quot;', falling back to default implementation&quot;;
+<span class="fc" id="L115">      Throwables.propagate(new RuntimeException(msg, e));</span>
+<span class="fc" id="L116">      return new DefaultRegistry();</span>
+    }
+  }
+
+  /** Create a new instance of the registry. */
+  static Registry newInstance(String name) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    return Config.SERVICE_LOADER.equals(name)</span>
+<span class="fc" id="L123">      ? newInstanceUsingServiceLoader()</span>
+<span class="fc" id="L124">      : newInstanceUsingClassName(name);</span>
+  }
+
+  /**
+   * Return the config implementation being used.
+   */
+  public static ConfigMap config() {
+<span class="fc" id="L131">    return CONFIG;</span>
+  }
+
+  /**
+   * Return the default global registry implementation. The implementation used will depend on the
+   * system property {@code spectator.api.registryClass}. If not set or set to
+   * {@code service-loader} the registry class will be determined by scanning the classpath using
+   * {@link java.util.ServiceLoader}. Otherwise an instance of the classname specified will be
+   * used. If a registry cannot be loaded the fallback is to use the {@link DefaultRegistry}.
+   * When {@code spectator.api.propagateWarnings} is set to {@code true} and an explicit class name
+   * is specified a {@link java.lang.RuntimeException} will be thrown if the specified class cannot
+   * be used.
+   */
+  public static ExtendedRegistry registry() {
+<span class="fc" id="L145">    return REGISTRY;</span>
+  }
+
+<span class="nc" id="L148">  private Spectator() {</span>
+<span class="nc" id="L149">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TDigestWriter.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.tdigest</a> &gt; <span class="el_source">TDigestWriter.java</span></div><h1>TDigestWriter.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.tdigest;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.netflix.spectator.api.Registry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
+
+/**
+ * Base-class for TDigestWriter implementations. This class will take care of mapping a set of
+ * measurements into capped-size byte buffers.
+ */
+abstract class TDigestWriter implements AutoCloseable {
+
+<span class="fc" id="L33">  private static final Logger LOGGER = LoggerFactory.getLogger(TDigestWriter.class);</span>
+
+  /** Kinesis has a 50k limit for the record size. */
+  static final int BUFFER_SIZE = 50000;
+
+  /**
+   * Minimum amount of free space for the buffer to try and write another measurement. If less
+   * space is available, go ahead and flush the buffer.
+   */
+  static final int MIN_FREE = 4096;
+
+<span class="fc" id="L44">  private final ByteBuffer buf = ByteBuffer.allocate(BUFFER_SIZE);</span>
+<span class="fc" id="L45">  private final ByteBufferOutputStream out = new ByteBufferOutputStream(buf, 2);</span>
+
+  private final Json json;
+
+  /** Create a new instance. */
+<span class="fc" id="L50">  TDigestWriter(Registry registry) {</span>
+<span class="fc" id="L51">    this.json = new Json(registry);</span>
+<span class="fc" id="L52">  }</span>
+
+  /**
+   * Writes a buffer of data.
+   *
+   * @param buffer
+   *     Buffer to write to the underlying storage. The buffer will be setup so it is ready to
+   *     consume, i.e., position=0 and limit=N where N is the amount of data to write. No
+   *     guarantees are made about data in the remaining part of the buffer. The buffer will be
+   *     reused when this method returns.
+   */
+  abstract void write(ByteBuffer buffer) throws IOException;
+
+  /**
+   * Write a list of measurements to some underlying storage.
+   */
+  void write(List&lt;TDigestMeasurement&gt; measurements) throws IOException {
+<span class="fc" id="L69">    JsonGenerator gen = json.newGenerator(out);</span>
+<span class="fc" id="L70">    gen.writeStartArray();</span>
+<span class="fc" id="L71">    gen.flush();</span>
+<span class="fc" id="L72">    int pos = buf.position();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    for (TDigestMeasurement m : measurements) {</span>
+<span class="fc" id="L74">      json.encode(m, gen);</span>
+<span class="fc" id="L75">      gen.flush();</span>
+
+<span class="fc bfc" id="L77" title="All 2 branches covered.">      if (out.overflow()) {</span>
+        // Ignore the last entry written to the buffer
+<span class="fc" id="L79">        out.setPosition(pos);</span>
+<span class="fc" id="L80">        gen.writeEndArray();</span>
+<span class="fc" id="L81">        gen.close();</span>
+<span class="fc" id="L82">        write(buf);</span>
+
+        // Reuse the buffer and write the current entry
+<span class="fc" id="L85">        out.reset();</span>
+<span class="fc" id="L86">        gen = json.newGenerator(out);</span>
+<span class="fc" id="L87">        gen.writeStartArray();</span>
+<span class="fc" id="L88">        json.encode(m, gen);</span>
+<span class="fc" id="L89">        gen.flush();</span>
+
+        // If a single entry is too big, then drop it
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (out.overflow()) {</span>
+<span class="fc" id="L93">          LOGGER.warn(&quot;dropping measurement {}, serialized size exceeds the buffer cap&quot;, m.id());</span>
+<span class="fc" id="L94">          out.reset();</span>
+<span class="fc" id="L95">          gen = json.newGenerator(out);</span>
+<span class="fc" id="L96">          gen.writeStartArray();</span>
+<span class="fc" id="L97">          gen.flush();</span>
+        }
+
+<span class="fc" id="L100">        pos = buf.position();</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">      } else if (buf.remaining() &lt; MIN_FREE) {</span>
+        // Not enough free-space, go ahead and write
+<span class="fc" id="L103">        gen.writeEndArray();</span>
+<span class="fc" id="L104">        gen.close();</span>
+<span class="fc" id="L105">        write(buf);</span>
+
+        // Reuse the buffer
+<span class="fc" id="L108">        out.reset();</span>
+<span class="fc" id="L109">        gen = json.newGenerator(out);</span>
+<span class="fc" id="L110">        gen.writeStartArray();</span>
+<span class="fc" id="L111">        gen.flush();</span>
+<span class="fc" id="L112">        pos = buf.position();</span>
+      } else {
+<span class="fc" id="L114">        pos = buf.position();</span>
+      }
+<span class="fc" id="L116">    }</span>
+
+    // Write any data that is still in the buffer
+<span class="pc bpc" id="L119" title="1 of 2 branches missed.">    if (buf.position() &gt; 1) {</span>
+<span class="fc" id="L120">      gen.writeEndArray();</span>
+<span class="fc" id="L121">      gen.close();</span>
+<span class="fc" id="L122">      write(buf);</span>
+    }
+<span class="fc" id="L124">  }</span>
+
+  // This is needed to avoid issues with AutoCloseable.close throwing Exception
+  @Override public void close() throws IOException {
+<span class="nc" id="L128">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

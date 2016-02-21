@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Functions.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Functions.java</span></div><h1>Functions.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.ToDoubleFunction;
+
+
+/**
+ * Common functions for use with gauges.
+ */
+public final class Functions {
+
+<span class="fc" id="L32">  private static final Logger LOGGER = LoggerFactory.getLogger(Functions.class);</span>
+
+<span class="nc" id="L34">  private Functions() {</span>
+<span class="nc" id="L35">  }</span>
+
+  /**
+   * Identity function that just returns the passed in value if it implements the
+   * {@link java.lang.Number} interface.
+   */
+<span class="fc" id="L41">  public static final DoubleFunction&lt;? extends Number&gt; IDENTITY = new DoubleFunction&lt;Number&gt;() {</span>
+    @Override public double apply(double v) {
+<span class="fc" id="L43">      return v;</span>
+    }
+  };
+
+  /**
+   * Returns the size of the collection.
+   *
+   * @deprecated Use {@code Collection::size} instead.
+   */
+  @Deprecated
+<span class="fc" id="L53">  public static final ValueFunction&lt;Collection&lt;?&gt;&gt; COLLECTION_SIZE = Collection::size;</span>
+
+  /**
+   * Returns the size of the map.
+   *
+   * @deprecated Use {@code Map::size} instead.
+   */
+  @Deprecated
+<span class="fc" id="L61">  public static final ValueFunction&lt;Map&lt;?, ?&gt;&gt; MAP_SIZE = Map::size;</span>
+
+  /**
+   * Age function based on the system clock. See {@link #age(Clock)} for more details.
+   */
+<span class="fc" id="L66">  public static final DoubleFunction AGE = age(Clock.SYSTEM);</span>
+
+  /**
+   * Returns a function that computes the age in seconds. The value passed into the function
+   * should be a timestamp in milliseconds since the epoch. Typically this will be the return
+   * value from calling {@link java.lang.System#currentTimeMillis()}.
+   *
+   * @param clock
+   *     Clock used to get the current time for comparing with the passed in value.
+   * @return
+   *     Function that computes the age.
+   */
+  public static DoubleFunction age(final Clock clock) {
+<span class="fc" id="L79">    return new DoubleFunction() {</span>
+      public double apply(double t) {
+<span class="fc" id="L81">        return (clock.wallTime() - t) / 1000.0;</span>
+      }
+    };
+  }
+
+  /**
+   * Returns a function that invokes a method on the object via reflection. If an
+   * exception of any kind occurs then NaN will be returned and the exception will be logged.
+   * The method must have an empty parameter list and return a primitive number value or a
+   * subclass of {@link java.lang.Number}. The method will be set accessible so that private
+   * methods can be used.
+   *
+   * @param method
+   *     Method to execute on the passed in object.
+   * @return
+   *     Value returned by the method or NaN if an exception is thrown.
+   */
+  public static ToDoubleFunction invokeMethod(final Method method) {
+<span class="fc" id="L99">    method.setAccessible(true);</span>
+<span class="fc" id="L100">    return (obj) -&gt; {</span>
+      try {
+        final Number n = (Number) method.invoke(obj);
+        return n.doubleValue();
+      } catch (Exception e) {
+        LOGGER.warn(&quot;exception from method registered as a gauge [&quot; + method + &quot;]&quot;, e);
+        return Double.NaN;
+      }
+    };
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>

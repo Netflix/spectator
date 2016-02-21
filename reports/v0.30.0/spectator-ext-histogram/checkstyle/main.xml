@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/BucketCounter.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/BucketDistributionSummary.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/BucketFunction.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/BucketFunctions.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/BucketTimer.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/DoubleDistributionSummary.java">
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/PercentileBuckets.java">
+<error line="9" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocTypeCheck"/>
+<error line="9" column="1" severity="error" message="Utility classes should not have a public or default constructor." source="com.puppycrawl.tools.checkstyle.checks.design.HideUtilityClassConstructorCheck"/>
+<error line="52" column="3" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+<error line="60" column="3" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+<error line="67" column="3" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+<error line="71" column="3" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+</file>
+<file name="/Users/brharrington/stash/spectator/spectator-ext-histogram/src/main/java/com/netflix/spectator/histogram/PercentileTimer.java">
+<error line="114" column="3" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+</file>
+</checkstyle>

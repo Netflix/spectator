@@ -1,0 +1,621 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Registry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Registry.java</span></div><h1>Registry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.function.ToDoubleFunction;
+
+/**
+ * Registry to manage a set of meters.
+ */
+public interface Registry extends Iterable&lt;Meter&gt; {
+
+  /**
+   * The clock used by the registry for timing events.
+   */
+  Clock clock();
+
+  /**
+   * Creates an identifier for a meter. All ids passed into other calls should be created by the
+   * registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   */
+  Id createId(String name);
+
+  /**
+   * Creates an identifier for a meter. All ids passed into other calls should be created by the
+   * registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   */
+  Id createId(String name, Iterable&lt;Tag&gt; tags);
+
+  /**
+   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     The newly created dynamic identifier.
+   */
+  default DynamicId createDynamicId(String name) {
+<span class="fc" id="L63">    return new DefaultDynamicId(name);</span>
+  }
+
+  /**
+   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tagFactories
+   *     Other factories that can generate other dimensions that can be used to classify the measurement.
+   * @return
+   *     The newly created dynamic identifier.
+   */
+  default DynamicId createDynamicId(String name, Iterable&lt;TagFactory&gt; tagFactories) {
+<span class="fc" id="L77">    return DefaultDynamicId.createWithFactories(name, tagFactories);</span>
+  }
+
+  /**
+   * Add a custom meter to the registry.
+   */
+  void register(Meter meter);
+
+  /**
+   * Measures the rate of some activity. A counter is for continuously incrementing sources like
+   * the number of requests that are coming into a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Counter counter(Id id);
+
+  /**
+   * Measures the rate of some activity.  A counter is for continuously incrementing sources like
+   * the number of requests that are coming into a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  default Counter counter(DynamicId id) {
+<span class="fc" id="L102">    return new DefaultDynamicCounter(id, this);</span>
+  }
+
+  /**
+   * Measures the rate and variation in amount for some activity. For example, it could be used to
+   * get insight into the variation in response sizes for requests to a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  DistributionSummary distributionSummary(Id id);
+
+  /**
+   * Measures the rate and variation in amount for some activity. For example, it could be used to
+   * get insight into the variation in response sizes for requests to a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  default DistributionSummary distributionSummary(DynamicId id) {
+<span class="fc" id="L122">    return new DefaultDynamicDistributionSummary(id, this);</span>
+  }
+
+  /**
+   * Measures the rate and time taken for short running tasks.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Timer timer(Id id);
+
+  /**
+   * Measures the rate and time taken for short running tasks.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createDynamicId}
+   */
+  default Timer timer(DynamicId id) {
+<span class="fc" id="L140">    return new DefaultDynamicTimer(id, this);</span>
+  }
+
+  /**
+   * Returns the meter associated with a given id.
+   *
+   * @param id
+   *     Identifier for the meter.
+   * @return
+   *     Instance of the meter or null if there is no match.
+   */
+  Meter get(Id id);
+
+  /** Iterator for traversing the set of meters in the registry. */
+  Iterator&lt;Meter&gt; iterator();
+
+  /////////////////////////////////////////////////////////////////
+  // Additional helper methods below
+
+  /**
+   * Returns the first underlying registry that is an instance of {@code c}.
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  default &lt;T extends Registry&gt; T underlying(Class&lt;T&gt; c) {
+<span class="nc bnc" id="L164" title="All 2 branches missed.">    if (c.isAssignableFrom(getClass())) {</span>
+<span class="nc" id="L165">      return (T) this;</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">    } else if (this instanceof CompositeRegistry) {</span>
+<span class="nc" id="L167">      return ((CompositeRegistry) this).find(c);</span>
+    } else {
+<span class="nc" id="L169">      return null;</span>
+    }
+  }
+
+  /**
+   * Creates an identifier for a meter.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Identifier for a meter.
+   */
+  default Id createId(String name, String... tags) {
+<span class="fc" id="L184">    return createId(name, Utils.toIterable(tags));</span>
+  }
+
+  /**
+   * Creates an identifier for a meter.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Identifier for a meter.
+   */
+  default Id createId(String name, Map&lt;String, String&gt; tags) {
+<span class="fc" id="L198">    return createId(name).withTags(TagList.create(tags));</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name) {
+<span class="fc" id="L210">    return counter(createId(name));</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L224">    return counter(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name, String... tags) {
+<span class="fc" id="L238">    return counter(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name) {
+<span class="fc" id="L250">    return distributionSummary(createId(name));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L264">    return distributionSummary(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name, String... tags) {
+<span class="fc" id="L278">    return distributionSummary(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name) {
+<span class="fc" id="L290">    return timer(createId(name));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L304">    return timer(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name, String... tags) {
+<span class="fc" id="L318">    return timer(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default LongTaskTimer longTaskTimer(Id id) {
+<span class="fc" id="L330">    LongTaskTimer taskTimer = new DefaultLongTaskTimer(clock(), id);</span>
+<span class="fc" id="L331">    register(taskTimer); // the AggrMeter has the right semantics for these type of timers</span>
+<span class="fc" id="L332">    return taskTimer;</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default LongTaskTimer longTaskTimer(String name) {
+<span class="nc" id="L344">    return longTaskTimer(createId(name));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default LongTaskTimer longTaskTimer(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L358">    return longTaskTimer(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default LongTaskTimer longTaskTimer(String name, String... tags) {
+<span class="fc" id="L372">    return longTaskTimer(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the {@link java.lang.Number}. The registration
+   * will keep a weak reference to the number so it will not prevent garbage collection.
+   * The number implementation used should be thread safe.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Number&gt; T gauge(Id id, T number) {
+<span class="fc" id="L389">    return (T) gauge(id, number, (ToDoubleFunction&lt;T&gt;) Functions.IDENTITY);</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the {@link java.lang.Number}. See
+   * {@link #gauge(Id, Number)}.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Number&gt; T gauge(String name, T number) {
+<span class="fc" id="L405">    return gauge(createId(name), number);</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the {@link java.lang.Number}. See
+   * {@link #gauge(Id, Number)}.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param tags
+   *     Sequence of dimensions for breaking down the name.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Number&gt; T gauge(String name, Iterable&lt;Tag&gt; tags, T number) {
+<span class="fc" id="L423">    return gauge(createId(name, tags), number);</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the object after the function
+   * {@code f} is applied. The registration will keep a weak reference to the number so it will
+   * not prevent garbage collection. The number implementation used should be thread safe.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T&gt; T gauge(Id id, T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L442">    register(new ObjectGauge(clock(), id, obj, f));</span>
+<span class="fc" id="L443">    return obj;</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the object. See
+   * {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T&gt; T gauge(String name, T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L461">    return gauge(createId(name), obj, f);</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the object after the function
+   * {@code f} is applied. The registration will keep a weak reference to the number so it will
+   * not prevent garbage collection. The number implementation used should be thread safe.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   *
+   * @deprecated Use {@link #gauge(Id, Object, ToDoubleFunction)}.
+   */
+  @Deprecated
+  default &lt;T&gt; T gauge(Id id, T obj, ValueFunction&lt;T&gt; f) {
+<span class="fc" id="L483">    register(new ObjectGauge(clock(), id, obj, f));</span>
+<span class="fc" id="L484">    return obj;</span>
+  }
+
+  /**
+   * Register a gauge that reports the value of the object. See
+   * {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   *
+   * @deprecated Use {@link #gauge(String, Object, ToDoubleFunction)}.
+   */
+  @Deprecated
+  default &lt;T&gt; T gauge(String name, T obj, ValueFunction&lt;T&gt; f) {
+<span class="fc" id="L505">    return gauge(createId(name), obj, f);</span>
+  }
+
+  /**
+   * Register a gauge that reports the size of the {@link java.util.Collection}. The registration
+   * will keep a weak reference to the collection so it will not prevent garbage collection.
+   * The collection implementation used should be thread safe. Note that calling
+   * {@link java.util.Collection#size()} can be expensive for some collection implementations
+   * and should be considered before registering.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Collection} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(Id id, T collection) {
+<span class="fc" id="L524">    return gauge(id, collection, Collection::size);</span>
+  }
+
+  /**
+   * Register a gauge that reports the size of the {@link java.util.Collection}. The registration
+   * will keep a weak reference to the collection so it will not prevent garbage collection.
+   * The collection implementation used should be thread safe. Note that calling
+   * {@link java.util.Collection#size()} can be expensive for some collection implementations
+   * and should be considered before registering.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Collection} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(String name, T collection) {
+<span class="fc" id="L543">    return collectionSize(createId(name), collection);</span>
+  }
+
+  /**
+   * Register a gauge that reports the size of the {@link java.util.Map}. The registration
+   * will keep a weak reference to the collection so it will not prevent garbage collection.
+   * The collection implementation used should be thread safe. Note that calling
+   * {@link java.util.Map#size()} can be expensive for some collection implementations
+   * and should be considered before registering.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Map} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(Id id, T collection) {
+<span class="fc" id="L562">    return gauge(id, collection, Map::size);</span>
+  }
+
+  /**
+   * Register a gauge that reports the size of the {@link java.util.Map}. The registration
+   * will keep a weak reference to the collection so it will not prevent garbage collection.
+   * The collection implementation used should be thread safe. Note that calling
+   * {@link java.util.Map#size()} can be expensive for some collection implementations
+   * and should be considered before registering.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Map} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   */
+  default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(String name, T collection) {
+<span class="fc" id="L581">    return mapSize(createId(name), collection);</span>
+  }
+
+  /**
+   * Register a gauge that reports the return value of invoking the method on the object. The
+   * registration will keep a weak reference to the object so it will not prevent garbage
+   * collection. The registered method should be thread safe and cheap to invoke. Any potentially
+   * long running or expensive activity such as IO should not be performed inline.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param method
+   *     Name of the method to invoke on the object.
+   */
+  default void methodValue(Id id, Object obj, String method) {
+<span class="fc" id="L598">    final Method m = Utils.getGaugeMethod(id, obj, method);</span>
+<span class="fc bfc" id="L599" title="All 2 branches covered.">    if (m != null) {</span>
+<span class="fc" id="L600">      gauge(id, obj, Functions.invokeMethod(m));</span>
+    }
+<span class="fc" id="L602">  }</span>
+
+  /**
+   * Register a gauge that reports the return value of invoking the method on the object. The
+   * registration will keep a weak reference to the object so it will not prevent garbage
+   * collection. The registered method should be thread safe and cheap to invoke. Any potentially
+   * long running or expensive activity such as IO should not be performed inline.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param method
+   *     Name of the method to invoke on the object.
+   */
+  default void methodValue(String name, Object obj, String method) {
+<span class="fc" id="L618">    methodValue(createId(name), obj, method);</span>
+<span class="fc" id="L619">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.1.201405082137</span></div></body></html>
