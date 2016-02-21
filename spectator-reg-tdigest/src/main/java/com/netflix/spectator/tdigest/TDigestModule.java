@@ -27,7 +27,10 @@ import javax.inject.Singleton;
 
 /**
  * Guice module to configure the plugin.
+ *
+ * @deprecated Use {@link com.netflix.spectator.api.histogram.PercentileTimer} instead.
  */
+@Deprecated
 public class TDigestModule extends AbstractModule {
 
   @Override protected void configure() {
