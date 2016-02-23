@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.Throwables;
+
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 

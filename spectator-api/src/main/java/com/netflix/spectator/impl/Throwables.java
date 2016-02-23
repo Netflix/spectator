@@ -13,13 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Helper functions for working with exceptions. */
-final class Throwables {
+/**
+ * Helper functions for working with exceptions.
+ *
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
+ */
+public final class Throwables {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Throwables.class);
 
@@ -30,7 +35,7 @@ final class Throwables {
    * @param t
    *     Exception to log and optionally propagate.
    */
-  static void propagate(Throwable t) {
+  public static void propagate(Throwable t) {
     propagate(t.getMessage(), t);
   }
 
@@ -43,7 +48,7 @@ final class Throwables {
    * @param t
    *     Exception to log and optionally propagate.
    */
-  static void propagate(String msg, Throwable t) {
+  public static void propagate(String msg, Throwable t) {
     LOGGER.warn(msg, t);
     if (Config.propagateWarnings()) {
       if (t instanceof RuntimeException) {

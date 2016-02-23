@@ -17,8 +17,10 @@ package com.netflix.spectator.impl;
 
 /**
  * Internal convenience methods that help a method or constructor check whether it was invoked
- * correctly. Please notice that this should be considered an internal implementation detail, and
- * it is subject to change without notice.
+ * correctly.
+ *
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
  */
 public final class Preconditions {
   private Preconditions() {
