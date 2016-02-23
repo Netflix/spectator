@@ -15,10 +15,10 @@
  */
 package com.netflix.spectator.metrics3;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -102,5 +102,23 @@ public class MetricsRegistryTest {
     map.put("foo", "bar");
     r.mapSize("fooMap", map);
     Assert.assertEquals(1.0, (Double) codaRegistry.getGauges().get("fooMap").getValue(), 1e-12);
+  }
+
+  @Test
+  public void gaugeRegisteredDirectly() throws Exception {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+
+    // Directly register a gauge with metrics register
+    codaRegistry.register("foo", (Gauge<Double>) () -> 42.0D);
+
+    // Try to register the same gauge via spectator
+    AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
+
+    // Should be registered with the coda
+    Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+
+    // Should not be registered with spectator
+    Assert.assertNull(r.get(r.createId("foo")));
   }
 }

@@ -17,9 +17,11 @@ package com.netflix.spectator.metrics3;
 
 import com.codahale.metrics.Gauge;
 import com.netflix.spectator.api.*;
+import com.netflix.spectator.impl.Throwables;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.ToDoubleFunction;
 
 import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
@@ -28,6 +30,7 @@ import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
 public class MetricsRegistry extends AbstractRegistry {
 
   private final com.codahale.metrics.MetricRegistry impl;
+  private final Map<Id, MetricsGaugeAggr> registeredGauges;
 
   /** Create a new instance. */
   public MetricsRegistry() {
@@ -38,6 +41,7 @@ public class MetricsRegistry extends AbstractRegistry {
   public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
     super(clock);
     this.impl = impl;
+    this.registeredGauges = new ConcurrentHashMap<>();
   }
 
   @Override protected Counter newCounter(Id id) {
@@ -62,20 +66,24 @@ public class MetricsRegistry extends AbstractRegistry {
   @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
     final String name = toMetricName(id);
 
-    Gauge aggrGauge = this.impl.getGauges().get(name);
+    final Gauge aggrGauge = registeredGauges.computeIfAbsent(id, idKey -> {
+      final MetricsGaugeAggr aggr = new MetricsGaugeAggr();
+      try {
+        this.impl.register(name, aggr);
+      } catch (IllegalArgumentException e) {
+        // This exception can be raised if someone registered a metric with the same name as the one being
+        // registered now directly on the MetricsRegister
+        Throwables.propagate(e);
+        return null;
+      }
+      return aggr;
+    });
 
-    // Wasn't registered already
-    if (aggrGauge == null) {
-      aggrGauge = new MetricsGaugeAggr();
-      this.impl.register(name, aggrGauge);
-    }
-
-    if (aggrGauge instanceof MetricsGaugeAggr) {
+    if (aggrGauge != null) {
       final MetricsGauge<T> simpleGauge = new MetricsGauge<>(clock(), id, obj, f);
       register(simpleGauge);
       ((MetricsGaugeAggr) aggrGauge).addGauge(simpleGauge);
     }
-    // FIXME throw exceptions with Throwables.propagate if aggrGauge is not a instance of MetricsGaugeAggr
 
     return obj;
   }

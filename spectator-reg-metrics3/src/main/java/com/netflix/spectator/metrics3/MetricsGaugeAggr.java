@@ -38,7 +38,7 @@ class MetricsGaugeAggr implements com.codahale.metrics.Gauge<Double> {
 
   @Override
   public Double getValue() {
-    double aggregatedValue = 0.0D;
+    double aggregatedValue = Double.NaN;
 
     final Iterator<MetricsGauge> iterator = gauges.iterator();
     while (iterator.hasNext()) {
@@ -49,8 +49,10 @@ class MetricsGaugeAggr implements com.codahale.metrics.Gauge<Double> {
       } else {
         final double gaugeVal = gauge.value();
 
-        if (Double.isFinite(gaugeVal))
-          aggregatedValue += gaugeVal;
+        // When it's NaN means the gauge can be unregistered due to it's reference to the value to extract value
+        // was garbage collected or simple the gauge returned a NaN so i don't count it
+        if (!Double.isNaN(gaugeVal))
+          aggregatedValue = (Double.isNaN(aggregatedValue) ? 0 : aggregatedValue) + gaugeVal;
       }
     }
 
