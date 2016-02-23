@@ -15,14 +15,18 @@
  */
 package com.netflix.spectator.metrics3;
 
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -65,11 +69,56 @@ public class MetricsRegistryTest {
     Assert.assertEquals(1, codaRegistry.getHistograms().get("foo").getCount());
   }
 
-  @Ignore
-  public void gauge() {
+  @Test
+  public void gaugeNumber() {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
     Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+  }
+
+  @Test
+  public void gaugeNumberDuplicate() {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    AtomicInteger num1 = r.gauge("foo", new AtomicInteger(42));
+    AtomicInteger num2 = r.gauge("foo", new AtomicInteger(21));
+    Assert.assertEquals(63.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+  }
+
+  @Test
+  public void gaugeCollection() throws Exception {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    final List<Integer> foo = r.collectionSize("foo", Arrays.asList(1, 2, 3, 4, 5));
+    Assert.assertEquals(5.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+  }
+
+  @Test
+  public void gaugeMap() throws Exception {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    Map<String, String> map = new HashMap<>();
+    map.put("foo", "bar");
+    r.mapSize("fooMap", map);
+    Assert.assertEquals(1.0, (Double) codaRegistry.getGauges().get("fooMap").getValue(), 1e-12);
+  }
+
+  @Test
+  public void gaugeRegisteredDirectly() throws Exception {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+
+    // Directly register a gauge with metrics register
+    codaRegistry.register("foo", (Gauge<Double>) () -> 42.0D);
+
+    // Try to register the same gauge via spectator
+    AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
+
+    // Should be registered with the coda
+    Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+
+    // Should not be registered with spectator
+    Assert.assertNull(r.get(r.createId("foo")));
   }
 }

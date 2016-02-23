@@ -15,12 +15,22 @@
  */
 package com.netflix.spectator.metrics3;
 
+import com.codahale.metrics.Gauge;
 import com.netflix.spectator.api.*;
+import com.netflix.spectator.impl.Throwables;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.ToDoubleFunction;
+
+import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
 
 /** Registry implementation that maps spectator types to the metrics3 library. */
 public class MetricsRegistry extends AbstractRegistry {
 
   private final com.codahale.metrics.MetricRegistry impl;
+  private final Map<Id, MetricsGaugeAggr> registeredGauges;
 
   /** Create a new instance. */
   public MetricsRegistry() {
@@ -31,16 +41,7 @@ public class MetricsRegistry extends AbstractRegistry {
   public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
     super(clock);
     this.impl = impl;
-  }
-
-  private String toMetricName(Id id) {
-    Id normalized = Utils.normalize(id);
-    StringBuilder buf = new StringBuilder();
-    buf.append(normalized.name());
-    for (Tag t : normalized.tags()) {
-      buf.append('.').append(t.key()).append('-').append(t.value());
-    }
-    return buf.toString();
+    this.registeredGauges = new ConcurrentHashMap<>();
   }
 
   @Override protected Counter newCounter(Id id) {
@@ -56,5 +57,46 @@ public class MetricsRegistry extends AbstractRegistry {
   @Override protected Timer newTimer(Id id) {
     final String name = toMetricName(id);
     return new MetricsTimer(clock(), id, impl.timer(name));
+  }
+
+  @Override public <T extends Number> T gauge(Id id, T number) {
+    return gauge(id, number, (ToDoubleFunction<T>) value -> number.doubleValue());
+  }
+
+  @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
+    final Gauge aggrGauge = registeredGauges.computeIfAbsent(id, idKey -> {
+      final String name = toMetricName(id);
+      final MetricsGaugeAggr aggr = new MetricsGaugeAggr();
+      try {
+        this.impl.register(name, aggr);
+      } catch (IllegalArgumentException e) {
+        // This exception can be raised if someone registered a metric with the same name as the one being
+        // registered now directly on the MetricsRegister
+        Throwables.propagate(e);
+        return null;
+      }
+      return aggr;
+    });
+
+    if (aggrGauge != null) {
+      final MetricsGauge<T> simpleGauge = new MetricsGauge<>(clock(), id, obj, f);
+      register(simpleGauge);
+      ((MetricsGaugeAggr) aggrGauge).addGauge(simpleGauge);
+    }
+
+    return obj;
+  }
+
+  @Override
+  public <T> T gauge(Id id, T obj, ValueFunction<T> f) {
+    return gauge(id, obj, ((ToDoubleFunction<T>) f));
+  }
+
+  @Override public <T extends Collection<?>> T collectionSize(Id id, T collection) {
+    return gauge(id, collection, (ToDoubleFunction<T>) Collection::size);
+  }
+
+  @Override public <T extends Map<?, ?>> T mapSize(Id id, T collection) {
+    return gauge(id, collection, (ToDoubleFunction<T>) Map::size);
   }
 }
