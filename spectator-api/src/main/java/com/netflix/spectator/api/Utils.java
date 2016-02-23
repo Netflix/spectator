@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.impl.Throwables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Throwables;
+
 import java.util.ArrayList;
 import java.util.List;
 

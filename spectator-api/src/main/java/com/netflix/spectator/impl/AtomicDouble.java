@@ -19,6 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Wrapper around AtomicLong to make working with double values easier.
+ *
+ * <p><b>Please notice that this should be considered an internal implementation detail, and
+ * it is subject to change without notice.</b></p>
  */
 public class AtomicDouble extends Number {
 

@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * The current implementation keeps an array of with two items where one is the current value
  * being updated and the other is the value from the previous interval and is only available for
  * polling.
+ *
+ * <p><b>Please notice that this should be considered an internal implementation detail, and
+ * it is subject to change without notice.</b></p>
  */
 public class StepLong {
 
