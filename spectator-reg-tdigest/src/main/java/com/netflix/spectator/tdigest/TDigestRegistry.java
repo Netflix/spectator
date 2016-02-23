@@ -16,7 +16,6 @@
 package com.netflix.spectator.tdigest;
 
 import com.netflix.spectator.api.*;
-import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.histogram.PercentileDistributionSummary;
 import com.netflix.spectator.api.histogram.PercentileTimer;
 
@@ -24,7 +23,13 @@ import javax.inject.Inject;
 import java.util.concurrent.TimeUnit;
 
 
-/** Registry that maps spectator types to servo. */
+/**
+ * Registry that uses t-digests to keep track of percentile data for timer and distribution
+ * summaries.
+ *
+ * @deprecated Use {@link com.netflix.spectator.api.histogram.PercentileTimer} instead.
+ */
+@Deprecated
 public class TDigestRegistry extends AbstractRegistry {
 
   private final Registry underlying;

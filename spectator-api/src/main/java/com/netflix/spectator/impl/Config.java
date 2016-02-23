@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.impl;
 
-/** Helper methods for accessing configuration settings. */
-final class Config {
+/**
+ * Helper methods for accessing configuration settings.
+ *
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
+ */
+public final class Config {
 
   private static final String PREFIX = "spectator.api.";
 
@@ -33,20 +38,21 @@ final class Config {
   }
 
   /** Should an exception be thrown for warnings? */
-  static boolean propagateWarnings() {
+  public static boolean propagateWarnings() {
     return Boolean.valueOf(get(PREFIX + "propagateWarnings", "false"));
   }
 
   /**
-   * For classes based on {@link AbstractRegistry} this setting is used to determine the maximum
-   * number of registered meters permitted. This limit is used to help protect the system from a
-   * memory leak if there is a bug or irresponsible usage of registering meters.
+   * For classes based on {@link com.netflix.spectator.api.AbstractRegistry} this setting is used
+   * to determine the maximum number of registered meters permitted. This limit is used to help
+   * protect the system from a memory leak if there is a bug or irresponsible usage of registering
+   * meters.
    *
    * @return
    *     Maximum number of distinct meters that can be registered at a given time. The default is
    *     {@link java.lang.Integer#MAX_VALUE}.
    */
-  static int maxNumberOfMeters() {
+  public static int maxNumberOfMeters() {
     final String v = get(PREFIX + "maxNumberOfMeters");
     return (v == null) ? Integer.MAX_VALUE : Integer.parseInt(v);
   }

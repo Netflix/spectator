@@ -15,7 +15,7 @@ function cloneGhPages {
   mkdir -p $BUILD_DIR
   cd $BUILD_DIR
   rm -rf gh-pages
-  git clone https://github.com/Netflix/spectator.git gh-pages
+  git clone git@github.com:Netflix/spectator.git gh-pages
   cd gh-pages
   git checkout gh-pages
   cd ../../
@@ -27,7 +27,7 @@ function updateForVersion {
   if [ "$VERSION" != "HEAD" ]; then
     git checkout tags/$VERSION
   fi
-  ./gradlew clean jacocoTestReport build buildDashboard -x checkCompatibility
+  ./gradlew clean jacocoTestReport build buildDashboard
   
   # Update the reports: code-coverage, findbugs, etc
   REPORT_DIR=$BUILD_DIR/gh-pages/reports/$VERSION
