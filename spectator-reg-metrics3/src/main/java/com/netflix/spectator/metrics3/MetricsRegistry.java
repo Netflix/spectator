@@ -64,9 +64,8 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    final String name = toMetricName(id);
-
     final Gauge aggrGauge = registeredGauges.computeIfAbsent(id, idKey -> {
+      final String name = toMetricName(id);
       final MetricsGaugeAggr aggr = new MetricsGaugeAggr();
       try {
         this.impl.register(name, aggr);
