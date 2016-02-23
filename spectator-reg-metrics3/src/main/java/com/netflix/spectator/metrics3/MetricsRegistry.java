@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.metrics3;
 
+import com.codahale.metrics.Gauge;
 import com.netflix.spectator.api.*;
 
 import java.util.Collection;
@@ -59,8 +60,23 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    MetricsGauge<T> gauge = new MetricsGauge<>(clock(), id, obj, impl, f);
-    register(gauge);
+    final String name = toMetricName(id);
+
+    Gauge aggrGauge = this.impl.getGauges().get(name);
+
+    // Wasn't registered already
+    if (aggrGauge == null) {
+      aggrGauge = new MetricsGaugeAggr();
+      this.impl.register(name, aggrGauge);
+    }
+
+    if (aggrGauge instanceof MetricsGaugeAggr) {
+      final MetricsGauge<T> simpleGauge = new MetricsGauge<>(clock(), id, obj, f);
+      register(simpleGauge);
+      ((MetricsGaugeAggr) aggrGauge).addGauge(simpleGauge);
+    }
+    // FIXME throw exceptions with Throwables.propagate if aggrGauge is not a instance of MetricsGaugeAggr
+
     return obj;
   }
 

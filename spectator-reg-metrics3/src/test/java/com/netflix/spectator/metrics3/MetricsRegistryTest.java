@@ -78,6 +78,15 @@ public class MetricsRegistryTest {
   }
 
   @Test
+  public void gaugeNumberDuplicate() {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    AtomicInteger num1 = r.gauge("foo", new AtomicInteger(42));
+    AtomicInteger num2 = r.gauge("foo", new AtomicInteger(21));
+    Assert.assertEquals(63.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+  }
+
+  @Test
   public void gaugeCollection() throws Exception {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);

@@ -1,7 +1,20 @@
+/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.netflix.spectator.metrics3;
 
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.AbstractMeter;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
@@ -11,52 +24,38 @@ import java.util.Collections;
 import java.util.function.ToDoubleFunction;
 
 /**
- * Gauge Implementation for metric3 registry.
+ * Gauge that is defined by executing a {@link ToDoubleFunction} on an object.
  *
  * @author Kennedy Oliveira
  */
-class MetricsGauge<T> extends AbstractMeter<T> {
-
-  private final MetricRegistry metricRegistry;
-  private final String metricName;
-  private final Gauge<Double> gauge;
+class MetricsGauge<T> extends AbstractMeter<T> implements com.netflix.spectator.api.Gauge {
+  /**
+   * Function used to extract the value for the gauge.
+   */
+  private final ToDoubleFunction<T> f;
 
   /**
-   * Create a new instance.
+   * Create a gauge that samples the provided number for the value.
    *
-   * @param clock                Clock to use for getting measurement timestamps. Typically should be the clock used by
-   *                             the registry (see {@link com.netflix.spectator.api.Registry#clock()}).
-   * @param id                   Identifier for the meter.
-   * @param obj                  Object that {@code extractValueFunction} will be applid to get the Value.
-   * @param metricRegistry       The {@link MetricRegistry} for registering the Gauge
-   * @param extractValueFunction The function that will receive {@code obj} to extract a value for the Gauge.
+   * @param clock Clock used for accessing the current time.
+   * @param id    Identifier for the gauge.
+   * @param obj   {@link Object} used to access the value.
+   * @param f     Function that is applied on the value for the number. The operation {@code f.apply(obj)}
+   *              should be thread-safe.
    */
-  MetricsGauge(Clock clock, Id id, T obj, MetricRegistry metricRegistry, ToDoubleFunction<T> extractValueFunction) {
+  MetricsGauge(Clock clock, Id id, T obj, ToDoubleFunction<T> f) {
     super(clock, id, obj);
-    this.metricRegistry = metricRegistry;
-    this.metricName = NameUtils.toMetricName(id);
-    this.gauge = () -> {
-      final T refObj = ref.get();
-      return (refObj != null) ? extractValueFunction.applyAsDouble(refObj) : Double.NaN;
-    };
-    this.metricRegistry.register(metricName, gauge);
+    this.f = f;
   }
 
   @Override
   public Iterable<Measurement> measure() {
-    return Collections.singleton(new Measurement(id, clock.wallTime(), gauge.getValue()));
+    return Collections.singleton(new Measurement(id, clock.wallTime(), value()));
   }
 
   @Override
-  public boolean hasExpired() {
-    final boolean hasExpired = super.hasExpired();
-
-    // When this method is called and hasExpired is true, the Gauge will be removed from
-    // Spectator registry, so we remove from the Metrics registry too
-    if (hasExpired) {
-      this.metricRegistry.remove(metricName);
-    }
-
-    return hasExpired;
+  public double value() {
+    final T obj = ref.get();
+    return (obj == null) ? Double.NaN : f.applyAsDouble(obj);
   }
 }
