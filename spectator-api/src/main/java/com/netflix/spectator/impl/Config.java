@@ -18,8 +18,8 @@ package com.netflix.spectator.impl;
 /**
  * Helper methods for accessing configuration settings.
  *
- * <p><b>Please notice that this should be considered an internal implementation detail, and
- * it is subject to change without notice.</b></p>
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
  */
 public final class Config {
 

@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * being updated and the other is the value from the previous interval and is only available for
  * polling.
  *
- * <p><b>Please notice that this should be considered an internal implementation detail, and
- * it is subject to change without notice.</b></p>
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
  */
 public class StepDouble {
 
