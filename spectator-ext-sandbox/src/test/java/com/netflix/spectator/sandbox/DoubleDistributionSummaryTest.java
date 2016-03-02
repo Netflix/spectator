@@ -63,6 +63,24 @@ public class DoubleDistributionSummaryTest {
   }
 
   @Test
+  public void testExpire() {
+    clock.setWallTime(0L);
+    DoubleDistributionSummary t = newInstance();
+
+    Assert.assertFalse(t.hasExpired());
+    t.record(42.0);
+
+    clock.setWallTime(15L * 60000L);
+    Assert.assertFalse(t.hasExpired());
+
+    clock.setWallTime(15L * 60000L + 1);
+    Assert.assertTrue(t.hasExpired());
+
+    t.record(42.0);
+    Assert.assertFalse(t.hasExpired());
+  }
+
+  @Test
   public void testMeasureNotEnoughTime() {
     DoubleDistributionSummary t = newInstance();
     t.record(42.0);
