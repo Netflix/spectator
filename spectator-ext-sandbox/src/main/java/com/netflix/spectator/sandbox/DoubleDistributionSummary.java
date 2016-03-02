@@ -41,6 +41,10 @@ public class DoubleDistributionSummary implements Meter {
   // https://github.com/Netflix/spectator/issues/43
   private static final long RESET_FREQ = 60000L;
 
+  // How long to keep reporting if there is no activity. Set to 15 minutes to match default
+  // behavior in servo.
+  private static final long INACTIVE_TTL = 15 * RESET_FREQ;
+
   /**
    * Get or create a double distribution summary with the specified id.
    *
@@ -85,6 +89,8 @@ public class DoubleDistributionSummary implements Meter {
   private final long resetFreq;
   private final AtomicLong lastResetTime;
 
+  private final AtomicLong lastUpdateTime;
+
   private final AtomicLong count;
   private final AtomicLong totalAmount;
   private final AtomicLong totalOfSquares;
@@ -103,6 +109,7 @@ public class DoubleDistributionSummary implements Meter {
     this.id = id;
     this.resetFreq = resetFreq;
     lastResetTime = new AtomicLong(clock.wallTime());
+    lastUpdateTime = new AtomicLong(clock.wallTime());
     count = new AtomicLong(0L);
     totalAmount = new AtomicLong(ZERO);
     totalOfSquares = new AtomicLong(ZERO);
@@ -156,7 +163,7 @@ public class DoubleDistributionSummary implements Meter {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    return clock.wallTime() - lastUpdateTime.get() > INACTIVE_TTL;
   }
 
   @Override public Iterable<Measurement> measure() {
@@ -192,6 +199,7 @@ public class DoubleDistributionSummary implements Meter {
       add(totalOfSquares, amount * amount);
       max(max, amount);
       count.incrementAndGet();
+      lastUpdateTime.set(clock.wallTime());
     }
   }
 
