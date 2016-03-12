@@ -124,7 +124,7 @@ final class DefaultDynamicId implements DynamicId {
   @Override
   public Iterable<Tag> tags() {
     return tagFactories.stream()
-      .map(factory -> factory.createTag())
+      .map(TagFactory::createTag)
       .filter(tag -> tag != null)
       .collect(Collectors.toList());
   }

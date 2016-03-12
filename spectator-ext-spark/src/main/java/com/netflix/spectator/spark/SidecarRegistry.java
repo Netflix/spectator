@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -116,29 +115,25 @@ public class SidecarRegistry extends AbstractRegistry {
     LOGGER.info("starting sidecar registry with url {} and poll period {} {}",
         url, pollPeriod, pollUnit);
     executor = Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactory() {
-          @Override public Thread newThread(Runnable r) {
-            final Thread t = new Thread(r, "spectator-sidecar");
-            t.setDaemon(true);
-            return t;
-          }
+        r -> {
+          final Thread t = new Thread(r, "spectator-sidecar");
+          t.setDaemon(true);
+          return t;
         }
     );
 
     final SidecarRegistry self = this;
-    Runnable task = new Runnable() {
-      @Override public void run() {
-        try {
-          List<Measurement> ms = new ArrayList<>();
-          for (Meter meter : self) {
-            for (Measurement m : meter.measure()) {
-              ms.add(m);
-            }
+    Runnable task = () -> {
+      try {
+        List<Measurement> ms = new ArrayList<>();
+        for (Meter meter : self) {
+          for (Measurement m : meter.measure()) {
+            ms.add(m);
           }
-          postJson(url, ms);
-        } catch (Exception e) {
-          LOGGER.error("failed to send data to sidecar", e);
         }
+        postJson(url, ms);
+      } catch (Exception e) {
+        LOGGER.error("failed to send data to sidecar", e);
       }
     };
     executor.scheduleWithFixedDelay(task, pollPeriod, pollPeriod, pollUnit);

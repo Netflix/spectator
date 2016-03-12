@@ -21,7 +21,6 @@ import com.google.inject.Injector;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
-import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -97,11 +96,9 @@ public class TDigestTimerTest {
   public void testRecordCallable() throws Exception {
     TDigestTimer t = newTimer("foo");
     clock.setMonotonicTime(100L);
-    int v = t.record(new Callable<Integer>() {
-      public Integer call() throws Exception {
-        clock.setMonotonicTime(500L);
-        return 42;
-      }
+    int v = t.record(() -> {
+      clock.setMonotonicTime(500L);
+      return 42;
     });
     clock.setWallTime(61000);
     Assert.assertEquals(v, 42);
@@ -114,11 +111,9 @@ public class TDigestTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(new Callable<Integer>() {
-        public Integer call() throws Exception {
-          clock.setMonotonicTime(500L);
-          throw new RuntimeException("foo");
-        }
+      t.record((Callable<Integer>) () -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
       });
     } catch (Exception e) {
       seen = true;
@@ -132,11 +127,7 @@ public class TDigestTimerTest {
   public void testRecordRunnable() throws Exception {
     TDigestTimer t = newTimer("foo");
     clock.setMonotonicTime(100L);
-    t.record(new Runnable() {
-      public void run() {
-        clock.setMonotonicTime(500L);
-      }
-    });
+    t.record(() -> clock.setMonotonicTime(500L));
     clock.setWallTime(61000);
     Assert.assertEquals(t.percentile(100.0), 400 / 1e9, 1e-12);
   }
@@ -147,11 +138,9 @@ public class TDigestTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(new Runnable() {
-        public void run() {
-          clock.setMonotonicTime(500L);
-          throw new RuntimeException("foo");
-        }
+      t.record((Runnable) () -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
       });
     } catch (Exception e) {
       seen = true;

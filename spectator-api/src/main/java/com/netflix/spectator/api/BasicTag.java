@@ -18,9 +18,7 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.impl.Preconditions;
 
 /**
- * Basic container for Tag data.
- *
- * Created on 10/1/15.
+ * Immutable implementation of Tag.
  */
 public final class BasicTag implements Tag {
   private final String key;
@@ -29,9 +27,6 @@ public final class BasicTag implements Tag {
 
   /**
    * Construct a new instance.
-   *
-   * @param key
-   * @param value
    */
   public BasicTag(String key, String value) {
     this.key = Preconditions.checkNotNull(key, "key");

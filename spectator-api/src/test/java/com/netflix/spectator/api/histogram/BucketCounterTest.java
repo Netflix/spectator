@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Functions;
 import com.netflix.spectator.api.Registry;
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class BucketCounterTest {
 
   private long sum(Registry r, String name) {
-    return r.counters().filter(Functions.nameEquals(name)).mapToLong(c -> c.count()).sum();
+    return r.counters().filter(Functions.nameEquals(name)).mapToLong(Counter::count).sum();
   }
 
   @Test

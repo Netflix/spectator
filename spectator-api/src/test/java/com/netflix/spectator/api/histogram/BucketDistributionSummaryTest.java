@@ -16,6 +16,7 @@
 package com.netflix.spectator.api.histogram;
 
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Functions;
 import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
@@ -31,7 +32,7 @@ public class BucketDistributionSummaryTest {
   private long sum(Registry r, String name) {
     return r.distributionSummaries()
         .filter(Functions.nameEquals(name))
-        .mapToLong(c -> c.count())
+        .mapToLong(DistributionSummary::count)
         .sum();
   }
 

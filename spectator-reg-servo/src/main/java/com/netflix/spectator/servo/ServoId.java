@@ -42,23 +42,19 @@ final class ServoId implements Id {
   }
 
   @Override public Iterable<Tag> tags() {
-    return new Iterable<Tag>() {
-      public Iterator<Tag> iterator() {
-        return new Iterator<Tag>() {
-          private final Iterator<com.netflix.servo.tag.Tag> iter = config.getTags().iterator();
+    return () -> new Iterator<Tag>() {
+      private final Iterator<com.netflix.servo.tag.Tag> iter = config.getTags().iterator();
 
-          public boolean hasNext() {
-            return iter.hasNext();
-          }
+      public boolean hasNext() {
+        return iter.hasNext();
+      }
 
-          public Tag next() {
-            return new ServoTag(iter.next());
-          }
+      public Tag next() {
+        return new ServoTag(iter.next());
+      }
 
-          public void remove() {
-            iter.remove();
-          }
-        };
+      public void remove() {
+        iter.remove();
       }
     };
   }

@@ -24,7 +24,6 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
 import com.tdunning.math.stats.TDigest;
 import com.tdunning.math.stats.TreeDigest;
-import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
