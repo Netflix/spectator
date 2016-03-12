@@ -16,7 +16,6 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Preconditions;
-import com.netflix.spectator.impl.Throwables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +51,7 @@ public final class Utils {
   }
 
   /** Return a method supplying a value for a gauge. */
-  static Method getGaugeMethod(Id id, Object obj, String method) {
+  static Method getGaugeMethod(Registry registry, Id id, Object obj, String method) {
     try {
       final Method m = Utils.getMethod(obj.getClass(), method);
       try {
@@ -64,12 +63,12 @@ public final class Utils {
       } catch (Exception e) {
         final String msg = "exception thrown invoking method [" + m
             + "], skipping registration of gauge " + id;
-        Throwables.propagate(msg, e);
+        registry.propagate(msg, e);
       }
     } catch (NoSuchMethodException e) {
       final String mname = obj.getClass().getName() + "." + method;
       final String msg = "invalid method [" + mname + "], skipping registration of gauge " + id;
-      Throwables.propagate(msg, e);
+      registry.propagate(msg, e);
     }
     return null;
   }

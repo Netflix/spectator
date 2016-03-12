@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractRegistry implements Registry {
 
   private final Clock clock;
+  private final RegistryConfig config;
 
   private final ConcurrentHashMap<Id, Meter> meters;
 
@@ -38,7 +39,20 @@ public abstract class AbstractRegistry implements Registry {
    *     Clock used for performing all timing measurements.
    */
   public AbstractRegistry(Clock clock) {
+    this(clock, Config.defaultConfig());
+  }
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   */
+  public AbstractRegistry(Clock clock, RegistryConfig config) {
     this.clock = clock;
+    this.config = config;
     meters = new ConcurrentHashMap<>();
   }
 
@@ -101,11 +115,11 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   private Meter compute(Meter m, Meter fallback) {
-    return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : m;
+    return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
   @Override public void register(Meter meter) {
-    Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
+    Meter aggr = (meters.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
       : meters.computeIfAbsent(meter.id(), AggrMeter::new);
     if (aggr != null) {
