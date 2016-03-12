@@ -63,11 +63,7 @@ public final class SpectatorReporter extends ScheduledReporter {
         return spectatorRegistry.createId(name);
       }
     };
-    private ValueFunction valueFunction = new ValueFunction() {
-      @Override public double convert(String name, double v) {
-        return v;
-      }
-    };
+    private ValueFunction valueFunction = (name, v) -> v;
 
     /**
      * By default none should match. Note the '$' sign is regex end of line so it cannot be

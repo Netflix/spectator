@@ -104,16 +104,10 @@ public class GcEvent {
   }
 
   /** Order events from oldest to newest. */
-  public static final Comparator<GcEvent> TIME_ORDER = new Comparator<GcEvent>() {
-    public int compare(GcEvent e1, GcEvent e2) {
-      return (int) (e1.getStartTime() - e2.getStartTime());
-    }
-  };
+  public static final Comparator<GcEvent> TIME_ORDER =
+      (e1, e2) -> (int) (e1.getStartTime() - e2.getStartTime());
 
   /** Order events from newest to oldest. */
-  public static final Comparator<GcEvent> REVERSE_TIME_ORDER = new Comparator<GcEvent>() {
-    public int compare(GcEvent e1, GcEvent e2) {
-      return (int) (e2.getStartTime() - e1.getStartTime());
-    }
-  };
+  public static final Comparator<GcEvent> REVERSE_TIME_ORDER =
+      (e1, e2) -> (int) (e2.getStartTime() - e1.getStartTime());
 }

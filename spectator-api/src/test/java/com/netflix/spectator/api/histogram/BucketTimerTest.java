@@ -18,6 +18,7 @@ package com.netflix.spectator.api.histogram;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Functions;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class BucketTimerTest {
 
   private long sum(Registry r, String name) {
-    return r.timers().filter(Functions.nameEquals(name)).mapToLong(t -> t.count()).sum();
+    return r.timers().filter(Functions.nameEquals(name)).mapToLong(Timer::count).sum();
   }
 
   @Test

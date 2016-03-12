@@ -27,9 +27,7 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
-import org.apache.logging.log4j.core.config.ConfigurationListener;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.apache.logging.log4j.core.config.Reconfigurable;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
@@ -75,11 +73,7 @@ public final class SpectatorAppender extends AbstractAppender {
     Configuration config = context.getConfiguration();
 
     addToRootLogger(appender);
-    config.addListener(new ConfigurationListener() {
-      @Override public void onChange(Reconfigurable reconfigurable) {
-        addToRootLogger(appender);
-      }
-    });
+    config.addListener(reconfigurable -> addToRootLogger(appender));
   }
 
   private static final long serialVersionUID = 42L;

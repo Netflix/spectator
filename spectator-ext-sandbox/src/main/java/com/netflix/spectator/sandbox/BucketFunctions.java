@@ -30,7 +30,7 @@ public final class BucketFunctions {
   }
 
   private static BucketFunction wrap(LongFunction<String> f) {
-    return amount -> f.apply(amount);
+    return f::apply;
   }
 
   /**

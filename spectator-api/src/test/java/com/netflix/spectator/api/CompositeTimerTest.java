@@ -90,11 +90,9 @@ public class CompositeTimerTest {
   public void testRecordCallable() throws Exception {
     Timer t = newTimer();
     clock.setMonotonicTime(100L);
-    int v = t.record(new Callable<Integer>() {
-      public Integer call() throws Exception {
-        clock.setMonotonicTime(500L);
-        return 42;
-      }
+    int v = t.record(() -> {
+      clock.setMonotonicTime(500L);
+      return 42;
     });
     Assert.assertEquals(v, 42);
     assertCountEquals(t, 1L);
@@ -107,11 +105,9 @@ public class CompositeTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(new Callable<Integer>() {
-        public Integer call() throws Exception {
-          clock.setMonotonicTime(500L);
-          throw new RuntimeException("foo");
-        }
+      t.record((Callable<Integer>) () -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
       });
     } catch (Exception e) {
       seen = true;
@@ -125,11 +121,7 @@ public class CompositeTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer t = newTimer();
     clock.setMonotonicTime(100L);
-    t.record(new Runnable() {
-      public void run() {
-        clock.setMonotonicTime(500L);
-      }
-    });
+    t.record(() -> clock.setMonotonicTime(500L));
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 400L);
   }
@@ -140,11 +132,9 @@ public class CompositeTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(new Runnable() {
-        public void run() {
-          clock.setMonotonicTime(500L);
-          throw new RuntimeException("foo");
-        }
+      t.record((Runnable) () -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
       });
     } catch (Exception e) {
       seen = true;
