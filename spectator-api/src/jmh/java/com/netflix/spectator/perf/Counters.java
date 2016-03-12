@@ -30,7 +30,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @State(Scope.Thread)
 public class Counters {
 
-  private final Counter cached = Spectator.registry().counter("cachedIncrement");
+  private final Counter cached = Spectator.globalRegistry().counter("cachedIncrement");
 
   @Threads(1)
   @Benchmark
@@ -41,7 +41,7 @@ public class Counters {
   @Threads(1)
   @Benchmark
   public void lookupIncrement_T1() {
-    Spectator.registry().counter("lookupIncrement").increment();
+    Spectator.globalRegistry().counter("lookupIncrement").increment();
   }
 
   @Threads(2)
@@ -53,7 +53,7 @@ public class Counters {
   @Threads(2)
   @Benchmark
   public void lookupIncrement_T2() {
-    Spectator.registry().counter("lookupIncrement").increment();
+    Spectator.globalRegistry().counter("lookupIncrement").increment();
   }
 
   @Threads(4)
@@ -65,7 +65,7 @@ public class Counters {
   @Threads(4)
   @Benchmark
   public void lookupIncrement_T4() {
-    Spectator.registry().counter("lookupIncrement").increment();
+    Spectator.globalRegistry().counter("lookupIncrement").increment();
   }
 
   @Threads(8)
@@ -77,13 +77,13 @@ public class Counters {
   @Threads(8)
   @Benchmark
   public void lookupIncrement_T8() {
-    Spectator.registry().counter("lookupIncrement").increment();
+    Spectator.globalRegistry().counter("lookupIncrement").increment();
   }
 
   @TearDown
   public void check() {
     final long cv = cached.count();
-    final long lv = Spectator.registry().counter("lookupIncrement").count();
+    final long lv = Spectator.globalRegistry().counter("lookupIncrement").count();
     assert cv > 0 || lv > 0 : "counters haven't been incremented";
   }
 
