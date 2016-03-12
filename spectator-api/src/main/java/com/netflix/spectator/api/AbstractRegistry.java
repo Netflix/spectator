@@ -16,7 +16,6 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
-import com.netflix.spectator.impl.Throwables;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -90,6 +89,10 @@ public abstract class AbstractRegistry implements Registry {
     return clock;
   }
 
+  @Override public final RegistryConfig config() {
+    return config;
+  }
+
   @Override public final Id createId(String name) {
     return new DefaultId(name);
   }
@@ -103,7 +106,7 @@ public abstract class AbstractRegistry implements Registry {
     final String ftype = found.getName();
     final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
       id, dtype, ftype);
-    Throwables.propagate(new IllegalStateException(msg));
+    propagate(new IllegalStateException(msg));
   }
 
   private void addToAggr(Meter aggr, Meter meter) {

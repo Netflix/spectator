@@ -28,6 +28,11 @@ public final class DefaultRegistry extends AbstractRegistry {
     super(clock);
   }
 
+  /** Create a new instance. */
+  public DefaultRegistry(Clock clock, RegistryConfig config) {
+    super(clock, config);
+  }
+
   @Override protected Counter newCounter(Id id) {
     return new DefaultCounter(clock(), id);
   }
