@@ -131,7 +131,7 @@ public final class BucketFunctions {
   private static LongFunction<String> biasZero(
       String ltZero, String gtMax, long max, ValueFormatter f) {
     List<Bucket> buckets = new ArrayList<>();
-    buckets.add(new Bucket(ltZero, 0L));
+    buckets.add(new Bucket(ltZero, -1L));
     buckets.add(f.newBucket(max / 8));
     buckets.add(f.newBucket(max / 4));
     buckets.add(f.newBucket(max / 2));
@@ -149,7 +149,7 @@ public final class BucketFunctions {
   private static LongFunction<String> biasMax(
       String ltZero, String gtMax, long max, ValueFormatter f) {
     List<Bucket> buckets = new ArrayList<>();
-    buckets.add(new Bucket(ltZero, 0L));
+    buckets.add(new Bucket(ltZero, -1L));
     buckets.add(f.newBucket(max - max / 2));
     buckets.add(f.newBucket(max - max / 4));
     buckets.add(f.newBucket(max - max / 8));

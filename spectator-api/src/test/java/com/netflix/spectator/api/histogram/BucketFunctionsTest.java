@@ -32,6 +32,7 @@ public class BucketFunctionsTest {
   public void age60s() {
     LongFunction<String> f = BucketFunctions.age(60, TimeUnit.SECONDS);
     Assert.assertEquals("future", f.apply(TimeUnit.SECONDS.toNanos(-1)));
+    Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(0)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(1)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(6)));
     Assert.assertEquals("07s", f.apply(TimeUnit.SECONDS.toNanos(7)));
@@ -49,6 +50,7 @@ public class BucketFunctionsTest {
   public void age60sBiasOld() {
     LongFunction<String> f = BucketFunctions.ageBiasOld(60, TimeUnit.SECONDS);
     Assert.assertEquals("future", f.apply(TimeUnit.SECONDS.toNanos(-1)));
+    Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(0)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(1)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(6)));
     Assert.assertEquals("30s", f.apply(TimeUnit.SECONDS.toNanos(7)));
@@ -66,6 +68,7 @@ public class BucketFunctionsTest {
   public void latency100ms() {
     LongFunction<String> f = BucketFunctions.latency(100, TimeUnit.MILLISECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
+    Assert.assertEquals("012ms", f.apply(TimeUnit.MILLISECONDS.toNanos(0)));
     Assert.assertEquals("012ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1)));
     Assert.assertEquals("025ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
     Assert.assertEquals("025ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
@@ -77,6 +80,7 @@ public class BucketFunctionsTest {
   public void latency100msBiasSlow() {
     LongFunction<String> f = BucketFunctions.latencyBiasSlow(100, TimeUnit.MILLISECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
+    Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(0)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(13)));
     Assert.assertEquals("050ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
@@ -91,6 +95,7 @@ public class BucketFunctionsTest {
   public void latency3s() {
     LongFunction<String> f = BucketFunctions.latency(3, TimeUnit.SECONDS);
     Assert.assertEquals("negative_latency", f.apply(TimeUnit.MILLISECONDS.toNanos(-1)));
+    Assert.assertEquals("0375ms", f.apply(TimeUnit.MILLISECONDS.toNanos(0)));
     Assert.assertEquals("0375ms", f.apply(TimeUnit.MILLISECONDS.toNanos(25)));
     Assert.assertEquals("0750ms", f.apply(TimeUnit.MILLISECONDS.toNanos(740)));
     Assert.assertEquals("1500ms", f.apply(TimeUnit.MILLISECONDS.toNanos(1000)));
@@ -109,7 +114,7 @@ public class BucketFunctionsTest {
         keys.add(f.apply(j));
       }
       keys.add(f.apply(max));
-      Assert.assertEquals(5, keys.size());
+      Assert.assertEquals(4, keys.size());
     }
   }
 
@@ -124,7 +129,7 @@ public class BucketFunctionsTest {
         keys.add(f.apply(j));
       }
       keys.add(f.apply(max));
-      Assert.assertEquals(5, keys.size());
+      Assert.assertEquals(4, keys.size());
     }
   }
 
