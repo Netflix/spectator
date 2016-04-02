@@ -1,6 +1,7 @@
 # Testing
 
-Testing should be relatively straightforward if you are using injection for the registry. Consider a sample class:
+Testing should be relatively straightforward if you are using injection for the registry.
+Consider a sample class:
 
 ```java
 public class Foo {

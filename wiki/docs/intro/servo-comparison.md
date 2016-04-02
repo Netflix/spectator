@@ -80,8 +80,8 @@ use-cases feel free to continue using it.
 
 ### Registration
 
-First read through the [servo docs on registration](https://github.com/Netflix/servo/wiki/Getting-Started#registration-of-metrics). In servo if you have a
-class like:
+First read through the [servo docs on registration](https://github.com/Netflix/servo/wiki/Getting-Started#registration-of-metrics).
+In servo if you have a class like:
 
 ```java
 public class Foo {

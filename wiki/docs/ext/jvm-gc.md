@@ -1,6 +1,8 @@
 # Garbage Collection
 
-The GC module registers with the notification emitter of the [GarbageCollectorMXBean](http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html) to provide some basic GC logging and metrics.
+The GC module registers with the notification emitter of the
+[GarbageCollectorMXBean](http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html)
+to provide some basic GC logging and metrics.
 
 * [Getting started](#getting-started)
 * [Logging](#logging)
@@ -9,11 +11,13 @@ The GC module registers with the notification emitter of the [GarbageCollectorMX
 
 ## Getting Started
 
-For using it internally at Netflix see the [[Netflix integration]] guide, otherwise keep reading this section.
+For using it internally at Netflix see the [[Netflix integration]] guide, otherwise keep reading
+this section.
 
 ### Requirements
 
-This library relies on the notification emitter added in 7u4, but there are known issues prior to 7u40. For G1 it is recommended to be on the latest version available.
+This library relies on the notification emitter added in 7u4, but there are known issues prior
+to 7u40. For G1 it is recommended to be on the latest version available.
 
 ### Dependencies
 
@@ -35,13 +39,16 @@ gc.start(null);
 
 ## Logging
 
-After GC events an INFO level log message will get reported using slf4j. This makes it easy to GC events in the context of other log messages for the application. The logger name is `com.netflix.spectator.gc.GcLogger` and the message will look like:
+After GC events an INFO level log message will get reported using slf4j. This makes it easy to
+GC events in the context of other log messages for the application. The logger name is
+`com.netflix.spectator.gc.GcLogger` and the message will look like:
 
 ```
 ${GC_TYPE}: ${COLLECTOR_NAME}, id=${N}, at=${START_TIME}, duration=${T}ms, cause=[${CAUSE}], ${TOTAL_USAGE_BEFORE} => ${TOTAL_USAGE_AFTER} / ${MAX_SIZE} (${PERCENT_USAGE_BEFORE} => ${PERCENT_USAGE_AFTER})
 ```
 
-The id can be used to verify events were not skipped or correlate with other sources like detailed GC logs. See [[GC causes]] for more details on the possible causes.
+The id can be used to verify events were not skipped or correlate with other sources like
+detailed GC logs. See [[GC causes]] for more details on the possible causes.
 
 Sample:
 
@@ -53,11 +60,14 @@ Sample:
 
 ### jvm.gc.allocationRate
 
-The allocation rate measures how fast the application is allocating memory. It is a counter that is incremented after a GC event by the amount `youngGen.sizeBeforeGC`. Technically, right now it is:
+The allocation rate measures how fast the application is allocating memory. It is a counter
+that is incremented after a GC event by the amount `youngGen.sizeBeforeGC`. Technically, right
+now it is:
 
 `youngGen.sizeBeforeGC - youngGen.sizeAfterGC`
 
-However, `youngGen.sizeAfterGC` should be 0 and thus the size of young gen before the GC is the amount allocated since the previous GC event.
+However, `youngGen.sizeAfterGC` should be 0 and thus the size of young gen before the GC is
+the amount allocated since the previous GC event.
 
 **Unit:** bytes/second
 
@@ -65,7 +75,8 @@ However, `youngGen.sizeAfterGC` should be 0 and thus the size of young gen befor
 
 ### jvm.gc.promotionRate
 
-The promotion rate measures how fast data is being moved from young generation into the old generation. It is a counter that is incremented after a GC event by the amount:
+The promotion rate measures how fast data is being moved from young generation into the old
+generation. It is a counter that is incremented after a GC event by the amount:
 
 `abs(oldGen.sizeAfterGC - oldGen.sizeBeforeGC)`
 
@@ -75,7 +86,8 @@ The promotion rate measures how fast data is being moved from young generation i
 
 ### jvm.gc.liveDataSize
 
-The live data size is the size of the old generation after a major GC. The image below shows how the live data size view compares to a metric showing the current size of the memory pool:
+The live data size is the size of the old generation after a major GC. The image below shows
+how the live data size view compares to a metric showing the current size of the memory pool:
 
 ![Live Data Size](http://netflix.github.io/spectator/wiki/images/live_data_size.png)
 
@@ -85,7 +97,8 @@ The live data size is the size of the old generation after a major GC. The image
 
 ### jvm.gc.maxDataSize
 
-Maximum size for the old generation. Primary use-case is for gaining perspective on the the live data size.
+Maximum size for the old generation. Primary use-case is for gaining perspective on the the
+live data size.
 
 **Unit:** bytes
 
@@ -93,7 +106,8 @@ Maximum size for the old generation. Primary use-case is for gaining perspective
 
 ### jvm.gc.pause
 
-Timer reporting the pause time for a GC event. All of the values reported are stop the world pauses.
+Timer reporting the pause time for a GC event. All of the values reported are stop the world
+pauses.
 
 **Unit:**
 
@@ -108,7 +122,10 @@ Timer reporting the pause time for a GC event. All of the values reported are st
 
 ## Alerting
 
-This section assumes the data is available in [Atlas](https://github.com/Netflix/atlas/wiki/), but users of other systems should be able to take the idea and make it work. For all of these alerts it is recommended to check them on instance. At Netflix that can be done by selecting the option in alert ui:
+This section assumes the data is available in [Atlas](https://github.com/Netflix/atlas/wiki/),
+but users of other systems should be able to take the idea and make it work. For all of these
+alerts it is recommended to check them on instance. At Netflix that can be done by selecting
+the option in alert ui:
 
 > ![On Instance Alerting](http://netflix.github.io/spectator/wiki/images/on_instance.png)
 

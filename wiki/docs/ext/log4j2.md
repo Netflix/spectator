@@ -1,6 +1,7 @@
 # Log4j2 Appender
 
-Custom appender for [log4j2](http://logging.apache.org/log4j/2.x/) to track the number of log messages reported. 
+Custom appender for [log4j2](http://logging.apache.org/log4j/2.x/) to track the number of
+log messages reported. 
 
 ## Getting Started
 
@@ -20,7 +21,12 @@ SpectatorAppender.addToRootLogger(
     false);               // Should stack traces be ignored?
 ```
 
-This will add the appender to the root logger and register a listener so it will get re-added if the configuration changes. You can also use the appender by specifying it in the log4j2 configuration, but this will cause some of the loggers in Spectator to get created before log4j is properly initialized and result in some lost log messages. With that caveat in mind, if you need the additional flexibility of using the configuration then specify the `Spectator` appender:
+This will add the appender to the root logger and register a listener so it will get
+re-added if the configuration changes. You can also use the appender by specifying it
+in the log4j2 configuration, but this will cause some of the loggers in Spectator to get
+created before log4j is properly initialized and result in some lost log messages. With
+that caveat in mind, if you need the additional flexibility of using the configuration then
+specify the `Spectator` appender:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -51,7 +57,8 @@ Counters showing the number of messages that have been passed to the appender.
 
 ### log4j.numStackTraces
 
-Counter for the number of messages with stack traces written to the logs. This will only be collected if the `ignoreExceptions` flag is set to false for the appender.
+Counter for the number of messages with stack traces written to the logs. This will only be
+collected if the `ignoreExceptions` flag is set to false for the appender.
 
 **Unit:** messages/second
 
