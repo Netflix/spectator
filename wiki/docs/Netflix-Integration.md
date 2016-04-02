@@ -54,7 +54,9 @@ If using `base-server`, then you will get the Spectator and Atlas bindings autom
 
 ## Auto Plugin
 
-> :warning: **Deprecated**: Use of AutoBindSingleton is generally discouraged. It is recommended to use one of the other methods.
+!!! warning
+    **Deprecated**: Use of AutoBindSingleton is generally discouraged. It is recommended to
+    use one of the other methods.
 
 If you are only interested in getting the GC logging, there is a library with an auto-bind singleton that can be used:
 
