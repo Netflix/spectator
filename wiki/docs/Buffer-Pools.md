@@ -20,6 +20,7 @@ Gauge showing the current number of distinct buffers.
 **Unit:** count 
 
 **Dimensions:**
+
 * `id`: type of buffers. Value will be either `direct` for direct byte buffers or `mapped` for memory mapped files.
 
 ### jvm.buffer.memoryUsed
@@ -29,4 +30,5 @@ Gauge showing the current number of bytes used by all buffers.
 **Unit:** bytes 
 
 **Dimensions:**
+
 * `id`: type of buffers. Value will be either `direct` for direct byte buffers or `mapped` for memory mapped files.

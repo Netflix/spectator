@@ -94,11 +94,13 @@ Maximum size for the old generation. Primary use-case is for gaining perspective
 Timer reporting the pause time for a GC event. All of the values reported are stop the world pauses.
 
 **Unit:**
+
 * `statistic=max`: seconds
 * `statistic=count`: events/second
 * `statistic=totalTime`: seconds/second 
 
 **Dimensions:**
+
 * `action`: action performed by the garbage collector ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcAction())). There is no guarantee, but the typical values seen are `end_of_major_GC` and `end_of_minor_GC`. 
 * `cause`: cause that instigated GC ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcCause())). For an explanation of common causes see the [[GC Causes]] page.
 
