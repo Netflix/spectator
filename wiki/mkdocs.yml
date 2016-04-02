@@ -1,6 +1,7 @@
 site_name: Spectator Docs
 site_url: 'http://netflix.github.io/spectator'
 repo_url: 'https://github.com/Netflix/spectator'
+strict: true
 pages:
 - Home: index.md
 - 'Getting Started':
