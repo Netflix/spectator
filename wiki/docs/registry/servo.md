@@ -1,3 +1,4 @@
+# Servo Registry
 
 Registry that uses [servo](https://github.com/Netflix/servo) as the underlying
 implementation. To use the servo registry, add a dependency on the

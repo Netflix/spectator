@@ -17,9 +17,9 @@ pages:
   - 'Memory Pools': Memory-Pools.md
   - 'Log4j2 Appender': Log4j2-Appender.md
 - Registries:
-  - Metrics3: Metrics3-Registry.md
-  - Servo: Servo-Registry.md
-  - TDigest: TDigest.md
+  - Metrics3: registry/metrics3.md
+  - Servo: registry/servo.md
+  - TDigest: registry/tdigest.md
 theme: readthedocs
 markdown_extensions:
 - admonition

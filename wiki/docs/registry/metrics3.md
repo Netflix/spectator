@@ -1,3 +1,4 @@
+# Metrics3 Registry
 
 Registry that uses [metrics3](http://metrics.dropwizard.io/3.1.0/) as the
 underlying implementation. To use the metrics registry, add a dependency on the

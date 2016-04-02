@@ -1,3 +1,5 @@
+# T-Digest Registry
+
 !!! warning
     Deprecated, use PercentileTimer or PercentileDistributionSummary instead.
 
