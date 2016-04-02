@@ -1,3 +1,4 @@
+# Distribution Summaries
 
 A distribution summary is used to track the distribution of events. It is
 similar to a timer, but more general in that the size does not have to be

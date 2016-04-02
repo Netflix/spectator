@@ -1,3 +1,4 @@
+# Gauges
 
 A gauge is a handle to get the current value. Typical examples for gauges
 would be the size of a queue or number of threads in the running state.

@@ -1,3 +1,4 @@
+# Timers
 
 A timer is used to measure how long some event is taking. Two types of timers
 are supported:

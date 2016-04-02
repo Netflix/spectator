@@ -3,13 +3,13 @@ pages:
 - Home: index.md
 - 'Getting Started':
   - 'Meter Types':
-    - Counters: Counter-Usage.md
-    - Timers: Timer-Usage.md
-    - Gauges: Gauge-Usage.md
-    - 'Distribution Summaries': Distribution-Summary-Usage.md
-  - Testing: Testing.md
-  - 'Netflix Integration': Netflix-Integration.md
-  - 'Servo Comparison': Servo-Comparison.md
+    - Counters: intro/counter.md
+    - Timers: intro/timer.md
+    - Gauges: intro/gauge.md
+    - 'Distribution Summaries': intro/dist-summary.md
+  - Testing: intro/testing.md
+  - 'Netflix Integration': intro/netflix.md
+  - 'Servo Comparison': intro/servo-comparison.md
 - Extensions:
   - 'Buffer Pools': ext/jvm-buffer-pools.md
   - 'Garbage Collection': ext/jvm-gc.md

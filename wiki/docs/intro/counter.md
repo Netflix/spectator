@@ -1,3 +1,4 @@
+# Counters
 
 A counter is used to measure the rate at which some event is occurring.
 Consider a simple queue, counters would be used to measure things like the
