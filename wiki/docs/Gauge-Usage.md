@@ -36,14 +36,15 @@ public class Queue {
 }
 ```
 
-> :warning: Be careful to avoid creating a reference to the object in the
-> lambda. It will prevent garbage collection and can lead to a memory leak
-> in the application. For example, by calling size without using the passed
-> in object there will be a reference to `this`:
->
-> ```java
-> registry.gauge("queue.size", this, obj -> size());
-> ```
+!!! warning
+    Be careful to avoid creating a reference to the object in the
+    lambda. It will prevent garbage collection and can lead to a memory leak
+    in the application. For example, by calling size without using the passed
+    in object there will be a reference to `this`:
+
+    ```
+    registry.gauge("queue.size", this, obj -> size());
+    ```
 
 ### Using Reflection
 

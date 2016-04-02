@@ -1,4 +1,5 @@
-> :warning: Deprecated, use PercentileTimer or PercentileDistributionSummary instead.
+!!! warning
+    Deprecated, use PercentileTimer or PercentileDistributionSummary instead.
 
 The TDigest registry is used for collecting dimensional percentile data and reporting to backends. This is currently an experiment and not ready for general use. Current instructions assume it is being used [internally at Netflix](Netflix-Integration).
 
