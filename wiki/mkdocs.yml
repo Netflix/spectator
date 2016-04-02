@@ -1,0 +1,25 @@
+site_name: Spectator Docs
+pages:
+- Home: index.md
+- 'Getting Started':
+  - 'Meter Types':
+    - Counters: Counter-Usage.md
+    - Timers: Timer-Usage.md
+    - Gauges: Gauge-Usage.md
+    - 'Distribution Summaries': Distribution-Summary-Usage.md
+  - Testing: Testing.md
+  - 'Netflix Integration': Netflix-Integration.md
+  - 'Servo Comparison': Servo-Comparison.md
+- Extensions:
+  - 'Buffer Pools': Buffer-Pools.md
+  - 'Garbage Collection': Garbage-Collection.md
+  - 'GC Causes': GC-Causes.md
+  - 'Memory Pools': Memory-Pools.md
+  - 'Log4j2 Appender': Log4j2-Appender.md
+- Registries:
+  - Metrics3: Metrics3-Registry.md
+  - Servo: Servo-Registry.md
+  - TDigest: TDigest.md
+theme: readthedocs
+markdown_extensions:
+- admonition
