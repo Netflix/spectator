@@ -1,3 +1,5 @@
+# Log4j2 Appender
+
 Custom appender for [log4j2](http://logging.apache.org/log4j/2.x/) to track the number of log messages reported. 
 
 ## Getting Started

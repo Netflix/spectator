@@ -1,3 +1,5 @@
+# Garbage Collection
+
 The GC module registers with the notification emitter of the [GarbageCollectorMXBean](http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html) to provide some basic GC logging and metrics.
 
 * [Getting started](#getting-started)
