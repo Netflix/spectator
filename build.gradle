@@ -8,7 +8,7 @@ buildscript {
 
 plugins {
   id 'nebula.netflixoss' version '3.2.3'
-  id 'me.champeau.gradle.jmh' version '0.2.0'
+  id 'me.champeau.gradle.jmh' version '0.3.0'
 }
 
 // Establish version and status
@@ -70,7 +70,7 @@ subprojects {
     warmupIterations = 2
     iterations = 10
     fork = 5
-    profilers = ['STACK']
+    profilers = ['stack']
     include '.*'
   }
 
