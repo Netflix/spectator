@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ByteBufferOutputStream.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.tdigest</a> &gt; <span class="el_source">ByteBufferOutputStream.java</span></div><h1>ByteBufferOutputStream.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.tdigest;
+
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+
+/**
+ * Output stream with an underlying ByteBuffer. If the amount of data written exceeds the
+ * capacity of the buffer, then the overflow flag will be set.
+ */
+final class ByteBufferOutputStream extends OutputStream implements DataOutput {
+
+  private final ByteBuffer buf;
+  private final int reserve;
+  private boolean overflow;
+
+  /**
+   * Create a new instance.
+   *
+   * @param buf
+   *     Buffer to write data into.
+   * @param reserve
+   *     Amount of space to reserve when checking the capacity of the buffer. The common use-case
+   *     is for writing records that can be at most size X. The reserve param is used to indicate
+   *     how much space is needed for closing the record, e.g., to add the ']' to terminate a
+   *     a json array.
+   */
+  ByteBufferOutputStream(ByteBuffer buf, int reserve) {
+<span class="fc" id="L45">    super();</span>
+<span class="fc" id="L46">    this.buf = buf;</span>
+<span class="fc" id="L47">    this.reserve = reserve;</span>
+<span class="fc" id="L48">    reset();</span>
+<span class="fc" id="L49">  }</span>
+
+  /** Return the underlying buffer. */
+  ByteBuffer buffer() {
+<span class="nc" id="L53">    return buf;</span>
+  }
+
+  /** Clear the buffer and overflow flag. */
+  void reset() {
+<span class="fc" id="L58">    buf.clear();</span>
+<span class="fc" id="L59">    overflow = false;</span>
+<span class="fc" id="L60">  }</span>
+
+  /** Set the current position for the buffer. */
+  void setPosition(int p) {
+<span class="fc" id="L64">    buf.position(p);</span>
+<span class="fc" id="L65">    overflow = false;</span>
+<span class="fc" id="L66">  }</span>
+
+  /** Returns true if the amount of data written exceeds the capacity of the buffer. */
+  boolean overflow() {
+<span class="fc" id="L70">    return overflow;</span>
+  }
+
+  private boolean checkCapacity(int size) {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    if (buf.remaining() &lt; size + reserve) {</span>
+<span class="fc" id="L75">      overflow = true;</span>
+    }
+<span class="fc bfc" id="L77" title="All 2 branches covered.">    return !overflow;</span>
+  }
+
+  @Override public void writeBoolean(boolean v) throws IOException {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    if (checkCapacity(1)) {</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">      buf.put((byte) (v ? 1 : 0));</span>
+    }
+<span class="nc" id="L84">  }</span>
+
+  @Override public void writeByte(int v) throws IOException {
+<span class="nc bnc" id="L87" title="All 2 branches missed.">    if (checkCapacity(1)) {</span>
+<span class="nc" id="L88">      buf.put((byte) v);</span>
+    }
+<span class="nc" id="L90">  }</span>
+
+  @Override public void writeShort(int v) throws IOException {
+<span class="nc bnc" id="L93" title="All 2 branches missed.">    if (checkCapacity(2)) {</span>
+<span class="nc" id="L94">      buf.putShort((short) v);</span>
+    }
+<span class="nc" id="L96">  }</span>
+
+  @Override public void writeChar(int v) throws IOException {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">    if (checkCapacity(2)) {</span>
+<span class="nc" id="L100">      buf.putChar((char) v);</span>
+    }
+<span class="nc" id="L102">  }</span>
+
+  @Override public void writeInt(int v) throws IOException {
+<span class="nc bnc" id="L105" title="All 2 branches missed.">    if (checkCapacity(4)) {</span>
+<span class="nc" id="L106">      buf.putInt((int) v);</span>
+    }
+<span class="nc" id="L108">  }</span>
+
+  @Override public void writeLong(long v) throws IOException {
+<span class="nc bnc" id="L111" title="All 2 branches missed.">    if (checkCapacity(8)) {</span>
+<span class="nc" id="L112">      buf.putLong((long) v);</span>
+    }
+<span class="nc" id="L114">  }</span>
+
+  @Override public void writeFloat(float v) throws IOException {
+<span class="nc bnc" id="L117" title="All 2 branches missed.">    if (checkCapacity(4)) {</span>
+<span class="nc" id="L118">      buf.putFloat((float) v);</span>
+    }
+<span class="nc" id="L120">  }</span>
+
+  @Override public void writeDouble(double v) throws IOException {
+<span class="nc bnc" id="L123" title="All 2 branches missed.">    if (checkCapacity(8)) {</span>
+<span class="nc" id="L124">      buf.putDouble((double) v);</span>
+    }
+<span class="nc" id="L126">  }</span>
+
+  @Override public void writeBytes(String s) throws IOException {
+<span class="nc" id="L129">    writeUTF(s);</span>
+<span class="nc" id="L130">  }</span>
+
+  @Override public void writeChars(String s) throws IOException {
+<span class="nc" id="L133">    writeUTF(s);</span>
+<span class="nc" id="L134">  }</span>
+
+  @Override public void writeUTF(String s) throws IOException {
+<span class="nc" id="L137">    byte[] data = s.getBytes(&quot;UTF-8&quot;);</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">    if (checkCapacity(4 + data.length)) {</span>
+<span class="nc" id="L139">      buf.putInt(data.length);</span>
+<span class="nc" id="L140">      buf.put(data);</span>
+    }
+<span class="nc" id="L142">  }</span>
+
+  @Override public void write(int b) throws IOException {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">    if (checkCapacity(1)) {</span>
+<span class="fc" id="L146">      buf.put((byte) b);</span>
+    }
+<span class="fc" id="L148">  }</span>
+
+  /** Flip the buffer so it is ready to be consumed. */
+  @Override public void close() throws IOException {
+<span class="fc" id="L152">    buf.flip();</span>
+<span class="fc" id="L153">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

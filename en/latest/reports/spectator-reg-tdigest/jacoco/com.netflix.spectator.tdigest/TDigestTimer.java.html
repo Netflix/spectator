@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TDigestTimer.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-tdigest</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.tdigest</a> &gt; <span class="el_source">TDigestTimer.java</span></div><h1>TDigestTimer.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.tdigest;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Timer;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Timer that updates a T-Digest with recorded values.
+ */
+class TDigestTimer implements TDigestMeter, Timer {
+
+  private final StepDigest digest;
+  private final Timer underlying;
+
+  /** Create a new instance. */
+<span class="fc" id="L34">  TDigestTimer(StepDigest digest, Timer underlying) {</span>
+<span class="fc" id="L35">    this.digest = digest;</span>
+<span class="fc" id="L36">    this.underlying = underlying;</span>
+<span class="fc" id="L37">  }</span>
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc bfc" id="L40" title="All 2 branches covered.">    if (amount &gt;= 0L) {</span>
+<span class="fc" id="L41">      final long nanos = unit.toNanos(amount);</span>
+<span class="fc" id="L42">      digest.add(nanos / 1e9);</span>
+<span class="fc" id="L43">      underlying.record(amount, unit);</span>
+    }
+<span class="fc" id="L45">  }</span>
+
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="fc" id="L48">    final long start = digest.clock().monotonicTime();</span>
+    try {
+<span class="fc" id="L50">      return f.call();</span>
+    } finally {
+<span class="fc" id="L52">      record(digest.clock().monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+    }
+  }
+
+  @Override public void record(Runnable f) {
+<span class="fc" id="L57">    final long start = digest.clock().monotonicTime();</span>
+    try {
+<span class="fc" id="L59">      f.run();</span>
+    } finally {
+<span class="fc" id="L61">      record(digest.clock().monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L62">    }</span>
+<span class="fc" id="L63">  }</span>
+
+  /**
+   * Return a percentile from the last complete digest.
+   *
+   * @param p
+   *     Percentile to retrieve. The value should be in the interval [0.0, 100.0].
+   * @return
+   *     The {@code p}th percentile of the last complete digest.
+   */
+  public double percentile(double p) {
+<span class="pc bpc" id="L74" title="2 of 4 branches missed.">    if (p &lt; 0.0 || p &gt; 100.0) {</span>
+<span class="nc" id="L75">      throw new IllegalArgumentException(&quot;p should be in [0.0, 100.0], got &quot; + p);</span>
+    }
+<span class="fc" id="L77">    final double q = p / 100.0;</span>
+<span class="fc" id="L78">    return digest.poll().quantile(q);</span>
+  }
+
+  @Override public long count() {
+<span class="fc" id="L82">    return underlying.count();</span>
+  }
+
+  @Override public long totalTime() {
+<span class="fc" id="L86">    return underlying.totalTime();</span>
+  }
+
+  @Override public Id id() {
+<span class="nc" id="L90">    return digest.id();</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="nc" id="L94">    return underlying.measure();</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L98">    return false;</span>
+  }
+
+  @Override public TDigestMeasurement measureDigest() {
+<span class="fc" id="L102">    return digest.measure();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

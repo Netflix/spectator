@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>SidecarRegistry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-spark</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.spark</a> &gt; <span class="el_source">SidecarRegistry.java</span></div><h1>SidecarRegistry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.spark;
+
+import com.eclipsesource.json.JsonArray;
+import com.eclipsesource.json.JsonObject;
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Timer;
+import org.apache.spark.SparkConf;
+import org.apache.spark.SparkEnv;
+import org.apache.spark.SparkEnv$;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import scala.Option;
+
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Registry that reports values to a sidecar process via an HTTP call.
+ */
+public class SidecarRegistry extends AbstractRegistry {
+
+<span class="nc" id="L54">  private static final Logger LOGGER = LoggerFactory.getLogger(SidecarRegistry.class);</span>
+
+<span class="nc" id="L56">  private static final Callable&lt;Map&lt;String, String&gt;&gt; SPARK = new Callable&lt;Map&lt;String, String&gt;&gt;() {</span>
+    @Override public Map&lt;String, String&gt; call() throws Exception {
+<span class="nc" id="L58">      SparkEnv env = SparkEnv$.MODULE$.get();</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">      if (env == null) {</span>
+<span class="nc" id="L60">        return Collections.emptyMap();</span>
+      } else {
+<span class="nc" id="L62">        Map&lt;String, String&gt; tagMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L63">        SparkConf conf = env.conf();</span>
+<span class="nc" id="L64">        put(tagMap, conf, &quot;spark.app.id&quot;, &quot;appId&quot;);</span>
+<span class="nc" id="L65">        put(tagMap, conf, &quot;spark.app.name&quot;, &quot;appName&quot;);</span>
+<span class="nc" id="L66">        put(tagMap, conf, &quot;spark.executor.id&quot;, &quot;executorId&quot;);</span>
+<span class="nc" id="L67">        return tagMap;</span>
+      }
+    }
+
+    private void put(Map&lt;String, String&gt; tags, SparkConf conf, String key, String tagName) {
+<span class="nc" id="L72">      Option&lt;String&gt; opt = conf.getOption(key);</span>
+<span class="nc bnc" id="L73" title="All 4 branches missed.">      if (opt.isDefined() &amp;&amp; !&quot;&quot;.equals(opt.get())) {</span>
+<span class="nc" id="L74">        tags.put(tagName, opt.get());</span>
+      }
+<span class="nc" id="L76">    }</span>
+  };
+
+  private ScheduledExecutorService executor;
+
+  private final Counter numMessages;
+  private final Counter numMeasurements;
+
+  private final Callable&lt;Map&lt;String, String&gt;&gt; commonTags;
+
+  /** Create a new instance. */
+  public SidecarRegistry() {
+<span class="nc" id="L88">    this(Clock.SYSTEM);</span>
+<span class="nc" id="L89">  }</span>
+
+  /** Create a new instance. */
+  public SidecarRegistry(Clock clock) {
+<span class="nc" id="L93">    this(clock, SPARK);</span>
+<span class="nc" id="L94">  }</span>
+
+  /** Create a new instance. */
+  public SidecarRegistry(Clock clock, Callable&lt;Map&lt;String, String&gt;&gt; commonTags) {
+<span class="nc" id="L98">    super(clock);</span>
+<span class="nc" id="L99">    numMessages = counter(createId(&quot;spectator.sidecar.numMessages&quot;));</span>
+<span class="nc" id="L100">    numMeasurements = counter(createId(&quot;spectator.sidecar.numMeasurements&quot;));</span>
+<span class="nc" id="L101">    this.commonTags = commonTags;</span>
+<span class="nc" id="L102">  }</span>
+
+  /**
+   * Start sending data to the sidecar.
+   *
+   * @param url
+   *     Location of the sidecar endpoint.
+   * @param pollPeriod
+   *     How frequently to poll the data and send to the sidecar.
+   * @param pollUnit
+   *     Unit for the {@code pollPeriod}.
+   */
+  public void start(final URL url, long pollPeriod, TimeUnit pollUnit) {
+<span class="nc" id="L115">    LOGGER.info(&quot;starting sidecar registry with url {} and poll period {} {}&quot;,</span>
+<span class="nc" id="L116">        url, pollPeriod, pollUnit);</span>
+<span class="nc" id="L117">    executor = Executors.newSingleThreadScheduledExecutor(</span>
+        r -&gt; {
+<span class="nc" id="L119">          final Thread t = new Thread(r, &quot;spectator-sidecar&quot;);</span>
+<span class="nc" id="L120">          t.setDaemon(true);</span>
+<span class="nc" id="L121">          return t;</span>
+        }
+    );
+
+<span class="nc" id="L125">    final SidecarRegistry self = this;</span>
+<span class="nc" id="L126">    Runnable task = () -&gt; {</span>
+      try {
+<span class="nc" id="L128">        List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        for (Meter meter : self) {</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">          for (Measurement m : meter.measure()) {</span>
+<span class="nc" id="L131">            ms.add(m);</span>
+<span class="nc" id="L132">          }</span>
+<span class="nc" id="L133">        }</span>
+<span class="nc" id="L134">        postJson(url, ms);</span>
+<span class="nc" id="L135">      } catch (Exception e) {</span>
+<span class="nc" id="L136">        LOGGER.error(&quot;failed to send data to sidecar&quot;, e);</span>
+<span class="nc" id="L137">      }</span>
+<span class="nc" id="L138">    };</span>
+<span class="nc" id="L139">    executor.scheduleWithFixedDelay(task, pollPeriod, pollPeriod, pollUnit);</span>
+<span class="nc" id="L140">  }</span>
+
+  /**
+   * Stop sending data to the sidecar and shutdown the executor.
+   */
+  public void stop() {
+<span class="nc" id="L146">    executor.shutdown();</span>
+<span class="nc" id="L147">    executor = null;</span>
+<span class="nc" id="L148">  }</span>
+
+  private String toJson(List&lt;Measurement&gt; ms, Map&lt;String, String&gt; tags) {
+<span class="nc" id="L151">    final JsonArray items = new JsonArray();</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">    for (Measurement m : ms) {</span>
+<span class="nc bnc" id="L153" title="All 4 branches missed.">      if (!Double.isNaN(m.value()) &amp;&amp; !Double.isInfinite(m.value())) {</span>
+<span class="nc" id="L154">        items.add(toJson(m, tags));</span>
+      }
+<span class="nc" id="L156">    }</span>
+<span class="nc" id="L157">    return items.toString();</span>
+  }
+
+  private JsonObject toJson(Measurement m, Map&lt;String, String&gt; tags) {
+<span class="nc" id="L161">    Map&lt;String, String&gt; tagMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">    for (Tag t : m.id().tags()) {</span>
+<span class="nc" id="L163">      tagMap.put(t.key(), t.value());</span>
+<span class="nc" id="L164">    }</span>
+<span class="nc" id="L165">    tagMap.putAll(tags);</span>
+
+<span class="nc" id="L167">    final JsonObject obj = new JsonObject();</span>
+<span class="nc" id="L168">    obj.add(&quot;timestamp&quot;, m.timestamp());</span>
+<span class="nc" id="L169">    obj.add(&quot;type&quot;,      getType(m.id()));</span>
+<span class="nc" id="L170">    obj.add(&quot;name&quot;,      m.id().name());</span>
+<span class="nc" id="L171">    obj.add(&quot;tags&quot;,      toJson(tagMap));</span>
+<span class="nc" id="L172">    obj.add(&quot;value&quot;,     m.value());</span>
+<span class="nc" id="L173">    return obj;</span>
+  }
+
+  private JsonObject toJson(Map&lt;String, String&gt; tags) {
+<span class="nc" id="L177">    final JsonObject obj = new JsonObject();</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">    for (Map.Entry&lt;String, String&gt; entry : tags.entrySet()) {</span>
+<span class="nc" id="L179">      obj.add(entry.getKey(), entry.getValue());</span>
+<span class="nc" id="L180">    }</span>
+<span class="nc" id="L181">    return obj;</span>
+  }
+
+  private String getType(Id id) {
+<span class="nc bnc" id="L185" title="All 2 branches missed.">    for (Tag t : id.tags()) {</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">      if (t.key().equals(&quot;type&quot;)) {</span>
+<span class="nc" id="L187">        return t.value();</span>
+      }
+<span class="nc" id="L189">    }</span>
+<span class="nc" id="L190">    return DataType.GAUGE.value();</span>
+  }
+
+  private Map&lt;String, String&gt; getCommonTags() {
+    try {
+<span class="nc" id="L195">      return commonTags.call();</span>
+<span class="nc" id="L196">    } catch (Exception e) {</span>
+<span class="nc" id="L197">      LOGGER.warn(&quot;failed to determine common tags&quot;, e);</span>
+<span class="nc" id="L198">      return null;</span>
+    }
+  }
+
+  private void postJson(URL url, List&lt;Measurement&gt; ms) throws Exception {
+<span class="nc" id="L203">    final Map&lt;String, String&gt; tags = getCommonTags();</span>
+<span class="nc bnc" id="L204" title="All 4 branches missed.">    if (!ms.isEmpty() &amp;&amp; tags != null) {</span>
+<span class="nc" id="L205">      LOGGER.info(&quot;sending {} messages to sidecar {} with tags {}&quot;, ms.size(), url.toString(), tags);</span>
+<span class="nc" id="L206">      numMessages.increment();</span>
+<span class="nc" id="L207">      numMeasurements.increment(ms.size());</span>
+<span class="nc" id="L208">      String json = toJson(ms, tags);</span>
+<span class="nc" id="L209">      HttpURLConnection con = (HttpURLConnection) url.openConnection();</span>
+      try {
+<span class="nc" id="L211">        con.setRequestMethod(&quot;POST&quot;);</span>
+<span class="nc" id="L212">        con.setDoInput(true);</span>
+<span class="nc" id="L213">        con.setDoOutput(true);</span>
+<span class="nc" id="L214">        try (OutputStream out = con.getOutputStream()) {</span>
+<span class="nc" id="L215">          out.write(json.getBytes(&quot;UTF-8&quot;));</span>
+<span class="nc bnc" id="L216" title="All 8 branches missed.">        }</span>
+<span class="nc" id="L217">        con.connect();</span>
+
+<span class="nc" id="L219">        int status = con.getResponseCode();</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">        if (status != 200) {</span>
+<span class="nc" id="L221">          LOGGER.error(&quot;post to sidecar failed with status: &quot; + status + &quot;, payload: &quot; + json);</span>
+        }
+      } finally {
+<span class="nc" id="L224">        con.disconnect();</span>
+<span class="nc" id="L225">      }</span>
+    }
+<span class="nc" id="L227">  }</span>
+
+  @Override protected Counter newCounter(Id id) {
+<span class="nc" id="L230">    return new SidecarCounter(clock(), id);</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="nc" id="L234">    return new SidecarDistributionSummary(clock(), id);</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="nc" id="L238">    return new SidecarTimer(clock(), id);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

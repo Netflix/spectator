@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Spectator.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Spectator.java</span></div><h1>Spectator.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+/**
+ * Static factory used to access the main global registry.
+ */
+public final class Spectator {
+
+<span class="fc" id="L23">  private static final CompositeRegistry COMPOSITE_REGISTRY = new CompositeRegistry(Clock.SYSTEM);</span>
+<span class="fc" id="L24">  private static final ExtendedRegistry REGISTRY = new ExtendedRegistry(COMPOSITE_REGISTRY);</span>
+
+  /**
+   * Return the config implementation being used.
+   */
+  public static ConfigMap config() {
+<span class="nc" id="L30">    return new SystemConfigMap();</span>
+  }
+
+  /**
+   * Returns the global registry.
+   *
+   * @deprecated Use injection or {@link #globalRegistry()} instead.
+   */
+  @Deprecated
+  public static ExtendedRegistry registry() {
+<span class="fc" id="L40">    return REGISTRY;</span>
+  }
+
+  /**
+   * Returns the global composite registry. This method can be used for use-cases where it is
+   * necessary to get a static reference to a registry. It will not do anything unless other
+   * registries are added. Example:
+   *
+   * &lt;pre&gt;
+   * class Main {
+   *   public static void main(String[] args) {
+   *     // This is the preferred usage and works well with DI libraries like guice. Setup a
+   *     // registry and pass it in as needed.
+   *     Registry registry = new DefaultRegistry();
+   *     (new Example1(registry)).start();
+   *
+   *     // If it is desirable to get data from things using the global registry, then the
+   *     // registry for the application can be added to the global context.
+   *     Spectator.globalRegistry().add(registry);
+   *     Example2 ex2 = new Example2();
+   *     ex2.start();
+   *
+   *     // If the lifecycle is not the same as the jvm, then the registry should be removed
+   *     // when shutting down.
+   *     ex2.onShutdown(() -&gt; Spectator.globalRegistry().remove(registry));
+   *   }
+   * }
+   *
+   * class Example1 {
+   *   private final Counter c;
+   *
+   *   Example1(Registry registry) {
+   *     c = registry.counter(&quot;example1&quot;);
+   *   }
+   *   ...
+   * }
+   *
+   * class Example2 {
+   *   private final Counter c;
+   *
+   *   Example2() {
+   *     c = Spectator.globalRegistry().counter(&quot;example1&quot;);
+   *   }
+   *   ...
+   * }
+   * &lt;/pre&gt;
+   */
+  public static CompositeRegistry globalRegistry() {
+<span class="nc" id="L88">    return COMPOSITE_REGISTRY;</span>
+  }
+
+<span class="nc" id="L91">  private Spectator() {</span>
+<span class="nc" id="L92">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

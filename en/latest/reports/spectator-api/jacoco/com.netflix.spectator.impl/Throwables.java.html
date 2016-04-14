@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Throwables.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">Throwables.java</span></div><h1>Throwables.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Helper functions for working with exceptions.
+ *
+ * &lt;p&gt;&lt;b&gt;This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.&lt;/b&gt;&lt;/p&gt;
+ */
+public final class Throwables {
+
+<span class="fc" id="L29">  private static final Logger LOGGER = LoggerFactory.getLogger(Throwables.class);</span>
+
+  /**
+   * Log a warning using the message from the exception and if enabled propagate the
+   * exception {@code t}.
+   *
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  public static void propagate(Throwable t) {
+<span class="fc" id="L39">    propagate(t.getMessage(), t);</span>
+<span class="fc" id="L40">  }</span>
+
+  /**
+   * Log a warning and if enabled propagate the exception {@code t}. The propagation is controlled
+   * by the system property {@code spectator.api.propagateWarnings}.
+   *
+   * @param msg
+   *     Message written out to the log.
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  public static void propagate(String msg, Throwable t) {
+<span class="fc" id="L52">    LOGGER.warn(msg, t);</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">    if (Config.propagateWarnings()) {</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">      if (t instanceof RuntimeException) {</span>
+<span class="fc" id="L55">        throw (RuntimeException) t;</span>
+      } else {
+<span class="fc" id="L57">        throw new RuntimeException(t);</span>
+      }
+    }
+<span class="fc" id="L60">  }</span>
+
+<span class="nc" id="L62">  private Throwables() {</span>
+<span class="nc" id="L63">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
