@@ -12,7 +12,7 @@ assume it is being used [internally at Netflix](Netflix-Integration).
 To use it simply add a dependency:
 
 ```
-com.netflix.spectator:spectator-reg-tdigest:0.35.0
+com.netflix.spectator:spectator-reg-tdigest:0.37.0
 ```
 
 Add the `TDigestModule` to the set of modules used with guice:
