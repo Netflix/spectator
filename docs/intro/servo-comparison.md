@@ -29,7 +29,7 @@ the tradeoffs and choose between:
 Further each of these can impact how data is reported to observers. The
 spectator API focuses on the constructs a user needs to instrument the
 code. In spectator the user would always use the registry to create a
-[Counter](Counter-Usage). The implementation details are left up to the
+[Counter](counter.md). The implementation details are left up to the
 registry.
 
 The [registration](#registration) is simpler as well to avoid common pitfalls
@@ -199,7 +199,7 @@ Annotations are not supported, use the appropriate meter type:
 ### BasicCounter
 
 See the general overview of [registration differences](#registration) and
-summary of [counter usage](Counter Usage).
+summary of [counter usage](counter.md).
 
 Servo:
 
@@ -238,7 +238,7 @@ public class Foo {
 ### BasicGauge
 
 See the general overview of [registration differences](#registration) and
-summary of [gauge usage](Gauge Usage).
+summary of [gauge usage](gauge.md).
 
 Servo:
 
@@ -269,7 +269,7 @@ public class Foo {
 ### BasicTimer
 
 See the general overview of [registration differences](#registration) and
-summary of [timer usage](Timer Usage). Note in spectator the reported unit
+summary of [timer usage](timer.md). Note in spectator the reported unit
 for timers is always seconds and cannot be changed. Seconds is the base unit
 and other units should only be used as a presentation detail. Servo allows
 the unit to be customized and defaults to milliseconds.
@@ -318,7 +318,7 @@ public class Foo {
 ### BasicDistributionSummary
 
 See the general overview of [registration differences](#registration) and
-summary of [distribution summary usage](Distribution Summary Usage).
+summary of [distribution summary usage](dist-summary.md).
 
 Servo:
 
@@ -358,7 +358,7 @@ public class Foo {
 
 ### BasicInformational
 
-Not supported, see [overview of differences](#more-opinionated).
+Not supported, see [overview of differences](#differences).
 
 ### BasicStopwatch
 
@@ -460,7 +460,7 @@ was never used much at Netflix. Future work being looked at in
 ### DoubleGauge
 
 See the general overview of [registration differences](#registration) and
-summary of [gauge usage](Gauge Usage).
+summary of [gauge usage](gauge.md).
 
 Servo:
 
@@ -494,7 +494,7 @@ public class Foo {
 ### DurationTimer
 
 See the general overview of [registration differences](#registration) and
-summary of [timer usage](Timer-Usage#longtasktimer).
+summary of [timer usage](timer.md#longtasktimer).
 
 Servo:
 
@@ -525,7 +525,7 @@ public class Foo {
 ### DynamicCounter
 
 See the general overview of [registration differences](#registration) and
-summary of [counter usage](Counter Usage).
+summary of [counter usage](counter.md).
 
 Servo:
 
@@ -580,7 +580,7 @@ public class Foo {
 ### DynamicTimer
 
 See the general overview of [registration differences](#registration) and
-summary of [timer usage](Timer Usage).
+summary of [timer usage](timer.md).
 
 Servo:
 
@@ -647,7 +647,7 @@ public class Foo {
 ### LongGauge
 
 See the general overview of [registration differences](#registration) and
-summary of [gauge usage](Gauge Usage).
+summary of [gauge usage](gauge.md).
 
 Servo:
 
@@ -678,7 +678,7 @@ public class Foo {
 
 ### MonitorConfig
 
-See the documentation on [naming](Naming).
+See the documentation on [naming](conventions.md).
 
 Servo:
 
@@ -709,7 +709,7 @@ If there is enough demand an extension can be created.
 ### NumberGauge
 
 See the general overview of [registration differences](#registration) and
-summary of [gauge usage](Gauge Usage).
+summary of [gauge usage](gauge.md).
 
 Servo:
 
@@ -740,12 +740,12 @@ public class Foo {
 
 ### StatsTimer
 
-Not supported, see [overview of differences](#more-opinionated).
+Not supported, see [overview of differences](#differences).
 
 ### StepCounter
 
 See the general overview of [registration differences](#registration) and
-summary of [counter usage](Counter Usage).
+summary of [counter usage](counter.md).
 
 Servo:
 

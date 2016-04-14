@@ -266,4 +266,31 @@ public class DefaultRegistryTest {
     }
     Assert.assertTrue(expected.isEmpty());
   }
+
+  @Test
+  public void testCounterNullId() {
+    System.setProperty("spectator.api.propagateWarnings", "false");
+    Registry r = new DefaultRegistry(clock);
+    Counter c = r.counter((Id) null);
+    c.increment();
+    Assert.assertEquals(c, NoopCounter.INSTANCE);
+  }
+
+  @Test
+  public void testDistributionSummaryNullId() {
+    System.setProperty("spectator.api.propagateWarnings", "false");
+    Registry r = new DefaultRegistry(clock);
+    DistributionSummary c = r.distributionSummary((Id) null);
+    c.record(42L);
+    Assert.assertEquals(c, NoopDistributionSummary.INSTANCE);
+  }
+
+  @Test
+  public void testTimerNullId() {
+    System.setProperty("spectator.api.propagateWarnings", "false");
+    Registry r = new DefaultRegistry(clock);
+    Timer c = r.timer((Id) null);
+    c.record(42L, TimeUnit.SECONDS);
+    Assert.assertEquals(c, NoopTimer.INSTANCE);
+  }
 }

@@ -29,7 +29,7 @@ public class Foo {
 }
 ```
 
-See the [testing docs](Testing) for more information about creating a binding to use with tests.
+See the [testing docs](testing.md) for more information about creating a binding to use with tests.
 
 ## Applications
 

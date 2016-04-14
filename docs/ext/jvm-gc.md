@@ -11,8 +11,8 @@ to provide some basic GC logging and metrics.
 
 ## Getting Started
 
-For using it internally at Netflix see the [[Netflix integration]] guide, otherwise keep reading
-this section.
+For using it internally at Netflix see the [Netflix integration](../intro/netflix.md) guide,
+otherwise keep reading this section.
 
 ### Requirements
 
@@ -89,7 +89,7 @@ generation. It is a counter that is incremented after a GC event by the amount:
 The live data size is the size of the old generation after a major GC. The image below shows
 how the live data size view compares to a metric showing the current size of the memory pool:
 
-![Live Data Size](http://netflix.github.io/spectator/wiki/images/live_data_size.png)
+![Live Data Size](../images/live_data_size.png)
 
 **Unit:** bytes
 
@@ -127,7 +127,7 @@ but users of other systems should be able to take the idea and make it work. For
 alerts it is recommended to check them on instance. At Netflix that can be done by selecting
 the option in alert ui:
 
-> ![On Instance Alerting](http://netflix.github.io/spectator/wiki/images/on_instance.png)
+> ![On Instance Alerting](../images/on_instance.png)
 
 ### Max Pause Time
 

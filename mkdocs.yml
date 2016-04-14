@@ -1,7 +1,7 @@
 site_name: Spectator Docs
 site_url: 'http://netflix.github.io/spectator'
 repo_url: 'https://github.com/Netflix/spectator'
-strict: true
+strict: True
 pages:
 - Home: index.md
 - 'Getting Started':
@@ -10,6 +10,7 @@ pages:
     - Timers: intro/timer.md
     - Gauges: intro/gauge.md
     - 'Distribution Summaries': intro/dist-summary.md
+  - 'Naming Conventions': intro/conventions.md
   - Testing: intro/testing.md
   - 'Netflix Integration': intro/netflix.md
   - 'Servo Comparison': intro/servo-comparison.md
