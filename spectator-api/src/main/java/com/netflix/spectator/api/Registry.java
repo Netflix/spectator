@@ -523,7 +523,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
-    return gauge(id, collection, Collection::size);
+    return gauge(id, collection, (ToDoubleFunction<T>) Collection::size);
   }
 
   /**
@@ -561,7 +561,7 @@ public interface Registry extends Iterable<Meter> {
    *     statement.
    */
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
-    return gauge(id, collection, Map::size);
+    return gauge(id, collection, (ToDoubleFunction<T>) Map::size);
   }
 
   /**
