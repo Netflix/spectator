@@ -105,6 +105,13 @@
         
             
     <li class="toctree-l1 ">
+        <a class="" href="../conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
         <a class="" href="../testing/">Testing</a>
         
     </li>
@@ -282,7 +289,7 @@ the tradeoffs and choose between:</p>
 <p>Further each of these can impact how data is reported to observers. The
 spectator API focuses on the constructs a user needs to instrument the
 code. In spectator the user would always use the registry to create a
-<a href="../Counter-Usage">Counter</a>. The implementation details are left up to the
+<a href="../counter/">Counter</a>. The implementation details are left up to the
 registry.</p>
 <p>The <a href="#registration">registration</a> is simpler as well to avoid common pitfalls
 when using servo like overwriting a registered object.</p>
@@ -445,7 +452,7 @@ present. Since it is a weak reference, nothing will prevent an instance of
 </table>
 <h3 id="basiccounter">BasicCounter<a class="headerlink" href="#basiccounter" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Counter Usage">counter usage</a>.</p>
+summary of <a href="../counter/">counter usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final Counter c =
@@ -478,7 +485,7 @@ summary of <a href="../Counter Usage">counter usage</a>.</p>
 
 <h3 id="basicgauge">BasicGauge<a class="headerlink" href="#basicgauge" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Gauge Usage">gauge usage</a>.</p>
+summary of <a href="../gauge/">gauge usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final BasicGauge g = new BasicGauge(
@@ -503,7 +510,7 @@ summary of <a href="../Gauge Usage">gauge usage</a>.</p>
 
 <h3 id="basictimer">BasicTimer<a class="headerlink" href="#basictimer" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Timer Usage">timer usage</a>. Note in spectator the reported unit
+summary of <a href="../timer/">timer usage</a>. Note in spectator the reported unit
 for timers is always seconds and cannot be changed. Seconds is the base unit
 and other units should only be used as a presentation detail. Servo allows
 the unit to be customized and defaults to milliseconds.</p>
@@ -546,7 +553,7 @@ the unit to be customized and defaults to milliseconds.</p>
 
 <h3 id="basicdistributionsummary">BasicDistributionSummary<a class="headerlink" href="#basicdistributionsummary" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Distribution Summary Usage">distribution summary usage</a>.</p>
+summary of <a href="../dist-summary/">distribution summary usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final BasicDistributionSummary s = new BasicDistributionSummary(
@@ -580,7 +587,7 @@ summary of <a href="../Distribution Summary Usage">distribution summary usage</a
 </code></pre>
 
 <h3 id="basicinformational">BasicInformational<a class="headerlink" href="#basicinformational" title="Permanent link">&para;</a></h3>
-<p>Not supported, see <a href="#more-opinionated">overview of differences</a>.</p>
+<p>Not supported, see <a href="#differences">overview of differences</a>.</p>
 <h3 id="basicstopwatch">BasicStopwatch<a class="headerlink" href="#basicstopwatch" title="Permanent link">&para;</a></h3>
 <p>There isn't an explicit stopwatch class in spectator. Just use a timing
 call directly. </p>
@@ -664,7 +671,7 @@ was never used much at Netflix. Future work being looked at in
 <a href="https://github.com/Netflix/spectator/issues/180">issue-180</a>.</p>
 <h3 id="doublegauge">DoubleGauge<a class="headerlink" href="#doublegauge" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Gauge Usage">gauge usage</a>.</p>
+summary of <a href="../gauge/">gauge usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final DoubleGauge g = new DoubleGauge(
@@ -692,7 +699,7 @@ public class Foo {
 
 <h3 id="durationtimer">DurationTimer<a class="headerlink" href="#durationtimer" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Timer-Usage#longtasktimer">timer usage</a>.</p>
+summary of <a href="../timer/#longtasktimer">timer usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final DurationTimer t = new DurationTimer(
@@ -717,7 +724,7 @@ summary of <a href="../Timer-Usage#longtasktimer">timer usage</a>.</p>
 
 <h3 id="dynamiccounter">DynamicCounter<a class="headerlink" href="#dynamiccounter" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Counter Usage">counter usage</a>.</p>
+summary of <a href="../counter/">counter usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
 
@@ -766,7 +773,7 @@ summary of <a href="../Counter Usage">counter usage</a>.</p>
 
 <h3 id="dynamictimer">DynamicTimer<a class="headerlink" href="#dynamictimer" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Timer Usage">timer usage</a>.</p>
+summary of <a href="../timer/">timer usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
 
@@ -827,7 +834,7 @@ summary of <a href="../Timer Usage">timer usage</a>.</p>
 
 <h3 id="longgauge">LongGauge<a class="headerlink" href="#longgauge" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Gauge Usage">gauge usage</a>.</p>
+summary of <a href="../gauge/">gauge usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final LongGauge g = new LongGauge(
@@ -852,7 +859,7 @@ summary of <a href="../Gauge Usage">gauge usage</a>.</p>
 </code></pre>
 
 <h3 id="monitorconfig">MonitorConfig<a class="headerlink" href="#monitorconfig" title="Permanent link">&para;</a></h3>
-<p>See the documentation on <a href="../Naming">naming</a>.</p>
+<p>See the documentation on <a href="../conventions/">naming</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">MonitorConfig id = MonitorConfig.builder(&quot;name&quot;)
   .withTag(&quot;country&quot;, &quot;US&quot;)
@@ -875,7 +882,7 @@ Id id = registry.createId(&quot;name&quot;, &quot;country&quot;, &quot;US&quot;,
 If there is enough demand an extension can be created.</p>
 <h3 id="numbergauge">NumberGauge<a class="headerlink" href="#numbergauge" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Gauge Usage">gauge usage</a>.</p>
+summary of <a href="../gauge/">gauge usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final NumberGauge g = new NumberGauge(
@@ -900,10 +907,10 @@ summary of <a href="../Gauge Usage">gauge usage</a>.</p>
 </code></pre>
 
 <h3 id="statstimer">StatsTimer<a class="headerlink" href="#statstimer" title="Permanent link">&para;</a></h3>
-<p>Not supported, see <a href="#more-opinionated">overview of differences</a>.</p>
+<p>Not supported, see <a href="#differences">overview of differences</a>.</p>
 <h3 id="stepcounter">StepCounter<a class="headerlink" href="#stepcounter" title="Permanent link">&para;</a></h3>
 <p>See the general overview of <a href="#registration">registration differences</a> and
-summary of <a href="../Counter Usage">counter usage</a>.</p>
+summary of <a href="../counter/">counter usage</a>.</p>
 <p>Servo:</p>
 <pre><code class="java">public class Foo {
   private final Counter c =

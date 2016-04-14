@@ -18,6 +18,12 @@
     </url>
         
     <url>
+     <loc>http://netflix.github.io/spectator/intro/conventions/</loc>
+     <lastmod>2016-04-14</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+        
+    <url>
      <loc>http://netflix.github.io/spectator/intro/testing/</loc>
      <lastmod>2016-04-14</lastmod>
      <changefreq>daily</changefreq>

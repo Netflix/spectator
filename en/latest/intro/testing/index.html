@@ -104,6 +104,13 @@
 
         
             
+    <li class="toctree-l1 ">
+        <a class="" href="../conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
     <li class="toctree-l1 current">
         <a class="current" href="./">Testing</a>
         
@@ -114,6 +121,8 @@
                     <li><a class="toctree-l4" href="#simple-test">Simple Test</a></li>
                 
                     <li><a class="toctree-l4" href="#guice-test">Guice Test</a></li>
+                
+                    <li><a class="toctree-l4" href="#exceptions">Exceptions</a></li>
                 
             
             </ul>
@@ -275,6 +284,7 @@ Consider a sample class:</p>
 }
 </code></pre>
 
+<p>Tests will typically want to use an isolated instance of the <code>DefaultRegistry</code>.</p>
 <h2 id="simple-test">Simple Test<a class="headerlink" href="#simple-test" title="Permanent link">&para;</a></h2>
 <p>A basic standalone test class would look something like:</p>
 <pre><code class="java">public class FooTest {
@@ -317,6 +327,35 @@ Consider a sample class:</p>
   }
 }
 </code></pre>
+
+<h2 id="exceptions">Exceptions<a class="headerlink" href="#exceptions" title="Permanent link">&para;</a></h2>
+<p>By default, for most user errors Spectator will log a warning rather than throw an exception.
+The rationale is that users do not often think about instrumentation and logging code causing
+an exception and interrupting the control flow of a program. However, for test cases it is
+recommended to be more aggressive and learn about problems as early as possible. This can
+be done by setting a system property:</p>
+<pre><code>spectator.api.propagateWarnings=true
+</code></pre>
+
+<p>Consider an example:</p>
+<pre><code class="java">private static final Id RARE_EXCEPTION_ID = null;
+
+public void doSomethingImportant() {
+  try {
+    ... do work ...
+  } catch (RareException e) {
+    // There is a bug in the program, an Id is not allowed to be null. In production we do
+    // not want it to throw and interrupt the control flow. Instrumentation should gracefully
+    // degrade.
+    registry.counter(RARE_EXCEPTION_ID).increment();
+
+    // These statements are important to provide context for operating the system
+    // and to ensure the app continues to function properly.
+    LOGGER.error(&quot;important context for user&quot;, e);
+    properlyHandleException(e);
+  }
+}
+</code></pre>
               
             </div>
           </div>
@@ -327,7 +366,7 @@ Consider a sample class:</p>
         <a href="../netflix/" class="btn btn-neutral float-right" title="Netflix Integration">Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
-        <a href="../dist-summary/" class="btn btn-neutral" title="Distribution Summaries"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../conventions/" class="btn btn-neutral" title="Naming Conventions"><span class="icon icon-circle-arrow-left"></span> Previous</a>
       
     </div>
   
@@ -355,7 +394,7 @@ Consider a sample class:</p>
           <a href="https://github.com/Netflix/spectator" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
       
       
-        <span><a href="../dist-summary/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+        <span><a href="../conventions/" style="color: #fcfcfc;">&laquo; Previous</a></span>
       
       
         <span style="margin-left: 15px"><a href="../netflix/" style="color: #fcfcfc">Next &raquo;</a></span>

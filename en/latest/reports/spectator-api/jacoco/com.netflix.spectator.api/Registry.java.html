@@ -377,7 +377,8 @@ public interface Registry extends Iterable&lt;Meter&gt; {
   /**
    * Register a gauge that reports the value of the {@link java.lang.Number}. The registration
    * will keep a weak reference to the number so it will not prevent garbage collection.
-   * The number implementation used should be thread safe.
+   * The number implementation used should be thread safe. See
+   * {@link #gauge(Id, Object, ToDoubleFunction)} for more information on gauges.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -388,7 +389,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Number&gt; T gauge(Id id, T number) {
-<span class="fc" id="L391">    return gauge(id, number, (ToDoubleFunction&lt;T&gt;) Number::doubleValue);</span>
+<span class="fc" id="L392">    return gauge(id, number, (ToDoubleFunction&lt;T&gt;) Number::doubleValue);</span>
   }
 
   /**
@@ -404,7 +405,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Number&gt; T gauge(String name, T number) {
-<span class="fc" id="L407">    return gauge(createId(name), number);</span>
+<span class="fc" id="L408">    return gauge(createId(name), number);</span>
   }
 
   /**
@@ -422,13 +423,19 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Number&gt; T gauge(String name, Iterable&lt;Tag&gt; tags, T number) {
-<span class="fc" id="L425">    return gauge(createId(name, tags), number);</span>
+<span class="fc" id="L426">    return gauge(createId(name, tags), number);</span>
   }
 
   /**
    * Register a gauge that reports the value of the object after the function
-   * {@code f} is applied. The registration will keep a weak reference to the number so it will
-   * not prevent garbage collection. The number implementation used should be thread safe.
+   * {@code f} is applied. The registration will keep a weak reference to the object so it will
+   * not prevent garbage collection. Applying {@code f} on the object should be thread safe.
+   *
+   * If multiple gauges are registered with the same id, then the values will be aggregated and
+   * the sum will be reported. For example, registering multiple gauges for active threads in
+   * a thread pool with the same id would produce a value that is the overall number
+   * of active threads. For other behaviors, manage it on the user side and avoid multiple
+   * registrations.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -441,8 +448,8 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T&gt; T gauge(Id id, T obj, ToDoubleFunction&lt;T&gt; f) {
-<span class="fc" id="L444">    register(new ObjectGauge&lt;&gt;(clock(), id, obj, f));</span>
-<span class="fc" id="L445">    return obj;</span>
+<span class="fc" id="L451">    register(new ObjectGauge&lt;&gt;(clock(), id, obj, f));</span>
+<span class="fc" id="L452">    return obj;</span>
   }
 
   /**
@@ -460,7 +467,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T&gt; T gauge(String name, T obj, ToDoubleFunction&lt;T&gt; f) {
-<span class="fc" id="L463">    return gauge(createId(name), obj, f);</span>
+<span class="fc" id="L470">    return gauge(createId(name), obj, f);</span>
   }
 
   /**
@@ -482,8 +489,8 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    */
   @Deprecated
   default &lt;T&gt; T gauge(Id id, T obj, ValueFunction&lt;T&gt; f) {
-<span class="fc" id="L485">    register(new ObjectGauge&lt;&gt;(clock(), id, obj, f));</span>
-<span class="fc" id="L486">    return obj;</span>
+<span class="fc" id="L492">    register(new ObjectGauge&lt;&gt;(clock(), id, obj, f));</span>
+<span class="fc" id="L493">    return obj;</span>
   }
 
   /**
@@ -504,7 +511,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    */
   @Deprecated
   default &lt;T&gt; T gauge(String name, T obj, ValueFunction&lt;T&gt; f) {
-<span class="fc" id="L507">    return gauge(createId(name), obj, f);</span>
+<span class="fc" id="L514">    return gauge(createId(name), obj, f);</span>
   }
 
   /**
@@ -523,7 +530,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(Id id, T collection) {
-<span class="fc" id="L526">    return gauge(id, collection, Collection::size);</span>
+<span class="fc" id="L533">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Collection::size);</span>
   }
 
   /**
@@ -542,7 +549,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(String name, T collection) {
-<span class="fc" id="L545">    return collectionSize(createId(name), collection);</span>
+<span class="fc" id="L552">    return collectionSize(createId(name), collection);</span>
   }
 
   /**
@@ -561,7 +568,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(Id id, T collection) {
-<span class="fc" id="L564">    return gauge(id, collection, Map::size);</span>
+<span class="fc" id="L571">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Map::size);</span>
   }
 
   /**
@@ -580,7 +587,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     statement.
    */
   default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(String name, T collection) {
-<span class="fc" id="L583">    return mapSize(createId(name), collection);</span>
+<span class="fc" id="L590">    return mapSize(createId(name), collection);</span>
   }
 
   /**
@@ -597,11 +604,11 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     Name of the method to invoke on the object.
    */
   default void methodValue(Id id, Object obj, String method) {
-<span class="fc" id="L600">    final Method m = Utils.getGaugeMethod(id, obj, method);</span>
-<span class="fc bfc" id="L601" title="All 2 branches covered.">    if (m != null) {</span>
-<span class="fc" id="L602">      gauge(id, obj, Functions.invokeMethod(m));</span>
+<span class="fc" id="L607">    final Method m = Utils.getGaugeMethod(id, obj, method);</span>
+<span class="fc bfc" id="L608" title="All 2 branches covered.">    if (m != null) {</span>
+<span class="fc" id="L609">      gauge(id, obj, Functions.invokeMethod(m));</span>
     }
-<span class="fc" id="L604">  }</span>
+<span class="fc" id="L611">  }</span>
 
   /**
    * Register a gauge that reports the return value of invoking the method on the object. The
@@ -617,12 +624,12 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    *     Name of the method to invoke on the object.
    */
   default void methodValue(String name, Object obj, String method) {
-<span class="fc" id="L620">    methodValue(createId(name), obj, method);</span>
-<span class="fc" id="L621">  }</span>
+<span class="fc" id="L627">    methodValue(createId(name), obj, method);</span>
+<span class="fc" id="L628">  }</span>
 
   /** Returns a stream of all registered meters. */
   default Stream&lt;Meter&gt; stream() {
-<span class="fc" id="L625">    return StreamSupport.stream(spliterator(), false);</span>
+<span class="fc" id="L632">    return StreamSupport.stream(spliterator(), false);</span>
   }
 
   /**
@@ -637,7 +644,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    * &lt;/pre&gt;
    */
   default Stream&lt;Counter&gt; counters() {
-<span class="fc" id="L640">    return stream().filter(m -&gt; m instanceof Counter).map(m -&gt; (Counter) m);</span>
+<span class="fc" id="L647">    return stream().filter(m -&gt; m instanceof Counter).map(m -&gt; (Counter) m);</span>
   }
 
   /**
@@ -658,7 +665,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    * &lt;/pre&gt;
    */
   default Stream&lt;DistributionSummary&gt; distributionSummaries() {
-<span class="fc" id="L661">    return stream().filter(m -&gt; m instanceof DistributionSummary).map(m -&gt; (DistributionSummary) m);</span>
+<span class="fc" id="L668">    return stream().filter(m -&gt; m instanceof DistributionSummary).map(m -&gt; (DistributionSummary) m);</span>
   }
 
   /**
@@ -679,7 +686,7 @@ public interface Registry extends Iterable&lt;Meter&gt; {
    * &lt;/pre&gt;
    */
   default Stream&lt;Timer&gt; timers() {
-<span class="fc" id="L682">    return stream().filter(m -&gt; m instanceof Timer).map(m -&gt; (Timer) m);</span>
+<span class="fc" id="L689">    return stream().filter(m -&gt; m instanceof Timer).map(m -&gt; (Timer) m);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

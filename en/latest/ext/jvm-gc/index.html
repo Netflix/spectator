@@ -105,6 +105,13 @@
         
             
     <li class="toctree-l1 ">
+        <a class="" href="../../intro/conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
         <a class="" href="../../intro/testing/">Testing</a>
         
     </li>
@@ -272,8 +279,8 @@ to provide some basic GC logging and metrics.</p>
 <li><a href="#alerting">Alerting</a></li>
 </ul>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
-<p>For using it internally at Netflix see the [[Netflix integration]] guide, otherwise keep reading
-this section.</p>
+<p>For using it internally at Netflix see the <a href="../../intro/netflix/">Netflix integration</a> guide,
+otherwise keep reading this section.</p>
 <h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
 <p>This library relies on the notification emitter added in 7u4, but there are known issues prior
 to 7u40. For G1 it is recommended to be on the latest version available.</p>
@@ -322,7 +329,7 @@ generation. It is a counter that is incremented after a GC event by the amount:<
 <h3 id="jvmgclivedatasize">jvm.gc.liveDataSize<a class="headerlink" href="#jvmgclivedatasize" title="Permanent link">&para;</a></h3>
 <p>The live data size is the size of the old generation after a major GC. The image below shows
 how the live data size view compares to a metric showing the current size of the memory pool:</p>
-<p><img alt="Live Data Size" src="http://netflix.github.io/spectator/wiki/images/live_data_size.png" /></p>
+<p><img alt="Live Data Size" src="../../images/live_data_size.png" /></p>
 <p><strong>Unit:</strong> bytes</p>
 <p><strong>Dimensions:</strong> n/a</p>
 <h3 id="jvmgcmaxdatasize">jvm.gc.maxDataSize<a class="headerlink" href="#jvmgcmaxdatasize" title="Permanent link">&para;</a></h3>
@@ -350,7 +357,7 @@ but users of other systems should be able to take the idea and make it work. For
 alerts it is recommended to check them on instance. At Netflix that can be done by selecting
 the option in alert ui:</p>
 <blockquote>
-<p><img alt="On Instance Alerting" src="http://netflix.github.io/spectator/wiki/images/on_instance.png" /></p>
+<p><img alt="On Instance Alerting" src="../../images/on_instance.png" /></p>
 </blockquote>
 <h3 id="max-pause-time">Max Pause Time<a class="headerlink" href="#max-pause-time" title="Permanent link">&para;</a></h3>
 <p>Example to trigger an alert if the <a href="#jvmgcpause">pause time</a> exceeds 500 milliseconds:</p>
