@@ -377,7 +377,8 @@ public interface Registry extends Iterable<Meter> {
   /**
    * Register a gauge that reports the value of the {@link java.lang.Number}. The registration
    * will keep a weak reference to the number so it will not prevent garbage collection.
-   * The number implementation used should be thread safe.
+   * The number implementation used should be thread safe. See
+   * {@link #gauge(Id, Object, ToDoubleFunction)} for more information on gauges.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -427,8 +428,14 @@ public interface Registry extends Iterable<Meter> {
 
   /**
    * Register a gauge that reports the value of the object after the function
-   * {@code f} is applied. The registration will keep a weak reference to the number so it will
-   * not prevent garbage collection. The number implementation used should be thread safe.
+   * {@code f} is applied. The registration will keep a weak reference to the object so it will
+   * not prevent garbage collection. Applying {@code f} on the object should be thread safe.
+   *
+   * If multiple gauges are registered with the same id, then the values will be aggregated and
+   * the sum will be reported. For example, registering multiple gauges for active threads in
+   * a thread pool with the same id would produce a value that is the overall number
+   * of active threads. For other behaviors, manage it on the user side and avoid multiple
+   * registrations.
    *
    * @param id
    *     Identifier for the metric being registered.
