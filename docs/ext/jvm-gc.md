@@ -11,8 +11,8 @@ to provide some basic GC logging and metrics.
 
 ## Getting Started
 
-For using it internally at Netflix see the [[Netflix integration]] guide, otherwise keep reading
-this section.
+For using it internally at Netflix see the [Netflix integration](../intro/netflix.md) guide,
+otherwise keep reading this section.
 
 ### Requirements
 
