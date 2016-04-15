@@ -61,8 +61,8 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
   };
 
   private static final TagField[] TAGS = {
-      new TagField(Field.ServiceEndpoint),
-      new TagField(Field.ServiceName, SpectatorRequestMetricCollector::getHost),
+      new TagField(Field.ServiceEndpoint, SpectatorRequestMetricCollector::getHost),
+      new TagField(Field.ServiceName),
       new TagField(Field.StatusCode)
   };
 

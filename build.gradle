@@ -1,14 +1,14 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.11.3'
-    classpath 'com.netflix.nebula:nebula-dependency-recommender:3.1.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
+    classpath 'com.netflix.nebula:nebula-dependency-recommender:3.3.0'
   }
 }
 
 plugins {
-  id 'nebula.netflixoss' version '3.1.2'
-  id 'me.champeau.gradle.jmh' version '0.2.0'
+  id 'nebula.netflixoss' version '3.2.3'
+  id 'me.champeau.gradle.jmh' version '0.3.0'
 }
 
 // Establish version and status
@@ -51,7 +51,7 @@ subprojects {
   }
   javadoc {
     options {
-      links = ['http://docs.oracle.com/javase/7/docs/api/']
+      links = ['http://docs.oracle.com/javase/8/docs/api/']
     }
   }
 
@@ -70,12 +70,12 @@ subprojects {
     warmupIterations = 2
     iterations = 10
     fork = 5
-    profilers = ['STACK']
+    profilers = ['stack']
     include '.*'
   }
 
   jacoco {
-    toolVersion = "0.7.1.201405082137"
+    toolVersion = "0.7.6.201602180812"
   }
 
   jacocoTestReport {

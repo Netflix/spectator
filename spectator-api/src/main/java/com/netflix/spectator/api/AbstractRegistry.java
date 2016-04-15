@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -131,31 +132,48 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Counter counter(Id id) {
-    Meter m = meters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
-    if (!(m instanceof Counter)) {
-      logTypeError(id, Counter.class, m.getClass());
-      m = NoopCounter.INSTANCE;
+    try {
+      Preconditions.checkNotNull(id, "id");
+      Meter m = meters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
+      if (!(m instanceof Counter)) {
+        logTypeError(id, Counter.class, m.getClass());
+        m = NoopCounter.INSTANCE;
+      }
+      return (Counter) m;
+    } catch (Exception e) {
+      propagate(e);
+      return NoopCounter.INSTANCE;
     }
-    return (Counter) m;
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
-    Meter m = meters.computeIfAbsent(id, i ->
-        compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
-    if (!(m instanceof DistributionSummary)) {
-      logTypeError(id, DistributionSummary.class, m.getClass());
-      m = NoopDistributionSummary.INSTANCE;
+    try {
+      Preconditions.checkNotNull(id, "id");
+      Meter m = meters.computeIfAbsent(id, i ->
+          compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
+      if (!(m instanceof DistributionSummary)) {
+        logTypeError(id, DistributionSummary.class, m.getClass());
+        m = NoopDistributionSummary.INSTANCE;
+      }
+      return (DistributionSummary) m;
+    } catch (Exception e) {
+      propagate(e);
+      return NoopDistributionSummary.INSTANCE;
     }
-    return (DistributionSummary) m;
   }
 
   @Override public final Timer timer(Id id) {
-    Meter m = meters.computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
-    if (!(m instanceof Timer)) {
-      logTypeError(id, Timer.class, m.getClass());
-      m = NoopTimer.INSTANCE;
+    try {
+      Meter m = meters.computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
+      if (!(m instanceof Timer)) {
+        logTypeError(id, Timer.class, m.getClass());
+        m = NoopTimer.INSTANCE;
+      }
+      return (Timer) m;
+    } catch (Exception e) {
+      propagate(e);
+      return NoopTimer.INSTANCE;
     }
-    return (Timer) m;
   }
 
   @Override public final Meter get(Id id) {

@@ -1,0 +1,34 @@
+site_name: Spectator Docs
+site_url: 'http://netflix.github.io/spectator'
+repo_url: 'https://github.com/Netflix/spectator'
+strict: True
+pages:
+- Home: index.md
+- 'Getting Started':
+  - 'Meter Types':
+    - Counters: intro/counter.md
+    - Timers: intro/timer.md
+    - Gauges: intro/gauge.md
+    - 'Distribution Summaries': intro/dist-summary.md
+  - 'Naming Conventions': intro/conventions.md
+  - Testing: intro/testing.md
+  - 'Netflix Integration': intro/netflix.md
+  - 'Servo Comparison': intro/servo-comparison.md
+- Extensions:
+  - 'Buffer Pools': ext/jvm-buffer-pools.md
+  - 'Garbage Collection': ext/jvm-gc.md
+  - 'GC Causes': ext/jvm-gc-causes.md
+  - 'Memory Pools': ext/jvm-memory-pools.md
+  - 'Log4j2 Appender': ext/log4j2.md
+- Registries:
+  - Metrics3: registry/metrics3.md
+  - Servo: registry/servo.md
+  - TDigest: registry/tdigest.md
+- 'Build Reports': reports.md
+theme: readthedocs
+extra_css:
+- css/custom.css
+markdown_extensions:
+- admonition
+- toc:
+    permalink: True
