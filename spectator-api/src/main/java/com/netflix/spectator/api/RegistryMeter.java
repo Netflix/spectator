@@ -15,8 +15,6 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.impl.Throwables;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,7 +60,7 @@ class RegistryMeter implements Meter {
         // Linkage errors sometimes happen due to compatibility issues. If it is a problem for
         // the application, then it can fail elsewhere. If it happens for monitoring, then the
         // additional context of the id is typically helpful.
-        Throwables.propagate("failed to measure " + m.id(), e);
+        registry.propagate("failed to measure " + m.id(), e);
       }
     }
     return ms;

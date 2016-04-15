@@ -17,7 +17,6 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
-import com.netflix.spectator.impl.Throwables;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class AbstractRegistry implements Registry {
 
   private final Clock clock;
+  private final RegistryConfig config;
 
   private final ConcurrentHashMap<Id, Meter> meters;
 
@@ -39,7 +39,20 @@ public abstract class AbstractRegistry implements Registry {
    *     Clock used for performing all timing measurements.
    */
   public AbstractRegistry(Clock clock) {
+    this(clock, Config.defaultConfig());
+  }
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   */
+  public AbstractRegistry(Clock clock, RegistryConfig config) {
     this.clock = clock;
+    this.config = config;
     meters = new ConcurrentHashMap<>();
   }
 
@@ -77,6 +90,10 @@ public abstract class AbstractRegistry implements Registry {
     return clock;
   }
 
+  @Override public final RegistryConfig config() {
+    return config;
+  }
+
   @Override public final Id createId(String name) {
     return new DefaultId(name);
   }
@@ -90,7 +107,7 @@ public abstract class AbstractRegistry implements Registry {
     final String ftype = found.getName();
     final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
       id, dtype, ftype);
-    Throwables.propagate(new IllegalStateException(msg));
+    propagate(new IllegalStateException(msg));
   }
 
   private void addToAggr(Meter aggr, Meter meter) {
@@ -102,11 +119,11 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   private Meter compute(Meter m, Meter fallback) {
-    return (meters.size() >= Config.maxNumberOfMeters()) ? fallback : m;
+    return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
   @Override public void register(Meter meter) {
-    Meter aggr = (meters.size() >= Config.maxNumberOfMeters())
+    Meter aggr = (meters.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
       : meters.computeIfAbsent(meter.id(), AggrMeter::new);
     if (aggr != null) {
@@ -124,7 +141,7 @@ public abstract class AbstractRegistry implements Registry {
       }
       return (Counter) m;
     } catch (Exception e) {
-      Throwables.propagate(e);
+      propagate(e);
       return NoopCounter.INSTANCE;
     }
   }
@@ -140,7 +157,7 @@ public abstract class AbstractRegistry implements Registry {
       }
       return (DistributionSummary) m;
     } catch (Exception e) {
-      Throwables.propagate(e);
+      propagate(e);
       return NoopDistributionSummary.INSTANCE;
     }
   }
@@ -154,7 +171,7 @@ public abstract class AbstractRegistry implements Registry {
       }
       return (Timer) m;
     } catch (Exception e) {
-      Throwables.propagate(e);
+      propagate(e);
       return NoopTimer.INSTANCE;
     }
   }

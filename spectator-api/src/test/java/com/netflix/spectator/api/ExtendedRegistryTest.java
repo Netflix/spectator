@@ -331,4 +331,25 @@ public class ExtendedRegistryTest {
     Assert.assertEquals(16L, totalSummary.getSum());
     Assert.assertEquals(13L, totalSummary.getMax());
   }
+
+  @Test
+  public void propagateWarningsDefault() {
+    RegistryConfig config = k -> null;
+    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+    r.propagate("foo", new RuntimeException("test"));
+  }
+
+  @Test
+  public void propagateWarningsFalse() {
+    RegistryConfig config = k -> "propagateWarnings".equals(k) ? "false" : null;
+    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+    r.propagate("foo", new RuntimeException("test"));
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void propagateWarningsTrue() {
+    RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
+    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+    r.propagate("foo", new RuntimeException("test"));
+  }
 }

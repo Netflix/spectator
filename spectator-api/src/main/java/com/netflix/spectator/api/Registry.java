@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Config;
+import org.slf4j.LoggerFactory;
+
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
@@ -32,6 +35,13 @@ public interface Registry extends Iterable<Meter> {
    * The clock used by the registry for timing events.
    */
   Clock clock();
+
+  /**
+   * Configuration settings used for this registry.
+   */
+  default RegistryConfig config() {
+    return Config.defaultConfig();
+  }
 
   /**
    * Creates an identifier for a meter. All ids passed into other calls should be created by the
@@ -604,7 +614,7 @@ public interface Registry extends Iterable<Meter> {
    *     Name of the method to invoke on the object.
    */
   default void methodValue(Id id, Object obj, String method) {
-    final Method m = Utils.getGaugeMethod(id, obj, method);
+    final Method m = Utils.getGaugeMethod(this, id, obj, method);
     if (m != null) {
       gauge(id, obj, Functions.invokeMethod(m));
     }
@@ -687,5 +697,43 @@ public interface Registry extends Iterable<Meter> {
    */
   default Stream<Timer> timers() {
     return stream().filter(m -> m instanceof Timer).map(m -> (Timer) m);
+  }
+
+  /**
+   * Log a warning and if enabled propagate the exception {@code t}. As a general rule
+   * instrumentation code should degrade gracefully and avoid impacting the core application. If
+   * the user makes a mistake and causes something to break, then it should not impact the
+   * application unless that mistake triggers a problem outside of the instrumentation code.
+   * However, in test code it is often better to throw so that mistakes are caught and corrected.
+   *
+   * This method is used to handle exceptions internal to the instrumentation code. Propagation
+   * is controlled by the {@link RegistryConfig#propagateWarnings()} setting. If the setting
+   * is true, then the exception will be propagated. Otherwise the exception will only get logged
+   * as a warning.
+   *
+   * @param msg
+   *     Message written out to the log.
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  default void propagate(String msg, Throwable t) {
+    LoggerFactory.getLogger(getClass()).warn(msg, t);
+    if (config().propagateWarnings()) {
+      if (t instanceof RuntimeException) {
+        throw (RuntimeException) t;
+      } else {
+        throw new RuntimeException(t);
+      }
+    }
+  }
+  /**
+   * Log a warning using the message from the exception and if enabled propagate the
+   * exception {@code t}. For more information see {@link #propagate(String, Throwable)}.
+   *
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  default void propagate(Throwable t) {
+    propagate(t.getMessage(), t);
   }
 }

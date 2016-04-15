@@ -17,7 +17,6 @@ package com.netflix.spectator.metrics3;
 
 import com.codahale.metrics.Gauge;
 import com.netflix.spectator.api.*;
-import com.netflix.spectator.impl.Throwables;
 
 import java.util.Collection;
 import java.util.Map;
@@ -72,7 +71,7 @@ public class MetricsRegistry extends AbstractRegistry {
       } catch (IllegalArgumentException e) {
         // This exception can be raised if someone registered a metric with the same name as the one being
         // registered now directly on the MetricsRegister
-        Throwables.propagate(e);
+        propagate(e);
         return null;
       }
       return aggr;
