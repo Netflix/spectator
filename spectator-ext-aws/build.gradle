@@ -1,4 +1,5 @@
 dependencies {
   compile project(":spectator-api")
   compile "com.amazonaws:aws-java-sdk-core"
+  testCompile "com.amazonaws:aws-java-sdk-cloudwatch"
 }
