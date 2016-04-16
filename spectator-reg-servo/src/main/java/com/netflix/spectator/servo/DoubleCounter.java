@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.servo;
 
-import com.google.common.base.Objects;
 import com.netflix.servo.annotations.DataSourceType;
 import com.netflix.servo.monitor.AbstractMonitor;
 import com.netflix.servo.monitor.MonitorConfig;
@@ -80,9 +79,6 @@ class DoubleCounter extends AbstractMonitor<Number> implements NumericMonitor<Nu
   }
 
   @Override public String toString() {
-    return Objects.toStringHelper(this)
-        .add("config", config)
-        .add("count", getValue())
-        .toString();
+    return "DoubleCounter(config=" + config + ",count=" + getValue() + ")";
   }
 }

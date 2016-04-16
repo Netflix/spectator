@@ -40,7 +40,14 @@ public class SpectatorAppenderTest {
   private LogEvent newEvent(Level level, Throwable t, boolean includeSource) {
     final String cname = SpectatorAppenderTest.class.getName();
     final StackTraceElement e = (t == null || !includeSource) ? null : t.getStackTrace()[0];
-    return new Log4jLogEvent(cname, null, cname, level, null, t, null, null, null, e, 0);
+    return new Log4jLogEvent.Builder()
+        .setLoggerName(cname)
+        .setLoggerFqcn(cname)
+        .setLevel(level)
+        .setThrown(t)
+        .setSource(e)
+        .setTimeMillis(0L)
+        .build();
   }
 
   @Before
