@@ -4,7 +4,7 @@
     
     <url>
      <loc>http://netflix.github.io/spectator/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
     
@@ -19,25 +19,25 @@
         
     <url>
      <loc>http://netflix.github.io/spectator/intro/conventions/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/intro/testing/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/intro/netflix/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/intro/servo-comparison/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -47,31 +47,31 @@
         
     <url>
      <loc>http://netflix.github.io/spectator/ext/jvm-buffer-pools/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/ext/jvm-gc/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/ext/jvm-gc-causes/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/ext/jvm-memory-pools/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/ext/log4j2/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -81,19 +81,19 @@
         
     <url>
      <loc>http://netflix.github.io/spectator/registry/metrics3/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/registry/servo/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
     <url>
      <loc>http://netflix.github.io/spectator/registry/tdigest/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
         
@@ -102,7 +102,7 @@
     
     <url>
      <loc>http://netflix.github.io/spectator/reports/</loc>
-     <lastmod>2016-04-14</lastmod>
+     <lastmod>2016-04-18</lastmod>
      <changefreq>daily</changefreq>
     </url>
     

@@ -24,20 +24,13 @@ public final class Spectator {
 <span class="fc" id="L24">  private static final ExtendedRegistry REGISTRY = new ExtendedRegistry(COMPOSITE_REGISTRY);</span>
 
   /**
-   * Return the config implementation being used.
-   */
-  public static ConfigMap config() {
-<span class="nc" id="L30">    return new SystemConfigMap();</span>
-  }
-
-  /**
    * Returns the global registry.
    *
    * @deprecated Use injection or {@link #globalRegistry()} instead.
    */
   @Deprecated
   public static ExtendedRegistry registry() {
-<span class="fc" id="L40">    return REGISTRY;</span>
+<span class="fc" id="L33">    return REGISTRY;</span>
   }
 
   /**
@@ -85,10 +78,10 @@ public final class Spectator {
    * &lt;/pre&gt;
    */
   public static CompositeRegistry globalRegistry() {
-<span class="nc" id="L88">    return COMPOSITE_REGISTRY;</span>
+<span class="nc" id="L81">    return COMPOSITE_REGISTRY;</span>
   }
 
-<span class="nc" id="L91">  private Spectator() {</span>
-<span class="nc" id="L92">  }</span>
+<span class="nc" id="L84">  private Spectator() {</span>
+<span class="nc" id="L85">  }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

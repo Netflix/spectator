@@ -17,7 +17,6 @@ package com.netflix.spectator.metrics3;
 
 import com.codahale.metrics.Gauge;
 import com.netflix.spectator.api.*;
-import com.netflix.spectator.impl.Throwables;
 
 import java.util.Collection;
 import java.util.Map;
@@ -34,70 +33,70 @@ public class MetricsRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public MetricsRegistry() {
-<span class="nc" id="L37">    this(Clock.SYSTEM, new com.codahale.metrics.MetricRegistry());</span>
-<span class="nc" id="L38">  }</span>
+<span class="nc" id="L36">    this(Clock.SYSTEM, new com.codahale.metrics.MetricRegistry());</span>
+<span class="nc" id="L37">  }</span>
 
   /** Create a new instance. */
   public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
-<span class="fc" id="L42">    super(clock);</span>
-<span class="fc" id="L43">    this.impl = impl;</span>
-<span class="fc" id="L44">    this.registeredGauges = new ConcurrentHashMap&lt;&gt;();</span>
-<span class="fc" id="L45">  }</span>
+<span class="fc" id="L41">    super(clock);</span>
+<span class="fc" id="L42">    this.impl = impl;</span>
+<span class="fc" id="L43">    this.registeredGauges = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L44">  }</span>
 
   @Override protected Counter newCounter(Id id) {
-<span class="fc" id="L48">    final String name = toMetricName(id);</span>
-<span class="fc" id="L49">    return new MetricsCounter(clock(), id, impl.meter(name));</span>
+<span class="fc" id="L47">    final String name = toMetricName(id);</span>
+<span class="fc" id="L48">    return new MetricsCounter(clock(), id, impl.meter(name));</span>
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-<span class="fc" id="L53">    final String name = toMetricName(id);</span>
-<span class="fc" id="L54">    return new MetricsDistributionSummary(clock(), id, impl.histogram(name));</span>
+<span class="fc" id="L52">    final String name = toMetricName(id);</span>
+<span class="fc" id="L53">    return new MetricsDistributionSummary(clock(), id, impl.histogram(name));</span>
   }
 
   @Override protected Timer newTimer(Id id) {
-<span class="fc" id="L58">    final String name = toMetricName(id);</span>
-<span class="fc" id="L59">    return new MetricsTimer(clock(), id, impl.timer(name));</span>
+<span class="fc" id="L57">    final String name = toMetricName(id);</span>
+<span class="fc" id="L58">    return new MetricsTimer(clock(), id, impl.timer(name));</span>
   }
 
   @Override public &lt;T extends Number&gt; T gauge(Id id, T number) {
-<span class="fc" id="L63">    return gauge(id, number, (ToDoubleFunction&lt;T&gt;) value -&gt; number.doubleValue());</span>
+<span class="fc" id="L62">    return gauge(id, number, (ToDoubleFunction&lt;T&gt;) value -&gt; number.doubleValue());</span>
   }
 
   @Override public &lt;T&gt; T gauge(Id id, T obj, ToDoubleFunction&lt;T&gt; f) {
-<span class="fc" id="L67">    final Gauge aggrGauge = registeredGauges.computeIfAbsent(id, idKey -&gt; {</span>
-<span class="fc" id="L68">      final String name = toMetricName(id);</span>
-<span class="fc" id="L69">      final MetricsGaugeAggr aggr = new MetricsGaugeAggr();</span>
+<span class="fc" id="L66">    final Gauge aggrGauge = registeredGauges.computeIfAbsent(id, idKey -&gt; {</span>
+<span class="fc" id="L67">      final String name = toMetricName(id);</span>
+<span class="fc" id="L68">      final MetricsGaugeAggr aggr = new MetricsGaugeAggr();</span>
       try {
-<span class="fc" id="L71">        this.impl.register(name, aggr);</span>
-<span class="fc" id="L72">      } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L70">        this.impl.register(name, aggr);</span>
+<span class="fc" id="L71">      } catch (IllegalArgumentException e) {</span>
         // This exception can be raised if someone registered a metric with the same name as the one being
         // registered now directly on the MetricsRegister
-<span class="fc" id="L75">        Throwables.propagate(e);</span>
-<span class="fc" id="L76">        return null;</span>
-<span class="fc" id="L77">      }</span>
-<span class="fc" id="L78">      return aggr;</span>
+<span class="fc" id="L74">        propagate(e);</span>
+<span class="fc" id="L75">        return null;</span>
+<span class="fc" id="L76">      }</span>
+<span class="fc" id="L77">      return aggr;</span>
     });
 
-<span class="fc bfc" id="L81" title="All 2 branches covered.">    if (aggrGauge != null) {</span>
-<span class="fc" id="L82">      final MetricsGauge&lt;T&gt; simpleGauge = new MetricsGauge&lt;&gt;(clock(), id, obj, f);</span>
-<span class="fc" id="L83">      register(simpleGauge);</span>
-<span class="fc" id="L84">      ((MetricsGaugeAggr) aggrGauge).addGauge(simpleGauge);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    if (aggrGauge != null) {</span>
+<span class="fc" id="L81">      final MetricsGauge&lt;T&gt; simpleGauge = new MetricsGauge&lt;&gt;(clock(), id, obj, f);</span>
+<span class="fc" id="L82">      register(simpleGauge);</span>
+<span class="fc" id="L83">      ((MetricsGaugeAggr) aggrGauge).addGauge(simpleGauge);</span>
     }
 
-<span class="fc" id="L87">    return obj;</span>
+<span class="fc" id="L86">    return obj;</span>
   }
 
   @Override
   public &lt;T&gt; T gauge(Id id, T obj, ValueFunction&lt;T&gt; f) {
-<span class="nc" id="L92">    return gauge(id, obj, ((ToDoubleFunction&lt;T&gt;) f));</span>
+<span class="nc" id="L91">    return gauge(id, obj, ((ToDoubleFunction&lt;T&gt;) f));</span>
   }
 
   @Override public &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(Id id, T collection) {
-<span class="fc" id="L96">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Collection::size);</span>
+<span class="fc" id="L95">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Collection::size);</span>
   }
 
   @Override public &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(Id id, T collection) {
-<span class="fc" id="L100">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Map::size);</span>
+<span class="fc" id="L99">    return gauge(id, collection, (ToDoubleFunction&lt;T&gt;) Map::size);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

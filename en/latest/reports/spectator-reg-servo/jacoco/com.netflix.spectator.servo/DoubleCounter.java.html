@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.servo;
 
-import com.google.common.base.Objects;
 import com.netflix.servo.annotations.DataSourceType;
 import com.netflix.servo.monitor.AbstractMonitor;
 import com.netflix.servo.monitor.MonitorConfig;
@@ -37,8 +36,8 @@ class DoubleCounter extends AbstractMonitor&lt;Number&gt; implements NumericMoni
    * Creates a new instance of the counter.
    */
   DoubleCounter(MonitorConfig config) {
-<span class="nc" id="L40">    this(config, ClockWithOffset.INSTANCE);</span>
-<span class="nc" id="L41">  }</span>
+<span class="nc" id="L39">    this(config, ClockWithOffset.INSTANCE);</span>
+<span class="nc" id="L40">  }</span>
 
   /**
    * Creates a new instance of the counter.
@@ -47,43 +46,40 @@ class DoubleCounter extends AbstractMonitor&lt;Number&gt; implements NumericMoni
     // This class will reset the value so it is not a monotonically increasing value as
     // expected for type=COUNTER. This class looks like a counter to the user and a gauge to
     // the publishing pipeline receiving the value.
-<span class="fc" id="L50">    super(config.withAdditionalTag(DataSourceType.NORMALIZED));</span>
-<span class="fc" id="L51">    count = new StepLong(0L, clock);</span>
-<span class="fc" id="L52">  }</span>
+<span class="fc" id="L49">    super(config.withAdditionalTag(DataSourceType.NORMALIZED));</span>
+<span class="fc" id="L50">    count = new StepLong(0L, clock);</span>
+<span class="fc" id="L51">  }</span>
 
   private void add(AtomicLong num, double amount) {
     long v;
     double d;
     long next;
     do {
-<span class="fc" id="L59">      v = num.get();</span>
-<span class="fc" id="L60">      d = Double.longBitsToDouble(v);</span>
-<span class="fc" id="L61">      next = Double.doubleToLongBits(d + amount);</span>
-<span class="pc bpc" id="L62" title="1 of 2 branches missed.">    } while (!num.compareAndSet(v, next));</span>
-<span class="fc" id="L63">  }</span>
+<span class="fc" id="L58">      v = num.get();</span>
+<span class="fc" id="L59">      d = Double.longBitsToDouble(v);</span>
+<span class="fc" id="L60">      next = Double.doubleToLongBits(d + amount);</span>
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">    } while (!num.compareAndSet(v, next));</span>
+<span class="fc" id="L62">  }</span>
 
   /**
    * Increment the value by the specified amount.
    */
   void increment(double amount) {
-<span class="pc bpc" id="L69" title="1 of 2 branches missed.">    if (amount &gt;= 0.0) {</span>
-<span class="fc bfc" id="L70" title="All 2 branches covered.">      for (int i = 0; i &lt; ServoPollers.NUM_POLLERS; ++i) {</span>
-<span class="fc" id="L71">        add(count.getCurrent(i), amount);</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">    if (amount &gt;= 0.0) {</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">      for (int i = 0; i &lt; ServoPollers.NUM_POLLERS; ++i) {</span>
+<span class="fc" id="L70">        add(count.getCurrent(i), amount);</span>
       }
     }
-<span class="fc" id="L74">  }</span>
+<span class="fc" id="L73">  }</span>
 
   @Override public Number getValue(int pollerIndex) {
-<span class="fc" id="L77">    final Long dp = count.poll(pollerIndex);</span>
-<span class="fc" id="L78">    final double stepSeconds = ServoPollers.POLLING_INTERVALS[pollerIndex] / 1000.0;</span>
-<span class="fc bfc" id="L79" title="All 2 branches covered.">    return (dp == null) ? Double.NaN : Double.longBitsToDouble(dp.longValue()) / stepSeconds;</span>
+<span class="fc" id="L76">    final Long dp = count.poll(pollerIndex);</span>
+<span class="fc" id="L77">    final double stepSeconds = ServoPollers.POLLING_INTERVALS[pollerIndex] / 1000.0;</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">    return (dp == null) ? Double.NaN : Double.longBitsToDouble(dp.longValue()) / stepSeconds;</span>
   }
 
   @Override public String toString() {
-<span class="nc" id="L83">    return Objects.toStringHelper(this)</span>
-<span class="nc" id="L84">        .add(&quot;config&quot;, config)</span>
-<span class="nc" id="L85">        .add(&quot;count&quot;, getValue())</span>
-<span class="nc" id="L86">        .toString();</span>
+<span class="nc" id="L82">    return &quot;DoubleCounter(config=&quot; + config + &quot;,count=&quot; + getValue() + &quot;)&quot;;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

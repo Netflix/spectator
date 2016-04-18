@@ -28,16 +28,21 @@ public final class DefaultRegistry extends AbstractRegistry {
 <span class="fc" id="L28">    super(clock);</span>
 <span class="fc" id="L29">  }</span>
 
+  /** Create a new instance. */
+  public DefaultRegistry(Clock clock, RegistryConfig config) {
+<span class="fc" id="L33">    super(clock, config);</span>
+<span class="fc" id="L34">  }</span>
+
   @Override protected Counter newCounter(Id id) {
-<span class="fc" id="L32">    return new DefaultCounter(clock(), id);</span>
+<span class="fc" id="L37">    return new DefaultCounter(clock(), id);</span>
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-<span class="fc" id="L36">    return new DefaultDistributionSummary(clock(), id);</span>
+<span class="fc" id="L41">    return new DefaultDistributionSummary(clock(), id);</span>
   }
 
   @Override protected Timer newTimer(Id id) {
-<span class="fc" id="L40">    return new DefaultTimer(clock(), id);</span>
+<span class="fc" id="L45">    return new DefaultTimer(clock(), id);</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

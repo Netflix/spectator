@@ -281,7 +281,7 @@ duration and has no information until the task is complete.</p>
 <p>As an example, consider a chart showing request latency to a typical web
 server. The expectation is many short requests so the timer will be getting
 updated many times per second.</p>
-<p><img alt="Request Latency" src="https://raw.githubusercontent.com/wiki/Netflix/spectator/images/request_latency.png" /></p>
+<p><img alt="Request Latency" src="../../images/request_latency.png" /></p>
 <p>Now consider a background process to refresh metadata from a data store. For
 example, Edda caches AWS resources such as instances, volumes, auto-scaling
 groups etc. Normally all data can be refreshed in a few minutes. If the AWS
@@ -290,9 +290,9 @@ can be used to track the overall time for refreshing the metadata.</p>
 <p>The charts below show max latency for the refresh using a regular timer and
 a long task timer. Regular timer, note that the y-axis is using a logarithmic
 scale:</p>
-<p><img alt="Regular Timer" src="https://raw.githubusercontent.com/wiki/Netflix/spectator/images/regular_timer.png" /></p>
+<p><img alt="Regular Timer" src="../../images/regular_timer.png" /></p>
 <p>Long task timer:</p>
-<p><img alt="Long Task Timer" src="https://raw.githubusercontent.com/wiki/Netflix/spectator/images/duration_timer.png" /></p>
+<p><img alt="Long Task Timer" src="../../images/duration_timer.png" /></p>
 <h2 id="timer">Timer<a class="headerlink" href="#timer" title="Permanent link">&para;</a></h2>
 <p>To get started create an instance using the registry:</p>
 <pre><code class="java">public class Server {

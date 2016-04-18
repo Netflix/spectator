@@ -61,8 +61,8 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
   };
 
 <span class="fc" id="L63">  private static final TagField[] TAGS = {</span>
-      new TagField(Field.ServiceEndpoint),
-      new TagField(Field.ServiceName, SpectatorRequestMetricCollector::getHost),
+      new TagField(Field.ServiceEndpoint, SpectatorRequestMetricCollector::getHost),
+      new TagField(Field.ServiceName),
       new TagField(Field.StatusCode)
   };
 
@@ -126,9 +126,9 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     }
 <span class="fc" id="L127">    baseTags.put(&quot;requestType&quot;, request.getOriginalRequest().getClass().getSimpleName());</span>
 <span class="fc" id="L128">    final boolean error = isError(metrics);</span>
-<span class="pc bpc" id="L129" title="1 of 2 branches missed.">    if (error) {</span>
-<span class="nc bnc" id="L130" title="All 2 branches missed.">      for (TagField tag : ERRORS) {</span>
-<span class="nc" id="L131">        baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (error) {</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">      for (TagField tag : ERRORS) {</span>
+<span class="fc" id="L131">        baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));</span>
       }
     }
 <span class="fc" id="L134">    baseTags.put(&quot;error&quot;, Boolean.toString(error));</span>
@@ -175,8 +175,8 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static boolean isError(AWSRequestMetrics metrics) {
 <span class="fc bfc" id="L177" title="All 2 branches covered.">    for (TagField err : ERRORS) {</span>
-<span class="pc bpc" id="L178" title="1 of 2 branches missed.">      if (err.getValue(metrics).isPresent()) {</span>
-<span class="nc" id="L179">        return true;</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">      if (err.getValue(metrics).isPresent()) {</span>
+<span class="fc" id="L179">        return true;</span>
       }
     }
 <span class="fc" id="L182">    return false;</span>
@@ -184,7 +184,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static String getHost(Object u) {
     try {
-<span class="nc" id="L187">      return URI.create(u.toString()).getHost();</span>
+<span class="fc" id="L187">      return URI.create(u.toString()).getHost();</span>
 <span class="nc" id="L188">    } catch (Exception e) {</span>
 <span class="nc" id="L189">      LOGGER.debug(&quot;failed to parse endpoint uri: &quot; + u, e);</span>
 <span class="nc" id="L190">      return UNKNOWN;</span>
