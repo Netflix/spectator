@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<pmd version="5.1.1" timestamp="2015-03-10T09:58:59.940">
-<file name="/Users/brharrington/stash/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/Agent.java">
-<violation beginline="46" endline="46" begincolumn="11" endcolumn="29" rule="AvoidPrintStackTrace" ruleset="Java Logging" package="com.netflix.spectator.agent" class="Agent" method="run" externalInfoUrl="http://pmd.sourceforge.net/pmd-5.1.1/rules/java/logging-java.html#AvoidPrintStackTrace" priority="3">
-Avoid printStackTrace(); use a logger call instead.
-</violation>
-</file>
-</pmd>
