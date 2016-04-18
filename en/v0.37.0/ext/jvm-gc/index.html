@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  
+  <title>Garbage Collection - Spectator Docs</title>
+  
+
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/highlight.css">
+  <link href="../../css/custom.css" rel="stylesheet">
+
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Garbage Collection";
+    var mkdocs_page_input_path = "ext/jvm-gc.md";
+    var mkdocs_page_url = "/ext/jvm-gc/";
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js"></script>
+  <script src="../../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../../js/highlight.pack.js"></script>
+  <script src="../../js/theme.js"></script> 
+
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> Spectator Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Getting Started</span></li>
+
+        
+            
+    <ul class="subnav">
+    <li><span>Meter Types</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/counter/">Counters</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/timer/">Timers</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/gauge/">Gauges</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/dist-summary/">Distribution Summaries</a>
+        
+    </li>
+
+        
+    </ul>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/testing/">Testing</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/netflix/">Netflix Integration</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/servo-comparison/">Servo Comparison</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Extensions</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-buffer-pools/">Buffer Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 current">
+        <a class="current" href="./">Garbage Collection</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#garbage-collection">Garbage Collection</a></li>
+                
+                    <li><a class="toctree-l4" href="#getting-started">Getting Started</a></li>
+                
+                    <li><a class="toctree-l4" href="#logging">Logging</a></li>
+                
+                    <li><a class="toctree-l4" href="#metrics">Metrics</a></li>
+                
+                    <li><a class="toctree-l4" href="#alerting">Alerting</a></li>
+                
+            
+            </ul>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-gc-causes/">GC Causes</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-memory-pools/">Memory Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../log4j2/">Log4j2 Appender</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Registries</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/metrics3/">Metrics3</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/servo/">Servo</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/tdigest/">TDigest</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../reports/">Build Reports</a>
+        
+    </li>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">Spectator Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Extensions &raquo;</li>
+        
+      
+    
+    <li>Garbage Collection</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        
+          <a href="https://github.com/Netflix/spectator" class="icon icon-github"> Edit on GitHub</a>
+        
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="garbage-collection">Garbage Collection<a class="headerlink" href="#garbage-collection" title="Permanent link">&para;</a></h1>
+<p>The GC module registers with the notification emitter of the
+<a href="http://docs.oracle.com/javase/7/docs/api/java/lang/management/GarbageCollectorMXBean.html">GarbageCollectorMXBean</a>
+to provide some basic GC logging and metrics.</p>
+<ul>
+<li><a href="#getting-started">Getting started</a></li>
+<li><a href="#logging">Logging</a></li>
+<li><a href="#metrics">Metrics</a></li>
+<li><a href="#alerting">Alerting</a></li>
+</ul>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>For using it internally at Netflix see the <a href="../../intro/netflix/">Netflix integration</a> guide,
+otherwise keep reading this section.</p>
+<h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
+<p>This library relies on the notification emitter added in 7u4, but there are known issues prior
+to 7u40. For G1 it is recommended to be on the latest version available.</p>
+<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h3>
+<pre><code>com.netflix.spectator:spectator-ext-gc:0.37.0
+</code></pre>
+
+<h3 id="start-reporting">Start Reporting<a class="headerlink" href="#start-reporting" title="Permanent link">&para;</a></h3>
+<p>Then in the initialization for the application:</p>
+<pre><code class="java">import com.netflix.spectator.gc.GcLogger;
+...
+// Keep a single instance of the logger
+GcLogger gc = new GcLogger();
+gc.start(null);
+</code></pre>
+
+<h2 id="logging">Logging<a class="headerlink" href="#logging" title="Permanent link">&para;</a></h2>
+<p>After GC events an INFO level log message will get reported using slf4j. This makes it easy to
+GC events in the context of other log messages for the application. The logger name is
+<code>com.netflix.spectator.gc.GcLogger</code> and the message will look like:</p>
+<pre><code>${GC_TYPE}: ${COLLECTOR_NAME}, id=${N}, at=${START_TIME}, duration=${T}ms, cause=[${CAUSE}], ${TOTAL_USAGE_BEFORE} =&gt; ${TOTAL_USAGE_AFTER} / ${MAX_SIZE} (${PERCENT_USAGE_BEFORE} =&gt; ${PERCENT_USAGE_AFTER})
+</code></pre>
+
+<p>The id can be used to verify events were not skipped or correlate with other sources like
+detailed GC logs. See [[GC causes]] for more details on the possible causes.</p>
+<p>Sample:</p>
+<pre><code>2014-08-31 02:02:24,724  INFO [com.netflix.spectator.gc.GcLogger] YOUNG: ParNew, id=5281, at=Sun Aug 31 02:02:24 UTC 2014, duration=2ms, cause=[Allocation Failure], 0.4G =&gt; 0.3G / 1.8G (24.3% =&gt; 16.6%)
+</code></pre>
+
+<h2 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">&para;</a></h2>
+<h3 id="jvmgcallocationrate">jvm.gc.allocationRate<a class="headerlink" href="#jvmgcallocationrate" title="Permanent link">&para;</a></h3>
+<p>The allocation rate measures how fast the application is allocating memory. It is a counter
+that is incremented after a GC event by the amount <code>youngGen.sizeBeforeGC</code>. Technically, right
+now it is:</p>
+<p><code>youngGen.sizeBeforeGC - youngGen.sizeAfterGC</code></p>
+<p>However, <code>youngGen.sizeAfterGC</code> should be 0 and thus the size of young gen before the GC is
+the amount allocated since the previous GC event.</p>
+<p><strong>Unit:</strong> bytes/second</p>
+<p><strong>Dimensions:</strong> n/a</p>
+<h3 id="jvmgcpromotionrate">jvm.gc.promotionRate<a class="headerlink" href="#jvmgcpromotionrate" title="Permanent link">&para;</a></h3>
+<p>The promotion rate measures how fast data is being moved from young generation into the old
+generation. It is a counter that is incremented after a GC event by the amount:</p>
+<p><code>abs(oldGen.sizeAfterGC - oldGen.sizeBeforeGC)</code></p>
+<p><strong>Unit:</strong> bytes/second</p>
+<p><strong>Dimensions:</strong> n/a</p>
+<h3 id="jvmgclivedatasize">jvm.gc.liveDataSize<a class="headerlink" href="#jvmgclivedatasize" title="Permanent link">&para;</a></h3>
+<p>The live data size is the size of the old generation after a major GC. The image below shows
+how the live data size view compares to a metric showing the current size of the memory pool:</p>
+<p><img alt="Live Data Size" src="../../images/live_data_size.png" /></p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong> n/a</p>
+<h3 id="jvmgcmaxdatasize">jvm.gc.maxDataSize<a class="headerlink" href="#jvmgcmaxdatasize" title="Permanent link">&para;</a></h3>
+<p>Maximum size for the old generation. Primary use-case is for gaining perspective on the the
+live data size.</p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong> n/a</p>
+<h3 id="jvmgcpause">jvm.gc.pause<a class="headerlink" href="#jvmgcpause" title="Permanent link">&para;</a></h3>
+<p>Timer reporting the pause time for a GC event. All of the values reported are stop the world
+pauses.</p>
+<p><strong>Unit:</strong></p>
+<ul>
+<li><code>statistic=max</code>: seconds</li>
+<li><code>statistic=count</code>: events/second</li>
+<li><code>statistic=totalTime</code>: seconds/second </li>
+</ul>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>action</code>: action performed by the garbage collector (<a href="http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcAction()">javadoc</a>). There is no guarantee, but the typical values seen are <code>end_of_major_GC</code> and <code>end_of_minor_GC</code>. </li>
+<li><code>cause</code>: cause that instigated GC (<a href="http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcCause()">javadoc</a>). For an explanation of common causes see the [[GC Causes]] page.</li>
+</ul>
+<h2 id="alerting">Alerting<a class="headerlink" href="#alerting" title="Permanent link">&para;</a></h2>
+<p>This section assumes the data is available in <a href="https://github.com/Netflix/atlas/wiki/">Atlas</a>,
+but users of other systems should be able to take the idea and make it work. For all of these
+alerts it is recommended to check them on instance. At Netflix that can be done by selecting
+the option in alert ui:</p>
+<blockquote>
+<p><img alt="On Instance Alerting" src="../../images/on_instance.png" /></p>
+</blockquote>
+<h3 id="max-pause-time">Max Pause Time<a class="headerlink" href="#max-pause-time" title="Permanent link">&para;</a></h3>
+<p>Example to trigger an alert if the <a href="#jvmgcpause">pause time</a> exceeds 500 milliseconds:</p>
+<pre><code>name,jvm.gc.pause,:eq,
+statistic,max,:eq,
+:and,
+:max,(,cause,),:by,
+0.5,:gt,
+$cause,:legend
+</code></pre>
+
+<h3 id="heap-pressure">Heap Pressure<a class="headerlink" href="#heap-pressure" title="Permanent link">&para;</a></h3>
+<p>Example to trigger an alert if the <a href="#jvmgclivedatasize">live data size</a> is over 70% of the heap:</p>
+<pre><code>name,jvm.gc.liveDataSize,:eq,:max,
+name,jvm.gc.maxDataSize,:eq,:max,
+:div,100,:mul,
+70,:gt,
+percentUsed,:legend
+</code></pre>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../jvm-gc-causes/" class="btn btn-neutral float-right" title="GC Causes">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../jvm-buffer-pools/" class="btn btn-neutral" title="Buffer Pools"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+<div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/Netflix/spectator" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../jvm-buffer-pools/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../jvm-gc-causes/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+
+</body>
+</html>
