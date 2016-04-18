@@ -14,7 +14,7 @@ As an example, consider a chart showing request latency to a typical web
 server. The expectation is many short requests so the timer will be getting
 updated many times per second.
 
-![Request Latency](https://raw.githubusercontent.com/wiki/Netflix/spectator/images/request_latency.png)
+![Request Latency](../images/request_latency.png)
 
 Now consider a background process to refresh metadata from a data store. For
 example, Edda caches AWS resources such as instances, volumes, auto-scaling
@@ -26,11 +26,11 @@ The charts below show max latency for the refresh using a regular timer and
 a long task timer. Regular timer, note that the y-axis is using a logarithmic
 scale:
 
-![Regular Timer](https://raw.githubusercontent.com/wiki/Netflix/spectator/images/regular_timer.png)
+![Regular Timer](../images/regular_timer.png)
 
 Long task timer:
 
-![Long Task Timer](https://raw.githubusercontent.com/wiki/Netflix/spectator/images/duration_timer.png)
+![Long Task Timer](../images/duration_timer.png)
 
 ## Timer
 
