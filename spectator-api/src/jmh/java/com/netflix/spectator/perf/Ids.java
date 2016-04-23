@@ -28,10 +28,32 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @State(Scope.Thread)
 public class Ids {
 
   private final Registry registry = new DefaultRegistry();
+
+  private final Map<String, String> tags = getTags();
+
+  private Map<String, String> getTags() {
+    Map<String, String> m = new HashMap<>();
+    m.put("nf.app", "test_app");
+    m.put("nf.cluster", "test_app-main");
+    m.put("nf.asg", "test_app-main-v042");
+    m.put("nf.stack", "main");
+    m.put("nf.ami", "ami-0987654321");
+    m.put("nf.region", "us-east-1");
+    m.put("nf.zone", "us-east-1e");
+    m.put("nf.node", "i-1234567890");
+    m.put("country", "US");
+    m.put("device", "xbox");
+    m.put("status", "200");
+    m.put("client", "ab");
+    return m;
+  }
 
   @Threads(1)
   @Benchmark
@@ -55,6 +77,13 @@ public class Ids {
         .withTag("device", "xbox")
         .withTag("status", "200")
         .withTag("client", "ab");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsMap(Blackhole bh) {
+    Id id = registry.createId("http.req.complete").withTags(tags);
     bh.consume(id);
   }
 
