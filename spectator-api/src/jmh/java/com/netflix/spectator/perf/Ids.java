@@ -23,10 +23,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,20 +36,30 @@ public class Ids {
 
   private Map<String, String> getTags() {
     Map<String, String> m = new HashMap<>();
-    m.put("nf.app", "test_app");
+    m.put(    "nf.app", "test_app");
     m.put("nf.cluster", "test_app-main");
-    m.put("nf.asg", "test_app-main-v042");
-    m.put("nf.stack", "main");
-    m.put("nf.ami", "ami-0987654321");
-    m.put("nf.region", "us-east-1");
-    m.put("nf.zone", "us-east-1e");
-    m.put("nf.node", "i-1234567890");
-    m.put("country", "US");
-    m.put("device", "xbox");
-    m.put("status", "200");
-    m.put("client", "ab");
+    m.put(    "nf.asg", "test_app-main-v042");
+    m.put(  "nf.stack", "main");
+    m.put(    "nf.ami", "ami-0987654321");
+    m.put( "nf.region", "us-east-1");
+    m.put(   "nf.zone", "us-east-1e");
+    m.put(   "nf.node", "i-1234567890");
+    m.put(   "country", "US");
+    m.put(    "device", "xbox");
+    m.put(    "status", "200");
+    m.put(    "client", "ab");
     return m;
   }
+
+  private final Id baseId = registry.createId("http.req.complete")
+      .withTag(    "nf.app", "test_app")
+      .withTag("nf.cluster", "test_app-main")
+      .withTag(    "nf.asg", "test_app-main-v042")
+      .withTag(  "nf.stack", "main")
+      .withTag(    "nf.ami", "ami-0987654321")
+      .withTag( "nf.region", "us-east-1")
+      .withTag(   "nf.zone", "us-east-1e")
+      .withTag(   "nf.node", "i-1234567890");
 
   @Threads(1)
   @Benchmark
@@ -63,20 +69,58 @@ public class Ids {
 
   @Threads(1)
   @Benchmark
-  public void withTags(Blackhole bh) {
-    Id id = registry.createId("http.req.complete")
-        .withTag("nf.app", "test_app")
+  public void baseline(Blackhole bh) {
+    PrependId id = new PrependId("http.req.complete", null)
+        .withTag(    "nf.app", "test_app")
         .withTag("nf.cluster", "test_app-main")
-        .withTag("nf.asg", "test_app-main-v042")
-        .withTag("nf.stack", "main")
-        .withTag("nf.ami", "ami-0987654321")
-        .withTag("nf.region", "us-east-1")
-        .withTag("nf.zone", "us-east-1e")
-        .withTag("nf.node", "i-1234567890")
-        .withTag("country", "US")
-        .withTag("device", "xbox")
-        .withTag("status", "200")
-        .withTag("client", "ab");
+        .withTag(    "nf.asg", "test_app-main-v042")
+        .withTag(  "nf.stack", "main")
+        .withTag(    "nf.ami", "ami-0987654321")
+        .withTag( "nf.region", "us-east-1")
+        .withTag(   "nf.zone", "us-east-1e")
+        .withTag(   "nf.node", "i-1234567890")
+        .withTag(   "country", "US")
+        .withTag(    "device", "xbox")
+        .withTag(    "status", "200")
+        .withTag(    "client", "ab");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTag(Blackhole bh) {
+    Id id = registry.createId("http.req.complete")
+        .withTag(    "nf.app", "test_app")
+        .withTag("nf.cluster", "test_app-main")
+        .withTag(    "nf.asg", "test_app-main-v042")
+        .withTag(  "nf.stack", "main")
+        .withTag(    "nf.ami", "ami-0987654321")
+        .withTag( "nf.region", "us-east-1")
+        .withTag(   "nf.zone", "us-east-1e")
+        .withTag(   "nf.node", "i-1234567890")
+        .withTag(   "country", "US")
+        .withTag(    "device", "xbox")
+        .withTag(    "status", "200")
+        .withTag(    "client", "ab");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsVararg(Blackhole bh) {
+    Id id = registry.createId("http.req.complete").withTags(
+            "nf.app", "test_app",
+        "nf.cluster", "test_app-main",
+            "nf.asg", "test_app-main-v042",
+          "nf.stack", "main",
+            "nf.ami", "ami-0987654321",
+         "nf.region", "us-east-1",
+           "nf.zone", "us-east-1e",
+           "nf.node", "i-1234567890",
+           "country", "US",
+            "device", "xbox",
+            "status", "200",
+            "client", "ab");
     bh.consume(id);
   }
 
@@ -87,11 +131,56 @@ public class Ids {
     bh.consume(id);
   }
 
-  public static void main(String[] args) throws RunnerException {
-    Options opt = new OptionsBuilder()
-        .include(".*")
-        .forks(1)
-        .build();
-    new Runner(opt).run();
+  @Threads(1)
+  @Benchmark
+  public void append1(Blackhole bh) {
+    Id id = baseId.withTag("country", "US");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void append2(Blackhole bh) {
+    Id id = baseId.withTags(
+        "country", "US",
+         "device", "xbox");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void append4(Blackhole bh) {
+    Id id = baseId.withTags(
+        "country", "US",
+         "device", "xbox",
+         "status", "200",
+         "client", "ab");
+    bh.consume(id);
+  }
+
+  public static class PrependId {
+    public final String name;
+    public final PrependTagList tags;
+
+    public PrependId(String name, PrependTagList tags) {
+      this.name = name;
+      this.tags = tags;
+    }
+
+    public PrependId withTag(String k, String v) {
+      return new PrependId(name, new PrependTagList(k, v, tags));
+    }
+  }
+
+  public static class PrependTagList {
+    public final String key;
+    public final String value;
+    public final PrependTagList next;
+
+    public PrependTagList(String key, String value, PrependTagList next) {
+      this.key = key;
+      this.value = value;
+      this.next = next;
+    }
   }
 }

@@ -34,6 +34,15 @@ public interface Id {
   Id withTag(Tag t);
 
   /** New id with additional tag values. */
+  default Id withTags(String... tags) {
+    Id tmp = this;
+    for (int i = 0; i < tags.length; i += 2) {
+      tmp = tmp.withTag(tags[i], tags[i + 1]);
+    }
+    return tmp;
+  }
+
+  /** New id with additional tag values. */
   Id withTags(Iterable<Tag> tags);
 
   /** New id with additional tag values. */
