@@ -240,7 +240,7 @@ public final class Utils {
     }
     ArrayList<Tag> ts = new ArrayList<>(tags.length);
     for (int i = 0; i < tags.length; i += 2) {
-      ts.add(new TagList(tags[i], tags[i + 1]));
+      ts.add(new BasicTag(tags[i], tags[i + 1]));
     }
     return ts;
   }

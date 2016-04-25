@@ -42,7 +42,7 @@ public class NoopRegistryTest {
   @Test
   public void testCreateIdWithTags() {
     Registry r = new NoopRegistry();
-    TagList ts = new TagList("k", "v");
+    ArrayTagSet ts = ArrayTagSet.create("k", "v");
     Assert.assertEquals(r.createId("foo", ts), NoopId.INSTANCE);
   }
 

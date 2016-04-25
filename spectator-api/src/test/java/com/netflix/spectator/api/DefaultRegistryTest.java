@@ -48,7 +48,7 @@ public class DefaultRegistryTest {
   @Test
   public void testCreateIdWithTags() {
     Registry r = new DefaultRegistry(clock);
-    TagList ts = new TagList("k", "v");
+    ArrayTagSet ts = ArrayTagSet.create("k", "v");
     Assert.assertEquals(r.createId("foo", ts), new DefaultId("foo", ts));
   }
 

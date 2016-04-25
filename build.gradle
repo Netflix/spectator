@@ -71,7 +71,7 @@ subprojects {
     iterations = 10
     fork = 5
     profilers = ['stack']
-    include '.*'
+    include '.*Ids.*'
   }
 
   jacoco {

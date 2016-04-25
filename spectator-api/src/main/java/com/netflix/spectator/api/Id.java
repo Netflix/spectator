@@ -43,8 +43,29 @@ public interface Id {
   }
 
   /** New id with additional tag values. */
-  Id withTags(Iterable<Tag> tags);
+  default Id withTags(Tag... tags) {
+    Id tmp = this;
+    for (Tag t : tags) {
+      tmp = tmp.withTag(t);
+    }
+    return tmp;
+  }
 
   /** New id with additional tag values. */
-  Id withTags(Map<String, String> tags);
+  default Id withTags(Iterable<Tag> tags) {
+    Id tmp = this;
+    for (Tag t : tags) {
+      tmp = tmp.withTag(t);
+    }
+    return tmp;
+  }
+
+  /** New id with additional tag values. */
+  default Id withTags(Map<String, String> tags) {
+    Id tmp = this;
+    for (Map.Entry<String, String> entry : tags.entrySet()) {
+      tmp = tmp.withTag(entry.getKey(), entry.getValue());
+    }
+    return tmp;
+  }
 }

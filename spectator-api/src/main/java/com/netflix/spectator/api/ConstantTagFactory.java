@@ -33,7 +33,7 @@ public final class ConstantTagFactory implements TagFactory {
    *        the non-null value for the tag
    */
   public ConstantTagFactory(String key, String value) {
-    this(new TagList(key, value));
+    this(new BasicTag(key, value));
   }
 
   /**

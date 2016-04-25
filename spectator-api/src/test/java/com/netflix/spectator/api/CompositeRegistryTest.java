@@ -61,7 +61,7 @@ public class CompositeRegistryTest {
   @Test
   public void testCreateIdWithTags() {
     Registry r = newRegistry(5);
-    TagList ts = new TagList("k", "v");
+    ArrayTagSet ts = ArrayTagSet.create("k", "v");
     Assert.assertEquals(r.createId("foo", ts), new DefaultId("foo", ts));
   }
 

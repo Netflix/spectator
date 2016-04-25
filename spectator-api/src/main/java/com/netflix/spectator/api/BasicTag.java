@@ -21,6 +21,17 @@ import com.netflix.spectator.impl.Preconditions;
  * Immutable implementation of Tag.
  */
 public final class BasicTag implements Tag {
+
+  /**
+   * Convert an arbitrary implementation of {@link Tag} to BasicTag. When
+   * used as part of an id this is needed to ensure correct behavior. Alternative
+   * implementations will likely vary the hashCode/equals causing ids that should
+   * be equivalent to not match as expected.
+   */
+  static BasicTag convert(Tag t) {
+    return (t instanceof BasicTag) ? (BasicTag) t : new BasicTag(t.key(), t.value());
+  }
+
   private final String key;
   private final String value;
   private final int hc;

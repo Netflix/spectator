@@ -21,6 +21,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -37,9 +38,7 @@ public class FilteredIteratorTest {
 
   private List<String> newList(String... vs) {
     List<String> data = new ArrayList<>();
-    for (String v : vs) {
-      data.add(v);
-    }
+    Collections.addAll(data, vs);
     return data;
   }
 
