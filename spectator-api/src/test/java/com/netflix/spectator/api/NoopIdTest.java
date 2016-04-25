@@ -37,12 +37,12 @@ public class NoopIdTest {
 
   @Test
   public void testWithTag() {
-    Assert.assertSame(NoopId.INSTANCE.withTag(new TagList("k", "v")), NoopId.INSTANCE);
+    Assert.assertSame(NoopId.INSTANCE.withTag(new BasicTag("k", "v")), NoopId.INSTANCE);
   }
 
   @Test
   public void testWithTags() {
-    Assert.assertSame(NoopId.INSTANCE.withTags(new TagList("k", "v")), NoopId.INSTANCE);
+    Assert.assertSame(NoopId.INSTANCE.withTags(ArrayTagSet.create("k", "v")), NoopId.INSTANCE);
   }
 
   @Test

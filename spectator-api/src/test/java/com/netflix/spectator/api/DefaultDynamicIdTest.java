@@ -50,7 +50,7 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void testTags() {
-    TagList tags = new TagList("k1", "v1").mergeTag(new BasicTag("k2", "v2"));
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1").add(new BasicTag("k2", "v2"));
     List<Tag> expected = new ArrayList<>();
     DynamicId id = new DefaultDynamicId("foo").withTags(tags);
 
@@ -69,11 +69,11 @@ public class DefaultDynamicIdTest {
 
   @Test
   public void equalsContractTest() {
-    TagList ts1 = new TagList("k1", "v1");
-    TagList ts2 = new TagList("k2", "v2").mergeTag(ts1);
+    ArrayTagSet ts1 = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet ts2 = ArrayTagSet.create("k2", "v2").addAll(ts1);
     EqualsVerifier
             .forClass(DefaultDynamicId.class)
-            .withPrefabValues(TagList.class, ts1, ts2)
+            .withPrefabValues(ArrayTagSet.class, ts1, ts2)
             .suppress(Warning.NULL_FIELDS)
             .verify();
   }

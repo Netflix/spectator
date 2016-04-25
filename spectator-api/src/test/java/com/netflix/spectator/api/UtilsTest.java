@@ -53,25 +53,25 @@ public class UtilsTest {
   @Test
   public void firstTag() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, t);
-    Assert.assertEquals(m.id().tags(), t);
+    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void firstKV() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, "i", "7");
-    Assert.assertEquals(m.id().tags(), t);
+    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void firstPredicate() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, v -> v.value() == 7.0);
-    Assert.assertEquals(m.id().tags(), t);
+    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
@@ -84,28 +84,28 @@ public class UtilsTest {
   @Test
   public void filterTag() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, t));
     Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), t);
+    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void filterKV() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, "i", "7"));
     Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), t);
+    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void filterPredicate() {
     List<Measurement> ms = newList(10);
-    Tag t = new TagList("i", "7");
+    Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, v -> v.value() == 7.0));
     Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), t);
+    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test

@@ -131,7 +131,7 @@ final class DefaultDynamicId implements DynamicId {
 
   @Override
   public DefaultDynamicId withTag(String k, String v) {
-    return withTagFactory(new ConstantTagFactory(new TagList(k, v)));
+    return withTagFactory(new ConstantTagFactory(new BasicTag(k, v)));
   }
 
   @Override
@@ -147,7 +147,7 @@ final class DefaultDynamicId implements DynamicId {
   @Override
   public DefaultDynamicId withTags(Map<String, String> tags) {
     return createNewId(sorter ->
-            tags.forEach((key, value) -> sorter.addFactory(new ConstantTagFactory(new TagList(key, value)))));
+            tags.forEach((key, value) -> sorter.addFactory(new ConstantTagFactory(new BasicTag(key, value)))));
   }
 
   @Override
@@ -166,7 +166,7 @@ final class DefaultDynamicId implements DynamicId {
 
   @Override
   public Id resolveToId() {
-    return new DefaultId(name, TagList.create(tags()));
+    return new DefaultId(name, ArrayTagSet.create(tags()));
   }
 
   @Override

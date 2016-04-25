@@ -38,12 +38,12 @@ public class NoopDynamicIdTest {
 
   @Test
   public void testWithTag() {
-    Assert.assertSame(NoopDynamicId.INSTANCE.withTag(new TagList("k", "v")), NoopDynamicId.INSTANCE);
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTag(new BasicTag("k", "v")), NoopDynamicId.INSTANCE);
   }
 
   @Test
   public void testWithTags() {
-    Assert.assertSame(NoopDynamicId.INSTANCE.withTags(new TagList("k", "v")), NoopDynamicId.INSTANCE);
+    Assert.assertSame(NoopDynamicId.INSTANCE.withTags(ArrayTagSet.create("k", "v")), NoopDynamicId.INSTANCE);
   }
 
   @Test

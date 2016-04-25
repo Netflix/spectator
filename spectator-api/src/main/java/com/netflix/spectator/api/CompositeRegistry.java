@@ -85,7 +85,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Id createId(String name, Iterable<Tag> tags) {
-    return new DefaultId(name, TagList.create(tags));
+    return new DefaultId(name, ArrayTagSet.create(tags));
   }
 
   @Override public void register(Meter meter) {

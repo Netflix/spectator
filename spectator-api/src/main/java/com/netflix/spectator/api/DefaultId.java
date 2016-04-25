@@ -26,17 +26,17 @@ import java.util.TreeMap;
 final class DefaultId implements Id {
 
   private final String name;
-  private final TagList tags;
+  private final ArrayTagSet tags;
 
   /** Create a new instance. */
   public DefaultId(String name) {
-    this(name, TagList.EMPTY);
+    this(name, ArrayTagSet.EMPTY);
   }
 
   /** Create a new instance. */
-  DefaultId(String name, TagList tags) {
+  DefaultId(String name, ArrayTagSet tags) {
     this.name = Preconditions.checkNotNull(name, "name");
-    this.tags = tags;
+    this.tags = Preconditions.checkNotNull(tags, "tags");
   }
 
   @Override public String name() {
@@ -44,26 +44,31 @@ final class DefaultId implements Id {
   }
 
   @Override public Iterable<Tag> tags() {
-    return (tags == TagList.EMPTY) ? Collections.<Tag>emptyList() : tags;
+    return tags;
   }
 
   @Override public DefaultId withTag(Tag tag) {
-    return new DefaultId(name, tags == TagList.EMPTY ? new TagList(tag.key(), tag.value()) : tags.mergeTag(tag));
+    return new DefaultId(name, tags.add(tag));
   }
 
   @Override public DefaultId withTag(String key, String value) {
-    TagList tag = new TagList(key, value);
-    return new DefaultId(name, tags == TagList.EMPTY ? tag : tags.mergeTag(tag));
+    return new DefaultId(name, tags.add(key, value));
+  }
+
+  @Override public DefaultId withTags(String... ts) {
+    return new DefaultId(name, tags.addAll(ts));
+  }
+
+  @Override public DefaultId withTags(Tag... ts) {
+    return new DefaultId(name, tags.addAll(ts));
   }
 
   @Override public DefaultId withTags(Iterable<Tag> ts) {
-    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.mergeList(ts);
-    return new DefaultId(name, tmp);
+    return new DefaultId(name, tags.addAll(ts));
   }
 
   @Override public DefaultId withTags(Map<String, String> ts) {
-    TagList tmp = (tags == TagList.EMPTY) ? TagList.create(ts) : tags.mergeMap(ts);
-    return new DefaultId(name, tmp);
+    return new DefaultId(name, tags.addAll(ts));
   }
 
   /**
@@ -89,7 +94,7 @@ final class DefaultId implements Id {
    *     New identifier after applying the rollup.
    */
   DefaultId rollup(Set<String> keys, boolean keep) {
-    if (tags == TagList.EMPTY) {
+    if (tags.isEmpty()) {
       return this;
     } else {
       Map<String, String> ts = new TreeMap<>();
@@ -98,7 +103,7 @@ final class DefaultId implements Id {
           ts.put(t.key(), t.value());
         }
       }
-      return new DefaultId(name, TagList.create(ts));
+      return new DefaultId(name, ArrayTagSet.create(ts));
     }
   }
 
@@ -106,20 +111,16 @@ final class DefaultId implements Id {
     if (this == obj) return true;
     if (obj == null || !(obj instanceof DefaultId)) return false;
     DefaultId other = (DefaultId) obj;
-    return name.equals(other.name)
-      && ((tags == null && other.tags == null) || (tags != null && tags.equals(other.tags)));
+    return name.equals(other.name) && tags.equals(other.tags);
   }
 
   @Override public int hashCode() {
-    return name.hashCode() + (tags == TagList.EMPTY ? 0 : tags.hashCode());
+    int result = name.hashCode();
+    result = 31 * result + tags.hashCode();
+    return result;
   }
 
   @Override public String toString() {
-    StringBuilder buf = new StringBuilder();
-    buf.append(name);
-    if (tags != TagList.EMPTY) {
-      buf.append(':').append(tags);
-    }
-    return buf.toString();
+    return name + tags;
   }
 }

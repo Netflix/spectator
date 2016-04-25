@@ -43,7 +43,7 @@ public class DefaultIdTest {
 
   @Test
   public void testTags() {
-    TagList ts = new TagList("k1", "v1");
+    ArrayTagSet ts = ArrayTagSet.create("k1", "v1");
     Id id = new DefaultId("foo", ts);
     Assert.assertEquals(id.name(), "foo");
     Assert.assertEquals(id.tags(), ts);
@@ -57,11 +57,11 @@ public class DefaultIdTest {
 
   @Test
   public void equalsContractTest() {
-    TagList ts1 = new TagList("k1", "v1");
-    TagList ts2 = new TagList("k2", "v2").mergeTag(ts1);
+    ArrayTagSet ts1 = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet ts2 = ArrayTagSet.create("k2", "v2").addAll(ts1);
     EqualsVerifier
       .forClass(DefaultId.class)
-      .withPrefabValues(TagList.class, ts1, ts2)
+      .withPrefabValues(ArrayTagSet.class, ts1, ts2)
       .suppress(Warning.NULL_FIELDS)
       .verify();
   }

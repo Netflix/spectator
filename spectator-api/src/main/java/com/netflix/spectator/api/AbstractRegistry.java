@@ -99,7 +99,7 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Id createId(String name, Iterable<Tag> tags) {
-    return new DefaultId(name, TagList.create(tags));
+    return new DefaultId(name, ArrayTagSet.create(tags));
   }
 
   private void logTypeError(Id id, Class<?> desired, Class<?> found) {

@@ -47,7 +47,7 @@ public class ConstantTagFactoryTest {
   @Test
   public void testNameFromTag() throws Exception {
     String expected = "factoryName";
-    Tag tag = new TagList(expected, "unused");
+    Tag tag = new BasicTag(expected, "unused");
     TagFactory factory = new ConstantTagFactory(tag);
 
     Assert.assertEquals(expected, factory.name());
@@ -63,7 +63,7 @@ public class ConstantTagFactoryTest {
 
   @Test
   public void testCreateTagUsingTagConstructor() throws Exception {
-    Tag expected = new TagList("key", "value");
+    Tag expected = new BasicTag("key", "value");
     TagFactory factory = new ConstantTagFactory(expected);
     Tag actual = factory.createTag();
 

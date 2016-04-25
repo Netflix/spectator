@@ -207,7 +207,7 @@ public interface Registry extends Iterable<Meter> {
    *     Identifier for a meter.
    */
   default Id createId(String name, Map<String, String> tags) {
-    return createId(name).withTags(TagList.create(tags));
+    return createId(name).withTags(tags);
   }
 
   /**
