@@ -103,25 +103,25 @@ final class ByteBufferOutputStream extends OutputStream implements DataOutput {
 
   @Override public void writeInt(int v) throws IOException {
     if (checkCapacity(4)) {
-      buf.putInt((int) v);
+      buf.putInt(v);
     }
   }
 
   @Override public void writeLong(long v) throws IOException {
     if (checkCapacity(8)) {
-      buf.putLong((long) v);
+      buf.putLong(v);
     }
   }
 
   @Override public void writeFloat(float v) throws IOException {
     if (checkCapacity(4)) {
-      buf.putFloat((float) v);
+      buf.putFloat(v);
     }
   }
 
   @Override public void writeDouble(double v) throws IOException {
     if (checkCapacity(8)) {
-      buf.putDouble((double) v);
+      buf.putDouble(v);
     }
   }
 

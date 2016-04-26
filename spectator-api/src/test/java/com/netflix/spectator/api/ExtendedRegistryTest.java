@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
@@ -168,7 +169,7 @@ public class ExtendedRegistryTest {
   public void testGaugeHelpersWithCustomFunction2() {
     AtomicLong al1 = new AtomicLong(1L);
     Registry r = new DefaultRegistry(new ManualClock(40, 0));
-    ValueFunction<AtomicLong> f = (obj) -> (r.clock().wallTime() - obj.doubleValue()) / 1000.0;
+    ToDoubleFunction<AtomicLong> f = (obj) -> (r.clock().wallTime() - obj.doubleValue()) / 1000.0;
 
     AtomicLong v1 = r.gauge("foo", al1, f);
     Assert.assertSame(v1, al1);

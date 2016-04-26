@@ -52,7 +52,7 @@ public class KinesisTDigestWriter extends TDigestWriter {
   private String partitionKey() {
     StringBuilder buf = new StringBuilder(8);
     for (int i = 0; i < 8; ++i) {
-      buf.append((char) '0' + random.nextInt('z' - '0'));
+      buf.append('0' + random.nextInt('z' - '0'));
     }
     return buf.toString();
   }

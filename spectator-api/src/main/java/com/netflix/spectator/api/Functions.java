@@ -20,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
@@ -46,22 +44,6 @@ public final class Functions {
       return v;
     }
   };
-
-  /**
-   * Returns the size of the collection.
-   *
-   * @deprecated Use {@code Collection::size} instead.
-   */
-  @Deprecated
-  public static final ValueFunction<Collection<?>> COLLECTION_SIZE = Collection::size;
-
-  /**
-   * Returns the size of the map.
-   *
-   * @deprecated Use {@code Map::size} instead.
-   */
-  @Deprecated
-  public static final ValueFunction<Map<?, ?>> MAP_SIZE = Map::size;
 
   /**
    * Age function based on the system clock. See {@link #age(Clock)} for more details.
