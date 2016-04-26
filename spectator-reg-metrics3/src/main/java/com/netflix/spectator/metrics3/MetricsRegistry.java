@@ -59,7 +59,7 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   @Override public <T extends Number> T gauge(Id id, T number) {
-    return gauge(id, number, (ToDoubleFunction<T>) value -> number.doubleValue());
+    return gauge(id, number, value -> number.doubleValue());
   }
 
   @Override public <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
@@ -69,8 +69,8 @@ public class MetricsRegistry extends AbstractRegistry {
       try {
         this.impl.register(name, aggr);
       } catch (IllegalArgumentException e) {
-        // This exception can be raised if someone registered a metric with the same name as the one being
-        // registered now directly on the MetricsRegister
+        // This exception can be raised if someone registered a metric with the same name as
+        // the one being registered now directly on the MetricsRegister
         propagate(e);
         return null;
       }
@@ -86,16 +86,11 @@ public class MetricsRegistry extends AbstractRegistry {
     return obj;
   }
 
-  @Override
-  public <T> T gauge(Id id, T obj, ValueFunction<T> f) {
-    return gauge(id, obj, ((ToDoubleFunction<T>) f));
-  }
-
   @Override public <T extends Collection<?>> T collectionSize(Id id, T collection) {
-    return gauge(id, collection, (ToDoubleFunction<T>) Collection::size);
+    return gauge(id, collection, Collection::size);
   }
 
   @Override public <T extends Map<?, ?>> T mapSize(Id id, T collection) {
-    return gauge(id, collection, (ToDoubleFunction<T>) Map::size);
+    return gauge(id, collection, Map::size);
   }
 }
