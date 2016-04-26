@@ -53,11 +53,11 @@ Then wrap the call you need to measure:
 
 ```java
   public Response handle(Request request) {
-    final long start = registry.clock().elapsedTime();
+    final long start = registry.clock().monotonicTime();
     try {
       return handleImpl(request);
     } finally {
-      final long end = registry.clock().elapsedTime();
+      final long end = registry.clock().monotonicTime();
       requestLatency.record(end - start, TimeUnit.NANOSECONDS);
     }
   }
