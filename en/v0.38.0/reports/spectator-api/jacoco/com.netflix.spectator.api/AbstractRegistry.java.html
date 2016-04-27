@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AbstractRegistry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">AbstractRegistry.java</span></div><h1>AbstractRegistry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Base class to make it easier to implement a simple registry that only needs to customise the
+ * types returned for Counter, DistributionSummary, and Timer calls.
+ */
+public abstract class AbstractRegistry implements Registry {
+
+  private final Clock clock;
+  private final RegistryConfig config;
+
+  private final ConcurrentHashMap&lt;Id, Meter&gt; meters;
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   */
+  public AbstractRegistry(Clock clock) {
+<span class="fc" id="L42">    this(clock, Config.defaultConfig());</span>
+<span class="fc" id="L43">  }</span>
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   */
+<span class="fc" id="L53">  public AbstractRegistry(Clock clock, RegistryConfig config) {</span>
+<span class="fc" id="L54">    this.clock = clock;</span>
+<span class="fc" id="L55">    this.config = config;</span>
+<span class="fc" id="L56">    meters = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L57">  }</span>
+
+  /**
+   * Create a new counter instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New counter instance.
+   */
+  protected abstract Counter newCounter(Id id);
+
+  /**
+   * Create a new distribution summary instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New distribution summary instance.
+   */
+  protected abstract DistributionSummary newDistributionSummary(Id id);
+
+  /**
+   * Create a new timer instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New timer instance.
+   */
+  protected abstract Timer newTimer(Id id);
+
+  @Override public final Clock clock() {
+<span class="fc" id="L90">    return clock;</span>
+  }
+
+  @Override public final RegistryConfig config() {
+<span class="fc" id="L94">    return config;</span>
+  }
+
+  @Override public final Id createId(String name) {
+<span class="fc" id="L98">    return new DefaultId(name);</span>
+  }
+
+  @Override public final Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L102">    return new DefaultId(name, ArrayTagSet.create(tags));</span>
+  }
+
+  private void logTypeError(Id id, Class&lt;?&gt; desired, Class&lt;?&gt; found) {
+<span class="fc" id="L106">    final String dtype = desired.getName();</span>
+<span class="fc" id="L107">    final String ftype = found.getName();</span>
+<span class="fc" id="L108">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
+      id, dtype, ftype);
+<span class="fc" id="L110">    propagate(new IllegalStateException(msg));</span>
+<span class="fc" id="L111">  }</span>
+
+  private void addToAggr(Meter aggr, Meter meter) {
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    if (aggr instanceof AggrMeter) {</span>
+<span class="fc" id="L115">      ((AggrMeter) aggr).add(meter);</span>
+    } else {
+<span class="fc" id="L117">      logTypeError(meter.id(), meter.getClass(), aggr.getClass());</span>
+    }
+<span class="fc" id="L119">  }</span>
+
+  private Meter compute(Meter m, Meter fallback) {
+<span class="fc bfc" id="L122" title="All 2 branches covered.">    return (meters.size() &gt;= config.maxNumberOfMeters()) ? fallback : m;</span>
+  }
+
+  @Override public void register(Meter meter) {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">    Meter aggr = (meters.size() &gt;= config.maxNumberOfMeters())</span>
+<span class="fc" id="L127">      ? meters.get(meter.id())</span>
+<span class="fc" id="L128">      : meters.computeIfAbsent(meter.id(), AggrMeter::new);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">    if (aggr != null) {</span>
+<span class="fc" id="L130">      addToAggr(aggr, meter);</span>
+    }
+<span class="fc" id="L132">  }</span>
+
+  @Override public final Counter counter(Id id) {
+    try {
+<span class="fc" id="L136">      Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L137">      Meter m = meters.computeIfAbsent(id, i -&gt; compute(newCounter(i), NoopCounter.INSTANCE));</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">      if (!(m instanceof Counter)) {</span>
+<span class="fc" id="L139">        logTypeError(id, Counter.class, m.getClass());</span>
+<span class="fc" id="L140">        m = NoopCounter.INSTANCE;</span>
+      }
+<span class="fc" id="L142">      return (Counter) m;</span>
+<span class="fc" id="L143">    } catch (Exception e) {</span>
+<span class="fc" id="L144">      propagate(e);</span>
+<span class="fc" id="L145">      return NoopCounter.INSTANCE;</span>
+    }
+  }
+
+  @Override public final DistributionSummary distributionSummary(Id id) {
+    try {
+<span class="fc" id="L151">      Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L152">      Meter m = meters.computeIfAbsent(id, i -&gt;</span>
+<span class="fc" id="L153">          compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">      if (!(m instanceof DistributionSummary)) {</span>
+<span class="fc" id="L155">        logTypeError(id, DistributionSummary.class, m.getClass());</span>
+<span class="fc" id="L156">        m = NoopDistributionSummary.INSTANCE;</span>
+      }
+<span class="fc" id="L158">      return (DistributionSummary) m;</span>
+<span class="fc" id="L159">    } catch (Exception e) {</span>
+<span class="fc" id="L160">      propagate(e);</span>
+<span class="fc" id="L161">      return NoopDistributionSummary.INSTANCE;</span>
+    }
+  }
+
+  @Override public final Timer timer(Id id) {
+    try {
+<span class="fc" id="L167">      Meter m = meters.computeIfAbsent(id, i -&gt; compute(newTimer(i), NoopTimer.INSTANCE));</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">      if (!(m instanceof Timer)) {</span>
+<span class="fc" id="L169">        logTypeError(id, Timer.class, m.getClass());</span>
+<span class="fc" id="L170">        m = NoopTimer.INSTANCE;</span>
+      }
+<span class="fc" id="L172">      return (Timer) m;</span>
+<span class="fc" id="L173">    } catch (Exception e) {</span>
+<span class="fc" id="L174">      propagate(e);</span>
+<span class="fc" id="L175">      return NoopTimer.INSTANCE;</span>
+    }
+  }
+
+  @Override public final Meter get(Id id) {
+<span class="fc" id="L180">    return meters.get(id);</span>
+  }
+
+  @Override public final Iterator&lt;Meter&gt; iterator() {
+<span class="fc" id="L184">    return meters.values().iterator();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
