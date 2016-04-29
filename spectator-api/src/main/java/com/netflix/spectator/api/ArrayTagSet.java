@@ -99,7 +99,7 @@ final class ArrayTagSet implements Iterable<Tag> {
   /** Add a new tag to the set. */
   ArrayTagSet add(Tag tag) {
     Tag[] newTags;
-    int pos = Arrays.binarySearch(tags, tag, TAG_COMPARATOR);
+    int pos = Arrays.binarySearch(tags, 0, length, tag, TAG_COMPARATOR);
     if (pos < 0) {
       // Not found in list
       newTags = new Tag[length + 1];
