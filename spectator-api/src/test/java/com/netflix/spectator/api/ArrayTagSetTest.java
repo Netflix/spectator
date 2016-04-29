@@ -261,4 +261,24 @@ public class ArrayTagSetTest {
     ArrayTagSet actual = initial.addAll(extra);
     Assert.assertEquals(expected, actual);
   }
+
+  @Test
+  public void addAllTagArrayEmpty() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new Tag[0]);
+    Assert.assertSame(ArrayTagSet.EMPTY, ts);
+  }
+
+  @Test
+  public void addAllStringArrayEmpty() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new String[0]);
+    Assert.assertSame(ArrayTagSet.EMPTY, ts);
+  }
+
+  @Test
+  public void addAllIterable() {
+    // Add an arbitrary iterable that isn't a collection or ArrayTagSet
+    Collection<Tag> tags = Collections.singletonList(new BasicTag("app", "foo"));
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(tags::iterator);
+    Assert.assertEquals(ArrayTagSet.EMPTY.addAll(tags), ts);
+  }
 }

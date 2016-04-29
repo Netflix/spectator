@@ -133,24 +133,27 @@ public class DefaultIdTest {
 
   @Test
   public void addTagAppend() {
-    new DefaultId("TotalTime")
+    Id id = new DefaultId("TotalTime")
         .withTag("app", "foo")
         .withTag("exception.thrown", "pvr");
+    Assert.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
   }
 
   @Test
   public void addTagPrepend() {
-    new DefaultId("TotalTime")
+    Id id = new DefaultId("TotalTime")
         .withTag("app", "foo")
         .withTag("aaa", "pvr");
+    Assert.assertEquals("TotalTime:aaa=pvr:app=foo", id.toString());
   }
 
   @Test
   public void addTagInsert() {
-    new DefaultId("TotalTime")
+    Id id = new DefaultId("TotalTime")
         .withTag("app", "foo")
         .withTag("exception.thrown", "pvr")
         .withTag("bbb", "bar");
+    Assert.assertEquals("TotalTime:app=foo:bbb=bar:exception.thrown=pvr", id.toString());
   }
 
   @Test
@@ -159,5 +162,6 @@ public class DefaultIdTest {
         .withTag("app", "foo")
         .withTags("app", "foo")
         .withTag("exception.thrown", "pvr");
+    Assert.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
   }
 }
