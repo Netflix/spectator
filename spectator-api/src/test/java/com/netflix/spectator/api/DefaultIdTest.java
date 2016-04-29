@@ -130,4 +130,34 @@ public class DefaultIdTest {
     DefaultId id = (new DefaultId("foo")).withTags(map);
     Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
+
+  @Test
+  public void addTagAppend() {
+    new DefaultId("TotalTime")
+        .withTag("app", "foo")
+        .withTag("exception.thrown", "pvr");
+  }
+
+  @Test
+  public void addTagPrepend() {
+    new DefaultId("TotalTime")
+        .withTag("app", "foo")
+        .withTag("aaa", "pvr");
+  }
+
+  @Test
+  public void addTagInsert() {
+    new DefaultId("TotalTime")
+        .withTag("app", "foo")
+        .withTag("exception.thrown", "pvr")
+        .withTag("bbb", "bar");
+  }
+
+  @Test
+  public void dedupAndAppend() {
+    Id id = new DefaultId("TotalTime")
+        .withTag("app", "foo")
+        .withTags("app", "foo")
+        .withTag("exception.thrown", "pvr");
+  }
 }
