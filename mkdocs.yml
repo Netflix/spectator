@@ -5,11 +5,13 @@ strict: True
 pages:
 - Home: index.md
 - 'Getting Started':
+  - Registry: intro/registry.md
   - 'Meter Types':
     - Counters: intro/counter.md
     - Timers: intro/timer.md
     - Gauges: intro/gauge.md
     - 'Distribution Summaries': intro/dist-summary.md
+  - Clock: intro/clock.md
   - 'Naming Conventions': intro/conventions.md
   - Testing: intro/testing.md
   - 'Netflix Integration': intro/netflix.md

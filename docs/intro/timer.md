@@ -49,7 +49,17 @@ public class Server {
   }
 ```
 
-Then wrap the call you need to measure:
+Then wrap the call you need to measure, preferably using a lambda:
+
+```java
+  public Response handle(Request request) {
+    return requestLatency.record(() -> handleImpl(request));
+  }
+```
+
+The lambda variants will handle exceptions for you and ensure the
+record happens as part of a finally block using the monotonic time.
+It could also have been done more explicitly like:
 
 ```java
   public Response handle(Request request) {
@@ -68,17 +78,7 @@ testing if you need to control the timing. In actual usage it will typically
 get mapped to the system clock. It is recommended to use a monotonically
 increasing source for measuring the times to avoid occasionally having bogus
 measurements due to time adjustments. For more information see the
-[Clock documentation](Clock).
-
-Also note that the record call is done in a finally block to ensure that
-the time will get recorded if a failure occurs. The example above could have
-also been done using a lambda:
-
-```java
-  public Response handle(Request request) {
-    return requestLatency.record(() -> handleImpl(request));
-  }
-```
+[Clock documentation](clock.md).
 
 ## LongTaskTimer
 
