@@ -1,7 +1,8 @@
 language: java
 jdk:
 - oraclejdk8
-sudo: false
+sudo: required
+dist: trusty
 install: "./installViaTravis.sh"
 script: "./buildViaTravis.sh"
 env:
