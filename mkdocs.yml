@@ -25,7 +25,6 @@ pages:
 - Registries:
   - Metrics3: registry/metrics3.md
   - Servo: registry/servo.md
-  - TDigest: registry/tdigest.md
 - 'Build Reports': reports.md
 theme: readthedocs
 extra_css:

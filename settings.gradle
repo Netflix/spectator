@@ -8,5 +8,4 @@ include 'spectator-api',
         'spectator-ext-sandbox',
         'spectator-ext-spark',
         'spectator-reg-metrics3',
-        'spectator-reg-servo',
-        'spectator-reg-tdigest'
+        'spectator-reg-servo'
