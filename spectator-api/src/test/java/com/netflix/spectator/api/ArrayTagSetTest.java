@@ -122,6 +122,34 @@ public class ArrayTagSetTest {
   }
 
   @Test
+  public void testCreateFromVarargs2() {
+    Map<String, String> m = new HashMap<>();
+    m.put("k1", "v1");
+    m.put("k2", "v2");
+    ArrayTagSet ts1 = ArrayTagSet.create(m);
+    ArrayTagSet ts2 = ArrayTagSet.create("k1", "v1", "k2", "v2");
+    Assert.assertEquals(ts1, ts2);
+  }
+
+  @Test
+  public void testCreateFromVarargs5() {
+    Map<String, String> m = new HashMap<>();
+    m.put("a", "1");
+    m.put("b", "2");
+    m.put("c", "3");
+    m.put("d", "4");
+    m.put("e", "5");
+    ArrayTagSet ts1 = ArrayTagSet.create(m);
+    ArrayTagSet ts2 = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4", "e", "5");
+    Assert.assertEquals(ts1, ts2);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCreateFromVarargsOdd() {
+    ArrayTagSet.create("a", "1", "b");
+  }
+
+  @Test
   public void testCreateFromEmptyIterable() {
     Assert.assertEquals(ArrayTagSet.EMPTY, ArrayTagSet.create(Collections.emptyList()));
   }
@@ -162,7 +190,8 @@ public class ArrayTagSetTest {
     Map<String, String> tags = new HashMap<>();
     tags.put("k1", "v1");
     tags.put("k2", "v2");
-    Assert.assertEquals(ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2")), ArrayTagSet.create(tags));
+    Assert.assertEquals(ArrayTagSet.create("k1", "v1")
+        .addAll(ArrayTagSet.create("k2", "v2")), ArrayTagSet.create(tags));
   }
 
   @Test(expected = NullPointerException.class)
@@ -218,7 +247,9 @@ public class ArrayTagSetTest {
   public void testMergeMultipleValuesAsList() {
     ArrayList<Tag> prefix = new ArrayList<>();
     ArrayTagSet initial = ArrayTagSet.create("k3", "v3");
-    ArrayTagSet expected = ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2")).addAll(ArrayTagSet.create("k3", "v3"));
+    ArrayTagSet expected = ArrayTagSet.create("k1", "v1")
+        .addAll(ArrayTagSet.create("k2", "v2"))
+        .addAll(ArrayTagSet.create("k3", "v3"));
 
     prefix.add(new BasicTag("k1", "v1"));
     prefix.add(new BasicTag("k2", "v2"));
@@ -254,7 +285,9 @@ public class ArrayTagSetTest {
   public void testMergeMultipleValuesAsMap() {
     Map<String, String> extra = new HashMap<>();
     ArrayTagSet initial = ArrayTagSet.create("k3", "v3");
-    ArrayTagSet expected = ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2")).addAll(ArrayTagSet.create("k3", "v3"));
+    ArrayTagSet expected = ArrayTagSet.create("k1", "v1")
+        .addAll(ArrayTagSet.create("k2", "v2"))
+        .addAll(ArrayTagSet.create("k3", "v3"));
 
     extra.put("k1", "v1");
     extra.put("k2", "v2");

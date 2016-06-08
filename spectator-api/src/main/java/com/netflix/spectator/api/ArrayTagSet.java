@@ -167,6 +167,10 @@ final class ArrayTagSet implements Iterable<Tag> {
 
   /** Add a collection of tags to the set. */
   ArrayTagSet addAll(String[] ts) {
+    if (ts.length % 2 != 0) {
+      throw new IllegalArgumentException("array length must be even, (length=" + ts.length + ")");
+    }
+
     if (ts.length == 0) {
       return this;
     } else {
@@ -174,7 +178,8 @@ final class ArrayTagSet implements Iterable<Tag> {
       Tag[] newTags = new Tag[length + tsLength];
       System.arraycopy(tags, 0, newTags, 0, length);
       for (int i = 0; i < tsLength; ++i) {
-        newTags[length + i] = new BasicTag(ts[i], ts[i + 1]);
+        final int j = i * 2;
+        newTags[length + i] = new BasicTag(ts[j], ts[j + 1]);
       }
       return dedup(newTags);
     }
