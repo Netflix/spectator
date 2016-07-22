@@ -16,7 +16,6 @@
 package com.netflix.spectator.api;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -34,15 +33,15 @@ import java.util.stream.Collectors;
 @RunWith(JUnit4.class)
 public class ExtendedRegistryTest {
 
-  @Before
-  public void init() {
-    System.setProperty("spectator.api.propagateWarnings", "true");
-    System.setProperty("spectator.api.maxNumberOfMeters", "10000");
+  private final ManualClock clock = new ManualClock();
+
+  private DefaultRegistry newRegistry(boolean warnings, int numberOfMeters) {
+    return new DefaultRegistry(clock, new TestRegistryConfig(warnings, numberOfMeters));
   }
 
   @Test
   public void testCreateIdArray() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     Id id1 = r.createId("foo", "bar", "baz", "k", "v");
     Id id2 = r.createId("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Assert.assertEquals(id1, id2);
@@ -50,7 +49,7 @@ public class ExtendedRegistryTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testCreateIdArrayOdd() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.createId("foo", "bar", "baz", "k");
   }
 
@@ -59,7 +58,7 @@ public class ExtendedRegistryTest {
     Map<String, String> map = new LinkedHashMap<>();
     map.put("k1", "v1");
     map.put("k2", "v2");
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     Id id1 = r.createId("foo", map);
     Id id2 = r.createId("foo", "k1", "v1", "k2", "v2");
     Assert.assertEquals(id1, id2);
@@ -67,7 +66,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testCounterHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     Counter c1 = r.counter("foo", "bar", "baz", "k", "v");
     Counter c2 = r.counter("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Counter c3 = r.counter("foo");
@@ -77,7 +76,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testDistributionSummaryHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     DistributionSummary c1 = r.distributionSummary("foo", "bar", "baz", "k", "v");
     DistributionSummary c2 = r.distributionSummary("foo",
         ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
@@ -88,7 +87,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testTimerHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     Timer c1 = r.timer("foo", "bar", "baz", "k", "v");
     Timer c2 = r.timer("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Timer c3 = r.timer("foo");
@@ -125,7 +124,7 @@ public class ExtendedRegistryTest {
     AtomicLong al1 = new AtomicLong(1L);
     AtomicLong al2 = new AtomicLong(2L);
     AtomicLong al4 = new AtomicLong(4L);
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     AtomicLong v1 = r.gauge(r.createId("foo", "bar", "baz", "k", "v"), al1);
     AtomicLong v2 = r.gauge("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")), al2);
     AtomicLong v3 = r.gauge("foo", al4);
@@ -179,7 +178,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testCollectionSizeHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     LinkedBlockingDeque<String> q1 = new LinkedBlockingDeque<>();
     LinkedBlockingDeque<String> q2 = r.collectionSize("queueSize", q1);
     Assert.assertSame(q1, q2);
@@ -191,7 +190,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testMapSizeHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     ConcurrentHashMap<String, String> q1 = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, String> q2 = r.mapSize("mapSize", q1);
     Assert.assertSame(q1, q2);
@@ -203,7 +202,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void testMethodValueHelpers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     LinkedBlockingDeque<String> q1 = new LinkedBlockingDeque<>();
     r.methodValue("queueSize", q1, "size");
     Id id = r.createId("queueSize");
@@ -214,37 +213,33 @@ public class ExtendedRegistryTest {
 
   @Test(expected = ClassCastException.class)
   public void methodValueBadReturnType() {
-    System.setProperty("spectator.api.propagateWarnings", "true");
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.methodValue("queueSize", this, "toString");
   }
 
   @Test
   public void methodValueBadReturnTypeNoPropagate() {
-    System.setProperty("spectator.api.propagateWarnings", "false");
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(false, 10000);
     r.methodValue("queueSize", this, "toString");
     Assert.assertNull(r.get(r.createId("queueSize")));
   }
 
   @Test(expected = RuntimeException.class)
   public void methodValueUnknown() {
-    System.setProperty("spectator.api.propagateWarnings", "true");
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.methodValue("queueSize", this, "unknownMethod");
   }
 
   @Test
   public void methodValueUnknownNoPropagate() {
-    System.setProperty("spectator.api.propagateWarnings", "false");
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(false, 10000);
     r.methodValue("queueSize", this, "unknownMethod");
     Assert.assertNull(r.get(r.createId("queueSize")));
   }
 
   @Test
   public void gaugeUsingLambda() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     GaugeUsingLambda g = new GaugeUsingLambda(r);
     for (Measurement m : r.get(r.createId("test")).measure()) {
       Assert.assertEquals(84.0, m.value(), 1e-12);
@@ -265,7 +260,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void counters() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.counter("foo").increment();
     r.counter("foo", "a", "1", "b", "2").increment();
     r.counter("foo", "a", "1", "b", "3").increment(13L);
@@ -283,7 +278,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void timers() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.timer("foo").record(1L, TimeUnit.NANOSECONDS);
     r.timer("foo", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
     r.timer("foo", "a", "1", "b", "3").record(13L, TimeUnit.NANOSECONDS);
@@ -309,7 +304,7 @@ public class ExtendedRegistryTest {
 
   @Test
   public void distributionSummaries() {
-    Registry r = new DefaultRegistry();
+    Registry r = newRegistry(true, 10000);
     r.distributionSummary("foo").record(1L);
     r.distributionSummary("foo", "a", "1", "b", "2").record(1L);
     r.distributionSummary("foo", "a", "1", "b", "3").record(13L);
