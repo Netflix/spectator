@@ -26,6 +26,10 @@ import java.util.Date;
  */
 public class GcEvent {
 
+  private static final long ONE_KIBIBYTE = 1 << 10;
+  private static final long ONE_MEBIBYTE = 1 << 20;
+  private static final long ONE_GIBIBYTE = 1 << 30;
+
   private final String name;
   private final GarbageCollectionNotificationInfo info;
   private final GcType type;
@@ -73,19 +77,19 @@ public class GcEvent {
 
   @Override
   public String toString() {
-    GcInfo gcInfo = info.getGcInfo();
-    long totalBefore = HelperFunctions.getTotalUsage(gcInfo.getMemoryUsageBeforeGc());
-    long totalAfter = HelperFunctions.getTotalUsage(gcInfo.getMemoryUsageAfterGc());
-    long max = HelperFunctions.getTotalMaxUsage(gcInfo.getMemoryUsageAfterGc());
+    final GcInfo gcInfo = info.getGcInfo();
+    final long totalBefore = HelperFunctions.getTotalUsage(gcInfo.getMemoryUsageBeforeGc());
+    final long totalAfter = HelperFunctions.getTotalUsage(gcInfo.getMemoryUsageAfterGc());
+    final long max = HelperFunctions.getTotalMaxUsage(gcInfo.getMemoryUsageAfterGc());
 
-    String unit = "K";
-    double cnv = 1000.0;
-    if (max > 1000000000L) {
-      unit = "G";
-      cnv = 1e9;
-    } else if (max > 1000000L) {
-      unit = "M";
-      cnv = 1e6;
+    String unit = "KiB";
+    double cnv = ONE_KIBIBYTE;
+    if (max > ONE_GIBIBYTE) {
+      unit = "GiB";
+      cnv = ONE_GIBIBYTE;
+    } else if (max > ONE_MEBIBYTE) {
+      unit = "MiB";
+      cnv = ONE_MEBIBYTE;
     }
 
     String change = String.format(
