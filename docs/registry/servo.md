@@ -5,7 +5,7 @@ implementation. To use the servo registry, add a dependency on the
 `spectator-reg-servo` library. For gradle:
 
 ```
-com.netflix.spectator:spectator-reg-servo:0.38.1
+com.netflix.spectator:spectator-reg-servo:0.40.0
 ```
 
 Then when initializing the application, use the `ServoRegistry`. If using guice

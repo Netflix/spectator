@@ -22,7 +22,7 @@ to 7u40. For G1 it is recommended to be on the latest version available.
 ### Dependencies
 
 ```
-com.netflix.spectator:spectator-ext-gc:0.38.1
+com.netflix.spectator:spectator-ext-gc:0.40.0
 ```
 
 ### Start Reporting
