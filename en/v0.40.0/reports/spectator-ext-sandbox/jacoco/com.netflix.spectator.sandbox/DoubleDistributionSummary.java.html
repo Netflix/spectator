@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>DoubleDistributionSummary.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-sandbox</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.sandbox</a> &gt; <span class="el_source">DoubleDistributionSummary.java</span></div><h1>DoubleDistributionSummary.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.sandbox;
+
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.Statistic;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Experiment for supporting a distribution summary type that accepts floating point values instead
+ * of just long values.
+ */
+public class DoubleDistributionSummary implements Meter {
+
+<span class="fc" id="L38">  private static final ConcurrentHashMap&lt;Id, DoubleDistributionSummary&gt; INSTANCES =</span>
+      new ConcurrentHashMap&lt;&gt;();
+
+  // https://github.com/Netflix/spectator/issues/43
+  private static final long RESET_FREQ = 60000L;
+
+  // How long to keep reporting if there is no activity. Set to 15 minutes to match default
+  // behavior in servo.
+  private static final long INACTIVE_TTL = 15 * RESET_FREQ;
+
+  /**
+   * Get or create a double distribution summary with the specified id.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Distribution summary corresponding to the id.
+   */
+  public static DoubleDistributionSummary get(Id id) {
+<span class="nc" id="L57">    return get(Spectator.globalRegistry(), id);</span>
+  }
+
+  /**
+   * Get or create a double distribution summary with the specified id.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Distribution summary corresponding to the id.
+   */
+  static DoubleDistributionSummary get(Registry registry, Id id) {
+<span class="fc" id="L71">    DoubleDistributionSummary instance = INSTANCES.get(id);</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">    if (instance == null) {</span>
+<span class="fc" id="L73">      final Clock c = registry.clock();</span>
+<span class="fc" id="L74">      DoubleDistributionSummary tmp = new DoubleDistributionSummary(c, id, RESET_FREQ);</span>
+<span class="fc" id="L75">      instance = INSTANCES.putIfAbsent(id, tmp);</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">      if (instance == null) {</span>
+<span class="fc" id="L77">        instance = tmp;</span>
+<span class="fc" id="L78">        registry.register(tmp);</span>
+      }
+    }
+<span class="fc" id="L81">    return instance;</span>
+  }
+
+<span class="fc" id="L84">  private static final long ZERO = Double.doubleToLongBits(0.0);</span>
+
+  private final Clock clock;
+  private final Id id;
+
+  private final long resetFreq;
+  private final AtomicLong lastResetTime;
+
+  private final AtomicLong lastUpdateTime;
+
+  private final AtomicLong count;
+  private final AtomicLong totalAmount;
+  private final AtomicLong totalOfSquares;
+  private final AtomicLong max;
+
+  private final Id countId;
+  private final Id totalAmountId;
+  private final Id totalOfSquaresId;
+  private final Id maxId;
+
+  /**
+   * Create a new instance.
+   */
+<span class="fc" id="L107">  DoubleDistributionSummary(Clock clock, Id id, long resetFreq) {</span>
+<span class="fc" id="L108">    this.clock = clock;</span>
+<span class="fc" id="L109">    this.id = id;</span>
+<span class="fc" id="L110">    this.resetFreq = resetFreq;</span>
+<span class="fc" id="L111">    lastResetTime = new AtomicLong(clock.wallTime());</span>
+<span class="fc" id="L112">    lastUpdateTime = new AtomicLong(clock.wallTime());</span>
+<span class="fc" id="L113">    count = new AtomicLong(0L);</span>
+<span class="fc" id="L114">    totalAmount = new AtomicLong(ZERO);</span>
+<span class="fc" id="L115">    totalOfSquares = new AtomicLong(ZERO);</span>
+<span class="fc" id="L116">    max = new AtomicLong(ZERO);</span>
+<span class="fc" id="L117">    countId = id.withTag(Statistic.count);</span>
+<span class="fc" id="L118">    totalAmountId = id.withTag(Statistic.totalAmount);</span>
+<span class="fc" id="L119">    totalOfSquaresId = id.withTag(Statistic.totalOfSquares);</span>
+<span class="fc" id="L120">    maxId = id.withTag(Statistic.max);</span>
+<span class="fc" id="L121">  }</span>
+
+  private void add(AtomicLong num, double amount) {
+    long v;
+    double d;
+    long next;
+    do {
+<span class="fc" id="L128">      v = num.get();</span>
+<span class="fc" id="L129">      d = Double.longBitsToDouble(v);</span>
+<span class="fc" id="L130">      next = Double.doubleToLongBits(d + amount);</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">    } while (!num.compareAndSet(v, next));</span>
+<span class="fc" id="L132">  }</span>
+
+  private void max(AtomicLong num, double amount) {
+<span class="fc" id="L135">    long n = Double.doubleToLongBits(amount);</span>
+    long v;
+    double d;
+    do {
+<span class="fc" id="L139">      v = num.get();</span>
+<span class="fc" id="L140">      d = Double.longBitsToDouble(v);</span>
+<span class="pc bpc" id="L141" title="1 of 4 branches missed.">    } while (amount &gt; d &amp;&amp; !num.compareAndSet(v, n));</span>
+<span class="fc" id="L142">  }</span>
+
+  private double toRateLong(AtomicLong num, long deltaMillis, boolean reset) {
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">    final long v = reset ? num.getAndSet(0L) : num.get();</span>
+<span class="fc" id="L146">    final double delta = deltaMillis / 1000.0;</span>
+<span class="fc" id="L147">    return v / delta;</span>
+  }
+
+  private double toRateDouble(AtomicLong num, long deltaMillis, boolean reset) {
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">    final long v = reset ? num.getAndSet(ZERO) : num.get();</span>
+<span class="fc" id="L152">    final double delta = deltaMillis / 1000.0;</span>
+<span class="fc" id="L153">    return Double.longBitsToDouble(v) / delta;</span>
+  }
+
+  private double toDouble(AtomicLong num, boolean reset) {
+<span class="pc bpc" id="L157" title="1 of 2 branches missed.">    final long v = reset ? num.getAndSet(ZERO) : num.get();</span>
+<span class="fc" id="L158">    return Double.longBitsToDouble(v);</span>
+  }
+
+  @Override public Id id() {
+<span class="fc" id="L162">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="fc bfc" id="L166" title="All 2 branches covered.">    return clock.wallTime() - lastUpdateTime.get() &gt; INACTIVE_TTL;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L170">    final long now = clock.wallTime();</span>
+<span class="fc" id="L171">    final long prev = lastResetTime.get();</span>
+<span class="fc" id="L172">    final long delta = now - prev;</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">    final boolean reset = delta &gt; resetFreq;</span>
+
+<span class="fc bfc" id="L175" title="All 2 branches covered.">    if (reset) {</span>
+<span class="fc" id="L176">      lastResetTime.set(now);</span>
+    }
+
+<span class="fc" id="L179">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(3);</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">    if (delta &gt; 1000L) {</span>
+<span class="fc" id="L181">      ms.add(new Measurement(countId, now, toRateLong(count, delta, reset)));</span>
+<span class="fc" id="L182">      ms.add(new Measurement(totalAmountId, now, toRateDouble(totalAmount, delta, reset)));</span>
+<span class="fc" id="L183">      ms.add(new Measurement(totalOfSquaresId, now, toRateDouble(totalOfSquares, delta, reset)));</span>
+<span class="fc" id="L184">      ms.add(new Measurement(maxId, now, toDouble(max, reset)));</span>
+    }
+<span class="fc" id="L186">    return ms;</span>
+  }
+
+  /**
+   * Updates the statistics kept by the summary with the specified amount.
+   *
+   * @param amount
+   *     Amount for an event being measured. For example, if the size in bytes of responses
+   *     from a server. If the amount is less than 0 the value will be dropped.
+   */
+  public void record(double amount) {
+<span class="pc bpc" id="L197" title="1 of 2 branches missed.">    if (amount &gt;= 0.0) {</span>
+<span class="fc" id="L198">      add(totalAmount, amount);</span>
+<span class="fc" id="L199">      add(totalOfSquares, amount * amount);</span>
+<span class="fc" id="L200">      max(max, amount);</span>
+<span class="fc" id="L201">      count.incrementAndGet();</span>
+<span class="fc" id="L202">      lastUpdateTime.set(clock.wallTime());</span>
+    }
+<span class="fc" id="L204">  }</span>
+
+  /** The number of times that record has been called since this timer was created. */
+  public long count() {
+<span class="fc" id="L208">    return count.get();</span>
+  }
+
+  /** The total amount of all recorded events since this summary was created. */
+  public double totalAmount() {
+<span class="fc" id="L213">    return Double.longBitsToDouble(totalAmount.get());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
