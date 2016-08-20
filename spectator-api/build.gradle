@@ -8,7 +8,3 @@ javadoc {
   title "Spectator"
 }
 
-build {
-  it.dependsOn licenseMain
-  it.dependsOn licenseTest
-}

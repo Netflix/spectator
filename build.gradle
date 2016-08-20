@@ -2,12 +2,12 @@ buildscript {
   repositories { jcenter() }
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
-    classpath 'com.netflix.nebula:nebula-dependency-recommender:3.3.0'
+    classpath 'com.netflix.nebula:nebula-dependency-recommender:3.6.3'
   }
 }
 
 plugins {
-  id 'nebula.netflixoss' version '3.2.3'
+  id 'nebula.netflixoss' version '3.4.0'
   id 'me.champeau.gradle.jmh' version '0.3.0'
 }
 
