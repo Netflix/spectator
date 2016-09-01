@@ -1,5 +1,5 @@
 dependencies {
-  compile project(':spectator-api')
-  compile 'io.dropwizard.metrics:metrics-core:3.1.2'
+  compileApi project(':spectator-api')
+  compileApi 'io.dropwizard.metrics:metrics-core:3.1.2'
   jmh project(':spectator-api')
 }
