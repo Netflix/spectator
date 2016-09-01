@@ -32,6 +32,7 @@ allprojects {
 
 subprojects {
   apply plugin: 'nebula.netflixoss'
+  apply plugin: 'nebula.compile-api'
   apply plugin: 'java'
   apply plugin: 'build-dashboard'
   apply plugin: 'jacoco'
