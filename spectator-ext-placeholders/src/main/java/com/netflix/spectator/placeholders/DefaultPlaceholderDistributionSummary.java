@@ -21,9 +21,9 @@ import com.netflix.spectator.api.Registry;
 /**
  * Distribution summary implementation that delegates the value tracking to
  * component distribution summaries based on the current value of the tags
- * associated with the DynamicId when the interface methods are called.
+ * associated with the PlaceholderId when the interface methods are called.
  */
-class DefaultDynamicDistributionSummary extends AbstractDefaultDynamicMeter<DistributionSummary>
+class DefaultPlaceholderDistributionSummary extends AbstractDefaultPlaceholderMeter<DistributionSummary>
         implements DistributionSummary {
   /**
    * Constructs a new distribution summary with the specified dynamic id.
@@ -31,7 +31,7 @@ class DefaultDynamicDistributionSummary extends AbstractDefaultDynamicMeter<Dist
    * @param id the dynamic (template) id for generating the individual distribution summaries
    * @param registry the registry to use to instantiate the individual distribution summaries
    */
-  DefaultDynamicDistributionSummary(DynamicId id, Registry registry) {
+  DefaultPlaceholderDistributionSummary(PlaceholderId id, Registry registry) {
     super(id, registry, registry::distributionSummary);
   }
 

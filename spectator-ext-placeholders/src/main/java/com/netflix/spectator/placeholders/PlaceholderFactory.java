@@ -44,8 +44,8 @@ public final class PlaceholderFactory {
    * @return
    *     The newly created identifier.
    */
-  public DynamicId createId(String name) {
-    return new DefaultDynamicId(name);
+  public PlaceholderId createId(String name) {
+    return new DefaultPlaceholderId(name);
   }
 
   /**
@@ -59,8 +59,8 @@ public final class PlaceholderFactory {
    * @return
    *     The newly created identifier.
    */
-  public DynamicId createId(String name, Iterable<TagFactory> tagFactories) {
-    return DefaultDynamicId.createWithFactories(name, tagFactories);
+  public PlaceholderId createId(String name, Iterable<TagFactory> tagFactories) {
+    return DefaultPlaceholderId.createWithFactories(name, tagFactories);
   }
 
   /**
@@ -70,8 +70,8 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public Counter counter(DynamicId id) {
-    return new DefaultDynamicCounter(id, registry);
+  public Counter counter(PlaceholderId id) {
+    return new DefaultPlaceholderCounter(id, registry);
   }
 
   /**
@@ -81,8 +81,8 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public DistributionSummary distributionSummary(DynamicId id) {
-    return new DefaultDynamicDistributionSummary(id, registry);
+  public DistributionSummary distributionSummary(PlaceholderId id) {
+    return new DefaultPlaceholderDistributionSummary(id, registry);
   }
 
   /**
@@ -91,7 +91,7 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public Timer timer(DynamicId id) {
-    return new DefaultDynamicTimer(id, registry);
+  public Timer timer(PlaceholderId id) {
+    return new DefaultPlaceholderTimer(id, registry);
   }
 }

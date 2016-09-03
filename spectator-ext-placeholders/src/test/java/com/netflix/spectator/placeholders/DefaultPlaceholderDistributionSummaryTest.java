@@ -27,17 +27,17 @@ import org.junit.runners.JUnit4;
 import java.util.Collections;
 
 /**
- * Unit tests for the DefaultDynamicDistributionSummary class.
+ * Unit tests for the DefaultPlaceholderDistributionSummary class.
  */
 @RunWith(JUnit4.class)
-public class DefaultDynamicDistributionSummaryTest {
+public class DefaultPlaceholderDistributionSummaryTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
   private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
-    DistributionSummary summary = new DefaultDynamicDistributionSummary(new DefaultDynamicId("testInit"), registry);
+    DistributionSummary summary = new DefaultPlaceholderDistributionSummary(new DefaultPlaceholderId("testInit"), registry);
 
     Assert.assertEquals(0L, summary.count());
     Assert.assertEquals(0L, summary.totalAmount());

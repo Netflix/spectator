@@ -26,8 +26,8 @@ import java.util.function.Function;
  * Base class for dynamic meters that provides implementations for the core
  * interface methods.
  */
-abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
-  private final DynamicId id;
+abstract class AbstractDefaultPlaceholderMeter<T extends Meter> implements Meter {
+  private final PlaceholderId id;
   private final Registry registry;
   private final Function<Id, T> meterResolver;
 
@@ -37,7 +37,7 @@ abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
    * @param id the dynamic id for the meter
    * @param meterResolver the function to map a resolved id to concrete metric
    */
-  AbstractDefaultDynamicMeter(DynamicId id, Registry registry, Function<Id, T> meterResolver) {
+  AbstractDefaultPlaceholderMeter(PlaceholderId id, Registry registry, Function<Id, T> meterResolver) {
     this.id = id;
     this.registry = registry;
     this.meterResolver = meterResolver;

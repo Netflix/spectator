@@ -30,17 +30,17 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Unit tests for the DefaultDynamicTimer class.
+ * Unit tests for the DefaultPlaceholderTimer class.
  */
 @RunWith(JUnit4.class)
-public class DefaultDynamicTimerTest {
+public class DefaultPlaceholderTimerTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
   private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
-    Timer timer = new DefaultDynamicTimer(new DefaultDynamicId("testInit"), registry);
+    Timer timer = new DefaultPlaceholderTimer(new DefaultPlaceholderId("testInit"), registry);
 
     Assert.assertEquals(0L, timer.count());
     Assert.assertEquals(0L, timer.totalTime());

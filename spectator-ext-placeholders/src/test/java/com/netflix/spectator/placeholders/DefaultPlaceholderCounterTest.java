@@ -30,19 +30,19 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Unit tests for DefaultDynamicCounter class.
+ * Unit tests for DefaultPlaceholderCounter class.
  *
  * Created on 10/8/15.
  */
 @RunWith(JUnit4.class)
-public class DefaultDynamicCounterTest {
+public class DefaultPlaceholderCounterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
   private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
-    Counter c = new DefaultDynamicCounter(NoopDynamicId.INSTANCE, registry);
+    Counter c = new DefaultPlaceholderCounter(NoopPlaceholderId.INSTANCE, registry);
     Assert.assertEquals(c.count(), 0L);
   }
 

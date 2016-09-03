@@ -27,7 +27,7 @@ import java.util.Map;
  * provide a default value for a tag or to use a TagFactory implementation that uses
  * context available in the execution environment to compute the value of the tag.
  */
-public interface DynamicId {
+public interface PlaceholderId {
   /** Description of the measurement that is being collected. */
   String name();
 
@@ -35,30 +35,30 @@ public interface DynamicId {
   Iterable<Tag> tags();
 
   /** New id with an additional tag value. */
-  DynamicId withTag(String k, String v);
+  PlaceholderId withTag(String k, String v);
 
   /** New id with an additional tag value. */
-  DynamicId withTag(Tag t);
+  PlaceholderId withTag(Tag t);
 
   /** New id with additional tag values. */
-  DynamicId withTags(Iterable<Tag> tags);
+  PlaceholderId withTags(Iterable<Tag> tags);
 
   /** New id with additional tag values. */
-  DynamicId withTags(Map<String, String> tags);
+  PlaceholderId withTags(Map<String, String> tags);
 
   /**
    * New id with an additional tag factory.
    * @param factory
    *        the factory to use to generate the values for the tag
    */
-  DynamicId withTagFactory(TagFactory factory);
+  PlaceholderId withTagFactory(TagFactory factory);
 
   /**
    * New id with additional tag factories.
    * @param factories
    *        a collection of factories for producing values for the tags
    */
-  DynamicId withTagFactories(Iterable<TagFactory> factories);
+  PlaceholderId withTagFactories(Iterable<TagFactory> factories);
 
   /**
    * Invokes each of the associated tag factories to produce a Id based on the
