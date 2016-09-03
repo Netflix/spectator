@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 public class DefaultDynamicTimerTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
+  private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
@@ -48,7 +49,7 @@ public class DefaultDynamicTimerTest {
   @Test
   public void testRecord() {
     String[] tagValue = new String[] { "default" };
-    Timer timer = registry.timer(registry.createDynamicId("testRecord",
+    Timer timer = factory.timer(factory.createId("testRecord",
             Collections.singleton(new TestTagFactory(tagValue))));
 
     timer.record(42, TimeUnit.MILLISECONDS);
@@ -64,7 +65,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testRecordNegative() {
-    Timer timer = registry.timer(registry.createDynamicId("testRecordNegative"));
+    Timer timer = factory.timer(factory.createId("testRecordNegative"));
     timer.record(-42, TimeUnit.MILLISECONDS);
     Assert.assertEquals(timer.count(), 0L);
     Assert.assertEquals(0L, timer.totalTime());
@@ -72,7 +73,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testRecordZero() {
-    Timer timer = registry.timer(registry.createDynamicId("testRecordZero"));
+    Timer timer = factory.timer(factory.createId("testRecordZero"));
     timer.record(0, TimeUnit.MILLISECONDS);
     Assert.assertEquals(1L, timer.count(), 1L);
     Assert.assertEquals(0L, timer.totalTime());
@@ -81,7 +82,7 @@ public class DefaultDynamicTimerTest {
   @Test
   public void testRecordCallable() throws Exception {
     int expected = 42;
-    Timer timer = registry.timer(registry.createDynamicId("testRecordCallable"));
+    Timer timer = factory.timer(factory.createId("testRecordCallable"));
     clock.setMonotonicTime(100L);
     int actual = timer.record(() -> {
       clock.setMonotonicTime(500L);
@@ -94,7 +95,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testRecordCallableException() throws Exception {
-    Timer timer = registry.timer(registry.createDynamicId("testRecordCallableException"));
+    Timer timer = factory.timer(factory.createId("testRecordCallableException"));
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
@@ -112,7 +113,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testRecordRunnable() throws Exception {
-    Timer timer = registry.timer(registry.createDynamicId("testRecordRunnable"));
+    Timer timer = factory.timer(factory.createId("testRecordRunnable"));
     clock.setMonotonicTime(100L);
     timer.record(() -> clock.setMonotonicTime(500L));
     Assert.assertEquals(1L, timer.count());
@@ -121,7 +122,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testRecordRunnableException() throws Exception {
-    Timer timer = registry.timer(registry.createDynamicId("testRecordRunnableException"));
+    Timer timer = factory.timer(factory.createId("testRecordRunnableException"));
     clock.setMonotonicTime(100L);
     Exception expectedExc = new RuntimeException("foo");
     Exception actualExc = null;
@@ -140,7 +141,7 @@ public class DefaultDynamicTimerTest {
 
   @Test
   public void testMeasure() {
-    Timer timer = registry.timer(registry.createDynamicId("testMeasure"));
+    Timer timer = factory.timer(factory.createId("testMeasure"));
     timer.record(42, TimeUnit.MILLISECONDS);
     clock.setWallTime(3712345L);
     for (Measurement m : timer.measure()) {

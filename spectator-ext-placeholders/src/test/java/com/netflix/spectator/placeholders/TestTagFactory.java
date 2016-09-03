@@ -17,7 +17,6 @@ package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Tag;
-import com.netflix.spectator.api.TagFactory;
 import org.junit.Ignore;
 
 /**

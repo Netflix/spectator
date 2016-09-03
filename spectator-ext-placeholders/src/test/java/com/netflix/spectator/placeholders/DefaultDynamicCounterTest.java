@@ -38,6 +38,7 @@ import java.util.List;
 public class DefaultDynamicCounterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
+  private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
@@ -48,7 +49,7 @@ public class DefaultDynamicCounterTest {
   @Test
   public void testIncrement() {
     String[] tagValue = new String[] { "default" };
-    Counter c = registry.counter(registry.createDynamicId("testIncrement",
+    Counter c = factory.counter(factory.createId("testIncrement",
             Collections.singleton(new TestTagFactory(tagValue))));
     Assert.assertEquals(0L, c.count());
     Assert.assertEquals("testIncrement:tag=default", c.id().toString());
@@ -72,7 +73,7 @@ public class DefaultDynamicCounterTest {
   @Test
   public void testIncrementAmount() {
     String[] tagValue = new String[] { "default" };
-    Counter c = registry.counter(registry.createDynamicId("testIncrementAmount",
+    Counter c = factory.counter(factory.createId("testIncrementAmount",
             Collections.singleton(new TestTagFactory(tagValue))));
 
     c.increment(42);
@@ -86,7 +87,7 @@ public class DefaultDynamicCounterTest {
   @Test
   public void testMeasure() {
     String[] tagValue = new String[] { "default" };
-    Counter c = registry.counter(registry.createDynamicId("testMeasure",
+    Counter c = factory.counter(factory.createId("testMeasure",
             Collections.singleton(new TestTagFactory(tagValue))));
 
     doMeasurementTest(c, 42, 3712345L);
@@ -110,7 +111,7 @@ public class DefaultDynamicCounterTest {
   @Test
   public void testHasExpired() {
     String[] tagValue = new String[] { "default" };
-    Counter c = registry.counter(registry.createDynamicId("testHasExpired",
+    Counter c = factory.counter(factory.createId("testHasExpired",
             Collections.singleton(new TestTagFactory(tagValue))));
 
     Assert.assertFalse(c.hasExpired());

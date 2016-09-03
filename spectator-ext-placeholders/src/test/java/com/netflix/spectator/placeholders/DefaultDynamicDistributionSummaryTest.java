@@ -33,6 +33,7 @@ import java.util.Collections;
 public class DefaultDynamicDistributionSummaryTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
+  private final PlaceholderFactory factory = PlaceholderFactory.from(registry);
 
   @Test
   public void testInit() {
@@ -45,7 +46,7 @@ public class DefaultDynamicDistributionSummaryTest {
   @Test
   public void testRecord() {
     String[] tagValue = new String[] { "default" };
-    DistributionSummary summary = registry.distributionSummary(registry.createDynamicId("testRecord",
+    DistributionSummary summary = factory.distributionSummary(factory.createId("testRecord",
             Collections.singleton(new TestTagFactory(tagValue))));
 
     summary.record(42L);
@@ -61,7 +62,7 @@ public class DefaultDynamicDistributionSummaryTest {
 
   @Test
   public void testRecordNegative() {
-    DistributionSummary summary = registry.distributionSummary(registry.createDynamicId("testRecordNegative"));
+    DistributionSummary summary = factory.distributionSummary(factory.createId("testRecordNegative"));
 
     summary.record(-42L);
     Assert.assertEquals(summary.count(), 0L);
@@ -70,7 +71,7 @@ public class DefaultDynamicDistributionSummaryTest {
 
   @Test
   public void testRecordZero() {
-    DistributionSummary summary = registry.distributionSummary(registry.createDynamicId("testRecordNegative"));
+    DistributionSummary summary = factory.distributionSummary(factory.createId("testRecordNegative"));
 
     summary.record(0);
     Assert.assertEquals(summary.count(), 1L);
