@@ -20,7 +20,10 @@ import com.netflix.spectator.impl.Preconditions;
 /**
  * TagFactory implementation that always produces the same tag.  Useful for
  * providing a default value for a tag.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 public final class ConstantTagFactory implements TagFactory {
   private final Tag tag;
 

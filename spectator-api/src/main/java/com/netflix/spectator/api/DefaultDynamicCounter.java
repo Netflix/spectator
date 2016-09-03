@@ -19,7 +19,10 @@ package com.netflix.spectator.api;
  * Counter implementation that delegates the value tracking to component counters
  * based on the current value of the tags associated with the DynamicId when the
  * increment methods are called.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 class DefaultDynamicCounter extends AbstractDefaultDynamicMeter<Counter> implements Counter {
   /**
    * Constructs a new counter with the specified dynamic id.

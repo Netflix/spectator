@@ -27,8 +27,9 @@ import java.util.stream.Collectors;
 /**
  * Default/standard implementation of the DynamicId interface.
  *
- * Created on 8/3/15.
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 final class DefaultDynamicId implements DynamicId {
   /**
    * Utility class for sorting and deduplicating lists of tag factories.

@@ -20,7 +20,10 @@ import java.util.function.Function;
 /**
  * Base class for dynamic meters that provides implementations for the core
  * interface methods.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
   private final DynamicId id;
   private final Function<Id, T> meterResolver;

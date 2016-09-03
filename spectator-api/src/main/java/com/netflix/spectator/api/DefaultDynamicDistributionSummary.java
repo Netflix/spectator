@@ -19,7 +19,10 @@ package com.netflix.spectator.api;
  * Distribution summary implementation that delegates the value tracking to
  * component distribution summaries based on the current value of the tags
  * associated with the DynamicId when the interface methods are called.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 class DefaultDynamicDistributionSummary extends AbstractDefaultDynamicMeter<DistributionSummary>
         implements DistributionSummary {
   /**

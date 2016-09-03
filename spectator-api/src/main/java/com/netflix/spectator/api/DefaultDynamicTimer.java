@@ -22,7 +22,10 @@ import java.util.concurrent.TimeUnit;
  * Timer implementation that delegates the value tracking to component timers
  * based on the current value of the tags associated with the DynamicId when the
  * interface methods are called.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 class DefaultDynamicTimer extends AbstractDefaultDynamicMeter<Timer> implements Timer {
   /**
    * Constructs a new timer with the specified dynamic id.

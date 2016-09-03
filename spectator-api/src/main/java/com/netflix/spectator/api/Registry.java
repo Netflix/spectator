@@ -70,7 +70,9 @@ public interface Registry extends Iterable<Meter> {
    *     Description of the measurement that is being collected.
    * @return
    *     The newly created dynamic identifier.
+   * @deprecated Use {@code spectator-ext-placeholders} library instead.
    */
+  @Deprecated
   default DynamicId createDynamicId(String name) {
     return new DefaultDynamicId(name);
   }
@@ -84,7 +86,9 @@ public interface Registry extends Iterable<Meter> {
    *     Other factories that can generate other dimensions that can be used to classify the measurement.
    * @return
    *     The newly created dynamic identifier.
+   * @deprecated Use {@code spectator-ext-placeholders} library instead.
    */
+  @Deprecated
   default DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
     return DefaultDynamicId.createWithFactories(name, tagFactories);
   }
@@ -109,7 +113,9 @@ public interface Registry extends Iterable<Meter> {
    *
    * @param id
    *     Identifier created by a call to {@link #createDynamicId}
+   * @deprecated Use {@code spectator-ext-placeholders} library instead.
    */
+  @Deprecated
   default Counter counter(DynamicId id) {
     return new DefaultDynamicCounter(id, this);
   }
@@ -129,7 +135,9 @@ public interface Registry extends Iterable<Meter> {
    *
    * @param id
    *     Identifier created by a call to {@link #createDynamicId}
+   * @deprecated Use {@code spectator-ext-placeholders} library instead.
    */
+  @Deprecated
   default DistributionSummary distributionSummary(DynamicId id) {
     return new DefaultDynamicDistributionSummary(id, this);
   }
@@ -147,7 +155,9 @@ public interface Registry extends Iterable<Meter> {
    *
    * @param id
    *     Identifier created by a call to {@link #createDynamicId}
+   * @deprecated Use {@code spectator-ext-placeholders} library instead.
    */
+  @Deprecated
   default Timer timer(DynamicId id) {
     return new DefaultDynamicTimer(id, this);
   }

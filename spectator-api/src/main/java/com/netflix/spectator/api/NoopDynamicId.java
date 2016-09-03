@@ -21,8 +21,9 @@ import java.util.Map;
 /**
  * DynamicId implementation for the no-op registry.
  *
- * Created on 8/27/15.
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 final class NoopDynamicId  implements DynamicId {
   /** Singleton instance. */
   static final DynamicId INSTANCE = new NoopDynamicId();

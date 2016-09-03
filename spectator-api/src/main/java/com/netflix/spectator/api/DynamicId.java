@@ -22,7 +22,10 @@ import java.util.Map;
  * to the Id to be declared in advance of the use of the metric.  This can be used to
  * provide a default value for a tag or to use a TagFactory implementation that uses
  * context available in the execution environment to compute the value of the tag.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 public interface DynamicId {
   /** Description of the measurement that is being collected. */
   String name();

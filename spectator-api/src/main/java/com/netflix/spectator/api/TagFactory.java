@@ -17,7 +17,10 @@ package com.netflix.spectator.api;
 
 /**
  * A factory for producing tag values.
+ *
+ * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
+@Deprecated
 public interface TagFactory {
   /**
    * Returns the name of the factory, which is used as the key for any Tag
