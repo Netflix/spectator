@@ -7,5 +7,6 @@ include 'spectator-api',
         'spectator-ext-log4j2',
         'spectator-ext-sandbox',
         'spectator-ext-spark',
+        'spectator-ext-stackdriver',
         'spectator-reg-metrics3',
         'spectator-reg-servo'
