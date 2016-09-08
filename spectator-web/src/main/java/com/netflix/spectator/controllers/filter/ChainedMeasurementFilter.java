@@ -18,24 +18,39 @@ package com.netflix.spectator.controllers.filter;
 
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
-import com.netflix.spectator.controllers.filter.MeasurementFilter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * Allows multiple filters to be composed into a single filter.
+ */
 public class ChainedMeasurementFilter implements MeasurementFilter {
   private List<MeasurementFilter> filters = new ArrayList<MeasurementFilter>();
 
+  /**
+   * Constructs filter a + b.
+   *
+   * Measurements must pass both filters.
+   */
   public ChainedMeasurementFilter(MeasurementFilter a, MeasurementFilter b) {
     filters.add(a);
     filters.add(b);
   }
 
-  public ChainedMeasurementFilter(ArrayList<MeasurementFilter> list) {
+  /**
+   * Constructs general pipeline.
+   *
+   * Measurements must pass all filters.
+   */
+  public ChainedMeasurementFilter(List<MeasurementFilter> list) {
     filters.addAll(list);
   }
 
+  /**
+   * Implements MeasurementFilter.
+   */
   public boolean keep(Meter meter, Measurement measurement) {
     for (MeasurementFilter filter : filters) {
       if (!filter.keep(meter, measurement)) return false;

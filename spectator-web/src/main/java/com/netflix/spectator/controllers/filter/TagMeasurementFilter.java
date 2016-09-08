@@ -16,8 +16,6 @@
 
 package com.netflix.spectator.controllers.filter;
 
-import com.netflix.spectator.controllers.filter.MeasurementFilter;
-
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
@@ -26,11 +24,17 @@ import com.netflix.spectator.api.Tag;
 import java.util.regex.Pattern;
 
 
+/**
+ * A simple MeasurementFilter based on meter/tag names and values.
+ */
 public class TagMeasurementFilter implements MeasurementFilter {
   private final Pattern meterNamePattern;
   private final Pattern tagNamePattern;
   private final Pattern tagValuePattern;
 
+  /**
+   * Constructor.
+   */
   public TagMeasurementFilter(String meterNameRegex, String tagNameRegex, String tagValueRegex) {
     if (meterNameRegex != null && !meterNameRegex.isEmpty() && !meterNameRegex.equals(".*")) {
       meterNamePattern = Pattern.compile(meterNameRegex);
@@ -51,6 +55,9 @@ public class TagMeasurementFilter implements MeasurementFilter {
     }
   }
 
+  /**
+   * Implements MeasurementFilter interface.
+   */
   public boolean keep(Meter meter, Measurement measurement) {
     Id id = measurement.id();
     if (meterNamePattern != null
@@ -59,7 +66,6 @@ public class TagMeasurementFilter implements MeasurementFilter {
     }
 
     if (tagNamePattern != null || tagValuePattern != null) {
-      boolean ok = false;
       for (Tag tag : id.tags()) {
         boolean nameOk = tagNamePattern == null
                          || tagNamePattern.matcher(tag.key()).matches();

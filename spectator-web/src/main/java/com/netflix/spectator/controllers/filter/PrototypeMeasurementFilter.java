@@ -25,55 +25,108 @@ import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 
 
+/**
+ * A general filter specified using a prototype "JSON" document.
+ *
+ * The json document generally follows the structure of the response,
+ * however in addition to containing a "metrics" section of what is desired,
+ * it also contains an "excludes" section saying what is not desired.
+ *
+ * Each of the section contains regular expression rather than literals
+ * where the regular expressions are matched against the actual names (or values).
+ * Thus the excludes section can be used to restrict more general matching
+ * expressions.
+ *
+ * Each measurement is evaluated against all the entries in the filter until one
+ * is found that would cause it to be accepted and not excluded.
+ */
 public class PrototypeMeasurementFilter implements MeasurementFilter {
+  /**
+   * Filters based on Spectator Id tag names and/or values.
+   */
   public static class TagFilterPattern {
+    /**
+     * Construct from regex patterns.
+     */
     public TagFilterPattern(Pattern key, Pattern value) {
      this.key = key;
      this.value = value;
     }
 
+    /**
+     * Construct from the prototype specification.
+     */
     public TagFilterPattern(PrototypeMeasurementFilterSpecification.TagFilterSpecification spec) {
       if (spec == null) return;
 
-      if (spec.key != null && !spec.key.isEmpty() && !spec.key.equals(".*")) {
-        key = Pattern.compile(spec.key);
+      String keySpec = spec.getKey();
+      String valueSpec = spec.getValue();
+      if (keySpec != null && !keySpec.isEmpty() && !keySpec.equals(".*")) {
+        key = Pattern.compile(keySpec);
       }
-      if (spec.value != null && !spec.value.isEmpty() && !spec.value.equals(".*")) {
-        value = Pattern.compile(spec.value);
+      if (valueSpec != null && !valueSpec.isEmpty() && !valueSpec.equals(".*")) {
+        value = Pattern.compile(valueSpec);
       }
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(key.pattern(), value.pattern());
     }
 
     @Override
     public boolean equals(Object obj) {
       if (obj == null || !(obj instanceof TagFilterPattern)) return false;
-      TagFilterPattern other = (TagFilterPattern)obj;
+      TagFilterPattern other = (TagFilterPattern) obj;
       return key.pattern().equals(other.key.pattern()) && value.pattern().equals(other.value.pattern());
     }
 
+    /**
+     * Implements the MeasurementFilter interface.
+     */
     public boolean keep(Tag tag) {
       if ((key != null) && !key.matcher(tag.key()).matches()) return false;
-      if ((value != null) && !value.matcher(tag.value()).matches()) return false;
-      return true;
+
+      return ((value == null) || value.matcher(tag.value()).matches());
     }
 
+    @Override
     public String toString() {
       return String.format("%s=%s", key.pattern(), value.pattern());
     }
 
-    public Pattern key;
-    public Pattern value;
+    /**
+     * Pattern for matching the Spectator tag key.
+     */
+    private Pattern key;
+
+    /**
+     * Pattern for matching the Spectator tag value.
+     */
+    private Pattern value;
   };
 
+
+  /**
+   * Filters on measurement values.
+   *
+   * A value includes a set of tags.
+   * This filter does not currently include the actual measurement value, only sets of tags.
+   */
   public static class ValueFilterPattern {
+    /**
+     * Constructs a filter from a specification.
+     */
     public ValueFilterPattern(PrototypeMeasurementFilterSpecification.ValueFilterSpecification spec) {
       if (spec == null) return;
 
-      for (PrototypeMeasurementFilterSpecification.TagFilterSpecification tag : spec.tags) {
+      for (PrototypeMeasurementFilterSpecification.TagFilterSpecification tag : spec.getTags()) {
           this.tags.add(new TagFilterPattern(tag));
-     }
+      }
     }
 
     @Override
@@ -83,6 +136,14 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
       return tags.equals(other.tags);
     }
 
+    @Override
+    public int hashCode() {
+      return tags.hashCode();
+    }
+
+    /**
+     * Determins if a particular TagFilter is satisfied among the value's tag set.
+     */
     static boolean patternInList(TagFilterPattern tagPattern,
                                  Iterable<Tag> sourceTags) {
       for (Tag candidateTag : sourceTags) {
@@ -93,6 +154,9 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
       return false;
     }
 
+    /**
+     * Implements the MeasurementFilter interface.
+     */
     public boolean keep(Iterable<Tag> sourceTags) {
       for (TagFilterPattern tagPattern : this.tags) {
         if (!patternInList(tagPattern, sourceTags)) {
@@ -102,20 +166,36 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
       return true;
     }
 
-    public final List<TagFilterPattern> tags = new ArrayList<TagFilterPattern>();
+
+    /**
+     * The list of tag filters that must be satisfied for the value to be satisfied.
+     */
+    public List<TagFilterPattern> getTags() {
+      return tags;
+    }
+    private final List<TagFilterPattern> tags = new ArrayList<TagFilterPattern>();
   };
 
+
+  /**
+   * Filters a meter.
+   */
   public static class MeterFilterPattern {
+    /**
+     * Constructs from a specification.
+     *
+     * The nameRegex specifies the name of the Spectator meter itself.
+     */
     public MeterFilterPattern(
             String nameRegex,
             PrototypeMeasurementFilterSpecification.MeterFilterSpecification spec) {
       namePattern = Pattern.compile(nameRegex);
       if (spec == null) return;
 
-      if (spec.values.isEmpty()) {
+      if (spec.getValues().isEmpty()) {
         values.add(new ValueFilterPattern(PrototypeMeasurementFilterSpecification.ValueFilterSpecification.ALL));
       }
-      for (PrototypeMeasurementFilterSpecification.ValueFilterSpecification value : spec.values) {
+      for (PrototypeMeasurementFilterSpecification.ValueFilterSpecification value : spec.getValues()) {
           values.add(new ValueFilterPattern(value));
       }
     }
@@ -127,16 +207,59 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
       return namePattern.equals(other.namePattern) && values.equals(other.values);
     }
 
-     public final Pattern namePattern;
-    public final List<ValueFilterPattern> values = new ArrayList<ValueFilterPattern>();
+    @Override
+    public int hashCode() {
+      return Objects.hash(namePattern, values);
+    }
+
+    /**
+     * Filters the name of the meter.
+     */
+    private final Pattern namePattern;
+
+    /**
+     * A list of value filters acts as a disjunction.
+     * Any of the values can be satisifed to satisfy the Meter.
+     */
+    public List<ValueFilterPattern> getValues() {
+      return values;
+    }
+    private final List<ValueFilterPattern> values = new ArrayList<ValueFilterPattern>();
   };
 
 
+  /**
+   * A collection of Include patterns and Exclude patterns for filtering.
+   */
   public static class IncludeExcludePatterns {
-    public List<ValueFilterPattern> include = new ArrayList<ValueFilterPattern>();
-    public List<ValueFilterPattern> exclude = new ArrayList<ValueFilterPattern>();
+    /**
+     * The value patterns that must be satisifed to include.
+     */
+    public List<ValueFilterPattern> getInclude() {
+      return include;
+    }
+    private List<ValueFilterPattern> include = new ArrayList<ValueFilterPattern>();
 
-    public IncludeExcludePatterns() {}
+    /**
+     * The value patterns that cannot be satisifed to include.
+     * This is meant to refine the include list from being too generous.
+     */
+    public List<ValueFilterPattern> getExclude() {
+      return exclude;
+    }
+    private List<ValueFilterPattern> exclude = new ArrayList<ValueFilterPattern>();
+
+
+    /**
+     * Default constructor.
+     */
+    public IncludeExcludePatterns() {
+      // empty.
+    }
+
+    /**
+     * Constructor.
+     */
     public IncludeExcludePatterns(List<ValueFilterPattern> include,
                                   List<ValueFilterPattern> exclude) {
       this.include.addAll(include);
@@ -148,10 +271,18 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
       if (obj == null || !(obj instanceof IncludeExcludePatterns)) {
         return false;
       }
-      IncludeExcludePatterns other = (IncludeExcludePatterns)obj;
+      IncludeExcludePatterns other = (IncludeExcludePatterns) obj;
       return include.equals(other.include) && exclude.equals(other.exclude);
     }
 
+    @Override
+    public int hashCode() {
+      return Objects.hash(include, exclude);
+    }
+
+    /**
+     * Implements the MeasurementFilter interface.
+     */
     public boolean keep(Meter meter, Measurement measurement) {
       boolean ok = include.isEmpty();
       for (ValueFilterPattern pattern : include) {
@@ -172,22 +303,34 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     }
   };
 
+  /**
+   * Constructor.
+   */
   public PrototypeMeasurementFilter(PrototypeMeasurementFilterSpecification specification) {
     for (Map.Entry<String, PrototypeMeasurementFilterSpecification.MeterFilterSpecification> entry
-             : specification.include.entrySet()) {
+             : specification.getInclude().entrySet()) {
       includePatterns.add(new MeterFilterPattern(entry.getKey(), entry.getValue()));
     }
     for (Map.Entry<String, PrototypeMeasurementFilterSpecification.MeterFilterSpecification> entry
-             : specification.exclude.entrySet()) {
+             : specification.getExclude().entrySet()) {
       excludePatterns.add(new MeterFilterPattern(entry.getKey(), entry.getValue()));
     }
   }
 
+  /**
+   * Implements the MeasurementFilter interface.
+   */
   public boolean keep(Meter meter, Measurement measurement) {
     IncludeExcludePatterns patterns = metricToPatterns(measurement.id().name());
     return patterns != null && patterns.keep(meter, measurement);
   }
 
+  /**
+   * Find the IncludeExcludePatterns for filtering a given metric.
+   *
+   * The result is the union of all the individual pattern entries
+   * where their specified metric name patterns matches the actual metric name.
+   */
   public IncludeExcludePatterns metricToPatterns(String metric) {
     IncludeExcludePatterns foundPatterns = metricNameToPatterns.get(metric);
     if (foundPatterns != null) {
@@ -212,15 +355,31 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     return foundPatterns;
   }
 
+  /**
+   * Factory method building a filter from a specification file.
+   */
   public static PrototypeMeasurementFilter loadFromPath(String path) throws IOException {
     PrototypeMeasurementFilterSpecification spec =
         PrototypeMeasurementFilterSpecification.loadFromPath(path);
     return new PrototypeMeasurementFilter(spec);
   }
 
-  final private List<MeterFilterPattern> includePatterns = new ArrayList<MeterFilterPattern>();
-  final private List<MeterFilterPattern> excludePatterns = new ArrayList<MeterFilterPattern>();
+  /**
+   * All the meter filter patterns that can be satisfied.
+   */
+  private final List<MeterFilterPattern> includePatterns = new ArrayList<MeterFilterPattern>();
 
-  final private Map<String, IncludeExcludePatterns> metricNameToPatterns = new HashMap<String, IncludeExcludePatterns>();
+  /**
+   * All the meter filter patterns that cannot be satisfied.
+   */
+  private final List<MeterFilterPattern> excludePatterns = new ArrayList<MeterFilterPattern>();
+
+  /**
+   * A cache of previously computed includeExcludePatterns.
+   * Since the patterns are static and meters heavily reused,
+   * we'll cache previous results for the next time we apply the filter.
+   */
+  private final Map<String, IncludeExcludePatterns> metricNameToPatterns
+      = new HashMap<String, IncludeExcludePatterns>();
 };
 

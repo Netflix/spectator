@@ -16,7 +16,10 @@
 
 package com.netflix.spectator.controllers.model;
 
-import com.netflix.spectator.controllers.model.MetricValuesMap;
+import java.util.Map;
+import java.util.Objects;
+
+
 
 /**
  * An ApplicationRegistry is the encoding of the metrics from a particular application.
@@ -24,12 +27,63 @@ import com.netflix.spectator.controllers.model.MetricValuesMap;
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class ApplicationRegistry {
-  public String applicationName;
-  public MetricValuesMap metrics;
+  private String applicationName;
+  private String applicationVersion;
+  private Map<String, MetricValues> metrics;
 
+  /**
+   * The application name exporting the metrics.
+   */
+  public String applicationName() {
+    return applicationName;
+  }
+
+  /**
+   * The application name exporting the metrics.
+   */
+  public void setApplicationName(String name) {
+     applicationName = name;
+  }
+
+  /**
+   * The version of the application name exporting the metrics.
+   */
+  public String applicationVersion() {
+    return applicationVersion;
+  }
+
+  /**
+   * The version of the application name exporting the metrics.
+   */
+  public void setApplicationVersion(String version) {
+      applicationVersion = version;
+  }
+
+  /**
+   * The current metrics.
+   */
+  public Map<String, MetricValues> getMetrics() {
+    return metrics;
+  }
+
+  /**
+   * Sets the metric map.
+   *
+   * This is just an assignment, not a copy.
+   */
+    public void setMetrics(Map<String, MetricValues> map) {
+    metrics = map;
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (obj == null || !(obj instanceof ApplicationRegistry)) return false;
-    ApplicationRegistry other = (ApplicationRegistry)obj;
+    ApplicationRegistry other = (ApplicationRegistry) obj;
     return applicationName.equals(other.applicationName) && metrics.equals(other.metrics);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(applicationName, metrics);
   }
 }

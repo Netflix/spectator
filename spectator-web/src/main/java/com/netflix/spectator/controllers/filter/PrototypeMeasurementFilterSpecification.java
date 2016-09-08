@@ -25,18 +25,39 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 
+/**
+ * Represents the specification for a PrototypeMeasurementFilter.
+ */
 public class PrototypeMeasurementFilterSpecification {
+  /**
+   * Specifies how to filter an individual tag (name and value).
+   */
   public static class TagFilterSpecification {
-    public String key;   // regex
-    public String value; // regex
+    private String key;   // regex
+    private String value; // regex
 
-    TagFilterSpecification() {
+    public String getKey() {
+        return key;
+    }
+    public String getValue() {
+        return value;
+    }
+
+    /**
+     * Default constructor.
+     */
+    public TagFilterSpecification() {
         key = null;
         value = null;
     }
-    TagFilterSpecification(String key, String value) {
+
+    /**
+     * Construct a filter with particular regular expressions.
+     */
+    public TagFilterSpecification(String key, String value) {
       this.key = key;
       this.value = value;
     }
@@ -46,8 +67,13 @@ public class PrototypeMeasurementFilterSpecification {
       if (obj == null || !(obj instanceof TagFilterSpecification)) {
         return false;
       }
-      TagFilterSpecification other = (TagFilterSpecification)obj;
+      TagFilterSpecification other = (TagFilterSpecification) obj;
       return key.equals(other.key) && value.equals(other.value);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(key, value);
     }
 
     @Override
@@ -56,21 +82,42 @@ public class PrototypeMeasurementFilterSpecification {
     }
   }
 
+  /**
+   * Specifies how to filter values.
+   *
+   * Values are identified by a collection of tags, so the filter
+   * is based on having a particular collection of name/value bindings.
+   *
+   * Actual values are not currently considered, but could be added later.
+   */
   public static class ValueFilterSpecification {
+    /**
+     * A filter that allows everything.
+     */
     static final ValueFilterSpecification ALL = new ValueFilterSpecification();
     static {
         ALL.tags.add(new TagFilterSpecification(".*", ".*"));
     }
 
-    ValueFilterSpecification() {}
+    /**
+     * Default constructor.
+     */
+    ValueFilterSpecification() {
+      // empty.
+    }
 
     @Override
     public boolean equals(Object obj) {
       if (obj == null || !(obj instanceof ValueFilterSpecification)) {
         return false;
       }
-      ValueFilterSpecification other = (ValueFilterSpecification)obj;
+      ValueFilterSpecification other = (ValueFilterSpecification) obj;
       return tags.equals(other.tags);
+    }
+
+    @Override
+    public int hashCode() {
+      return tags.hashCode();
     }
 
     @Override
@@ -78,12 +125,37 @@ public class PrototypeMeasurementFilterSpecification {
       return tags.toString();
     }
 
-    public final List<TagFilterSpecification> tags
+
+    /**
+     * The tag specifications.
+     */
+    public List<TagFilterSpecification> getTags() {
+        return tags;
+    }
+
+    /**
+     * The minimal list of tag bindings that are covered by this specification.
+     */
+    private final List<TagFilterSpecification> tags
         = new ArrayList<TagFilterSpecification>();
   };
 
+  /**
+   * A specification for filtering on a Spectator Meter.
+   *
+   * A meter is a name pattern and collection of tag bindings.
+   */
   public static class MeterFilterSpecification {
-    public MeterFilterSpecification() {}
+    /**
+     * Default constructor.
+     */
+    public MeterFilterSpecification() {
+      // empty.
+    }
+
+    /**
+     * Constructor injecting a value specification.
+     */
     public MeterFilterSpecification(List<ValueFilterSpecification> values) {
         this.values.addAll(values);
     }
@@ -93,8 +165,13 @@ public class PrototypeMeasurementFilterSpecification {
       if (obj == null || !(obj instanceof MeterFilterSpecification)) {
         return false;
       }
-      MeterFilterSpecification other = (MeterFilterSpecification)obj;
+      MeterFilterSpecification other = (MeterFilterSpecification) obj;
       return values.equals(other.values);
+    }
+
+    @Override
+    public int hashCode() {
+      return values.hashCode();
     }
 
     @Override
@@ -102,11 +179,26 @@ public class PrototypeMeasurementFilterSpecification {
       return values.toString();
     }
 
-    public final List<ValueFilterSpecification> values
+    /**
+     * The metric vlaue specifications.
+     */
+    public List<ValueFilterSpecification> getValues() {
+      return values;
+    }
+
+    /**
+     * The meter can be filtered on one or more collection of tag bindings.
+     * In essence, this permits certain aspects of a meter to be considered
+     * but not others.
+     */
+    private final List<ValueFilterSpecification> values
         = new ArrayList<ValueFilterSpecification>();
   };
 
 
+  /**
+   * Loads a specification from a file.
+   */
   public static PrototypeMeasurementFilterSpecification loadFromPath(String path)
       throws IOException {
     byte[] jsonData = Files.readAllBytes(Paths.get(path));
@@ -121,19 +213,48 @@ public class PrototypeMeasurementFilterSpecification {
       return false;
     }
     PrototypeMeasurementFilterSpecification other
-        = (PrototypeMeasurementFilterSpecification)obj;
+        = (PrototypeMeasurementFilterSpecification) obj;
     return include.equals(other.include) && exclude.equals(other.exclude);
   }
 
   @Override
+  public int hashCode() {
+    return Objects.hash(include, exclude);
+  }
+
+  @Override
   public String toString() {
-    return String.format("INCLUDE=%s\nEXCLUDE=%s",
+    return String.format("INCLUDE=%s%nEXCLUDE=%s",
                          include.toString(), exclude.toString());
   }
 
-  public final Map<String, MeterFilterSpecification> include
+  /**
+   * The list of specifications for when meters should be included.
+   */
+  public Map<String, MeterFilterSpecification> getInclude() {
+      return include;
+  }
+
+  /**
+   * The list of specifications for when meters should be excluded.
+   */
+  public Map<String, MeterFilterSpecification> getExclude() {
+      return exclude;
+  }
+
+  /**
+   * Maps meter name patterns to the meter specification for that pattern.
+   * The specified filter only passes meter/measurements that can be
+   * traced back to a specification in this list.
+   */
+  private final Map<String, MeterFilterSpecification> include
       = new HashMap<String, MeterFilterSpecification>();
 
-  public final Map<String, MeterFilterSpecification> exclude
+  /**
+   * Maps meter name patterns to the meter specification for that pattern.
+   * The specified filter does not pass meter/measurements that can be
+   * traced back to a specification in this list.
+   */
+  private final Map<String, MeterFilterSpecification> exclude
       = new HashMap<String, MeterFilterSpecification>();
 };

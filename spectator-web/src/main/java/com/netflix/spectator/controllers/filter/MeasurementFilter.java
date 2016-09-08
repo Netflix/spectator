@@ -19,7 +19,19 @@ package com.netflix.spectator.controllers.filter;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 
+/**
+ * Interface for filtering measurements.
+ *
+ * This is used to reduce available metrics down to those of interest to a caller.
+ */
 public interface MeasurementFilter {
-  public boolean keep(Meter meter, Measurement measurement);
+  /**
+   * Meter is the source of the measurement.
+   * Measurement is the particular measurement being filtered.
+   *
+   * The concrete filter determines the criteria of what to keep.
+   * Returns true to keep, false to discard.
+   */
+  boolean keep(Meter meter, Measurement measurement);
 };
 

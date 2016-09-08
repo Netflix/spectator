@@ -22,13 +22,22 @@ import com.netflix.spectator.api.Tag;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * A collection of DataPoint instances for a comment set of TagValues.
+ * A collection of DataPoint instances for a common set of TagValues.
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class TaggedDataPoints {
+  /**
+   * Factory for creating from Spectator objects.
+   *
+   * TODO(ewiseblatt): 20160909
+   * It appears that AggrMeter is already aggregating so
+   * the aggregate handling can be removed. Need to verify this
+   * in spinnaker before removing.
+   */
   public static TaggedDataPoints make(Id id, List<Measurement> measurements,
                                       boolean aggregate) {
     List<TagValue> tags = new ArrayList<TagValue>();
@@ -54,9 +63,23 @@ public class TaggedDataPoints {
     return new TaggedDataPoints(tags, dataPoints);
   }
 
-  public Iterable<TagValue> getTags() { return tags; }
-  public Iterable<DataPoint> getValues() { return dataPoints; }
+  /**
+   * The tag bindings for the values.
+   */
+  public Iterable<TagValue> getTags() {
+      return tags;
+  }
 
+  /**
+   * The current values.
+   */
+  public Iterable<DataPoint> getValues() {
+      return dataPoints;
+  }
+
+  /**
+   * Constructor.
+   */
   public TaggedDataPoints(List<TagValue> tags, List<DataPoint> dataPoints) {
     this.tags = tags;
     this.dataPoints = dataPoints;
@@ -70,8 +93,13 @@ public class TaggedDataPoints {
   @Override
   public boolean equals(Object obj) {
     if (obj == null || !(obj instanceof TaggedDataPoints)) return false;
-    TaggedDataPoints other = (TaggedDataPoints)obj;
+    TaggedDataPoints other = (TaggedDataPoints) obj;
     return tags.equals(other.tags) && dataPoints.equals(other.dataPoints);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(tags, dataPoints);
   }
 
   private List<TagValue> tags;

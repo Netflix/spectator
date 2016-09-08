@@ -14,15 +14,10 @@
  * limitations under the License.
  */
 
-apply plugin: 'groovy'
-
 dependencies {
-  compile project(':spectator-api')
+  compileApi project(':spectator-api')
 
   compile 'org.springframework.boot:spring-boot-starter-actuator:1.2.8.RELEASE'
   compile 'org.springframework.boot:spring-boot-starter-data-rest:1.2.8.RELEASE'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.5.3'
-
-  testCompile 'org.codehaus.groovy:groovy-all:2.3.11'
-  testCompile 'org.spockframework:spock-core:1.1-groovy-2.3-rc-1'
 }

@@ -26,13 +26,12 @@ import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 
-import com.netflix.spectator.controllers.model.ApplicationRegistry;
 import com.netflix.spectator.controllers.filter.ChainedMeasurementFilter;
-import com.netflix.spectator.controllers.model.MetricValuesMap;
-import com.netflix.spectator.controllers.model.MetricValues;
 import com.netflix.spectator.controllers.filter.MeasurementFilter;
 import com.netflix.spectator.controllers.filter.PrototypeMeasurementFilter;
 import com.netflix.spectator.controllers.filter.TagMeasurementFilter;
+import com.netflix.spectator.controllers.model.ApplicationRegistry;
+import com.netflix.spectator.controllers.model.MetricValues;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,19 +49,21 @@ import java.util.Map;
 import java.util.HashMap;
 
 
+/**
+ * Provides an HTTP endpoint for polling spectator metrics.
+ */
 @RequestMapping("/spectator/metrics")
 @RestController
 @ConditionalOnExpression("${spectator.endpoint.enabled:false}")
 public class MetricsController {
-
   @Autowired
-  Registry registry;
+  private Registry registry;
 
   @Value("${spectator.applicationName:}")
   private String applicationName;
 
   @Value("${spectator.applicationVersion:}")
-  public String applicationVersion;
+  private String applicationVersion;
 
   @Value("${spectator.endpoint.tagFilter.meterNameRegex:.*}")
   private String meterNameRegex;
@@ -78,6 +79,9 @@ public class MetricsController {
 
   private MeasurementFilter defaultMeasurementFilter = null;
 
+  /**
+   * The default measurement filter is configured through properties.
+   */
   public MeasurementFilter getDefaultMeasurementFilter() throws IOException {
     if (defaultMeasurementFilter != null) {
       return defaultMeasurementFilter;
@@ -94,13 +98,15 @@ public class MetricsController {
     return defaultMeasurementFilter;
   }
 
-  static String getWithDefault(Map<String, String> map,
-                               String key, String defaultValue) {
-    String value = map.get(key);
-    return value == null ? defaultValue : value;
-  }
 
-  @RequestMapping(method=RequestMethod.GET)
+  /**
+   * Endpoint for querying current metric values.
+   *
+   * The result is a JSON document describing the metrics and their values.
+   * The result can be filtered using query parameters or configuring the
+   * controller instance itself.
+   */
+  @RequestMapping(method = RequestMethod.GET)
   public ApplicationRegistry getMetrics(@RequestParam Map<String, String> filters)
     throws IOException {
     boolean all = filters.get("all") != null;
@@ -118,13 +124,19 @@ public class MetricsController {
     }
 
     ApplicationRegistry response = new ApplicationRegistry();
-    response.applicationName = applicationName;
-    response.metrics = encodeRegistry(registry, filter);
+    response.setApplicationName(applicationName);
+    response.setApplicationVersion(applicationVersion);
+    response.setMetrics(encodeRegistry(registry, filter));
     return response;
   }
 
-  MetricValuesMap encodeRegistry(Registry registry, MeasurementFilter filter) {
-    MetricValuesMap metricMap = new MetricValuesMap();
+  /**
+   * Internal API for encoding a registry that can be encoded as JSON.
+   * This is a helper function for the REST endpoint and to test against.
+   */
+  Map<String, MetricValues> encodeRegistry(
+        Registry sourceRegistry, MeasurementFilter filter) {
+    Map<String, MetricValues> metricMap = new HashMap<String, MetricValues>();
 
     /**
      * Spectator meters seam to group measurements. The meter name is the
@@ -140,7 +152,7 @@ public class MetricsController {
      * assumption doesnt hold, then forming the groupings will be complicated
      * and more expensive.
      */
-    for (Meter meter : registry) {
+    for (Meter meter : sourceRegistry) {
       Map<Id, List<Measurement>> collection
           = new HashMap<Id, List<Measurement>>();
       collectValues(collection, meter, filter);
@@ -153,12 +165,21 @@ public class MetricsController {
            if (have == null) {
              metricMap.put(entryName, MetricValues.make(kind, entry.getValue()));
            } else {
-             have.addMeasurements(kind, entry.getValue());
+              have.addMeasurements(kind, entry.getValue());
            }
         }
       }
     }
     return metricMap;
+  }
+
+  /**
+   * Looks up key in map, returning a specific default value if not found.
+   */
+  private static String getWithDefault(Map<String, String> map,
+                                       String key, String defaultValue) {
+    String value = map.get(key);
+    return value == null ? defaultValue : value;
   }
 
   /**
@@ -168,7 +189,7 @@ public class MetricsController {
       Map<Id, List<Measurement>> collection,
       Meter meter,
       MeasurementFilter filter) {
-    List<Id> new_ids = new ArrayList<Id>();
+    List<Id> newIds = new ArrayList<Id>();
 
     for (Measurement measurement : meter.measure()) {
       if (!filter.keep(meter, measurement)) {
@@ -180,13 +201,16 @@ public class MetricsController {
       if (valueList == null) {
         valueList = new ArrayList<Measurement>();
         collection.put(id, valueList);
-        new_ids.add(id);
+        newIds.add(id);
       }
       valueList.add(measurement);
     }
-    return new_ids;
+    return newIds;
   }
 
+  /**
+   * Determine the type of a meter for reporting purposes.
+   */
   public static String meterToKind(Meter meter) {
     String kind;
     if (meter instanceof Counter) {
@@ -198,9 +222,7 @@ public class MetricsController {
     } else if (meter instanceof DistributionSummary) {
       kind = "Distribution";
     } else {
-      kind = meter.getClass().getName();
-      int dot = kind.lastIndexOf('.');
-      kind = kind.substring(dot + 1);
+      kind = meter.getClass().getSimpleName();
     }
     return kind;  // This might be a class name of some other unforseen type.
   }

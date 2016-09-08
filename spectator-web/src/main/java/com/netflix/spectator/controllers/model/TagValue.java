@@ -16,6 +16,8 @@
 
 package com.netflix.spectator.controllers.model;
 
+import java.util.Objects;
+
 
 /**
  * A TagValue is an NameValue pair for a tag and its binding.
@@ -23,9 +25,24 @@ package com.netflix.spectator.controllers.model;
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class TagValue {
-  public String getKey() { return key; }
-  public String getValue() { return value; }
+  /**
+   * The tag key.
+   */
+  public String getKey() {
+      return key;
+  }
 
+  /**
+   * The tag value.
+   */
+  public String getValue() {
+      return value;
+  }
+
+
+  /**
+   * Constructor.
+   */
   public TagValue(String key, String value) {
     this.key = key;
     this.value = value;
@@ -34,8 +51,13 @@ public class TagValue {
   @Override
   public boolean equals(Object obj) {
     if (obj == null || !(obj instanceof TagValue)) return false;
-    TagValue other = (TagValue)obj;
+    TagValue other = (TagValue) obj;
     return key.equals(other.key) && value.equals(other.value);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(key, value);
   }
 
   @Override

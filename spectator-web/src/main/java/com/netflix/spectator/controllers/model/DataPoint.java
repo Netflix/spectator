@@ -17,6 +17,8 @@
 package com.netflix.spectator.controllers.model;
 
 import com.netflix.spectator.api.Measurement;
+import java.util.Objects;
+
 
 /**
  * A serializable Measurement.
@@ -27,18 +29,39 @@ import com.netflix.spectator.api.Measurement;
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class DataPoint {
-  static public DataPoint make(Measurement m) {
+  /**
+   * Factory method to create a DataPoint from a Measurement.
+   */
+  public static DataPoint make(Measurement m) {
     return new DataPoint(m.timestamp(), m.value());
   }
 
-  public long getT() { return timestamp; }
-  public double getV() { return value; }
+  /**
+   * The measurement timestamp.
+   */
+  public long getT() {
+      return timestamp;
+  }
 
-  public DataPoint(Long timestamp, Double value) {
+  /**
+   * The measurement value.
+   */
+  public double getV() {
+      return value;
+  }
+
+  /**
+   * Constructor.
+   */
+  public DataPoint(long timestamp, double value) {
     this.timestamp = timestamp;
     this.value = value;
   }
 
+  /**
+   * Adds another Measurment to this datapoint where multiple
+   * measurements should be combined together (typically an AggrMeter).
+   */
   public void aggregate(Measurement m) {
     if (m.timestamp() > this.timestamp) {
       this.timestamp = m.timestamp();
@@ -54,8 +77,13 @@ public class DataPoint {
   @Override
   public boolean equals(Object obj) {
     if (obj == null || !(obj instanceof DataPoint)) return false;
-    DataPoint other = (DataPoint)obj;
-    return timestamp == other.timestamp && value == other.value;
+    DataPoint other = (DataPoint) obj;
+    return timestamp == other.timestamp && (Math.abs(value - other.value) < 0.001);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(timestamp, value);
   }
 
   private long timestamp;
