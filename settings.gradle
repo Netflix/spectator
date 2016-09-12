@@ -9,4 +9,4 @@ include 'spectator-api',
         'spectator-ext-spark',
         'spectator-reg-metrics3',
         'spectator-reg-servo',
-        'spectator-web'
+        'spectator-web-spring'
