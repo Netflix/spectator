@@ -68,10 +68,10 @@ public class MetricsController {
   @Value("${spectator.endpoint.tagFilter.meterNameRegex:.*}")
   private String meterNameRegex;
 
-  @Value("${spectator.endpoint.tagFilter.tagNameRegex:}")
+  @Value("${spectator.endpoint.tagFilter.tagNameRegex:.+}")
   private String tagNameRegex;
 
-  @Value("${spectator.endpoint.tagFilter.tagValueRegex:}")
+  @Value("${spectator.endpoint.tagFilter.tagValueRegex:.*}")
   private String tagValueRegex;
 
   @Value("${spectator.endpoint.prototypeFilter.path:}")
@@ -110,9 +110,9 @@ public class MetricsController {
   public ApplicationRegistry getMetrics(@RequestParam Map<String, String> filters)
     throws IOException {
     boolean all = filters.get("all") != null;
-    String filterMeterNameRegex = getWithDefault(filters, "meterNameRegex", "");
-    String filterTagNameRegex = getWithDefault(filters, "tagNameRegex", "");
-    String filterTagValueRegex = getWithDefault(filters, "tagValueRegex", "");
+    String filterMeterNameRegex = filters.getOrDefault("meterNameRegex", "");
+    String filterTagNameRegex = filters.getOrDefault("tagNameRegex", "");
+    String filterTagValueRegex = filters.getOrDefault("tagValueRegex", "");
     TagMeasurementFilter queryFilter = new TagMeasurementFilter(
         filterMeterNameRegex, filterTagNameRegex, filterTagValueRegex);
     MeasurementFilter filter;
@@ -139,7 +139,7 @@ public class MetricsController {
     Map<String, MetricValues> metricMap = new HashMap<String, MetricValues>();
 
     /**
-     * Spectator meters seam to group measurements. The meter name is the
+     * Spectator meters seem to group measurements. The meter name is the
      * measurement name prefix. It seems that all the measurements within a
      * meter instance share the same tag values as the meter.
      * Different instances are different tag assignments, keeping the groups
@@ -174,38 +174,20 @@ public class MetricsController {
   }
 
   /**
-   * Looks up key in map, returning a specific default value if not found.
-   */
-  private static String getWithDefault(Map<String, String> map,
-                                       String key, String defaultValue) {
-    String value = map.get(key);
-    return value == null ? defaultValue : value;
-  }
-
-  /**
    * Collect all the meter values matching the tag pattern.
    */
-  public static List<Id> collectValues(
+  public static void collectValues(
       Map<Id, List<Measurement>> collection,
       Meter meter,
       MeasurementFilter filter) {
-    List<Id> newIds = new ArrayList<Id>();
-
     for (Measurement measurement : meter.measure()) {
       if (!filter.keep(meter, measurement)) {
           continue;
       }
       Id id = measurement.id();
-
-      List<Measurement> valueList = collection.get(id);
-      if (valueList == null) {
-        valueList = new ArrayList<Measurement>();
-        collection.put(id, valueList);
-        newIds.add(id);
-      }
-      valueList.add(measurement);
+      collection.computeIfAbsent(id, k -> new ArrayList<Measurement>())
+          .add(measurement);
     }
-    return newIds;
   }
 
   /**

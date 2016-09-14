@@ -32,27 +32,24 @@ public class TagMeasurementFilter implements MeasurementFilter {
   private final Pattern tagNamePattern;
   private final Pattern tagValuePattern;
 
+  private static Pattern regexToPatternOrNull(String regex) {
+    if (regex != null && !regex.isEmpty() && !regex.equals(".*")) {
+      return Pattern.compile(regex);
+    }
+    return null;
+  }
+
+  private static boolean stringMatches(String text, Pattern pattern) {
+    return pattern == null || pattern.matcher(text).matches();
+  }
+
   /**
    * Constructor.
    */
   public TagMeasurementFilter(String meterNameRegex, String tagNameRegex, String tagValueRegex) {
-    if (meterNameRegex != null && !meterNameRegex.isEmpty() && !meterNameRegex.equals(".*")) {
-      meterNamePattern = Pattern.compile(meterNameRegex);
-    } else {
-      meterNamePattern = null;
-    }
-
-    if (tagNameRegex != null && !tagNameRegex.isEmpty() && !tagNameRegex.equals(".*")) {
-      tagNamePattern = Pattern.compile(tagNameRegex);
-    } else {
-      tagNamePattern = null;
-    }
-
-    if (tagValueRegex != null && !tagValueRegex.isEmpty() && !tagValueRegex.equals(".*")) {
-      tagValuePattern = Pattern.compile(tagValueRegex);
-    } else {
-      tagValuePattern = null;
-    }
+    meterNamePattern = regexToPatternOrNull(meterNameRegex);
+    tagNamePattern = regexToPatternOrNull(tagNameRegex);
+    tagValuePattern = regexToPatternOrNull(tagValueRegex);
   }
 
   /**
@@ -60,17 +57,14 @@ public class TagMeasurementFilter implements MeasurementFilter {
    */
   public boolean keep(Meter meter, Measurement measurement) {
     Id id = measurement.id();
-    if (meterNamePattern != null
-        && !meterNamePattern.matcher(id.name()).matches()) {
-      return false;
+    if (!stringMatches(id.name(), meterNamePattern)) {
+        return false;
     }
 
     if (tagNamePattern != null || tagValuePattern != null) {
       for (Tag tag : id.tags()) {
-        boolean nameOk = tagNamePattern == null
-                         || tagNamePattern.matcher(tag.key()).matches();
-        boolean valueOk = tagValuePattern == null
-                         || tagValuePattern.matcher(tag.value()).matches();
+        boolean nameOk = stringMatches(tag.key(), tagNamePattern);
+        boolean valueOk = stringMatches(tag.value(), tagValuePattern);
         if (nameOk && valueOk) {
           return true;
         }

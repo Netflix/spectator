@@ -115,8 +115,7 @@ public class MetricsControllerTest {
     expect.put(idAYX, Arrays.asList(measureAYX));
     expect.put(idAXZ, Arrays.asList(measureAXZ));
 
-    List<Id> added
-        = MetricsController.collectValues(collection, meterA, allowAll);
+    MetricsController.collectValues(collection, meterA, allowAll);
 
     Assert.assertEquals(collection, expect);
   }
