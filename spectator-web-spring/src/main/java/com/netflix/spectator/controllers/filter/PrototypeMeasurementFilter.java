@@ -17,10 +17,10 @@
 package com.netflix.spectator.controllers.filter;
 
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,7 +44,7 @@ import java.util.Map;
  * Each measurement is evaluated against all the entries in the filter until one
  * is found that would cause it to be accepted and not excluded.
  */
-public class PrototypeMeasurementFilter implements MeasurementFilter {
+public class PrototypeMeasurementFilter implements Predicate<Measurement> {
   /**
    * Filters based on Spectator Id tag names and/or values.
    */
@@ -88,7 +88,8 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     /**
      * Implements the MeasurementFilter interface.
      */
-    public boolean keep(Tag tag) {
+    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
+    public boolean test(Tag tag) {
       if ((key != null) && !key.matcher(tag.key()).matches()) return false;
 
       return ((value == null) || value.matcher(tag.value()).matches());
@@ -147,7 +148,7 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     static boolean patternInList(TagFilterPattern tagPattern,
                                  Iterable<Tag> sourceTags) {
       for (Tag candidateTag : sourceTags) {
-          if (tagPattern.keep(candidateTag)) {
+          if (tagPattern.test(candidateTag)) {
             return true;
           }
       }
@@ -157,7 +158,8 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     /**
      * Implements the MeasurementFilter interface.
      */
-    public boolean keep(Iterable<Tag> sourceTags) {
+    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
+    public boolean test(Iterable<Tag> sourceTags) {
       for (TagFilterPattern tagPattern : this.tags) {
         if (!patternInList(tagPattern, sourceTags)) {
           return false;
@@ -283,10 +285,11 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
     /**
      * Implements the MeasurementFilter interface.
      */
-    public boolean keep(Meter meter, Measurement measurement) {
+    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
+    public boolean test(Measurement measurement) {
       boolean ok = include.isEmpty();
       for (ValueFilterPattern pattern : include) {
-        if (pattern.keep(measurement.id().tags())) {
+        if (pattern.test(measurement.id().tags())) {
           ok = true;
           break;
         }
@@ -294,7 +297,7 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
 
       if (ok) {
         for (ValueFilterPattern pattern : exclude) {
-          if (pattern.keep(measurement.id().tags())) {
+          if (pattern.test(measurement.id().tags())) {
            return false;
           }
         }
@@ -320,9 +323,10 @@ public class PrototypeMeasurementFilter implements MeasurementFilter {
   /**
    * Implements the MeasurementFilter interface.
    */
-  public boolean keep(Meter meter, Measurement measurement) {
+  @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
+  public boolean test(Measurement measurement) {
     IncludeExcludePatterns patterns = metricToPatterns(measurement.id().name());
-    return patterns != null && patterns.keep(meter, measurement);
+    return patterns != null && patterns.test(measurement);
   }
 
   /**

@@ -18,16 +18,16 @@ package com.netflix.spectator.controllers.filter;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
 
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 
 /**
  * A simple MeasurementFilter based on meter/tag names and values.
  */
-public class TagMeasurementFilter implements MeasurementFilter {
+public class TagMeasurementFilter implements Predicate<Measurement> {
   private final Pattern meterNamePattern;
   private final Pattern tagNamePattern;
   private final Pattern tagValuePattern;
@@ -55,7 +55,8 @@ public class TagMeasurementFilter implements MeasurementFilter {
   /**
    * Implements MeasurementFilter interface.
    */
-  public boolean keep(Meter meter, Measurement measurement) {
+  @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
+  public boolean test(Measurement measurement) {
     Id id = measurement.id();
     if (!stringMatches(id.name(), meterNamePattern)) {
         return false;
@@ -75,4 +76,3 @@ public class TagMeasurementFilter implements MeasurementFilter {
     return true;
   }
 };
-

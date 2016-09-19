@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.controllers.filter;
 
+import com.netflix.spectator.controllers.model.TestId;
+import com.netflix.spectator.controllers.model.TestMeter;
+
 
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Clock;
@@ -43,92 +46,6 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class PrototypeMeasurementFilterTest {
-    public static class TestMeter implements Meter {
-        private Id id;
-        private List<Measurement> measurements;
-
-        public TestMeter(Id id) {
-          this.id = id;
-          this.measurements = new ArrayList<Measurement>();
-        }
-        public Id id() {
-          return this.id;
-        }
-        public boolean hasExpired() {
-          return false;
-        }
-        public Iterable<Measurement> measure() {
-          return measurements;
-        }
-    };
-
-    public static class TestId implements Id {
-      private String name;
-      private List<Tag> tags;
-
-      public TestId(String name) {
-        this.name = name;
-        this.tags = new ArrayList<Tag>();
-      }
-      public TestId(String name, List<Tag> tags) {
-       this.name = name;
-       this.tags = tags;
-      }
-
-      public String name() {
-        return this.name;
-      }
-
-      public Iterable<Tag> tags() {
-        return this.tags;
-      }
-
-      public Id withTag(String k, String v) {
-        ArrayList<Tag> newList = new ArrayList<Tag>();
-        newList.addAll(this.tags);
-        newList.add(new BasicTag(k, v));
-        return new TestId(this.name, newList);
-      }
-
-      public Id withTag(Tag t) {
-        ArrayList<Tag> newList = new ArrayList<Tag>();
-        newList.addAll(this.tags);
-        newList.add(t);
-        return new TestId(this.name, newList);
-      }
-
-      public Id withTags(Iterable<Tag> tags) {
-        ArrayList<Tag> newList = new ArrayList<Tag>();
-        newList.addAll(this.tags);
-        for (Tag tag : tags) {
-          newList.add(tag);
-        }
-        return new TestId(this.name, newList);
-      }
-
-      public Id withTags(Map<String, String> tags) {
-        ArrayList<Tag> newList = new ArrayList<Tag>();
-        newList.addAll(this.tags);
-        for (Map.Entry<String, String> entry : tags.entrySet()) {
-          newList.add(new BasicTag(entry.getKey(), entry.getValue()));
-        }
-        return new TestId(this.name, newList);
-      }
-
-      public int hashCode() {
-        return Objects.hash(name, tags);
-      }
-
-      public boolean equals(Object obj) {
-        if (obj == null || !(obj instanceof TestId)) {
-            return false;
-        }
-        TestId other = (TestId) obj;
-        return name.equals(other.name) && tags.equals(other.tags);
-      }
-    };
-
-
     private long millis = 12345L;
     Clock clock = new Clock() {
         public long wallTime() { return millis; }
@@ -262,7 +179,7 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.TagFilterPattern(
                       new PrototypeMeasurementFilterSpecification.TagFilterSpecification("", ""));
         Tag tagA = new BasicTag("some_name_value", "some_value_string");
-        Assert.assertTrue(pattern.keep(tagA));
+        Assert.assertTrue(pattern.test(tagA));
     }
 
     @Test
@@ -271,7 +188,7 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.TagFilterPattern(
                       Pattern.compile(".+_name_.+"), Pattern.compile(".+_value_.+"));
         Tag tagA = new BasicTag("some_name_value", "some_value_string");
-        Assert.assertTrue(pattern.keep(tagA));
+        Assert.assertTrue(pattern.test(tagA));
     }
 
     @Test
@@ -283,9 +200,9 @@ public class PrototypeMeasurementFilterTest {
         Tag tagOnlyValueOk = new BasicTag("some_value", "some_value_string");
         Tag tagNeitherOk = new BasicTag("some_value", "some_string");
 
-        Assert.assertFalse(pattern.keep(tagOnlyNameOk));
-        Assert.assertFalse(pattern.keep(tagOnlyValueOk));
-        Assert.assertFalse(pattern.keep(tagNeitherOk));
+        Assert.assertFalse(pattern.test(tagOnlyNameOk));
+        Assert.assertFalse(pattern.test(tagOnlyValueOk));
+        Assert.assertFalse(pattern.test(tagNeitherOk));
     }
 
     @Test
@@ -295,8 +212,8 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsAxBy = Arrays.asList(new BasicTag("tagA", "X"),
                                            new BasicTag("tagB", "Y"));
         List<Tag> tagsByAx = Arrays.asList(tagsAxBy.get(1), tagsAxBy.get(0));
-        Assert.assertTrue(pattern.keep(tagsAxBy));
-        Assert.assertTrue(pattern.keep(tagsByAx));
+        Assert.assertTrue(pattern.test(tagsAxBy));
+        Assert.assertTrue(pattern.test(tagsByAx));
     }
 
     @Test
@@ -310,8 +227,8 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsByAx
             = Arrays.asList(tagsAxBy.get(3), tagsAxBy.get(2),
                             tagsAxBy.get(1), tagsAxBy.get(0));
-        Assert.assertTrue(pattern.keep(tagsAxBy));
-        Assert.assertTrue(pattern.keep(tagsByAx));
+        Assert.assertTrue(pattern.test(tagsAxBy));
+        Assert.assertTrue(pattern.test(tagsByAx));
     }
 
     @Test
@@ -324,9 +241,9 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsAyBy = Arrays.asList(new BasicTag("tagA", "Y"),
                                            new BasicTag("tagB", "Y"));
 
-        Assert.assertFalse(pattern.keep(tagsAx));
-        Assert.assertFalse(pattern.keep(tagsAxZy));
-        Assert.assertFalse(pattern.keep(tagsAyBy));
+        Assert.assertFalse(pattern.test(tagsAx));
+        Assert.assertFalse(pattern.test(tagsAxZy));
+        Assert.assertFalse(pattern.test(tagsAyBy));
     }
 
     @Test
@@ -343,11 +260,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
         Id idBZY = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "Y");
 
-        TestMeter meterA = new TestMeter(idAYX);
-        TestMeter meterB = new TestMeter(idBZY);
-
-        Assert.assertTrue(filter.keep(meterA, new Measurement(idAYX, 1, 1)));
-        Assert.assertTrue(filter.keep(meterB, new Measurement(idBZY, 2, 2)));
+        Assert.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
+        Assert.assertTrue(filter.test(new Measurement(idBZY, 2, 2)));
     }
 
     @Test
@@ -368,11 +282,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
         Id idCYX = new TestId("counterC").withTag("tagA", "Y").withTag("tagB", "X");
 
-        TestMeter meterA = new TestMeter(idAYX);
-        TestMeter meterC = new TestMeter(idCYX);
-
-        Assert.assertTrue(filter.keep(meterA, new Measurement(idAYX, 1, 1)));
-        Assert.assertFalse(filter.keep(meterC, new Measurement(idCYX, 2, 2)));
+        Assert.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
+        Assert.assertFalse(filter.test(new Measurement(idCYX, 2, 2)));
     }
 
     @Test
@@ -389,11 +300,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAXX = new TestId("counterA").withTag("tagA", "X").withTag("tagB", "X");
         Id idBZX = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "X");
 
-        TestMeter meterA = new TestMeter(idAXX);
-        TestMeter meterB = new TestMeter(idBZX);
-
-        Assert.assertFalse(filter.keep(meterA, new Measurement(idAXX, 1, 1)));
-        Assert.assertFalse(filter.keep(meterB, new Measurement(idBZX, 2, 2)));
+        Assert.assertFalse(filter.test(new Measurement(idAXX, 1, 1)));
+        Assert.assertFalse(filter.test(new Measurement(idBZX, 2, 2)));
     }
 
     @Test

@@ -58,17 +58,6 @@ public class DataPoint {
     this.value = value;
   }
 
-  /**
-   * Adds another Measurment to this datapoint where multiple
-   * measurements should be combined together (typically an AggrMeter).
-   */
-  public void aggregate(Measurement m) {
-    if (m.timestamp() > this.timestamp) {
-      this.timestamp = m.timestamp();
-    }
-    this.value += m.value();
-  }
-
   @Override
   public String toString() {
     return String.format("t=%d, v=%f", timestamp, value);

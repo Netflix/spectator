@@ -29,16 +29,6 @@ import java.util.Objects;
  */
 public class MetricValues {
   /**
-   * Factory method.
-   */
-  public static MetricValues make(String kind, List<Measurement> collection) {
-    boolean aggregate = "AggrMeter".equals(kind);
-    List<TaggedDataPoints> dataPoints = new ArrayList<TaggedDataPoints>();
-    dataPoints.add(TaggedDataPoints.make(collection.get(0).id(), collection, aggregate));
-    return new MetricValues(kind, dataPoints);
-  }
-
-  /**
    * Returns a string denoting the type of Meter.
    * These are strings we've added; Spectator doesnt have this.
    */
@@ -54,20 +44,27 @@ public class MetricValues {
   }
 
   /**
-   * Adds the values from the collection to the list of current values.
-   * The individual measurements may get aggregated depending on their type.
+   * Adds another measurement datapoint.
    */
-  public void addMeasurements(String meterKind, List<Measurement> collection) {
-    boolean aggregate = "AggrMeter".equals(meterKind);
-    dataPoints.add(TaggedDataPoints.make(collection.get(0).id(), collection, aggregate));
+  public void addMeasurement(Measurement measurement) {
+    dataPoints.add(new TaggedDataPoints(measurement));
   }
 
   /**
-   * Constructor.
+   * Constructor from a single measurement datapoint.
+   */
+  public MetricValues(String kind, Measurement measurement) {
+    this.kind = kind;
+    dataPoints = new ArrayList<TaggedDataPoints>();
+    dataPoints.add(new TaggedDataPoints(measurement));
+  }
+
+  /**
+   * Constructor from a list of datapoints (for testing).
    */
   public MetricValues(String kind, List<TaggedDataPoints> dataPoints) {
     this.kind = kind;
-    this.dataPoints = dataPoints;
+    this.dataPoints = new ArrayList<TaggedDataPoints>(dataPoints);
   }
 
   @Override

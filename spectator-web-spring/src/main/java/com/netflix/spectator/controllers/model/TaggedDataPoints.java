@@ -16,78 +16,96 @@
 
 package com.netflix.spectator.controllers.model;
 
-import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Tag;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * A collection of DataPoint instances for a common set of TagValues.
+ * A collection of DataPoint instances for a common set of Tags.
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class TaggedDataPoints {
-  /**
-   * Factory for creating from Spectator objects.
-   *
-   * TODO(ewiseblatt): 20160909
-   * It appears that AggrMeter is already aggregating so
-   * the aggregate handling can be removed. Need to verify this
-   * in spinnaker before removing.
-   */
-  public static TaggedDataPoints make(Id id, List<Measurement> measurements,
-                                      boolean aggregate) {
-    List<TagValue> tags = new ArrayList<TagValue>();
-    List<DataPoint> dataPoints = new ArrayList<DataPoint>();
-    for (Tag tag : id.tags()) {
-        tags.add(new TagValue(tag.key(), tag.value()));
+  private static class JacksonableTag implements Tag {
+    private String key;
+    private String value;
+
+    JacksonableTag(Tag tag) {
+      key = tag.key();
+      value = tag.value();
     }
-    if (aggregate) {
-      DataPoint point = null;
-      for (Measurement measurement : measurements) {
-         if (point == null) {
-           point = DataPoint.make(measurement);
-           dataPoints.add(point);
-         } else {
-           point.aggregate(measurement);
-         }
-      }
-    } else {
-      for (Measurement measurement : measurements) {
-        dataPoints.add(DataPoint.make(measurement));
-      }
+
+    public String key() {
+      return key;
     }
-    return new TaggedDataPoints(tags, dataPoints);
-  }
+    public String value() {
+      return value;
+    }
+    public String getKey() {
+      return key;
+    }
+    public String getValue() {
+      return value;
+    }
+
+    public int hashCode() {
+      return Objects.hash(key, value);
+    }
+
+    public boolean equals(Object obj) {
+      if (obj == this) return true;
+      if (!(obj instanceof Tag)) return false;
+
+      Tag tag = (Tag) obj;
+      return key.equals(tag.key()) && value.equals(tag.value());
+    }
+
+    static List<Tag> convertTags(Iterable<Tag> iterable) {
+      ArrayList<Tag> result = new ArrayList<Tag>();
+      for (Tag tag : iterable) {
+        result.add(new JacksonableTag(tag));
+      }
+      return result;
+    }
+  };
 
   /**
    * The tag bindings for the values.
    */
-  public Iterable<TagValue> getTags() {
-      return tags;
+  public Iterable<Tag> getTags() {
+    return tags;
   }
 
   /**
    * The current values.
    */
   public Iterable<DataPoint> getValues() {
-      return dataPoints;
+    return dataPoints;
   }
 
   /**
-   * Constructor.
+   * Constructor from a single measurement data point.
    */
-  public TaggedDataPoints(List<TagValue> tags, List<DataPoint> dataPoints) {
-    this.tags = tags;
+  public TaggedDataPoints(Measurement measurement) {
+    tags = JacksonableTag.convertTags(measurement.id().tags());
+    dataPoints = Arrays.asList(DataPoint.make(measurement));
+  }
+
+  /**
+   * Constructor from a list of data points (for testing).
+   */
+  public TaggedDataPoints(Iterable<Tag> tags, List<DataPoint> dataPoints) {
+    this.tags = JacksonableTag.convertTags(tags);
     this.dataPoints = dataPoints;
   }
 
   @Override
   public String toString() {
-      return String.format("{TAGS={%s} DATA={%s}", tags, dataPoints);
+    return String.format("{TAGS={%s} DATA={%s}", tags, dataPoints);
   }
 
   @Override
@@ -102,6 +120,6 @@ public class TaggedDataPoints {
     return Objects.hash(tags, dataPoints);
   }
 
-  private List<TagValue> tags;
+  private List<Tag> tags;
   private List<DataPoint> dataPoints;
 }

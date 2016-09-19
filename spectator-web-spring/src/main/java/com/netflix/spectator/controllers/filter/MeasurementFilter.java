@@ -34,4 +34,3 @@ public interface MeasurementFilter {
    */
   boolean keep(Meter meter, Measurement measurement);
 };
-
