@@ -46,7 +46,7 @@ import java.util.HashMap;
  */
 @RequestMapping("/spectator/metrics")
 @RestController
-@ConditionalOnExpression("${spectator.endpoint.enabled:false}")
+@ConditionalOnExpression("${spectator.webEndpoint.enabled:false}")
 public class MetricsController {
   @Autowired
   private Registry registry;
@@ -68,7 +68,7 @@ public class MetricsController {
   @Value("${spectator.applicationVersion:}")
   private String applicationVersion;
 
-  @Value("${spectator.endpoint.prototypeFilter.path:}")
+  @Value("${spectator.webEndpoint.prototypeFilter.path:}")
   private String prototypeFilterPath;
 
   private Map<Id, String> knownMeterKinds = new HashMap<Id, String>();
