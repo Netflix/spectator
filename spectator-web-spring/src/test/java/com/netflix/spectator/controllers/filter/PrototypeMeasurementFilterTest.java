@@ -30,6 +30,7 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -86,11 +87,11 @@ public class PrototypeMeasurementFilterTest {
         valueSpecAzBy.getTags().addAll(tagsAzBy);
 
         meterSpecA = new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-            Arrays.asList(valueSpecAxBy));
+            Collections.singletonList(valueSpecAxBy));
         meterSpecB = new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-            Arrays.asList(valueSpecAyBx));
+            Collections.singletonList(valueSpecAyBx));
         meterSpecC = new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-            Arrays.asList(valueSpecAzBy));
+            Collections.singletonList(valueSpecAzBy));
         meterSpecD = new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
             Arrays.asList(valueSpecAxBy, valueSpecAyBx));
     }
@@ -117,8 +118,6 @@ public class PrototypeMeasurementFilterTest {
 
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternA
             = new PrototypeMeasurementFilter.MeterFilterPattern("meterA", meterSpecA);
-        PrototypeMeasurementFilter.MeterFilterPattern meterPatternB
-            = new PrototypeMeasurementFilter.MeterFilterPattern(".+B", meterSpecB);
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternC
             = new PrototypeMeasurementFilter.MeterFilterPattern(".+C.*", meterSpecC);
 
@@ -131,7 +130,7 @@ public class PrototypeMeasurementFilterTest {
                     meterPatternA.getValues(), emptyList));
 
         Assert.assertEquals(
-            filter.metricToPatterns("meterBefore"),
+            filter.metricToPatterns("meterBextra"),
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     emptyList, emptyList));
 
@@ -152,7 +151,6 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.MeterFilterPattern("ignored", meterSpecA);
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternB
             = new PrototypeMeasurementFilter.MeterFilterPattern("ignored", meterSpecB);
-
         final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList
             = new ArrayList<PrototypeMeasurementFilter.ValueFilterPattern>();
         Assert.assertEquals(
@@ -235,7 +233,7 @@ public class PrototypeMeasurementFilterTest {
     public void valueTagsMissing() {
         PrototypeMeasurementFilter.ValueFilterPattern pattern
             = new PrototypeMeasurementFilter.ValueFilterPattern(valueSpecAxBy);
-        List<Tag> tagsAx = Arrays.asList(new BasicTag("tagA", "X"));
+        List<Tag> tagsAx = Collections.singletonList(new BasicTag("tagA", "X"));
         List<Tag> tagsAxZy = Arrays.asList(new BasicTag("tagA", "X"),
                                            new BasicTag("tagZ","Y"));
         List<Tag> tagsAyBy = Arrays.asList(new BasicTag("tagA", "Y"),
@@ -266,10 +264,6 @@ public class PrototypeMeasurementFilterTest {
 
     @Test
     public void metersExcluded() {
-        PrototypeMeasurementFilterSpecification.MeterFilterSpecification meterSpec
-            = new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-                      Arrays.asList(valueSpecAyBx, valueSpecAzBy));
-
         PrototypeMeasurementFilterSpecification spec = new PrototypeMeasurementFilterSpecification();
         spec.getInclude().put(
                 "counter.+",
@@ -327,7 +321,7 @@ public class PrototypeMeasurementFilterTest {
         specA.getExclude().put(
                ".+",
                new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-                      Arrays.asList(valueSpecX)));
+                      Collections.singletonList(valueSpecX)));
 
         Assert.assertEquals(spec, specA);
     }

@@ -15,7 +15,7 @@
  */
 
 dependencies {
-  compileApi project(':spectator-api')
+  compile project(':spectator-api')
 
   compile 'org.springframework.boot:spring-boot-starter-actuator:1.2.8.RELEASE'
   compile 'org.springframework.boot:spring-boot-starter-data-rest:1.2.8.RELEASE'

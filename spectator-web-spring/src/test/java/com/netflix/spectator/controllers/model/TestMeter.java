@@ -27,7 +27,6 @@ import java.util.List;
 public class TestMeter implements Meter {
   private Id myId;
   private List<Measurement> myMeasurements;
-  private boolean expired = false;
 
   public TestMeter(Id id) {
     myId = id;
@@ -47,7 +46,7 @@ public class TestMeter implements Meter {
     return myMeasurements;
   }
   public boolean hasExpired() {
-    return expired;
+      return false;
   }
 };
 

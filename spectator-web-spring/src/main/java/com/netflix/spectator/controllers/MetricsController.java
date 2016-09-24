@@ -54,13 +54,7 @@ public class MetricsController {
   /**
    * A measurement filter that accepts all measurements.
    */
-  public static final Predicate<Measurement> ALL_MEASUREMENTS_FILTER
-      = new Predicate<Measurement>() {
-          @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
-          public boolean test(Measurement ignore) {
-            return true;
-          }
-        };
+  public static final Predicate<Measurement> ALL_MEASUREMENTS_FILTER = m -> true;
 
   @Value("${spectator.applicationName:}")
   private String applicationName;
@@ -77,7 +71,7 @@ public class MetricsController {
   /**
    * The default measurement filter is configured through properties.
    */
-  public Predicate getDefaultMeasurementFilter() throws IOException {
+  public Predicate<Measurement> getDefaultMeasurementFilter() throws IOException {
     if (defaultMeasurementFilter != null) {
       return defaultMeasurementFilter;
     }
@@ -133,7 +127,7 @@ public class MetricsController {
 
     /**
      * Flatten the meter measurements into a map of measurements keyed by
-     * the name and mapped to the different tag varients.
+     * the name and mapped to the different tag variants.
      */
     for (Meter meter : sourceRegistry) {
       String kind = knownMeterKinds.computeIfAbsent(
@@ -159,7 +153,7 @@ public class MetricsController {
   /**
    * Determine the type of a meter for reporting purposes.
    *
-   * The accuracy of this method is sensiive to the registry value.
+   * The accuracy of this method is sensitive to the registry value.
    * In practice meters are often AggrMeter or CompositeMeter so it
    * is not worth testing the class against the interface because it
    * is rarely an actual kind. For lack of a direct way to query
@@ -177,7 +171,7 @@ public class MetricsController {
    * bean so you need to passing in an @autowired registry.
    *
    * @param registry
-   *    Used to provide suplemental information (e.g. to search for the meter).
+   *    Used to provide supplemental information (e.g. to search for the meter).
    *
    * @param meter
    *    The meters whose kind we want to know.
@@ -205,4 +199,4 @@ public class MetricsController {
     }
     return kind;
   }
-};
+}
