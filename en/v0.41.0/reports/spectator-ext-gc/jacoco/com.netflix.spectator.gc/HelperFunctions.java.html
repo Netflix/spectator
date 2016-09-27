@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>HelperFunctions.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-gc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.gc</a> &gt; <span class="el_source">HelperFunctions.java</span></div><h1>HelperFunctions.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.gc;
+
+import com.sun.management.GcInfo;
+
+import java.lang.management.MemoryUsage;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+/** Utility functions for GC. */
+final class HelperFunctions {
+
+<span class="fc" id="L28">  private static final Map&lt;String, GcType&gt; KNOWN_COLLECTOR_NAMES = knownCollectors();</span>
+
+<span class="nc" id="L30">  private HelperFunctions() {</span>
+<span class="nc" id="L31">  }</span>
+
+  private static Map&lt;String, GcType&gt; knownCollectors() {
+<span class="fc" id="L34">    Map&lt;String, GcType&gt; m = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L35">    m.put(&quot;ConcurrentMarkSweep&quot;,  GcType.OLD);</span>
+<span class="fc" id="L36">    m.put(&quot;Copy&quot;,                 GcType.YOUNG);</span>
+<span class="fc" id="L37">    m.put(&quot;G1 Old Generation&quot;,    GcType.OLD);</span>
+<span class="fc" id="L38">    m.put(&quot;G1 Young Generation&quot;,  GcType.YOUNG);</span>
+<span class="fc" id="L39">    m.put(&quot;MarkSweepCompact&quot;,     GcType.OLD);</span>
+<span class="fc" id="L40">    m.put(&quot;PS MarkSweep&quot;,         GcType.OLD);</span>
+<span class="fc" id="L41">    m.put(&quot;PS Scavenge&quot;,          GcType.YOUNG);</span>
+<span class="fc" id="L42">    m.put(&quot;ParNew&quot;,               GcType.YOUNG);</span>
+<span class="fc" id="L43">    return Collections.unmodifiableMap(m);</span>
+  }
+
+  /** Determine the type, old or young, based on the name of the collector. */
+  static GcType getGcType(String name) {
+<span class="fc" id="L48">    GcType t = KNOWN_COLLECTOR_NAMES.get(name);</span>
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">    return (t == null) ? GcType.UNKNOWN : t;</span>
+  }
+
+  /** Returns true if memory pool name matches an old generation pool. */
+  static boolean isOldGenPool(String name) {
+<span class="nc bnc" id="L54" title="All 4 branches missed.">    return name.endsWith(&quot;Old Gen&quot;) || name.endsWith(&quot;Tenured Gen&quot;);</span>
+  }
+
+  /** Returns true if memory pool name matches an young generation pool. */
+  static boolean isYoungGenPool(String name) {
+<span class="nc" id="L59">    return name.endsWith(&quot;Eden Space&quot;);</span>
+  }
+
+  /** Compute the total usage across all pools. */
+  static long getTotalUsage(Map&lt;String, MemoryUsage&gt; usages) {
+<span class="fc" id="L64">    long sum = 0L;</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">    for (Map.Entry&lt;String, MemoryUsage&gt; e : usages.entrySet()) {</span>
+<span class="fc" id="L66">      sum += e.getValue().getUsed();</span>
+<span class="fc" id="L67">    }</span>
+<span class="fc" id="L68">    return sum;</span>
+  }
+
+  /** Compute the max usage across all pools. */
+  static long getTotalMaxUsage(Map&lt;String, MemoryUsage&gt; usages) {
+<span class="fc" id="L73">    long sum = 0L;</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    for (Map.Entry&lt;String, MemoryUsage&gt; e : usages.entrySet()) {</span>
+<span class="fc" id="L75">      long max = e.getValue().getMax();</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">      if (max &gt; 0) {</span>
+<span class="fc" id="L77">        sum += e.getValue().getMax();</span>
+      }
+<span class="fc" id="L79">    }</span>
+<span class="fc" id="L80">    return sum;</span>
+  }
+
+  /** Compute the amount of data promoted during a GC event. */
+  static long getPromotionSize(GcInfo info) {
+<span class="nc" id="L85">    long totalBefore = getTotalUsage(info.getMemoryUsageBeforeGc());</span>
+<span class="nc" id="L86">    long totalAfter = getTotalUsage(info.getMemoryUsageAfterGc());</span>
+<span class="nc" id="L87">    return totalAfter - totalBefore;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

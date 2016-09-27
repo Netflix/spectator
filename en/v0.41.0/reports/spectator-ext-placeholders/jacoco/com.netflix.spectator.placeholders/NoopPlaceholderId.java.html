@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>NoopPlaceholderId.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-placeholders</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.placeholders</a> &gt; <span class="el_source">NoopPlaceholderId.java</span></div><h1>NoopPlaceholderId.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
+
+import java.util.Collections;
+import java.util.Map;
+
+/**
+ * PlaceholderId implementation for the no-op registry.
+ *
+ * Created on 8/27/15.
+ */
+final class NoopPlaceholderId implements PlaceholderId {
+  /** Singleton instance. */
+<span class="fc" id="L32">  static final PlaceholderId INSTANCE = new NoopPlaceholderId();</span>
+
+<span class="fc" id="L34">  private NoopPlaceholderId() {</span>
+<span class="fc" id="L35">  }</span>
+
+  @Override public String name() {
+<span class="fc" id="L38">    return &quot;noop&quot;;</span>
+  }
+
+  @Override public Iterable&lt;Tag&gt; tags() {
+<span class="fc" id="L42">    return Collections.emptyList();</span>
+  }
+
+  @Override public PlaceholderId withTag(String k, String v) {
+<span class="nc" id="L46">    return this;</span>
+  }
+
+  @Override public PlaceholderId withTag(Tag tag) {
+<span class="nc" id="L50">    return this;</span>
+  }
+
+  @Override public PlaceholderId withTags(Iterable&lt;Tag&gt; tags) {
+<span class="nc" id="L54">    return this;</span>
+  }
+
+  @Override public PlaceholderId withTags(Map&lt;String, String&gt; tags) {
+<span class="nc" id="L58">    return this;</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L62">    return name();</span>
+  }
+
+  @Override public PlaceholderId withTagFactory(TagFactory factory) {
+<span class="nc" id="L66">    return this;</span>
+  }
+
+  @Override public PlaceholderId withTagFactories(Iterable&lt;TagFactory&gt; factories) {
+<span class="nc" id="L70">    return this;</span>
+  }
+
+  @Override public Id resolveToId(Registry registry) {
+<span class="fc" id="L74">    return registry.createId(name(), tags());</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
