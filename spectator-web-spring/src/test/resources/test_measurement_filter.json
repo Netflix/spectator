@@ -1,0 +1,57 @@
+{
+  "include" : {
+    "meterA" : {
+      "values" : [ {
+        "tags" : [ {
+          "key" : "tagA",
+          "value" : "X"
+        }, {
+          "key" : "tagB",
+          "value" : "Y"
+        } ]
+      } ]
+    },
+
+    "meterD" : {
+      "values" : [
+        {
+          "tags" : [
+            {
+              "key" : "tagA",
+              "value" : "X"
+            }, {
+              "key" : "tagB",
+              "value" : "Y"
+            } ]
+        }, {
+          "tags" : [
+            {
+              "key" : "tagA",
+              "value" : "Y"
+            }, {
+              "key" : "tagB",
+              "value" : "X"
+            } ]
+        }
+      ]
+    },
+
+    "empty" : {}
+  },
+
+  "exclude" : {
+    ".+" : {
+      "values" : [ {
+        "tags" : [ {
+          "key" : "tagA",
+          "value" : "X"
+        }, {
+          "key" : "tagX",
+          "value" : ".*"
+        } ]
+      } ]
+    }
+  }
+}
+
+    
