@@ -64,36 +64,6 @@ public interface Registry extends Iterable<Meter> {
   Id createId(String name, Iterable<Tag> tags);
 
   /**
-   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
-   *
-   * @param name
-   *     Description of the measurement that is being collected.
-   * @return
-   *     The newly created dynamic identifier.
-   * @deprecated Use {@code spectator-ext-placeholders} library instead.
-   */
-  @Deprecated
-  default DynamicId createDynamicId(String name) {
-    return new DefaultDynamicId(name);
-  }
-
-  /**
-   * Creates a dynamic identifier for a meter. All ids passed into other calls should be created by the registry.
-   *
-   * @param name
-   *     Description of the measurement that is being collected.
-   * @param tagFactories
-   *     Other factories that can generate other dimensions that can be used to classify the measurement.
-   * @return
-   *     The newly created dynamic identifier.
-   * @deprecated Use {@code spectator-ext-placeholders} library instead.
-   */
-  @Deprecated
-  default DynamicId createDynamicId(String name, Iterable<TagFactory> tagFactories) {
-    return DefaultDynamicId.createWithFactories(name, tagFactories);
-  }
-
-  /**
    * Add a custom meter to the registry.
    */
   void register(Meter meter);
@@ -108,19 +78,6 @@ public interface Registry extends Iterable<Meter> {
   Counter counter(Id id);
 
   /**
-   * Measures the rate of some activity.  A counter is for continuously incrementing sources like
-   * the number of requests that are coming into a server.
-   *
-   * @param id
-   *     Identifier created by a call to {@link #createDynamicId}
-   * @deprecated Use {@code spectator-ext-placeholders} library instead.
-   */
-  @Deprecated
-  default Counter counter(DynamicId id) {
-    return new DefaultDynamicCounter(id, this);
-  }
-
-  /**
    * Measures the rate and variation in amount for some activity. For example, it could be used to
    * get insight into the variation in response sizes for requests to a server.
    *
@@ -130,37 +87,12 @@ public interface Registry extends Iterable<Meter> {
   DistributionSummary distributionSummary(Id id);
 
   /**
-   * Measures the rate and variation in amount for some activity. For example, it could be used to
-   * get insight into the variation in response sizes for requests to a server.
-   *
-   * @param id
-   *     Identifier created by a call to {@link #createDynamicId}
-   * @deprecated Use {@code spectator-ext-placeholders} library instead.
-   */
-  @Deprecated
-  default DistributionSummary distributionSummary(DynamicId id) {
-    return new DefaultDynamicDistributionSummary(id, this);
-  }
-
-  /**
    * Measures the rate and time taken for short running tasks.
    *
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
   Timer timer(Id id);
-
-  /**
-   * Measures the rate and time taken for short running tasks.
-   *
-   * @param id
-   *     Identifier created by a call to {@link #createDynamicId}
-   * @deprecated Use {@code spectator-ext-placeholders} library instead.
-   */
-  @Deprecated
-  default Timer timer(DynamicId id) {
-    return new DefaultDynamicTimer(id, this);
-  }
 
   /**
    * Returns the meter associated with a given id.
