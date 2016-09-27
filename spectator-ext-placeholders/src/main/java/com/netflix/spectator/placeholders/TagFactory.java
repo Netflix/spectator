@@ -13,15 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
+
+import java.util.function.Supplier;
 
 /**
  * A factory for producing tag values.
- *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
-@Deprecated
 public interface TagFactory {
+
+  /**
+   * Helper method for creating a tag factory that uses a lambda to supply
+   * the value.
+   *
+   * @param name
+   *     Key to use for the returned tag value.
+   * @param value
+   *     Supplier used to retrieve the value for the tag. If the return
+   *     value is null, then a null tag is returned an the dimension will
+   *     be suppressed.
+   * @return
+   *     Factory for producing tags using the value supplier.
+   */
+  static TagFactory from(String name, Supplier<String> value) {
+    return new TagFactory() {
+      @Override public String name() {
+        return name;
+      }
+
+      @Override public Tag createTag() {
+        final String v = value.get();
+        return (v == null) ? null : new BasicTag(name, v);
+      }
+    };
+  }
+
   /**
    * Returns the name of the factory, which is used as the key for any Tag
    * produced by the createTag method.

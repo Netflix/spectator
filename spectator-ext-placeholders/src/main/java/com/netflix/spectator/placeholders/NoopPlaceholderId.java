@@ -13,22 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 
 import java.util.Collections;
 import java.util.Map;
 
 /**
- * DynamicId implementation for the no-op registry.
+ * PlaceholderId implementation for the no-op registry.
  *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
+ * Created on 8/27/15.
  */
-@Deprecated
-final class NoopDynamicId  implements DynamicId {
+final class NoopPlaceholderId implements PlaceholderId {
   /** Singleton instance. */
-  static final DynamicId INSTANCE = new NoopDynamicId();
+  static final PlaceholderId INSTANCE = new NoopPlaceholderId();
 
-  private NoopDynamicId() {
+  private NoopPlaceholderId() {
   }
 
   @Override public String name() {
@@ -39,19 +42,19 @@ final class NoopDynamicId  implements DynamicId {
     return Collections.emptyList();
   }
 
-  @Override public DynamicId withTag(String k, String v) {
+  @Override public PlaceholderId withTag(String k, String v) {
     return this;
   }
 
-  @Override public DynamicId withTag(Tag tag) {
+  @Override public PlaceholderId withTag(Tag tag) {
     return this;
   }
 
-  @Override public DynamicId withTags(Iterable<Tag> tags) {
+  @Override public PlaceholderId withTags(Iterable<Tag> tags) {
     return this;
   }
 
-  @Override public DynamicId withTags(Map<String, String> tags) {
+  @Override public PlaceholderId withTags(Map<String, String> tags) {
     return this;
   }
 
@@ -59,15 +62,15 @@ final class NoopDynamicId  implements DynamicId {
     return name();
   }
 
-  @Override public DynamicId withTagFactory(TagFactory factory) {
+  @Override public PlaceholderId withTagFactory(TagFactory factory) {
     return this;
   }
 
-  @Override public DynamicId withTagFactories(Iterable<TagFactory> factories) {
+  @Override public PlaceholderId withTagFactories(Iterable<TagFactory> factories) {
     return this;
   }
 
-  @Override public Id resolveToId() {
-    return NoopId.INSTANCE;
+  @Override public Id resolveToId(Registry registry) {
+    return registry.createId(name(), tags());
   }
 }

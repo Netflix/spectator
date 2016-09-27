@@ -13,8 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
 
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Collection;
@@ -25,12 +29,11 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * Default/standard implementation of the DynamicId interface.
+ * Default/standard implementation of the PlaceholderId interface.
  *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
+ * Created on 8/3/15.
  */
-@Deprecated
-final class DefaultDynamicId implements DynamicId {
+final class DefaultPlaceholderId implements PlaceholderId {
   /**
    * Utility class for sorting and deduplicating lists of tag factories.
    */
@@ -87,20 +90,20 @@ final class DefaultDynamicId implements DynamicId {
    * @return
    *      the newly created id
    */
-  static DefaultDynamicId createWithFactories(String name, Iterable<TagFactory> tagFactories) {
+  static DefaultPlaceholderId createWithFactories(String name, Iterable<TagFactory> tagFactories) {
     if (tagFactories == null) {
-      return new DefaultDynamicId(name);
+      return new DefaultPlaceholderId(name);
     } else {
       FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);
 
-      return new DefaultDynamicId(name, sorter.asCollection());
+      return new DefaultPlaceholderId(name, sorter.asCollection());
     }
   }
 
   /**
    * Constructs a new id with the specified name and no associated tag factories.
    */
-  DefaultDynamicId(String name) {
+  DefaultPlaceholderId(String name) {
     this(name, Collections.emptyList());
   }
 
@@ -112,7 +115,7 @@ final class DefaultDynamicId implements DynamicId {
    * @param tagFactories
    *      the possibly empty, immutable collection of tag factories to use
    */
-  private DefaultDynamicId(String name, Collection<TagFactory> tagFactories) {
+  private DefaultPlaceholderId(String name, Collection<TagFactory> tagFactories) {
     this.name = Preconditions.checkNotNull(name, "name");
     this.tagFactories = tagFactories;
   }
@@ -131,43 +134,43 @@ final class DefaultDynamicId implements DynamicId {
   }
 
   @Override
-  public DefaultDynamicId withTag(String k, String v) {
+  public DefaultPlaceholderId withTag(String k, String v) {
     return withTagFactory(new ConstantTagFactory(new BasicTag(k, v)));
   }
 
   @Override
-  public DefaultDynamicId withTag(Tag t) {
+  public DefaultPlaceholderId withTag(Tag t) {
     return withTagFactory(new ConstantTagFactory(t));
   }
 
   @Override
-  public DefaultDynamicId withTags(Iterable<Tag> tags) {
+  public DefaultPlaceholderId withTags(Iterable<Tag> tags) {
     return createNewId(sorter -> tags.forEach(tag -> sorter.addFactory(new ConstantTagFactory(tag))));
   }
 
   @Override
-  public DefaultDynamicId withTags(Map<String, String> tags) {
+  public DefaultPlaceholderId withTags(Map<String, String> tags) {
     return createNewId(sorter ->
             tags.forEach((key, value) -> sorter.addFactory(new ConstantTagFactory(new BasicTag(key, value)))));
   }
 
   @Override
-  public DefaultDynamicId withTagFactory(TagFactory factory) {
+  public DefaultPlaceholderId withTagFactory(TagFactory factory) {
     if (tagFactories.isEmpty()) {
-      return new DefaultDynamicId(name, Collections.singleton(factory));
+      return new DefaultPlaceholderId(name, Collections.singleton(factory));
     } else {
       return createNewId(sorter -> sorter.addFactory(factory));
     }
   }
 
   @Override
-  public DefaultDynamicId withTagFactories(Iterable<TagFactory> factories) {
+  public DefaultPlaceholderId withTagFactories(Iterable<TagFactory> factories) {
     return createNewId(sorter -> sorter.addFactories(factories));
   }
 
   @Override
-  public Id resolveToId() {
-    return new DefaultId(name, ArrayTagSet.create(tags()));
+  public Id resolveToId(Registry registry) {
+    return registry.createId(name, tags());
   }
 
   @Override
@@ -175,7 +178,7 @@ final class DefaultDynamicId implements DynamicId {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
 
-    DefaultDynamicId that = (DefaultDynamicId) o;
+    DefaultPlaceholderId that = (DefaultPlaceholderId) o;
 
     // We cannot use tagFactories.equals(that.tagFactories) below, because Java
     // unmodifiable collections do not override equals appropriately.
@@ -209,10 +212,10 @@ final class DefaultDynamicId implements DynamicId {
    * @return
    *      the newly created id
    */
-  private DefaultDynamicId createNewId(Consumer<FactorySorterAndDeduplicator> consumer) {
+  private DefaultPlaceholderId createNewId(Consumer<FactorySorterAndDeduplicator> consumer) {
     FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);
 
     consumer.accept(sorter);
-    return new DefaultDynamicId(name, sorter.asCollection());
+    return new DefaultPlaceholderId(name, sorter.asCollection());
   }
 }

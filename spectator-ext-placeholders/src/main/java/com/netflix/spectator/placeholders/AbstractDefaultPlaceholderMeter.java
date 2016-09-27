@@ -13,19 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
 
 import java.util.function.Function;
 
 /**
  * Base class for dynamic meters that provides implementations for the core
  * interface methods.
- *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
-@Deprecated
-abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
-  private final DynamicId id;
+abstract class AbstractDefaultPlaceholderMeter<T extends Meter> implements Meter {
+  private final PlaceholderId id;
+  private final Registry registry;
   private final Function<Id, T> meterResolver;
 
   /**
@@ -34,8 +37,9 @@ abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
    * @param id the dynamic id for the meter
    * @param meterResolver the function to map a resolved id to concrete metric
    */
-  AbstractDefaultDynamicMeter(DynamicId id, Function<Id, T> meterResolver) {
+  AbstractDefaultPlaceholderMeter(PlaceholderId id, Registry registry, Function<Id, T> meterResolver) {
     this.id = id;
+    this.registry = registry;
     this.meterResolver = meterResolver;
   }
 
@@ -43,7 +47,7 @@ abstract class AbstractDefaultDynamicMeter<T extends Meter> implements Meter {
    * Resolve the dynamic id to the current metric instance.
    */
   protected final T resolveToCurrentMeter() {
-    return meterResolver.apply(id.resolveToId());
+    return meterResolver.apply(id.resolveToId(registry));
   }
 
   @Override

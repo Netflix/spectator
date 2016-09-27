@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Registry;
 
 /**
  * Counter implementation that delegates the value tracking to component counters
- * based on the current value of the tags associated with the DynamicId when the
+ * based on the current value of the tags associated with the PlaceholderId when the
  * increment methods are called.
- *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
-@Deprecated
-class DefaultDynamicCounter extends AbstractDefaultDynamicMeter<Counter> implements Counter {
+class DefaultPlaceholderCounter extends AbstractDefaultPlaceholderMeter<Counter> implements Counter {
   /**
    * Constructs a new counter with the specified dynamic id.
    *
    * @param id the dynamic (template) id for generating the individual counters
    * @param registry the registry to use to instantiate the individual counters
    */
-  DefaultDynamicCounter(DynamicId id, Registry registry) {
-    super(id, registry::counter);
+  DefaultPlaceholderCounter(PlaceholderId id, Registry registry) {
+    super(id, registry, registry::counter);
   }
 
   @Override

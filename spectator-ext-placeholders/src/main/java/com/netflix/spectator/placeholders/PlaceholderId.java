@@ -13,7 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 
 import java.util.Map;
 
@@ -22,11 +26,8 @@ import java.util.Map;
  * to the Id to be declared in advance of the use of the metric.  This can be used to
  * provide a default value for a tag or to use a TagFactory implementation that uses
  * context available in the execution environment to compute the value of the tag.
- *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
-@Deprecated
-public interface DynamicId {
+public interface PlaceholderId {
   /** Description of the measurement that is being collected. */
   String name();
 
@@ -34,30 +35,30 @@ public interface DynamicId {
   Iterable<Tag> tags();
 
   /** New id with an additional tag value. */
-  DynamicId withTag(String k, String v);
+  PlaceholderId withTag(String k, String v);
 
   /** New id with an additional tag value. */
-  DynamicId withTag(Tag t);
+  PlaceholderId withTag(Tag t);
 
   /** New id with additional tag values. */
-  DynamicId withTags(Iterable<Tag> tags);
+  PlaceholderId withTags(Iterable<Tag> tags);
 
   /** New id with additional tag values. */
-  DynamicId withTags(Map<String, String> tags);
+  PlaceholderId withTags(Map<String, String> tags);
 
   /**
    * New id with an additional tag factory.
    * @param factory
    *        the factory to use to generate the values for the tag
    */
-  DynamicId withTagFactory(TagFactory factory);
+  PlaceholderId withTagFactory(TagFactory factory);
 
   /**
    * New id with additional tag factories.
    * @param factories
    *        a collection of factories for producing values for the tags
    */
-  DynamicId withTagFactories(Iterable<TagFactory> factories);
+  PlaceholderId withTagFactories(Iterable<TagFactory> factories);
 
   /**
    * Invokes each of the associated tag factories to produce a Id based on the
@@ -67,5 +68,5 @@ public interface DynamicId {
    *
    * @return an Id that has the same name as this id and the resolved tag values attached
    */
-  Id resolveToId();
+  Id resolveToId(Registry registry);
 }

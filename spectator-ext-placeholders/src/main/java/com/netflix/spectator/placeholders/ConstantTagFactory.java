@@ -13,17 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.placeholders;
 
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.Preconditions;
 
 /**
  * TagFactory implementation that always produces the same tag.  Useful for
  * providing a default value for a tag.
- *
- * @deprecated Use {@code spectator-ext-placeholders} library instead.
  */
-@Deprecated
 public final class ConstantTagFactory implements TagFactory {
   private final Tag tag;
 
