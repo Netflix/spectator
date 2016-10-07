@@ -1,0 +1,36 @@
+plugins {
+  id 'com.github.johnrengelman.shadow' version '1.2.3'
+}
+
+dependencies {
+  compile project(':spectator-api')
+  compile project(':spectator-ext-gc')
+  compile project(':spectator-ext-jvm')
+  compile project(':spectator-reg-atlas')
+  compile 'com.typesafe:config'
+  compile 'org.slf4j:slf4j-simple'
+}
+
+jar {
+  manifest {
+    attributes 'Premain-Class': 'spectator-agent.spectator.agent.Agent'
+  }
+}
+
+shadowJar {
+  classifier = 'shadow'
+  configurations = [project.configurations.runtime]
+  relocate('com.netflix.spectator',    'spectator-agent.spectator')
+  relocate('com.fasterxml',            'spectator-agent.json')
+  relocate('com.typesafe.config',      'spectator-agent.config')
+  relocate('org.slf4j',                'spectator-agent.slf4j')
+}
+
+publishing {
+  publications {
+    nebula(MavenPublication) {
+      artifact shadowJar
+    }
+  }
+}
+
