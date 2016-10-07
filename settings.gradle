@@ -8,6 +8,7 @@ include 'spectator-api',
         'spectator-ext-placeholders',
         'spectator-ext-sandbox',
         'spectator-ext-spark',
+        'spectator-reg-atlas',
         'spectator-reg-metrics3',
         'spectator-reg-servo',
         'spectator-web-spring'

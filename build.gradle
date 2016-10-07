@@ -111,8 +111,8 @@ subprojects {
   tasks.withType(FindBugs) {
     findbugs.toolVersion "3.0.0"
     reports {
-      xml.enabled = true
-      html.enabled = false
+      xml.enabled = false
+      html.enabled = true
     }
   }
 
