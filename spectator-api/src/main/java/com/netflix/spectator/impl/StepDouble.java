@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
-public class StepDouble {
+public class StepDouble implements StepValue {
 
   private final double init;
   private final Clock clock;
@@ -71,6 +71,18 @@ public class StepDouble {
   public double poll() {
     rollCount(clock.wallTime());
     return previous.get();
+  }
+
+  /** Get the value for the last completed interval as a rate per second. */
+  @Override public double pollAsRate() {
+    final double amount = poll();
+    final double period = step / 1000.0;
+    return amount / period;
+  }
+
+  /** Get the timestamp for the end of the last completed interval. */
+  @Override public long timestamp() {
+    return lastInitPos.get() * step;
   }
 
   @Override public String toString() {
