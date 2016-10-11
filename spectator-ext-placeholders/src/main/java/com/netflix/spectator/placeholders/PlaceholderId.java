@@ -16,7 +16,6 @@
 package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 
 import java.util.Map;
@@ -30,9 +29,6 @@ import java.util.Map;
 public interface PlaceholderId {
   /** Description of the measurement that is being collected. */
   String name();
-
-  /** Other dimensions that can be used to classify the measurement. */
-  Iterable<Tag> tags();
 
   /** New id with an additional tag value. */
   PlaceholderId withTag(String k, String v);
@@ -68,5 +64,5 @@ public interface PlaceholderId {
    *
    * @return an Id that has the same name as this id and the resolved tag values attached
    */
-  Id resolveToId(Registry registry);
+  Id resolveToId();
 }

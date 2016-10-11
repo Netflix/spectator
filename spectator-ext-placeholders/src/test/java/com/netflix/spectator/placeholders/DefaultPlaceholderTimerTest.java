@@ -40,7 +40,7 @@ public class DefaultPlaceholderTimerTest {
 
   @Test
   public void testInit() {
-    Timer timer = new DefaultPlaceholderTimer(new DefaultPlaceholderId("testInit"), registry);
+    Timer timer = new DefaultPlaceholderTimer(new DefaultPlaceholderId("testInit", registry), registry);
 
     Assert.assertEquals(0L, timer.count());
     Assert.assertEquals(0L, timer.totalTime());

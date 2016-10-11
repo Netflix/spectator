@@ -31,7 +31,7 @@ class DefaultPlaceholderCounter extends AbstractDefaultPlaceholderMeter<Counter>
    * @param registry the registry to use to instantiate the individual counters
    */
   DefaultPlaceholderCounter(PlaceholderId id, Registry registry) {
-    super(id, registry, registry::counter);
+    super(id, registry::counter);
   }
 
   @Override

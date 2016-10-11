@@ -42,7 +42,7 @@ public class DefaultPlaceholderCounterTest {
 
   @Test
   public void testInit() {
-    Counter c = new DefaultPlaceholderCounter(NoopPlaceholderId.INSTANCE, registry);
+    Counter c = new DefaultPlaceholderCounter(new DefaultPlaceholderId("unused", registry), registry);
     Assert.assertEquals(c.count(), 0L);
   }
 

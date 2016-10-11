@@ -34,7 +34,7 @@ class DefaultPlaceholderTimer extends AbstractDefaultPlaceholderMeter<Timer> imp
    * @param registry the registry to use to instantiate the individual timers
    */
   DefaultPlaceholderTimer(PlaceholderId id, Registry registry) {
-    super(id, registry, registry::timer);
+    super(id, registry::timer);
   }
 
   @Override
