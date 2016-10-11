@@ -28,7 +28,7 @@ public class NoopTimerTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopTimer.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertTrue(!NoopTimer.INSTANCE.hasExpired());
+    Assert.assertFalse(NoopTimer.INSTANCE.hasExpired());
   }
 
   @Test
@@ -66,7 +66,7 @@ public class NoopTimerTest {
   public void testMeasure() {
     NoopTimer t = NoopTimer.INSTANCE;
     t.record(42, TimeUnit.MILLISECONDS);
-    Assert.assertTrue(!t.measure().iterator().hasNext());
+    Assert.assertFalse(t.measure().iterator().hasNext());
   }
 
 }

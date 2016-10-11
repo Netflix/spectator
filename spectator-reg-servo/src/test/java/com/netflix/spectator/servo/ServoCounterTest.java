@@ -60,11 +60,11 @@ public class ServoCounterTest {
     Counter c = newCounter("foo");
     Assert.assertTrue(c.hasExpired());
     c.increment(42);
-    Assert.assertTrue(!c.hasExpired());
+    Assert.assertFalse(c.hasExpired());
 
     // Expires with inactivity, total count in memory is maintained
     clock.setWallTime(initTime + fifteenMinutes);
-    Assert.assertTrue(!c.hasExpired());
+    Assert.assertFalse(c.hasExpired());
 
     // Expires with inactivity, total count in memory is maintained
     clock.setWallTime(initTime + fifteenMinutes + 1);
@@ -74,7 +74,7 @@ public class ServoCounterTest {
     // Activity brings it back
     c.increment();
     Assert.assertEquals(c.count(), 43);
-    Assert.assertTrue(!c.hasExpired());
+    Assert.assertFalse(c.hasExpired());
   }
 
 }

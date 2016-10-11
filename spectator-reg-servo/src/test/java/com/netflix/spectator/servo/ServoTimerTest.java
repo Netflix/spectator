@@ -220,7 +220,7 @@ public class ServoTimerTest {
     Timer t = newTimer("foo");
     Assert.assertTrue(t.hasExpired());
     t.record(1, TimeUnit.SECONDS);
-    Assert.assertTrue(!t.hasExpired());
+    Assert.assertFalse(t.hasExpired());
 
     // Expires with inactivity
     clock.setWallTime(initTime + fifteenMinutes + 1);
@@ -228,7 +228,7 @@ public class ServoTimerTest {
 
     // Activity brings it back
     t.record(42, TimeUnit.SECONDS);
-    Assert.assertTrue(!t.hasExpired());
+    Assert.assertFalse(t.hasExpired());
   }
 
 }
