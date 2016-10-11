@@ -37,7 +37,7 @@ public class DefaultPlaceholderDistributionSummaryTest {
 
   @Test
   public void testInit() {
-    DistributionSummary summary = new DefaultPlaceholderDistributionSummary(new DefaultPlaceholderId("testInit"), registry);
+    DistributionSummary summary = new DefaultPlaceholderDistributionSummary(new DefaultPlaceholderId("testInit", registry), registry);
 
     Assert.assertEquals(0L, summary.count());
     Assert.assertEquals(0L, summary.totalAmount());

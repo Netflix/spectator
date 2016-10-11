@@ -79,6 +79,7 @@ final class DefaultPlaceholderId implements PlaceholderId {
 
   private final String name;
   private final Collection<TagFactory> tagFactories;
+  private final Registry registry;
 
   /**
    * Creates a new id with the specified name and collection of factories.
@@ -87,50 +88,46 @@ final class DefaultPlaceholderId implements PlaceholderId {
    *      the name of the new id
    * @param tagFactories
    *      the possibly empty collection of factories to be attached to the new id
+   * @param registry
+   *      the registry to use when resolving to an {@link Id}
    * @return
    *      the newly created id
    */
-  static DefaultPlaceholderId createWithFactories(String name, Iterable<TagFactory> tagFactories) {
+  static DefaultPlaceholderId createWithFactories(String name, Iterable<TagFactory> tagFactories, Registry registry) {
     if (tagFactories == null) {
-      return new DefaultPlaceholderId(name);
+      return new DefaultPlaceholderId(name, registry);
     } else {
       FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);
 
-      return new DefaultPlaceholderId(name, sorter.asCollection());
+      return new DefaultPlaceholderId(name, sorter.asCollection(), registry);
     }
   }
 
   /**
    * Constructs a new id with the specified name and no associated tag factories.
    */
-  DefaultPlaceholderId(String name) {
-    this(name, Collections.emptyList());
+  DefaultPlaceholderId(String name, Registry registry) {
+    this(name, Collections.emptyList(), registry);
   }
 
   /**
    * Constructs a new id with the specified name and tag factories.
-   *
-   * @param name
+   *  @param name
    *      the name of the new id
    * @param tagFactories
-   *      the possibly empty, immutable collection of tag factories to use
+   *      the possibly empty collection of factories to be attached to the new id
+   * @param registry
+   *      the registry to use when resolving to an {@link Id}
    */
-  private DefaultPlaceholderId(String name, Collection<TagFactory> tagFactories) {
+  private DefaultPlaceholderId(String name, Collection<TagFactory> tagFactories, Registry registry) {
     this.name = Preconditions.checkNotNull(name, "name");
     this.tagFactories = tagFactories;
+    this.registry = registry;
   }
 
   @Override
   public String name() {
     return name;
-  }
-
-  @Override
-  public Iterable<Tag> tags() {
-    return tagFactories.stream()
-      .map(TagFactory::createTag)
-      .filter(tag -> tag != null)
-      .collect(Collectors.toList());
   }
 
   @Override
@@ -157,7 +154,7 @@ final class DefaultPlaceholderId implements PlaceholderId {
   @Override
   public DefaultPlaceholderId withTagFactory(TagFactory factory) {
     if (tagFactories.isEmpty()) {
-      return new DefaultPlaceholderId(name, Collections.singleton(factory));
+      return new DefaultPlaceholderId(name, Collections.singleton(factory), registry);
     } else {
       return createNewId(sorter -> sorter.addFactory(factory));
     }
@@ -169,8 +166,13 @@ final class DefaultPlaceholderId implements PlaceholderId {
   }
 
   @Override
-  public Id resolveToId(Registry registry) {
-    return registry.createId(name, tags());
+  public Id resolveToId() {
+    Iterable<Tag> tags = tagFactories.stream()
+            .map(TagFactory::createTag)
+            .filter(tag -> tag != null)
+            .collect(Collectors.toList());
+
+    return registry.createId(name, tags);
   }
 
   @Override
@@ -193,14 +195,7 @@ final class DefaultPlaceholderId implements PlaceholderId {
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder();
-    buf.append(name);
-    if (!tagFactories.isEmpty()) {
-      for (Tag cur: tags()) {
-        buf.append(":").append(cur.key()).append("=").append(cur.value());
-      }
-    }
-    return buf.toString();
+    return resolveToId().toString();
   }
 
   /**
@@ -216,6 +211,6 @@ final class DefaultPlaceholderId implements PlaceholderId {
     FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);
 
     consumer.accept(sorter);
-    return new DefaultPlaceholderId(name, sorter.asCollection());
+    return new DefaultPlaceholderId(name, sorter.asCollection(), registry);
   }
 }

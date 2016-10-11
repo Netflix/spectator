@@ -32,7 +32,7 @@ class DefaultPlaceholderDistributionSummary extends AbstractDefaultPlaceholderMe
    * @param registry the registry to use to instantiate the individual distribution summaries
    */
   DefaultPlaceholderDistributionSummary(PlaceholderId id, Registry registry) {
-    super(id, registry, registry::distributionSummary);
+    super(id, registry::distributionSummary);
   }
 
   @Override

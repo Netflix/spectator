@@ -18,7 +18,6 @@ package com.netflix.spectator.placeholders;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
-import com.netflix.spectator.api.Registry;
 
 import java.util.function.Function;
 
@@ -28,18 +27,15 @@ import java.util.function.Function;
  */
 abstract class AbstractDefaultPlaceholderMeter<T extends Meter> implements Meter {
   private final PlaceholderId id;
-  private final Registry registry;
   private final Function<Id, T> meterResolver;
 
   /**
    * Creates a new dynamic meter.
-   *
-   * @param id the dynamic id for the meter
+   *  @param id the dynamic id for the meter
    * @param meterResolver the function to map a resolved id to concrete metric
    */
-  AbstractDefaultPlaceholderMeter(PlaceholderId id, Registry registry, Function<Id, T> meterResolver) {
+  AbstractDefaultPlaceholderMeter(PlaceholderId id, Function<Id, T> meterResolver) {
     this.id = id;
-    this.registry = registry;
     this.meterResolver = meterResolver;
   }
 
@@ -47,12 +43,12 @@ abstract class AbstractDefaultPlaceholderMeter<T extends Meter> implements Meter
    * Resolve the dynamic id to the current metric instance.
    */
   protected final T resolveToCurrentMeter() {
-    return meterResolver.apply(id.resolveToId(registry));
+    return meterResolver.apply(id());
   }
 
   @Override
   public final Id id() {
-    return resolveToCurrentMeter().id();
+    return id.resolveToId();
   }
 
   @Override

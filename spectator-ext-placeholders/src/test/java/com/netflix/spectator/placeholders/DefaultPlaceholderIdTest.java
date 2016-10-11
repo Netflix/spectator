@@ -48,32 +48,13 @@ public class DefaultPlaceholderIdTest {
 
   @Test(expected = NullPointerException.class)
   public void testNullName() {
-    new DefaultPlaceholderId(null);
+    new DefaultPlaceholderId(null, REGISTRY);
   }
-
 
   @Test
   public void testName() {
-    PlaceholderId id = new DefaultPlaceholderId("foo");
+    PlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY);
     Assert.assertEquals(id.name(), "foo");
-  }
-
-  @Test
-  public void testTags() {
-    List<Tag> expected = new ArrayList<>();
-    PlaceholderId id = new DefaultPlaceholderId("foo").withTags(ID_2.tags());
-
-    Assert.assertEquals(id.name(), "foo");
-    for (Tag tag : ID_2.tags()) {
-      expected.add(tag);
-    }
-    Assert.assertEquals(expected, id.tags());
-  }
-
-  @Test
-  public void testTagsEmpty() {
-    PlaceholderId id = new DefaultPlaceholderId("foo");
-    Assert.assertTrue(!id.tags().iterator().hasNext());
   }
 
   @Test
@@ -87,24 +68,33 @@ public class DefaultPlaceholderIdTest {
 
   @Test
   public void testToString() {
-    DefaultPlaceholderId id = (new DefaultPlaceholderId("foo")).withTag("k1", "v1").withTag("k2", "v2");
+    DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTag("k1", "v1").withTag("k2", "v2");
     Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
   public void testToStringNameOnly() {
-    DefaultPlaceholderId id = new DefaultPlaceholderId("foo");
+    DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY);
     Assert.assertEquals(id.toString(), "foo");
   }
 
   @Test
   public void testWithTag() {
     Tag expected = new BasicTag("key", "value");
-    DefaultPlaceholderId id = new DefaultPlaceholderId("foo").withTag(expected);
-    Iterator<Tag> tags = id.tags().iterator();
+    DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTag(expected);
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertTrue("tags empty", tags.hasNext());
     Assert.assertEquals(expected, tags.next());
+  }
+
+  @Test
+  public void testWithTagsIterable() {
+    List<Tag> tags = new ArrayList<>();
+    tags.add(new BasicTag("k1", "v1"));
+    tags.add(new BasicTag("k2", "v2"));
+    DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTags(tags);
+    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
@@ -112,25 +102,25 @@ public class DefaultPlaceholderIdTest {
     Map<String, String> map = new LinkedHashMap<>();
     map.put("k1", "v1");
     map.put("k2", "v2");
-    DefaultPlaceholderId id = (new DefaultPlaceholderId("foo")).withTags(map);
+    DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTags(map);
     Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
   public void testWithNoopTagFactory() {
-    DefaultPlaceholderId id = new DefaultPlaceholderId("foo").withTagFactory(new TagFactory() {
+    DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTagFactory(new TagFactory() {
       @Override
       public String name() {
         return "noopTagFactory";
       }
 
       @Override
-      /** Implementation that always returns null, which should result in the tag being omitted. */
+      /* Implementation that always returns null, which should result in the tag being omitted. */
       public Tag createTag() {
         return null;
       }
     });
-    Iterator<Tag> tags = id.tags().iterator();
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertFalse("tags not empty", tags.hasNext());
   }
@@ -138,8 +128,8 @@ public class DefaultPlaceholderIdTest {
   @Test
   public void testWithTagFactory() {
     Tag expected = new BasicTag("key", "value");
-    DefaultPlaceholderId id = new DefaultPlaceholderId("foo").withTagFactory(new ConstantTagFactory(expected));
-    Iterator<Tag> tags = id.tags().iterator();
+    DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTagFactory(new ConstantTagFactory(expected));
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertTrue("tags empty", tags.hasNext());
     Assert.assertEquals(expected, tags.next());
@@ -150,8 +140,8 @@ public class DefaultPlaceholderIdTest {
     Tag tags1 = new BasicTag("k1", "v1");
     Tag tags2 = new BasicTag("k2", "v2");
     List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
-    DefaultPlaceholderId id = new DefaultPlaceholderId("foo").withTagFactories(factories);
-    Iterator<Tag> tags = id.tags().iterator();
+    DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTagFactories(factories);
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertTrue("tags empty", tags.hasNext());
     Assert.assertEquals(tags1, tags.next());
@@ -162,8 +152,8 @@ public class DefaultPlaceholderIdTest {
   public void testResolveToId() {
     Tag tag = new BasicTag("key", "value");
     Id expected = REGISTRY.createId("foo").withTag(tag);
-    PlaceholderId placeholderId = new DefaultPlaceholderId("foo").withTag(tag);
-    Assert.assertEquals(expected, placeholderId.resolveToId(REGISTRY));
+    PlaceholderId placeholderId = new DefaultPlaceholderId("foo", REGISTRY).withTag(tag);
+    Assert.assertEquals(expected, placeholderId.resolveToId());
   }
 
   @Test
@@ -171,8 +161,8 @@ public class DefaultPlaceholderIdTest {
     Tag tags1 = new BasicTag("k1", "v1");
     Tag tags2 = new BasicTag("k2", "v2");
     List<TagFactory> factories = Arrays.asList(new ConstantTagFactory(tags1), new ConstantTagFactory(tags2));
-    DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", factories);
-    Iterator<Tag> tags = id.tags().iterator();
+    DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", factories, REGISTRY);
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertEquals("foo", id.name());
     Assert.assertTrue("tags empty", tags.hasNext());
@@ -182,8 +172,8 @@ public class DefaultPlaceholderIdTest {
 
   @Test
   public void testCreateWithFactoriesNullIterable() {
-    DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", null);
-    Iterator<Tag> tags = id.tags().iterator();
+    DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", null, REGISTRY);
+    Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
     Assert.assertEquals("foo", id.name());
     Assert.assertFalse("tags not empty", tags.hasNext());
