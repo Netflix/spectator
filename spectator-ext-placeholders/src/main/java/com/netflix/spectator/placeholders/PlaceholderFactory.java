@@ -15,25 +15,25 @@
  */
 package com.netflix.spectator.placeholders;
 
-import com.netflix.spectator.api.*;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 
 /**
  * Factory for creating instances of activity based meters with placeholders in the
  * identifiers so that the final id can be resolved when the activity takes place.
  */
-public final class PlaceholderFactory {
+public interface PlaceholderFactory {
 
   /**
    * Create a new instance of the factory.
+   *
+   * @param registry
+   *      the registry to use when creating ids
    */
-  public static PlaceholderFactory from(Registry registry) {
-    return new PlaceholderFactory(registry);
-  }
-
-  private final Registry registry;
-
-  private PlaceholderFactory(Registry registry) {
-    this.registry = registry;
+  static PlaceholderFactory from(Registry registry) {
+    return new DefaultPlaceholderFactory(registry);
   }
 
   /**
@@ -44,9 +44,7 @@ public final class PlaceholderFactory {
    * @return
    *     The newly created identifier.
    */
-  public PlaceholderId createId(String name) {
-    return new DefaultPlaceholderId(name);
-  }
+  PlaceholderId createId(String name);
 
   /**
    * Creates an identifier with placeholders for a counter, timer, or distribution summary.
@@ -59,9 +57,7 @@ public final class PlaceholderFactory {
    * @return
    *     The newly created identifier.
    */
-  public PlaceholderId createId(String name, Iterable<TagFactory> tagFactories) {
-    return DefaultPlaceholderId.createWithFactories(name, tagFactories);
-  }
+  PlaceholderId createId(String name, Iterable<TagFactory> tagFactories);
 
   /**
    * Measures the rate of some activity.  A counter is for continuously incrementing sources like
@@ -70,9 +66,7 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public Counter counter(PlaceholderId id) {
-    return new DefaultPlaceholderCounter(id, registry);
-  }
+  Counter counter(PlaceholderId id);
 
   /**
    * Measures the rate and variation in amount for some activity. For example, it could be used to
@@ -81,9 +75,7 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public DistributionSummary distributionSummary(PlaceholderId id) {
-    return new DefaultPlaceholderDistributionSummary(id, registry);
-  }
+  DistributionSummary distributionSummary(PlaceholderId id);
 
   /**
    * Measures the rate and time taken for short running tasks.
@@ -91,7 +83,5 @@ public final class PlaceholderFactory {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  public Timer timer(PlaceholderId id) {
-    return new DefaultPlaceholderTimer(id, registry);
-  }
+  Timer timer(PlaceholderId id);
 }
