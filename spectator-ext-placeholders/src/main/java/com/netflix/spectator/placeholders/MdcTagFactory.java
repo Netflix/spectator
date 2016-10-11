@@ -23,7 +23,7 @@ import org.slf4j.MDC;
 /**
  * A TagFactory implementation that extracts information from the Sl4fj MDC data.
  * If the MDC for the current thread has no value associated with the specified
- * naem at the time that the createTag method is invoked, then that method will
+ * name at the time that the createTag method is invoked, then that method will
  * return null, which will result in the tag being omitted.
  */
 public class MdcTagFactory implements TagFactory {
