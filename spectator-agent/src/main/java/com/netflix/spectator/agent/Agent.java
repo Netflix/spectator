@@ -45,7 +45,7 @@ public final class Agent {
   }
 
   /** Entry point for the agent. */
-  public static void premain(String arg, Instrumentation instrumentation) {
+  public static void premain(String arg, Instrumentation instrumentation) throws Exception {
     // Setup logging
     Config config = loadConfig(arg);
 
@@ -65,6 +65,13 @@ public final class Agent {
     // Enable JVM data collection
     if (config.getBoolean("collection.jvm")) {
       Jmx.registerStandardMXBeans(registry);
+    }
+
+    // Enable JMX query collection
+    if (config.getBoolean("collection.jmx")) {
+      for (Config cfg : config.getConfigList("jmx.mappings")) {
+        registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));
+      }
     }
 
     // Start collection for the registry
