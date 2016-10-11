@@ -35,11 +35,13 @@ public final class Agent {
   private Agent() {
   }
 
-  private static Config loadConfig(String userResource) {
+  private static Config loadConfig(String userResources) {
     Config config = ConfigFactory.load("agent");
-    if (userResource != null && !"".equals(userResource)) {
-      Config user = ConfigFactory.load(userResource);
-      config = user.withFallback(config);
+    if (userResources != null && !"".equals(userResources)) {
+      for (String userResource : userResources.split("[,\\s]+]")) {
+        Config user = ConfigFactory.load(userResource);
+        config = user.withFallback(config);
+      }
     }
     return config.getConfig("netflix.spectator.agent");
   }
