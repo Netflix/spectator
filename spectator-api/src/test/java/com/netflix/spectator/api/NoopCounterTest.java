@@ -25,7 +25,7 @@ public class NoopCounterTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopCounter.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertTrue(!NoopCounter.INSTANCE.hasExpired());
+    Assert.assertFalse(NoopCounter.INSTANCE.hasExpired());
   }
 
   @Test
@@ -46,7 +46,7 @@ public class NoopCounterTest {
   public void testMeasure() {
     NoopCounter c = NoopCounter.INSTANCE;
     c.increment(42);
-    Assert.assertTrue(!c.measure().iterator().hasNext());
+    Assert.assertFalse(c.measure().iterator().hasNext());
   }
 
 }

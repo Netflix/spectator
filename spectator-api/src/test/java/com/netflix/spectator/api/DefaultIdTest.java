@@ -52,7 +52,7 @@ public class DefaultIdTest {
   @Test
   public void testTagsEmpty() {
     Id id = new DefaultId("foo");
-    Assert.assertTrue(!id.tags().iterator().hasNext());
+    Assert.assertFalse(id.tags().iterator().hasNext());
   }
 
   @Test

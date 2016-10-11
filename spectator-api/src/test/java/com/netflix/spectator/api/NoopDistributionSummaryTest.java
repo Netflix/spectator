@@ -25,7 +25,7 @@ public class NoopDistributionSummaryTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopDistributionSummary.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertTrue(!NoopDistributionSummary.INSTANCE.hasExpired());
+    Assert.assertFalse(NoopDistributionSummary.INSTANCE.hasExpired());
   }
 
   @Test
@@ -40,7 +40,7 @@ public class NoopDistributionSummaryTest {
   public void testMeasure() {
     NoopDistributionSummary t = NoopDistributionSummary.INSTANCE;
     t.record(42);
-    Assert.assertTrue(!t.measure().iterator().hasNext());
+    Assert.assertFalse(t.measure().iterator().hasNext());
   }
 
 }

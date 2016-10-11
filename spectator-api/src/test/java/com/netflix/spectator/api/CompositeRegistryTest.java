@@ -214,7 +214,7 @@ public class CompositeRegistryTest {
   public void testIteratorNoRegistries() {
     Registry r = newRegistry(0, true);
     r.counter(r.createId("foo")).increment();
-    Assert.assertTrue(!r.iterator().hasNext());
+    Assert.assertFalse(r.iterator().hasNext());
   }
 
   @Test
