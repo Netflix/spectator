@@ -9,7 +9,6 @@ dependencies {
   compile project(':spectator-reg-atlas')
   compile 'com.typesafe:config'
   compile 'org.slf4j:slf4j-simple'
-  testCompile 'org.apache.cassandra:cassandra-all:2.1.15'
 }
 
 jar {
