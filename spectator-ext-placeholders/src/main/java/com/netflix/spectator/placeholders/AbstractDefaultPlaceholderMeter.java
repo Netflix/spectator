@@ -31,7 +31,8 @@ abstract class AbstractDefaultPlaceholderMeter<T extends Meter> implements Meter
 
   /**
    * Creates a new dynamic meter.
-   *  @param id the dynamic id for the meter
+   *
+   * @param id the dynamic id for the meter
    * @param meterResolver the function to map a resolved id to concrete metric
    */
   AbstractDefaultPlaceholderMeter(PlaceholderId id, Function<Id, T> meterResolver) {
