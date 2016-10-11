@@ -35,17 +35,19 @@ public final class Agent {
   private Agent() {
   }
 
-  private static Config loadConfig(String userResource) {
+  private static Config loadConfig(String userResources) {
     Config config = ConfigFactory.load("agent");
-    if (userResource != null && !"".equals(userResource)) {
-      Config user = ConfigFactory.load(userResource);
-      config = user.withFallback(config);
+    if (userResources != null && !"".equals(userResources)) {
+      for (String userResource : userResources.split("[,\\s]+]")) {
+        Config user = ConfigFactory.load(userResource);
+        config = user.withFallback(config);
+      }
     }
     return config.getConfig("netflix.spectator.agent");
   }
 
   /** Entry point for the agent. */
-  public static void premain(String arg, Instrumentation instrumentation) {
+  public static void premain(String arg, Instrumentation instrumentation) throws Exception {
     // Setup logging
     Config config = loadConfig(arg);
 
@@ -65,6 +67,13 @@ public final class Agent {
     // Enable JVM data collection
     if (config.getBoolean("collection.jvm")) {
       Jmx.registerStandardMXBeans(registry);
+    }
+
+    // Enable JMX query collection
+    if (config.getBoolean("collection.jmx")) {
+      for (Config cfg : config.getConfigList("jmx.mappings")) {
+        registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));
+      }
     }
 
     // Start collection for the registry
