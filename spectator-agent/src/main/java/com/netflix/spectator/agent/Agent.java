@@ -25,6 +25,8 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import java.lang.instrument.Instrumentation;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Agent that can be added to JVM to get basic stats about GC, memory, and optionally
@@ -52,8 +54,7 @@ public final class Agent {
     Config config = loadConfig(arg);
 
     // Setup Registry
-    AtlasConfig atlasConfig = k -> config.hasPath(k) ? config.getString(k) : null;
-    AtlasRegistry registry = new AtlasRegistry(Clock.SYSTEM, atlasConfig);
+    AtlasRegistry registry = new AtlasRegistry(Clock.SYSTEM, new AgentAtlasConfig(config));
 
     // Add to global registry for http stats and GC logger
     Spectator.globalRegistry().add(registry);
@@ -81,5 +82,26 @@ public final class Agent {
 
     // Shutdown registry
     Runtime.getRuntime().addShutdownHook(new Thread(registry::stop, "spectator-agent-shutdown"));
+  }
+
+  private static class AgentAtlasConfig implements AtlasConfig {
+
+    private final Config config;
+
+    AgentAtlasConfig(Config config) {
+      this.config = config;
+    }
+
+    @Override public String get(String k) {
+      return config.hasPath(k) ? config.getString(k) : null;
+    }
+
+    @Override public Map<String, String> commonTags() {
+      Map<String, String> tags = new HashMap<>();
+      for (Config cfg : config.getConfigList("atlas.tags")) {
+        tags.put(cfg.getString("key"), cfg.getString("value"));
+      }
+      return tags;
+    }
   }
 }
