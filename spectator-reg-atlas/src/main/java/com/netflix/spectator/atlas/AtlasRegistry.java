@@ -88,7 +88,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
       scheduler = new Scheduler(this, "atlas-registry", numThreads);
       scheduler.schedule(options, this::collectData);
-      LOGGER.info("started collecting metrics every {}ms reporting to {}", step, uri);
+      LOGGER.info("started collecting metrics every {} reporting to {}", step, uri);
     } else {
       LOGGER.warn("registry already started, ignoring duplicate request");
     }
