@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -69,7 +70,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     this.readTimeout = (int) config.readTimeout().toMillis();
     this.batchSize = config.batchSize();
     this.numThreads = config.numThreads();
-    this.commonTags = config.commonTags();
+    this.commonTags = new TreeMap<>(config.commonTags());
 
     SimpleModule module = new SimpleModule()
         .addSerializer(Measurement.class, new MeasurementSerializer());
@@ -89,6 +90,7 @@ public final class AtlasRegistry extends AbstractRegistry {
       scheduler = new Scheduler(this, "atlas-registry", numThreads);
       scheduler.schedule(options, this::collectData);
       LOGGER.info("started collecting metrics every {} reporting to {}", step, uri);
+      LOGGER.info("common tags: {}", commonTags);
     } else {
       LOGGER.warn("registry already started, ignoring duplicate request");
     }
