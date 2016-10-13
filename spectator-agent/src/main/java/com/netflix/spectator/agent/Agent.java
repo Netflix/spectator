@@ -99,7 +99,12 @@ public final class Agent {
     @Override public Map<String, String> commonTags() {
       Map<String, String> tags = new HashMap<>();
       for (Config cfg : config.getConfigList("atlas.tags")) {
-        tags.put(cfg.getString("key"), cfg.getString("value"));
+        // These are often populated by environment variables that can sometimes be empty
+        // rather than not set when missing. Empty strings are not allowed by Atlas.
+        String value = cfg.getString("value");
+        if (!value.isEmpty()) {
+          tags.put(cfg.getString("key"), cfg.getString("value"));
+        }
       }
       return tags;
     }
