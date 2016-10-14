@@ -58,6 +58,7 @@ class JmxData {
       }
 
       Map<String, String> stringAttrs = new HashMap<>(name.getKeyPropertyList());
+      stringAttrs.put("domain", name.getDomain());
       Map<String, Number> numberAttrs = new HashMap<>();
       for (Attribute attr : server.getAttributes(name, attrNames).asList()) {
         Object obj = attr.getValue();
