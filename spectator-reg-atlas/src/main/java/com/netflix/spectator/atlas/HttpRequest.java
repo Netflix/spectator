@@ -43,7 +43,8 @@ class HttpRequest {
   HttpRequest(URI uri) throws Exception {
     this.uri = uri;
     this.entry = new HttpLogEntry()
-        .withRequestUri(uri);
+        .withRequestUri(uri)
+        .withClientName("spectator-reg-atlas");
     this.con = (HttpURLConnection) uri.toURL().openConnection();
   }
 
