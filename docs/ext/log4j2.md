@@ -8,7 +8,7 @@ log messages reported.
 To use it simply add a dependency:
 
 ```
-com.netflix.spectator:spectator-ext-log4j2:0.41.0
+com.netflix.spectator:spectator-ext-log4j2:0.42.0
 ```
 
 Then in your application initialization:
