@@ -17,7 +17,9 @@
 dependencies {
   compile project(':spectator-api')
 
-  compile 'org.springframework.boot:spring-boot-starter-actuator:1.2.8.RELEASE'
-  compile 'org.springframework.boot:spring-boot-starter-data-rest:1.2.8.RELEASE'
-  compile 'com.fasterxml.jackson.core:jackson-databind:2.5.3'
+  compileOnly 'org.springframework.boot:spring-boot-starter-actuator:1.2.8.RELEASE'
+  compileOnly 'org.springframework.data:spring-data-rest-webmvc:2.2.4.RELEASE'
+
+  testCompile 'org.springframework.boot:spring-boot-starter-actuator:1.2.8.RELEASE'
+
 }
