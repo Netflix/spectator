@@ -9,6 +9,7 @@ dependencies {
   compile project(':spectator-reg-atlas')
   compile 'com.typesafe:config'
   compile 'org.slf4j:slf4j-simple'
+  testCompile 'com.fasterxml.jackson.core:jackson-databind'
 }
 
 jar {

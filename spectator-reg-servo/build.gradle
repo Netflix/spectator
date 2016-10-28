@@ -1,5 +1,6 @@
 dependencies {
   compileApi project(':spectator-api')
+  compile 'com.google.guava:guava'
   compileApi 'com.netflix.servo:servo-core'
   jmh project(':spectator-api')
 }
