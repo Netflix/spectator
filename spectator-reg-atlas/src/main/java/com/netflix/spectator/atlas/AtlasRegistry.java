@@ -135,7 +135,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     try {
       for (List<Measurement> batch : getBatches()) {
         PublishPayload p = new PublishPayload(commonTags, batch);
-        new HttpRequest(uri)
+        new HttpRequest(this, uri)
             .withMethod("POST")
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
