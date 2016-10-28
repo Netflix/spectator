@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.sandbox.HttpLogEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Helper for sending an HTTP request using {@link HttpURLConnection}.
@@ -34,13 +36,18 @@ class HttpRequest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequest.class);
 
+  private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
+
+  private final Registry registry;
+
   private final URI uri;
   private final HttpLogEntry entry;
   private final HttpURLConnection con;
   private byte[] entity;
 
   /** Create a new instance for the specified URI. */
-  HttpRequest(URI uri) throws Exception {
+  HttpRequest(Registry registry, URI uri) throws Exception {
+    this.registry = registry;
     this.uri = uri;
     this.entry = new HttpLogEntry()
         .withRequestUri(uri)
@@ -103,6 +110,9 @@ class HttpRequest {
 
       int status = con.getResponseCode();
       entry.mark("complete").withStatusCode(status);
+
+      recordClockSkew(con.getHeaderFieldDate("Date", 0L));
+
       try (InputStream in = (status >= 400) ? con.getErrorStream() : con.getInputStream()) {
         byte[] data = readAll(in);
         entry.withResponseContentLength(data.length);
@@ -116,6 +126,33 @@ class HttpRequest {
       LOGGER.warn("request to {} failed", uri, e);
     } finally {
       HttpLogEntry.logClientRequest(entry);
+    }
+  }
+
+  /**
+   * Record the difference between the date response time and the local time on the server.
+   * This is used to get a rough idea of the amount of skew in the environment. Ideally it
+   * should be fairly small. The date header will only have seconds so we expect to regularly
+   * have differences of up to 1 second. Note, that it is a rough estimate and could be
+   * elevated because of unrelated problems like GC or network delays.
+   */
+  private void recordClockSkew(long responseTimestamp) {
+    if (responseTimestamp == 0L) {
+      LOGGER.debug("no date timestamp on response, cannot record skew");
+    } else {
+      final long delta = System.currentTimeMillis() - responseTimestamp;
+      if (delta >= 0L) {
+        // Local clock is running fast compared to the server. Note this should also be the
+        // common case for if the clocks are in sync as there will be some delay for the server
+        // response to reach this node.
+        registry.timer(CLOCK_SKEW_TIMER, "id", "fast").record(delta, TimeUnit.MILLISECONDS);
+      } else {
+        // Local clock is running slow compared to the server. This means the response timestamp
+        // appears to be after the current time on this node. The timer will ignore negative
+        // values so we negate and record it with a different id.
+        registry.timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
+      }
+      LOGGER.debug("clock skew between client and server: {}ms", delta);
     }
   }
 
