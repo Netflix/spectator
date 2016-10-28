@@ -1,4 +1,9 @@
 dependencies {
   compile project(':spectator-nflx-plugin')
-  compile "com.netflix.governator:governator"
+  compile 'com.netflix.governator:governator'
+  compile 'com.netflix.governator:governator-api'
+  compile 'com.google.inject:guice'
+  testCompile 'com.google.inject:guice'
+  testCompile 'com.netflix.archaius:archaius-core'
+  testCompile 'commons-configuration:commons-configuration'
 }
