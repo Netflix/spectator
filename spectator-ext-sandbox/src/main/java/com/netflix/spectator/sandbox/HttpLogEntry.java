@@ -516,7 +516,7 @@ public class HttpLogEntry {
     }
 
     int numBytes() {
-      return name.length() + ": ".length() + value.length() + "\n" .length();
+      return name.length() + ": ".length() + value.length() + "\n".length();
     }
   }
 

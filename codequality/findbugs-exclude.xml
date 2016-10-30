@@ -6,4 +6,22 @@
       <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.sandbox.HttpResponse"/>
+      <Bug pattern="EI_EXPOSE_REP"/>
+    </And>
+  </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.sandbox.HttpResponse"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </And>
+  </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.sandbox.HttpRequestBuilder"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </And>
+  </Match>
 </FindBugsFilter>
