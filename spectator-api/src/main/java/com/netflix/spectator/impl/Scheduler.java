@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -400,7 +400,7 @@ public class Scheduler {
             final long delay = clock.wallTime() - task.getNextExecutionTime();
             taskExecutionDelay.record(delay, TimeUnit.MILLISECONDS);
 
-            taskExecutionTime.record(() -> task.runAndReschedule(queue, skipped));
+            taskExecutionTime.run(() -> task.runAndReschedule(queue, skipped));
           } catch (InterruptedException e) {
             LOGGER.debug("task interrupted", e);
             break;

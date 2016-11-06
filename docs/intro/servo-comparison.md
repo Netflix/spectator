@@ -308,7 +308,7 @@ public class Foo {
   }
 
   public void doSomething() {
-    t.record(() -> {
+    t.run(() -> {
       ...
     });
   }

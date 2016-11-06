@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package com.netflix.spectator.placeholders;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,29 +27,30 @@ import java.util.concurrent.TimeUnit;
  * interface methods are called.
  */
 class DefaultPlaceholderTimer extends AbstractDefaultPlaceholderMeter<Timer> implements Timer {
+
+  private final Clock clock;
+
   /**
    * Constructs a new timer with the specified dynamic id.
    *
-   * @param id the dynamic (template) id for generating the individual timers
-   * @param registry the registry to use to instantiate the individual timers
+   * @param id
+   *     The template id for generating the individual timers.
+   * @param registry
+   *     The registry to use to instantiate the individual timers.
    */
   DefaultPlaceholderTimer(PlaceholderId id, Registry registry) {
     super(id, registry::timer);
+    this.clock = registry.clock();
+  }
+
+  @Override
+  public Clock clock() {
+    return clock;
   }
 
   @Override
   public void record(long amount, TimeUnit unit) {
     resolveToCurrentMeter().record(amount, unit);
-  }
-
-  @Override
-  public <T> T record(Callable<T> f) throws Exception {
-    return resolveToCurrentMeter().record(f);
-  }
-
-  @Override
-  public void record(Runnable f) {
-    resolveToCurrentMeter().record(f);
   }
 
   @Override

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import com.netflix.spectator.api.Timer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -47,27 +46,13 @@ class SidecarTimer implements Timer {
     return id;
   }
 
+  @Override public Clock clock() {
+    return clock;
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     Measurement m = new Measurement(id, clock.wallTime(), unit.toMillis(amount));
     values.offer(m);
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long start = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long start = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
-    }
   }
 
   @Override public long count() {

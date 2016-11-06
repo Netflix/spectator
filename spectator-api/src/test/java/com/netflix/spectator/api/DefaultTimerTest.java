@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ public class DefaultTimerTest {
   public void testRecordCallable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
-    int v = t.record(() -> {
+    int v = t.call(() -> {
       clock.setMonotonicTime(500L);
       return 42;
     });
@@ -78,7 +78,7 @@ public class DefaultTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.call(() -> {
         clock.setMonotonicTime(500L);
         throw new Exception("foo");
       });
@@ -94,7 +94,7 @@ public class DefaultTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
-    t.record(() -> clock.setMonotonicTime(500L));
+    t.run(() -> clock.setMonotonicTime(500L));
     Assert.assertEquals(t.count(), 1L);
     Assert.assertEquals(t.totalTime(), 400L);
   }
@@ -105,7 +105,7 @@ public class DefaultTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.run(() -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });

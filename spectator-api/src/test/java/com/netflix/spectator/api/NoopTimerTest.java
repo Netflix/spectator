@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public class NoopTimerTest {
     NoopTimer t = NoopTimer.INSTANCE;
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.call(() -> {
         throw new Exception("foo");
       });
     } catch (Exception e) {
@@ -58,7 +58,7 @@ public class NoopTimerTest {
     NoopTimer t = NoopTimer.INSTANCE;
     AtomicBoolean run = new AtomicBoolean();
 
-    t.record(() -> run.set(true));
+    t.run(() -> run.set(true));
     Assert.assertTrue(run.get());
   }
 

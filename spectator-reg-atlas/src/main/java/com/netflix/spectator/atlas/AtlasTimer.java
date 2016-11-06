@@ -15,18 +15,17 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.AbstractTimer;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
-import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.StepDouble;
 import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -48,10 +47,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * the values since the last complete interval rather than the total for the
  * life of the process.</p>
  */
-class AtlasTimer implements Timer {
+class AtlasTimer extends AbstractTimer {
 
   private final Id id;
-  private final Clock clock;
   private final StepLong count;
   private final StepLong total;
   private final StepDouble totalOfSquares;
@@ -61,8 +59,8 @@ class AtlasTimer implements Timer {
 
   /** Create a new instance. */
   AtlasTimer(Id id, Clock clock, long step) {
+    super(clock);
     this.id = id;
-    this.clock = clock;
     this.count = new StepLong(0L, clock, step);
     this.total = new StepLong(0L, clock, step);
     this.totalOfSquares = new StepDouble(0.0, clock, step);
@@ -124,24 +122,6 @@ class AtlasTimer implements Timer {
     long p = maxValue.get();
     while (v > p && !maxValue.compareAndSet(p, v)) {
       p = maxValue.get();
-    }
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long start = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long start = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
     }
   }
 

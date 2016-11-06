@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,16 @@ public interface Timer extends Meter {
   void record(long amount, TimeUnit unit);
 
   /**
+   * Clock to use for measuring the elasped time.
+   *
+   * @return
+   *     Clock instance. Defaults to {@link Clock#SYSTEM}.
+   */
+  default Clock clock() {
+    return Clock.SYSTEM;
+  }
+
+  /**
    * Executes the callable `f` and records the time taken.
    *
    * @param f
@@ -48,7 +58,16 @@ public interface Timer extends Meter {
    * @return
    *     The return value of `f`.
    */
-  <T> T record(Callable<T> f) throws Exception;
+  default <T> T call(Callable<T> f) throws Exception {
+    final Clock clock = clock();
+    final long s = clock.monotonicTime();
+    try {
+      return f.call();
+    } finally {
+      final long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
 
   /**
    * Executes the runnable `f` and records the time taken.
@@ -56,7 +75,48 @@ public interface Timer extends Meter {
    * @param f
    *     Function to execute and measure the execution time.
    */
-  void record(Runnable f);
+  default void run(Runnable f) {
+    final Clock clock = clock();
+    final long s = clock.monotonicTime();
+    try {
+      f.run();
+    } finally {
+      final long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   * @deprecated
+   *     Use {@link #call(Callable)} instead. This method is overloaded with
+   *     {@link #record(Runnable)} which can cause ambiguous lookup errors when
+   *     passing lambdas.
+   */
+  @Deprecated
+  default <T> T record(Callable<T> f) throws Exception {
+    return call(f);
+  }
+
+  /**
+   * Executes the runnable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @deprecated
+   *     Use {@link #run(Runnable)} instead. This method is overloaded with
+   *     {@link #record(Callable)} which can cause ambiguous lookup errors when
+   *     passing lambdas.
+   */
+  @Deprecated
+  default void record(Runnable f) {
+    run(f);
+  }
 
   /** The number of times that record has been called since this timer was created. */
   long count();
