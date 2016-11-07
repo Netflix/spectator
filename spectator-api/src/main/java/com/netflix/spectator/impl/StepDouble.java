@@ -86,7 +86,7 @@ public class StepDouble implements StepValue {
   }
 
   @Override public String toString() {
-    return "StepLong{init="  + init
+    return "StepDouble{init="  + init
         + ", previous=" + previous.get()
         + ", current=" + current.get()
         + ", lastInitPos=" + lastInitPos.get() + '}';
