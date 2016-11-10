@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
@@ -69,31 +68,13 @@ public final class BucketTimer implements Timer {
     return false;
   }
 
+  @Override public Clock clock() {
+    return registry.clock();
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     final long nanos = unit.toNanos(amount);
     timer(f.apply(nanos)).record(amount, unit);
-  }
-
-  @Override public <T> T record(Callable<T> rf) throws Exception {
-    final Clock clock = registry.clock();
-    final long s = clock.monotonicTime();
-    try {
-      return rf.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable rf) {
-    final Clock clock = registry.clock();
-    final long s = clock.monotonicTime();
-    try {
-      rf.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   /** Return the timer for a given bucket. */

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,11 +39,11 @@ enum NoopTimer implements Timer {
     return Collections.emptyList();
   }
 
-  @Override public <T> T record(Callable<T> f) throws Exception {
+  @Override public <T> T call(Callable<T> f) throws Exception {
     return f.call();
   }
 
-  @Override public void record(Runnable f) {
+  @Override public void run(Runnable f) {
     f.run();
   }
 

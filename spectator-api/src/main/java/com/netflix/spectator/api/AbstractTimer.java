@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-
-
 /**
  * Base class to simplify implementing a {@link Timer}.
  */
@@ -32,23 +28,7 @@ public abstract class AbstractTimer implements Timer {
     this.clock = clock;
   }
 
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
+  @Override public Clock clock() {
+    return clock;
   }
 }

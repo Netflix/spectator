@@ -72,7 +72,7 @@ ManualClock clock = new ManualClock();
 Registry registry = new DefaultRegistry(clock);
 
 Timer timer = registry.timer("test");
-timer.record(() -> {
+timer.run(() -> {
   doSomething();
   clock.setMonotonicTime(42L);
 });

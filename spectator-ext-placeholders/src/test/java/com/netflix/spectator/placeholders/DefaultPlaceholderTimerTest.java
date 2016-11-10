@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ public class DefaultPlaceholderTimerTest {
     int expected = 42;
     Timer timer = factory.timer(factory.createId("testRecordCallable"));
     clock.setMonotonicTime(100L);
-    int actual = timer.record(() -> {
+    int actual = timer.call(() -> {
       clock.setMonotonicTime(500L);
       return expected;
     });
@@ -99,7 +99,7 @@ public class DefaultPlaceholderTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      timer.record(() -> {
+      timer.call(() -> {
         clock.setMonotonicTime(500L);
         throw new Exception("foo");
       });
@@ -115,7 +115,7 @@ public class DefaultPlaceholderTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer timer = factory.timer(factory.createId("testRecordRunnable"));
     clock.setMonotonicTime(100L);
-    timer.record(() -> clock.setMonotonicTime(500L));
+    timer.run(() -> clock.setMonotonicTime(500L));
     Assert.assertEquals(1L, timer.count());
     Assert.assertEquals(timer.totalTime(), 400L);
   }
@@ -124,10 +124,10 @@ public class DefaultPlaceholderTimerTest {
   public void testRecordRunnableException() throws Exception {
     Timer timer = factory.timer(factory.createId("testRecordRunnableException"));
     clock.setMonotonicTime(100L);
-    Exception expectedExc = new RuntimeException("foo");
+    RuntimeException expectedExc = new RuntimeException("foo");
     Exception actualExc = null;
     try {
-      timer.record(() -> {
+      timer.run(() -> {
         clock.setMonotonicTime(500L);
         throw expectedExc;
       });

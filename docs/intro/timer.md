@@ -53,7 +53,7 @@ Then wrap the call you need to measure, preferably using a lambda:
 
 ```java
   public Response handle(Request request) {
-    return requestLatency.record(() -> handleImpl(request));
+    return requestLatency.call(() -> handleImpl(request));
   }
 ```
 
@@ -128,6 +128,6 @@ simplify the common case:
 
 ```java
   private void refresh() {
-    metadataRefresh.record(this::refreshImpl);
+    metadataRefresh.run(this::refreshImpl);
   }
 ```

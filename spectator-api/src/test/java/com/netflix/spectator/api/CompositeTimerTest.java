@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ public class CompositeTimerTest {
   public void testRecordCallable() throws Exception {
     Timer t = newTimer();
     clock.setMonotonicTime(100L);
-    int v = t.record(() -> {
+    int v = t.call(() -> {
       clock.setMonotonicTime(500L);
       return 42;
     });
@@ -105,7 +105,7 @@ public class CompositeTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record((Callable<Integer>) () -> {
+      t.call((Callable<Integer>) () -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });
@@ -121,7 +121,7 @@ public class CompositeTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer t = newTimer();
     clock.setMonotonicTime(100L);
-    t.record(() -> clock.setMonotonicTime(500L));
+    t.run(() -> clock.setMonotonicTime(500L));
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 400L);
   }
@@ -132,7 +132,7 @@ public class CompositeTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record((Runnable) () -> {
+      t.run(() -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });
