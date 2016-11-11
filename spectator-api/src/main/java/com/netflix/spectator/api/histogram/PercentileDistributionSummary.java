@@ -22,11 +22,26 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Distribution summary that buckets the counts to allow for estimating percentiles.
  */
 public class PercentileDistributionSummary implements DistributionSummary {
+
+  // Precomputed values for the corresponding buckets. This is done to avoid expensive
+  // String.format calls when creating new instances of a percentile variant. The
+  // String.format calls uses regex internally to parse out the `%` substitutions which
+  // has a lot of overhead.
+  private static final String[] TAG_VALUES;
+
+  static {
+    int length = PercentileBuckets.length();
+    TAG_VALUES = new String[length];
+    for (int i = 0; i < length; ++i) {
+      TAG_VALUES[i] = String.format("D%04X", i);
+    }
+  }
 
   /**
    * Creates a distribution summary object that can be used for estimating percentiles.
@@ -43,19 +58,17 @@ public class PercentileDistributionSummary implements DistributionSummary {
     return new PercentileDistributionSummary(registry, id);
   }
 
+  private final Registry registry;
   private final Id id;
   private final DistributionSummary summary;
-  private final Counter[] counters;
+  private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
   PercentileDistributionSummary(Registry registry, Id id) {
+    this.registry = registry;
     this.id = id;
     this.summary = registry.distributionSummary(id);
-    this.counters = new Counter[PercentileBuckets.length()];
-    for (int i = 0; i < counters.length; ++i) {
-      Id counterId = id.withTag("percentile", String.format("D%04X", i));
-      counters[i] = registry.counter(counterId);
-    }
+    this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
   }
 
   @Override public Id id() {
@@ -70,10 +83,23 @@ public class PercentileDistributionSummary implements DistributionSummary {
     return summary.hasExpired();
   }
 
+  // Lazily load the counter for a given bucket. This avoids the allocation for
+  // creating the id and the map lookup after the first time a given bucket is
+  // accessed for a timer.
+  private Counter counterFor(int i) {
+    Counter c = counters.get(i);
+    if (c == null) {
+      Id counterId = id.withTag("percentile", TAG_VALUES[i]);
+      c = registry.counter(counterId);
+      counters.set(i, c);
+    }
+    return c;
+  }
+
   @Override public void record(long amount) {
     if (amount >= 0L) {
       summary.record(amount);
-      counters[PercentileBuckets.indexOf(amount)].increment();
+      counterFor(PercentileBuckets.indexOf(amount)).increment();
     }
   }
 
@@ -88,7 +114,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
   public double percentile(double p) {
     long[] counts = new long[PercentileBuckets.length()];
     for (int i = 0; i < counts.length; ++i) {
-      counts[i] = counters[i].count();
+      counts[i] = counterFor(i).count();
     }
     return PercentileBuckets.percentile(counts, p);
   }

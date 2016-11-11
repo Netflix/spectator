@@ -25,11 +25,26 @@ import com.netflix.spectator.api.Timer;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * Timer that buckets the counts to allow for estimating percentiles.
  */
 public final class PercentileTimer implements Timer {
+
+  // Precomputed values for the corresponding buckets. This is done to avoid expensive
+  // String.format calls when creating new instances of a percentile variant. The
+  // String.format calls uses regex internally to parse out the `%` substitutions which
+  // has a lot of overhead.
+  private static final String[] TAG_VALUES;
+
+  static {
+    int length = PercentileBuckets.length();
+    TAG_VALUES = new String[length];
+    for (int i = 0; i < length; ++i) {
+      TAG_VALUES[i] = String.format("T%04X", i);
+    }
+  }
 
   /**
    * Creates a timer object that can be used for estimating percentiles.
@@ -49,18 +64,14 @@ public final class PercentileTimer implements Timer {
   private final Registry registry;
   private final Id id;
   private final Timer timer;
-  private final Counter[] counters;
+  private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
   PercentileTimer(Registry registry, Id id) {
     this.registry = registry;
     this.id = id;
     this.timer = registry.timer(id);
-    this.counters = new Counter[PercentileBuckets.length()];
-    for (int i = 0; i < counters.length; ++i) {
-      Id counterId = id.withTag("percentile", String.format("T%04X", i));
-      counters[i] = registry.counter(counterId);
-    }
+    this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
   }
 
   @Override public Id id() {
@@ -75,10 +86,23 @@ public final class PercentileTimer implements Timer {
     return timer.hasExpired();
   }
 
+  // Lazily load the counter for a given bucket. This avoids the allocation for
+  // creating the id and the map lookup after the first time a given bucket is
+  // accessed for a timer.
+  private Counter counterFor(int i) {
+    Counter c = counters.get(i);
+    if (c == null) {
+      Id counterId = id.withTag("percentile", TAG_VALUES[i]);
+      c = registry.counter(counterId);
+      counters.set(i, c);
+    }
+    return c;
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     final long nanos = unit.toNanos(amount);
     timer.record(amount, unit);
-    counters[PercentileBuckets.indexOf(nanos)].increment();
+    counterFor(PercentileBuckets.indexOf(nanos)).increment();
   }
 
   @Override public <T> T record(Callable<T> rf) throws Exception {
@@ -114,7 +138,7 @@ public final class PercentileTimer implements Timer {
   public double percentile(double p) {
     long[] counts = new long[PercentileBuckets.length()];
     for (int i = 0; i < counts.length; ++i) {
-      counts[i] = counters[i].count();
+      counts[i] = counterFor(i).count();
     }
     double v = PercentileBuckets.percentile(counts, p);
     return v / 1e9;
