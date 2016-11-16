@@ -16,6 +16,7 @@
 
 package com.netflix.spectator.controllers.model;
 
+import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,6 +28,7 @@ import java.util.Objects;
  * This is only public for testing purposes so implements equals but not hash.
  */
 public class ApplicationRegistry {
+  private static long startTime = ManagementFactory.getRuntimeMXBean().getStartTime();
   private String applicationName;
   private String applicationVersion;
   private Map<String, MetricValues> metrics;
@@ -34,7 +36,7 @@ public class ApplicationRegistry {
   /**
    * The application name exporting the metrics.
    */
-  public String applicationName() {
+  public String getApplicationName() {
     return applicationName;
   }
 
@@ -48,7 +50,7 @@ public class ApplicationRegistry {
   /**
    * The version of the application name exporting the metrics.
    */
-  public String applicationVersion() {
+  public String getApplicationVersion() {
     return applicationVersion;
   }
 
@@ -57,6 +59,13 @@ public class ApplicationRegistry {
    */
   public void setApplicationVersion(String version) {
       applicationVersion = version;
+  }
+
+  /**
+   * The JVM start time (millis).
+   */
+  public long getStartTime() {
+    return startTime;
   }
 
   /**
