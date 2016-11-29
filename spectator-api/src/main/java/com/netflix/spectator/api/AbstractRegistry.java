@@ -20,6 +20,7 @@ import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
@@ -30,7 +31,7 @@ public abstract class AbstractRegistry implements Registry {
   private final Clock clock;
   private final RegistryConfig config;
 
-  private final ConcurrentHashMap<Id, Meter> meters;
+  private final ConcurrentMap<Id, Meter> meters;
 
   /**
    * Create a new instance.
@@ -51,9 +52,13 @@ public abstract class AbstractRegistry implements Registry {
    *     Configuration settings for the registry.
    */
   public AbstractRegistry(Clock clock, RegistryConfig config) {
+    this(clock, config, new ConcurrentHashMap(1024));
+  }
+
+  public AbstractRegistry(Clock clock, RegistryConfig config, ConcurrentMap meters) {
     this.clock = clock;
     this.config = config;
-    meters = new ConcurrentHashMap<>();
+    this.meters = meters;
   }
 
   /**
