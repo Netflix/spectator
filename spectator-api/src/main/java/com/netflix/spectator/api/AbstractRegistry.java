@@ -52,10 +52,20 @@ public abstract class AbstractRegistry implements Registry {
    *     Configuration settings for the registry.
    */
   public AbstractRegistry(Clock clock, RegistryConfig config) {
-    this(clock, config, new ConcurrentHashMap(1024));
+    this(clock, config, new ConcurrentHashMap<>(1024));
   }
 
-  public AbstractRegistry(Clock clock, RegistryConfig config, ConcurrentMap meters) {
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   * @param meters 
+   *     in-memory storage for registry meters
+   */
+  public AbstractRegistry(Clock clock, RegistryConfig config, ConcurrentMap<Id, Meter> meters) {
     this.clock = clock;
     this.config = config;
     this.meters = meters;
