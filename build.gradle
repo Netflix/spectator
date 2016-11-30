@@ -70,14 +70,16 @@ subprojects {
     testCompile 'junit:junit'
     testCompile 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
+    jmh "org.openjdk.jmh:jmh-core:1.17"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.17"
   }
 
   jmh {
-    warmupIterations = 2
+    warmupIterations = 10
     iterations = 10
-    fork = 5
+    fork = 1
     profilers = ['stack']
-    include '.*Ids.*'
+    include '.*Counters.*'
   }
 
   jacoco {
