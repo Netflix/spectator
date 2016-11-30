@@ -20,6 +20,7 @@ import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
@@ -122,10 +123,29 @@ public abstract class AbstractRegistry implements Registry {
     return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
+  /**
+   * This method should be used instead of the
+   * {@link ConcurrentHashMap#computeIfAbsent(Object, Function)} call to minimize
+   * thread contention. This method does not require locking for the common case
+   * where the key exists, but potentially performs additional computation when
+   * absent.
+   */
+  private Meter computeIfAbsent(Id id, Function<Id, Meter> f) {
+    Meter m = meters.get(id);
+    if (m == null) {
+      Meter tmp = f.apply(id);
+      m = meters.putIfAbsent(id, tmp);
+      if (m == null) {
+        m = tmp;
+      }
+    }
+    return m;
+  }
+
   @Override public void register(Meter meter) {
     Meter aggr = (meters.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
-      : meters.computeIfAbsent(meter.id(), AggrMeter::new);
+      : computeIfAbsent(meter.id(), AggrMeter::new);
     if (aggr != null) {
       addToAggr(aggr, meter);
     }
@@ -134,7 +154,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final Counter counter(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = meters.computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
+      Meter m = computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
       if (!(m instanceof Counter)) {
         logTypeError(id, Counter.class, m.getClass());
         m = NoopCounter.INSTANCE;
@@ -149,7 +169,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final DistributionSummary distributionSummary(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = meters.computeIfAbsent(id, i ->
+      Meter m = computeIfAbsent(id, i ->
           compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
       if (!(m instanceof DistributionSummary)) {
         logTypeError(id, DistributionSummary.class, m.getClass());
@@ -164,7 +184,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Timer timer(Id id) {
     try {
-      Meter m = meters.computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
+      Meter m = computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
       if (!(m instanceof Timer)) {
         logTypeError(id, Timer.class, m.getClass());
         m = NoopTimer.INSTANCE;
