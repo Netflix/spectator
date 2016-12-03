@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,27 @@ public interface Registry extends Iterable<Meter> {
    *     Identifier created by a call to {@link #createId}
    */
   Timer timer(Id id);
+
+  /**
+   * Represents a value sampled from another source. For example, the size of queue. The caller
+   * is responsible for sampling the value regularly and calling {@link Gauge#set(double)}.
+   * Registry implementations are free to expire the gauge if it has not been updated in the
+   * last minute. If you do not want to worry about the sampling, then use one of the helpers
+   * linked below instead.
+   *
+   * @see #gauge(Id, Number)
+   * @see #gauge(Id, Object, ToDoubleFunction)
+   * @see #collectionSize(Id, Collection)
+   * @see #mapSize(Id, Map)
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  default Gauge gauge(Id id) {
+    // Added in 0.45.0. For backwards compatibility we use a default implementation here that
+    // returns a noop implementation.
+    return NoopGauge.INSTANCE;
+  }
 
   /**
    * Returns the meter associated with a given id.

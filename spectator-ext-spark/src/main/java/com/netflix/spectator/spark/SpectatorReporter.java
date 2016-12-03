@@ -27,7 +27,6 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.impl.AtomicDouble;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +114,6 @@ public final class SpectatorReporter extends ScheduledReporter {
   private final ValueFunction valueFunction;
   private final Pattern gaugeCounters;
 
-  private final ConcurrentHashMap<String, AtomicDouble> gaugeDoubles = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, AtomicLong> previousValues = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
@@ -197,26 +195,12 @@ public final class SpectatorReporter extends ScheduledReporter {
   }
 
   private void setGaugeValue(String name, double v) {
-    AtomicDouble value = gaugeDoubles.get(name);
-    if (value == null) {
-      AtomicDouble tmp = new AtomicDouble(v);
-      value = gaugeDoubles.putIfAbsent(name, tmp);
-      if (value == null) {
-        value = tmp;
-        register(name, value);
-      }
-    }
-    final double cv = valueFunction.convert(name, v);
-    LOGGER.debug("setting gauge {} to {}", name, cv);
-    value.set(cv);
-  }
-
-  private Id register(String name, AtomicDouble value) {
     Id id = nameFunction.apply(name);
     if (id != null) {
-      spectatorRegistry.gauge(id, value);
+      final double cv = valueFunction.convert(name, v);
+      LOGGER.debug("setting gauge {} to {}", name, cv);
+      spectatorRegistry.gauge(id).set(cv);
     }
-    return id;
   }
 
   private long getAndSetPrevious(String name, long newValue) {

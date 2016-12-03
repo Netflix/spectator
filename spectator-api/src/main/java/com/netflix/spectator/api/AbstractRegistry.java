@@ -17,9 +17,14 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.impl.Scheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 
 /**
@@ -27,11 +32,18 @@ import java.util.function.Function;
  * types returned for Counter, DistributionSummary, and Timer calls.
  */
 public abstract class AbstractRegistry implements Registry {
+  /** Logger instance for the class. */
+  protected final Logger logger;
 
   private final Clock clock;
   private final RegistryConfig config;
 
   private final ConcurrentHashMap<Id, Meter> meters;
+  private final ConcurrentHashMap<Id, Meter> gauges;
+
+  private final Semaphore pollSem = new Semaphore(1);
+
+  private volatile Scheduler scheduler;
 
   /**
    * Create a new instance.
@@ -52,9 +64,11 @@ public abstract class AbstractRegistry implements Registry {
    *     Configuration settings for the registry.
    */
   public AbstractRegistry(Clock clock, RegistryConfig config) {
+    this.logger = LoggerFactory.getLogger(getClass());
     this.clock = clock;
     this.config = config;
-    meters = new ConcurrentHashMap<>();
+    this.meters = new ConcurrentHashMap<>();
+    this.gauges = new ConcurrentHashMap<>();
   }
 
   /**
@@ -86,6 +100,16 @@ public abstract class AbstractRegistry implements Registry {
    *     New timer instance.
    */
   protected abstract Timer newTimer(Id id);
+
+  /**
+   * Create a new gauge instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New gauge instance.
+   */
+  protected abstract Gauge newGauge(Id id);
 
   @Override public final Clock clock() {
     return clock;
@@ -130,11 +154,11 @@ public abstract class AbstractRegistry implements Registry {
    * where the key exists, but potentially performs additional computation when
    * absent.
    */
-  private Meter computeIfAbsent(Id id, Function<Id, Meter> f) {
-    Meter m = meters.get(id);
+  private Meter computeIfAbsent(ConcurrentHashMap<Id, Meter> map, Id id, Function<Id, Meter> f) {
+    Meter m = map.get(id);
     if (m == null) {
       Meter tmp = f.apply(id);
-      m = meters.putIfAbsent(id, tmp);
+      m = map.putIfAbsent(id, tmp);
       if (m == null) {
         m = tmp;
       }
@@ -142,10 +166,62 @@ public abstract class AbstractRegistry implements Registry {
     return m;
   }
 
+  private void handleGaugeException(Id id, Throwable t) {
+    logger.warn("dropping gauge [{}], exception occurred when polling value", id, t);
+    gauges.remove(id);
+  }
+
+  /** Poll the values from all registered gauges. */
+  @SuppressWarnings("PMD")
+  void pollGauges() {
+    if (pollSem.tryAcquire()) {
+      try {
+        for (Map.Entry<Id, Meter> e : gauges.entrySet()) {
+          Id id = e.getKey();
+          Meter meter = e.getValue();
+          try {
+            if (!meter.hasExpired()) {
+              for (Measurement m : meter.measure()) {
+                gauge(m.id()).set(m.value());
+              }
+            }
+          } catch (StackOverflowError t) {
+            handleGaugeException(id, t);
+          } catch (VirtualMachineError | ThreadDeath t) {
+            // Avoid catching OutOfMemoryError and other serious problems in the next
+            // catch block.
+            throw t;
+          } catch (Throwable t) {
+            // The sampling is calling user functions and therefore we cannot
+            // make any guarantees they are well-behaved. We catch most Throwables with
+            // the exception of some VM errors and drop the gauge.
+            handleGaugeException(id, t);
+          }
+        }
+      } finally {
+        pollSem.release();
+      }
+    }
+  }
+
   @Override public void register(Meter meter) {
-    Meter aggr = (meters.size() >= config.maxNumberOfMeters())
+    if (scheduler == null) {
+      synchronized (this) {
+        if (scheduler == null) {
+          Scheduler.Options options = new Scheduler.Options()
+              .withInitialDelay(config.gaugePollingFrequency())
+              .withFrequency(Scheduler.Policy.FIXED_DELAY, config.gaugePollingFrequency())
+              .withStopOnFailure(false);
+          // Need to avoid recursive registration of gauges, so assign the scheduler
+          // to use a noop registry.
+          scheduler = new Scheduler(new NoopRegistry(), "spectator-gauge-polling", 1);
+          scheduler.schedule(options, this::pollGauges);
+        }
+      }
+    }
+    Meter aggr = (gauges.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
-      : computeIfAbsent(meter.id(), AggrMeter::new);
+      : computeIfAbsent(gauges, meter.id(), AggrMeter::new);
     if (aggr != null) {
       addToAggr(aggr, meter);
     }
@@ -154,7 +230,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final Counter counter(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = computeIfAbsent(id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
+      Meter m = computeIfAbsent(meters, id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
       if (!(m instanceof Counter)) {
         logTypeError(id, Counter.class, m.getClass());
         m = NoopCounter.INSTANCE;
@@ -169,7 +245,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final DistributionSummary distributionSummary(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = computeIfAbsent(id, i ->
+      Meter m = computeIfAbsent(meters, id, i ->
           compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
       if (!(m instanceof DistributionSummary)) {
         logTypeError(id, DistributionSummary.class, m.getClass());
@@ -184,7 +260,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Timer timer(Id id) {
     try {
-      Meter m = computeIfAbsent(id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
+      Meter m = computeIfAbsent(meters, id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
       if (!(m instanceof Timer)) {
         logTypeError(id, Timer.class, m.getClass());
         m = NoopTimer.INSTANCE;
@@ -196,11 +272,27 @@ public abstract class AbstractRegistry implements Registry {
     }
   }
 
+  @Override public final Gauge gauge(Id id) {
+    try {
+      Meter m = computeIfAbsent(meters, id, i -> compute(newGauge(i), NoopGauge.INSTANCE));
+      if (!(m instanceof Gauge)) {
+        logTypeError(id, Gauge.class, m.getClass());
+        m = NoopGauge.INSTANCE;
+      }
+      return (Gauge) m;
+    } catch (Exception e) {
+      propagate(e);
+      return NoopGauge.INSTANCE;
+    }
+  }
+
   @Override public final Meter get(Id id) {
     return meters.get(id);
   }
 
   @Override public final Iterator<Meter> iterator() {
+    // Force update of gauges before traversing values
+    pollGauges();
     return meters.values().iterator();
   }
 }

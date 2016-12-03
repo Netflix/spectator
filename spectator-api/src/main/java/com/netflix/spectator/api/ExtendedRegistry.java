@@ -69,6 +69,10 @@ public final class ExtendedRegistry implements Registry {
     return impl.timer(id);
   }
 
+  @Override public Gauge gauge(Id id) {
+    return impl.gauge(id);
+  }
+
   @Override public Meter get(Id id) {
     return impl.get(id);
   }

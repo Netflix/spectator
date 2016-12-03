@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers.model;
 
 import com.netflix.spectator.api.Measurement;
@@ -52,16 +51,20 @@ public class TaggedDataPoints {
       return value;
     }
 
-    public int hashCode() {
+    @Override public int hashCode() {
       return Objects.hash(key, value);
     }
 
-    public boolean equals(Object obj) {
+    @Override public boolean equals(Object obj) {
       if (obj == this) return true;
       if (!(obj instanceof Tag)) return false;
 
       Tag tag = (Tag) obj;
       return key.equals(tag.key()) && value.equals(tag.value());
+    }
+
+    @Override public String toString() {
+      return key + "=" + value;
     }
 
     static List<Tag> convertTags(Iterable<Tag> iterable) {

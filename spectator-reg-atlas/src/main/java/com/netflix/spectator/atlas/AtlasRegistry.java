@@ -22,14 +22,13 @@ import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.sandbox.HttpClient;
 import com.netflix.spectator.sandbox.HttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Duration;
@@ -46,8 +45,6 @@ import java.util.stream.StreamSupport;
  * Registry for reporting metrics to Atlas.
  */
 public final class AtlasRegistry extends AbstractRegistry {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(AtlasRegistry.class);
 
   private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
 
@@ -93,12 +90,12 @@ public final class AtlasRegistry extends AbstractRegistry {
           .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
           .withStopOnFailure(false);
 
-      scheduler = new Scheduler(this, "atlas-registry", numThreads);
+      scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
       scheduler.schedule(options, this::collectData);
-      LOGGER.info("started collecting metrics every {} reporting to {}", step, uri);
-      LOGGER.info("common tags: {}", commonTags);
+      logger.info("started collecting metrics every {} reporting to {}", step, uri);
+      logger.info("common tags: {}", commonTags);
     } else {
-      LOGGER.warn("registry already started, ignoring duplicate request");
+      logger.warn("registry already started, ignoring duplicate request");
     }
   }
 
@@ -131,9 +128,9 @@ public final class AtlasRegistry extends AbstractRegistry {
     if (scheduler != null) {
       scheduler.shutdown();
       scheduler = null;
-      LOGGER.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
+      logger.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
     } else {
-      LOGGER.warn("registry stopped, but was never started");
+      logger.warn("registry stopped, but was never started");
     }
   }
 
@@ -151,7 +148,7 @@ public final class AtlasRegistry extends AbstractRegistry {
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
       }
     } catch (Exception e) {
-      LOGGER.warn("failed to send metrics", e);
+      logger.warn("failed to send metrics", e);
     }
   }
 
@@ -164,7 +161,7 @@ public final class AtlasRegistry extends AbstractRegistry {
    */
   private void recordClockSkew(long responseTimestamp) {
     if (responseTimestamp == 0L) {
-      LOGGER.debug("no date timestamp on response, cannot record skew");
+      logger.debug("no date timestamp on response, cannot record skew");
     } else {
       final long delta = clock.wallTime() - responseTimestamp;
       if (delta >= 0L) {
@@ -178,7 +175,7 @@ public final class AtlasRegistry extends AbstractRegistry {
         // values so we negate and record it with a different id.
         timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
       }
-      LOGGER.debug("clock skew between client and server: {}ms", delta);
+      logger.debug("clock skew between client and server: {}ms", delta);
     }
   }
 
@@ -210,5 +207,11 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   @Override protected Timer newTimer(Id id) {
     return new AtlasTimer(id, clock, stepMillis);
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+    // Be sure to get StepClock so the measurements will have step aligned
+    // timestamps.
+    return new AtlasGauge(id, clock());
   }
 }

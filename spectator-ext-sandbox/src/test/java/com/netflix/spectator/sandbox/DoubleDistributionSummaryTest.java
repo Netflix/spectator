@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -160,7 +161,7 @@ public class DoubleDistributionSummaryTest {
     Assert.assertEquals(stddev(values), Math.sqrt((n * t2 - t * t) / (n * n)), 1e-12);
   }
 
-  @Test
+  @Ignore
   public void testRegister() {
     DoubleDistributionSummary t = newInstance();
     registry.register(t);
@@ -188,7 +189,7 @@ public class DoubleDistributionSummaryTest {
     }
   }
 
-  @Test
+  @Ignore
   public void staticGet() {
     Id id = registry.createId("foo");
     DoubleDistributionSummary t = DoubleDistributionSummary.get(registry, id);

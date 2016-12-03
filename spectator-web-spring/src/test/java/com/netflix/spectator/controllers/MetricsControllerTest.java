@@ -16,6 +16,7 @@
 
 package com.netflix.spectator.controllers;
 
+import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.controllers.model.TestId;
 
 import com.netflix.spectator.api.BasicTag;
@@ -46,11 +47,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MetricsControllerTest {
-  private long millis = 12345L;
-  private Clock clock = new Clock() {
-    public long  wallTime() { return millis; }
-    public long monotonicTime() { return millis; }
-  };
+  private Clock clock = new ManualClock(12345L, 0L);
 
   MetricsController controller = new MetricsController();
   Id idA = new TestId("idA");
@@ -96,14 +93,14 @@ public class MetricsControllerTest {
           new TaggedDataPoints(
               Arrays.asList(new BasicTag("tagA", "X"),
                             new BasicTag("tagB", "Y")),
-              Arrays.asList(new DataPoint(millis, 4))));
+              Arrays.asList(new DataPoint(clock.wallTime(), 4))));
 
     List<TaggedDataPoints> expectedTaggedDataPointsB
       = Arrays.asList(
           new TaggedDataPoints(
               Arrays.asList(new BasicTag("tagA", "X"),
                             new BasicTag("tagB", "Y")),
-              Arrays.asList(new DataPoint(millis, 10))));
+              Arrays.asList(new DataPoint(clock.wallTime(), 10))));
 
     HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
     expect.put("idA", new MetricValues("Counter", expectedTaggedDataPointsA));
@@ -126,9 +123,9 @@ public class MetricsControllerTest {
        new TaggedDataPoints(
              Arrays.asList(new BasicTag("tagA", "X"),
                            new BasicTag("tagB", "Y")),
-             Arrays.asList(new DataPoint(50, 50.5 + 5.5))));
+             Arrays.asList(new DataPoint(clock.wallTime(), 50.5 + 5.5))));
 
-    HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
+    HashMap<String, MetricValues> expect = new HashMap<>();
     expect.put("idB", new MetricValues("Counter", expectedTaggedDataPoints));
 
     Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
@@ -150,15 +147,15 @@ public class MetricsControllerTest {
         = Arrays.asList(
                new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "Y"),
                                                   new BasicTag("tagB", "X")),
-                                    Arrays.asList(new DataPoint(12, 12.12))),
+                                    Arrays.asList(new DataPoint(clock.wallTime(), 12.12))),
                new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "X"),
                                                   new BasicTag("tagB", "Y")),
                                     // This should be 20, but AggrMeter keeps first time,
                                     // which happens to be the 11th, not the most recent time.
-                                    Arrays.asList(new DataPoint(11, 11.11 + 20.20))),
+                                    Arrays.asList(new DataPoint(clock.wallTime(), 11.11 + 20.20))),
                new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "X"),
                                                   new BasicTag("tagZ", "Z")),
-                                    Arrays.asList(new DataPoint(13, 13.13))));
+                                    Arrays.asList(new DataPoint(clock.wallTime(), 13.13))));
 
     HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
     expect.put("idA", new MetricValues("Counter", expected_tagged_data_points));

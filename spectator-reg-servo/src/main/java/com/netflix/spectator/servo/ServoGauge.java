@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,23 +18,52 @@ package com.netflix.spectator.servo;
 import com.netflix.servo.monitor.AbstractMonitor;
 import com.netflix.servo.monitor.MonitorConfig;
 import com.netflix.servo.monitor.NumericMonitor;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AtomicDouble;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Reports a constant value passed into the constructor.
  */
 final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
-    implements NumericMonitor<Double> {
-  private final double value;
+    implements Gauge, NumericMonitor<Double> {
+
+  private final Clock clock;
+  private final AtomicDouble value;
+  private final AtomicLong lastUpdated;
 
   /**
    * Create a new monitor that returns {@code value}.
    */
-  ServoGauge(MonitorConfig config, double value) {
+  ServoGauge(Clock clock, MonitorConfig config) {
     super(config);
-    this.value = value;
+    this.clock = clock;
+    this.value = new AtomicDouble(Double.NaN);
+    this.lastUpdated = new AtomicLong(0L);
+  }
+
+  @Override public Id id() {
+    return new ServoId(config);
+  }
+
+  @Override public boolean hasExpired() {
+    long now = clock.wallTime();
+    return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
+  }
+
+  @Override public Iterable<Measurement> measure() {
+    return null;
+  }
+
+  @Override public double value() {
+    return hasExpired() ? Double.NaN : value.get();
   }
 
   @Override public Double getValue(int pollerIndex) {
-    return value;
+    return value();
   }
 }

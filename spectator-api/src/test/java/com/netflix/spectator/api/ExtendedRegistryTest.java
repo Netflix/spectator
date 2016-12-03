@@ -39,6 +39,10 @@ public class ExtendedRegistryTest {
     return new DefaultRegistry(clock, new TestRegistryConfig(warnings, numberOfMeters));
   }
 
+  private void pollGauges(Registry r) {
+    ((AbstractRegistry) r).pollGauges();
+  }
+
   @Test
   public void testCreateIdArray() {
     Registry r = newRegistry(true, 10000);
@@ -95,13 +99,24 @@ public class ExtendedRegistryTest {
     Assert.assertNotSame(c1, c3);
   }
 
+  private void assertLongTaskTimer(Registry r, Id id, long timestamp, int activeTasks, double duration) {
+    pollGauges(r);
+
+    Gauge g = r.gauge(id.withTag(Statistic.activeTasks));
+    Assert.assertEquals(timestamp, g.measure().iterator().next().timestamp());
+    Assert.assertEquals(activeTasks, g.value(), 1.0e-12);
+
+    g = r.gauge(id.withTag(Statistic.duration));
+    Assert.assertEquals(timestamp, g.measure().iterator().next().timestamp());
+    Assert.assertEquals(duration, g.value(), 1.0e-12);
+  }
+
   @Test
   public void testLongTaskTimerHelpers() {
     ManualClock clock = new ManualClock();
     Registry r = new DefaultRegistry(clock);
     LongTaskTimer c1 = r.longTaskTimer("foo", "bar", "baz", "k", "v");
-    Meter m1 = r.get(c1.id());
-    Assert.assertEquals(c1.id(), m1.id()); // registration
+    assertLongTaskTimer(r, c1.id(), 0L, 0, 0L);
 
     LongTaskTimer c2 = r.longTaskTimer("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Assert.assertEquals(c1.id(), c2.id());
@@ -110,13 +125,18 @@ public class ExtendedRegistryTest {
     long t2 = c2.start();
     clock.setMonotonicTime(1000L);
     clock.setWallTime(1L);
-    DefaultLongTaskTimerTest.assertLongTaskTimer(r.get(c1.id()), 1L, 2, 2.0e-6);
+    assertLongTaskTimer(r, c1.id(), 1L, 2, 2.0e-6);
 
     c1.stop(t1);
-    DefaultLongTaskTimerTest.assertLongTaskTimer(r.get(c1.id()), 1L, 1, 1.0e-6);
+    assertLongTaskTimer(r, c1.id(), 1L, 1, 1.0e-6);
 
     c2.stop(t2);
-    DefaultLongTaskTimerTest.assertLongTaskTimer(r.get(c1.id()), 1L, 0, 0L);
+    assertLongTaskTimer(r, c1.id(), 1L, 0, 0L);
+  }
+
+  private void assertGaugeValue(Registry r, Id id, double expected) {
+    pollGauges(r);
+    Assert.assertEquals(expected, r.gauge(id).value(), 1e-12);
   }
 
   @Test
@@ -133,8 +153,8 @@ public class ExtendedRegistryTest {
     Assert.assertSame(v3, al4);
     Id id1 = r.createId("foo", "bar", "baz", "k", "v");
     Id id2 = r.createId("foo");
-    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 3.0, 1e-12);
-    Assert.assertEquals(r.get(id2).measure().iterator().next().value(), 4.0, 1e-12);
+    assertGaugeValue(r, id1, 3.0);
+    assertGaugeValue(r, id2, 4.0);
   }
 
   @Test
@@ -145,7 +165,7 @@ public class ExtendedRegistryTest {
     AtomicLong v1 = r.gauge("foo", al1, f);
     Assert.assertSame(v1, al1);
     Id id1 = r.createId("foo");
-    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 39.0 / 1000.0, 1e-12);
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
 
   @Test
@@ -161,7 +181,7 @@ public class ExtendedRegistryTest {
     AtomicLong v1 = r.gauge("foo", al1, f);
     Assert.assertSame(v1, al1);
     Id id1 = r.createId("foo");
-    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 39.0 / 1000.0, 1e-12);
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
 
   @Test
@@ -173,7 +193,7 @@ public class ExtendedRegistryTest {
     AtomicLong v1 = r.gauge("foo", al1, f);
     Assert.assertSame(v1, al1);
     Id id1 = r.createId("foo");
-    Assert.assertEquals(r.get(id1).measure().iterator().next().value(), 39.0 / 1000.0, 1e-12);
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
 
   @Test
@@ -183,9 +203,9 @@ public class ExtendedRegistryTest {
     LinkedBlockingDeque<String> q2 = r.collectionSize("queueSize", q1);
     Assert.assertSame(q1, q2);
     Id id = r.createId("queueSize");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 0.0, 1e-12);
+    assertGaugeValue(r, id, 0.0);
     q2.push("foo");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 1.0, 1e-12);
+    assertGaugeValue(r, id, 1.0);
   }
 
   @Test
@@ -195,9 +215,9 @@ public class ExtendedRegistryTest {
     ConcurrentHashMap<String, String> q2 = r.mapSize("mapSize", q1);
     Assert.assertSame(q1, q2);
     Id id = r.createId("mapSize");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 0.0, 1e-12);
+    assertGaugeValue(r, id, 0.0);
     q2.put("foo", "bar");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 1.0, 1e-12);
+    assertGaugeValue(r, id, 1.0);
   }
 
   @Test
@@ -206,9 +226,9 @@ public class ExtendedRegistryTest {
     LinkedBlockingDeque<String> q1 = new LinkedBlockingDeque<>();
     r.methodValue("queueSize", q1, "size");
     Id id = r.createId("queueSize");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 0.0, 1e-12);
+    assertGaugeValue(r, id, 0.0);
     q1.push("foo");
-    Assert.assertEquals(r.get(id).measure().iterator().next().value(), 1.0, 1e-12);
+    assertGaugeValue(r, id, 1.0);
   }
 
   @Test(expected = ClassCastException.class)
@@ -241,9 +261,7 @@ public class ExtendedRegistryTest {
   public void gaugeUsingLambda() {
     Registry r = newRegistry(true, 10000);
     GaugeUsingLambda g = new GaugeUsingLambda(r);
-    for (Measurement m : r.get(r.createId("test")).measure()) {
-      Assert.assertEquals(84.0, m.value(), 1e-12);
-    }
+    assertGaugeValue(r, r.createId("test"), 84.0);
   }
 
   public static class GaugeUsingLambda {
