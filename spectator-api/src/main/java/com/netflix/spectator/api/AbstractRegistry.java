@@ -17,10 +17,10 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
-import com.netflix.spectator.impl.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,8 +42,6 @@ public abstract class AbstractRegistry implements Registry {
   private final ConcurrentHashMap<Id, Meter> gauges;
 
   private final Semaphore pollSem = new Semaphore(1);
-
-  private volatile Scheduler scheduler;
 
   /**
    * Create a new instance.
@@ -69,6 +67,10 @@ public abstract class AbstractRegistry implements Registry {
     this.config = config;
     this.meters = new ConcurrentHashMap<>();
     this.gauges = new ConcurrentHashMap<>();
+    GaugePoller.schedule(
+        new WeakReference<>(this),
+        config.gaugePollingFrequency().toMillis(),
+        AbstractRegistry::pollGauges);
   }
 
   /**
@@ -171,6 +173,14 @@ public abstract class AbstractRegistry implements Registry {
     gauges.remove(id);
   }
 
+  /**
+   * Lambda passed to {@link GaugePoller} to avoid having a strong reference to this
+   * registry that would prevent garbage collection.
+   */
+  private static void pollGauges(Registry r) {
+    ((AbstractRegistry) r).pollGauges();
+  }
+
   /** Poll the values from all registered gauges. */
   @SuppressWarnings("PMD")
   void pollGauges() {
@@ -205,20 +215,6 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    if (scheduler == null) {
-      synchronized (this) {
-        if (scheduler == null) {
-          Scheduler.Options options = new Scheduler.Options()
-              .withInitialDelay(config.gaugePollingFrequency())
-              .withFrequency(Scheduler.Policy.FIXED_DELAY, config.gaugePollingFrequency())
-              .withStopOnFailure(false);
-          // Need to avoid recursive registration of gauges, so assign the scheduler
-          // to use a noop registry.
-          scheduler = new Scheduler(new NoopRegistry(), "spectator-gauge-polling", 1);
-          scheduler.schedule(options, this::pollGauges);
-        }
-      }
-    }
     Meter aggr = (gauges.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
       : computeIfAbsent(gauges, meter.id(), AggrMeter::new);

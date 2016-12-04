@@ -15,11 +15,15 @@
  */
 package com.netflix.spectator.api;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.Semaphore;
 
 /**
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
@@ -27,23 +31,77 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public final class CompositeRegistry implements Registry {
 
-  /**
-   * Id used for a meter storing all gauges registered with the composite. Since there is no
-   * activity on a gauge, all gauges will get registered with a sub-registry when it is added
-   * by including the meter with this id.
-   */
-  static final Id GAUGES_ID = new DefaultId("spectator.composite.gauges");
-
   private final Clock clock;
   private final CopyOnWriteArraySet<Registry> registries;
 
-  private final RegistryMeter gauges;
+  private final ConcurrentHashMap<Id, AggrMeter> gauges;
+
+  private final Semaphore pollSem = new Semaphore(1);
 
   /** Creates a new instance. */
   CompositeRegistry(Clock clock) {
     this.clock = clock;
     this.registries = new CopyOnWriteArraySet<>();
-    this.gauges = new RegistryMeter(GAUGES_ID);
+    this.gauges = new ConcurrentHashMap<>();
+    GaugePoller.schedule(
+        new WeakReference<>(this),
+        10000L,
+        CompositeRegistry::pollGauges);
+  }
+
+  private static void pollGauges(Registry r) {
+    ((CompositeRegistry) r).pollGauges();
+  }
+
+  /** Poll the values from all registered gauges. */
+  @SuppressWarnings("PMD")
+  void pollGauges() {
+    if (pollSem.tryAcquire()) {
+      try {
+        for (Map.Entry<Id, AggrMeter> e : gauges.entrySet()) {
+          Id id = e.getKey();
+          Meter meter = e.getValue();
+          try {
+            if (!meter.hasExpired()) {
+              for (Measurement m : meter.measure()) {
+                gauge(m.id()).set(m.value());
+              }
+            }
+          } catch (StackOverflowError t) {
+            gauges.remove(id);
+          } catch (VirtualMachineError | ThreadDeath t) {
+            // Avoid catching OutOfMemoryError and other serious problems in the next
+            // catch block.
+            throw t;
+          } catch (Throwable t) {
+            // The sampling is calling user functions and therefore we cannot
+            // make any guarantees they are well-behaved. We catch most Throwables with
+            // the exception of some VM errors and drop the gauge.
+            gauges.remove(id);
+          }
+        }
+      } finally {
+        pollSem.release();
+      }
+    }
+  }
+
+  /**
+   * This method should be used instead of the computeIfAbsent call on the map to
+   * minimize thread contention. This method does not require locking for the common
+   * case where the key exists, but potentially performs additional computation when
+   * absent.
+   */
+  private AggrMeter computeIfAbsent(Id id) {
+    AggrMeter m = gauges.get(id);
+    if (m == null) {
+      AggrMeter tmp = new AggrMeter(id);
+      m = gauges.putIfAbsent(id, tmp);
+      if (m == null) {
+        m = tmp;
+      }
+    }
+    return m;
   }
 
   /**
@@ -63,7 +121,6 @@ public final class CompositeRegistry implements Registry {
   /** Add a registry to the composite. */
   public void add(Registry registry) {
     registries.add(registry);
-    registry.register(gauges);
   }
 
   /** Remove a registry from the composite. */
@@ -89,7 +146,8 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    gauges.register(meter);
+    AggrMeter m = computeIfAbsent(meter.id());
+    m.add(meter);
   }
 
   @Override public Counter counter(Id id) {

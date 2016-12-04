@@ -175,10 +175,7 @@ public class CompositeRegistryTest {
   public void testIteratorEmpty() {
     Registry r = newRegistry(5, true);
     for (Meter m : r) {
-      // There is always one composite in the registry used for gauges.
-      if (m.id() != CompositeRegistry.GAUGES_ID) {
-        Assert.fail("should be empty, but found " + m.id());
-      }
+      Assert.fail("should be empty, but found " + m.id());
     }
   }
 
