@@ -19,6 +19,7 @@ import com.netflix.servo.DefaultMonitorRegistry;
 import com.netflix.servo.monitor.*;
 import com.netflix.spectator.api.*;
 import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +101,10 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     return new ServoTimer(this, id);
   }
 
+  @Override protected Gauge newGauge(Id id) {
+    return new ServoGauge(clock(), toMonitorConfig(id));
+  }
+
   @Override public Integer getValue() {
     return 0;
   }
@@ -115,14 +120,8 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   @Override public List<Monitor<?>> getMonitors() {
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
-      if (meter instanceof ServoMeter) {
-        if (!meter.hasExpired()) {
-          ((ServoMeter) meter).addMonitors(monitors);
-        }
-      } else {
-        for (Measurement m : meter.measure()) {
-          monitors.add(new ServoGauge(toMonitorConfig(m.id()), m.value()));
-        }
+      if (!meter.hasExpired()) {
+        ((ServoMeter) meter).addMonitors(monitors);
       }
     }
     return monitors;

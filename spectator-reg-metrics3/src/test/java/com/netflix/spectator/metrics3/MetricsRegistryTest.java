@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.netflix.spectator.metrics3;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -69,12 +70,18 @@ public class MetricsRegistryTest {
     Assert.assertEquals(1, codaRegistry.getHistograms().get("foo").getCount());
   }
 
+  private void assertGaugeValue(
+      MetricsRegistry r, MetricRegistry codaRegistry, String name, double expected) {
+    r.iterator(); // To force polling of gauges
+    Assert.assertEquals(expected, (Double) codaRegistry.getGauges().get(name).getValue(), 1e-12);
+  }
+
   @Test
   public void gaugeNumber() {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
-    Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+    assertGaugeValue(r, codaRegistry, "foo", 42.0);
   }
 
   @Test
@@ -83,7 +90,7 @@ public class MetricsRegistryTest {
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     AtomicInteger num1 = r.gauge("foo", new AtomicInteger(42));
     AtomicInteger num2 = r.gauge("foo", new AtomicInteger(21));
-    Assert.assertEquals(63.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+    assertGaugeValue(r, codaRegistry, "foo", 63.0);
   }
 
   @Test
@@ -91,7 +98,7 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     final List<Integer> foo = r.collectionSize("foo", Arrays.asList(1, 2, 3, 4, 5));
-    Assert.assertEquals(5.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+    assertGaugeValue(r, codaRegistry, "foo", 5.0);
   }
 
   @Test
@@ -101,7 +108,7 @@ public class MetricsRegistryTest {
     Map<String, String> map = new HashMap<>();
     map.put("foo", "bar");
     r.mapSize("fooMap", map);
-    Assert.assertEquals(1.0, (Double) codaRegistry.getGauges().get("fooMap").getValue(), 1e-12);
+    assertGaugeValue(r, codaRegistry, "fooMap", 1.0);
   }
 
   @Test

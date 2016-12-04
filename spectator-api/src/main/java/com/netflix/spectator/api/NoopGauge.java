@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,26 @@
  */
 package com.netflix.spectator.api;
 
-/**
- * A meter with a single value that can only be sampled at a point in time. A typical example is
- * a queue size.
- */
-public interface Gauge extends Meter {
+import java.util.Collections;
 
-  /**
-   * Set the current value of the gauge.
-   *
-   * @param value
-   *     Most recent measured value.
-   */
-  default void set(double value) {
+/** Gauge implementation for the no-op registry. */
+enum NoopGauge implements Gauge {
+  /** Singleton instance. */
+  INSTANCE;
+
+  @Override public Id id() {
+    return NoopId.INSTANCE;
   }
 
-  /** Returns the current value. */
-  double value();
+  @Override public Iterable<Measurement> measure() {
+    return Collections.emptyList();
+  }
+
+  @Override public boolean hasExpired() {
+    return false;
+  }
+
+  @Override public double value() {
+    return Double.NaN;
+  }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.metrics3;
 
-/**
- * A meter with a single value that can only be sampled at a point in time. A typical example is
- * a queue size.
- */
-public interface Gauge extends Meter {
+import com.codahale.metrics.Gauge;
+import com.netflix.spectator.impl.AtomicDouble;
 
-  /**
-   * Set the current value of the gauge.
-   *
-   * @param value
-   *     Most recent measured value.
-   */
-  default void set(double value) {
+/** Metrics3 gauge type based on an {@link AtomicDouble}. */
+class DoubleGauge implements Gauge<Double> {
+
+  private AtomicDouble value = new AtomicDouble(Double.NaN);
+
+  /** Update the value. */
+  void set(double v) {
+    value.set(v);
   }
 
-  /** Returns the current value. */
-  double value();
+  @Override public Double getValue() {
+    return value.get();
+  }
 }

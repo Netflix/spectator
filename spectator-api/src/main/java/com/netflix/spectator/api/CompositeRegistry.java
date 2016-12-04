@@ -104,6 +104,10 @@ public final class CompositeRegistry implements Registry {
     return new CompositeTimer(id, clock, registries);
   }
 
+  @Override public Gauge gauge(Id id) {
+    return new CompositeGauge(id, registries);
+  }
+
   @Override public Meter get(Id id) {
     return new CompositeMeter(id, registries);
   }

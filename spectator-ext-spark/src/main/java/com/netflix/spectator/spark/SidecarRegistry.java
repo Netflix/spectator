@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2106 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
@@ -29,8 +30,6 @@ import com.netflix.spectator.api.Timer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkEnv;
 import org.apache.spark.SparkEnv$;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import scala.Option;
 
 import java.io.OutputStream;
@@ -50,8 +49,6 @@ import java.util.concurrent.TimeUnit;
  * Registry that reports values to a sidecar process via an HTTP call.
  */
 public class SidecarRegistry extends AbstractRegistry {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(SidecarRegistry.class);
 
   private static final Callable<Map<String, String>> SPARK = new Callable<Map<String, String>>() {
     @Override public Map<String, String> call() throws Exception {
@@ -112,7 +109,7 @@ public class SidecarRegistry extends AbstractRegistry {
    *     Unit for the {@code pollPeriod}.
    */
   public void start(final URL url, long pollPeriod, TimeUnit pollUnit) {
-    LOGGER.info("starting sidecar registry with url {} and poll period {} {}",
+    logger.info("starting sidecar registry with url {} and poll period {} {}",
         url, pollPeriod, pollUnit);
     executor = Executors.newSingleThreadScheduledExecutor(
         r -> {
@@ -133,7 +130,7 @@ public class SidecarRegistry extends AbstractRegistry {
         }
         postJson(url, ms);
       } catch (Exception e) {
-        LOGGER.error("failed to send data to sidecar", e);
+        logger.error("failed to send data to sidecar", e);
       }
     };
     executor.scheduleWithFixedDelay(task, pollPeriod, pollPeriod, pollUnit);
@@ -194,7 +191,7 @@ public class SidecarRegistry extends AbstractRegistry {
     try {
       return commonTags.call();
     } catch (Exception e) {
-      LOGGER.warn("failed to determine common tags", e);
+      logger.warn("failed to determine common tags", e);
       return null;
     }
   }
@@ -202,7 +199,7 @@ public class SidecarRegistry extends AbstractRegistry {
   private void postJson(URL url, List<Measurement> ms) throws Exception {
     final Map<String, String> tags = getCommonTags();
     if (!ms.isEmpty() && tags != null) {
-      LOGGER.info("sending {} messages to sidecar {} with tags {}", ms.size(), url.toString(), tags);
+      logger.info("sending {} messages to sidecar {} with tags {}", ms.size(), url.toString(), tags);
       numMessages.increment();
       numMeasurements.increment(ms.size());
       String json = toJson(ms, tags);
@@ -218,7 +215,7 @@ public class SidecarRegistry extends AbstractRegistry {
 
         int status = con.getResponseCode();
         if (status != 200) {
-          LOGGER.error("post to sidecar failed with status: " + status + ", payload: " + json);
+          logger.error("post to sidecar failed with status: " + status + ", payload: " + json);
         }
       } finally {
         con.disconnect();
@@ -236,5 +233,9 @@ public class SidecarRegistry extends AbstractRegistry {
 
   @Override protected Timer newTimer(Id id) {
     return new SidecarTimer(clock(), id);
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+    return new SidecarGauge(clock(), id);
   }
 }

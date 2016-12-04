@@ -13,39 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.metrics3;
+package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
 
 /**
- * Spectator gauge that wraps {@link DoubleGauge}.
- *
- * @author Kennedy Oliveira
+ * Counter that reports a rate per second to Atlas.
  */
-class MetricsGauge implements com.netflix.spectator.api.Gauge {
+class AtlasGauge implements Gauge {
 
-  private final Clock clock;
   private final Id id;
-  private final DoubleGauge gauge;
+  private final Clock clock;
+  private final AtomicDouble value;
+  private final Id stat;
 
-  /**
-   * Create a gauge that samples the provided number for the value.
-   *
-   * @param clock
-   *     Clock used for accessing the current time.
-   * @param id
-   *     Identifier for the gauge.
-   * @param gauge
-   *     Gauge object that is registered with metrics3.
-   */
-  MetricsGauge(Clock clock, Id id, DoubleGauge gauge) {
-    this.clock = clock;
+  /** Create a new instance. */
+  AtlasGauge(Id id, Clock clock) {
     this.id = id;
-    this.gauge = gauge;
+    this.clock = clock;
+    this.value = new AtomicDouble(0.0);
+    this.stat = id.withTag(DsType.gauge);
   }
 
   @Override public Id id() {
@@ -57,14 +50,15 @@ class MetricsGauge implements com.netflix.spectator.api.Gauge {
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.singleton(new Measurement(id, clock.wallTime(), value()));
+    final Measurement m = new Measurement(stat, clock.wallTime(), value());
+    return Collections.singletonList(m);
   }
 
   @Override public void set(double v) {
-    gauge.set(v);
+    value.set(v);
   }
 
   @Override public double value() {
-    return gauge.getValue();
+    return value.get();
   }
 }

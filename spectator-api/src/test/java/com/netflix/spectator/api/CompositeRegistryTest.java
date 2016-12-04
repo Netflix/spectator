@@ -186,10 +186,6 @@ public class CompositeRegistryTest {
   public void testIteratorDoesNotAllowRemove() {
     Registry r = newRegistry(5, true);
     Iterator<Meter> iter = r.iterator();
-
-    // There is always one composite in the registry used for gauges.
-    Assert.assertTrue(iter.hasNext());
-    iter.next();
     iter.remove();
   }
 

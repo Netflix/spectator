@@ -52,6 +52,10 @@ public final class NoopRegistry implements Registry {
     return NoopTimer.INSTANCE;
   }
 
+  @Override public Gauge gauge(Id id) {
+    return NoopGauge.INSTANCE;
+  }
+
   @Override public Meter get(Id id) {
     return null;
   }

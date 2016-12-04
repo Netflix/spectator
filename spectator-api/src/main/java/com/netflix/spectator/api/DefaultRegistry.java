@@ -44,4 +44,8 @@ public final class DefaultRegistry extends AbstractRegistry {
   @Override protected Timer newTimer(Id id) {
     return new DefaultTimer(clock(), id);
   }
+
+  @Override protected Gauge newGauge(Id id) {
+    return new DefaultGauge(clock(), id);
+  }
 }
