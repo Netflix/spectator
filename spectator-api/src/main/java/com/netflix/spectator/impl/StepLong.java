@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2016 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ public class StepLong implements StepValue {
   private final Clock clock;
   private final long step;
 
-  private final AtomicLong previous;
+  private volatile long previous;
   private final AtomicLong current;
 
   private final AtomicLong lastInitPos;
@@ -44,7 +44,7 @@ public class StepLong implements StepValue {
     this.init = init;
     this.clock = clock;
     this.step = step;
-    previous = new AtomicLong(init);
+    previous = init;
     current = new AtomicLong(init);
     lastInitPos = new AtomicLong(clock.wallTime() / step);
   }
@@ -57,7 +57,7 @@ public class StepLong implements StepValue {
       // Need to check if there was any activity during the previous step interval. If there was
       // then the init position will move forward by 1, otherwise it will be older. No activity
       // means the previous interval should be set to the `init` value.
-      previous.set((lastInit == stepTime - 1) ? v : init);
+      previous = (lastInit == stepTime - 1) ? v : init;
     }
   }
 
@@ -70,7 +70,7 @@ public class StepLong implements StepValue {
   /** Get the value for the last completed interval. */
   public long poll() {
     rollCount(clock.wallTime());
-    return previous.get();
+    return previous;
   }
 
   /** Get the value for the last completed interval as a rate per second. */
@@ -87,7 +87,7 @@ public class StepLong implements StepValue {
 
   @Override public String toString() {
     return "StepLong{init="  + init
-        + ", previous=" + previous.get()
+        + ", previous=" + previous
         + ", current=" + current.get()
         + ", lastInitPos=" + lastInitPos.get() + '}';
   }

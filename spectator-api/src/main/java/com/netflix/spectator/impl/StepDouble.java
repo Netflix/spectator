@@ -34,7 +34,7 @@ public class StepDouble implements StepValue {
   private final Clock clock;
   private final long step;
 
-  private final AtomicDouble previous;
+  private volatile double previous;
   private final AtomicDouble current;
 
   private final AtomicLong lastInitPos;
@@ -44,7 +44,7 @@ public class StepDouble implements StepValue {
     this.init = init;
     this.clock = clock;
     this.step = step;
-    previous = new AtomicDouble(init);
+    previous = init;
     current = new AtomicDouble(init);
     lastInitPos = new AtomicLong(clock.wallTime() / step);
   }
@@ -57,7 +57,7 @@ public class StepDouble implements StepValue {
       // Need to check if there was any activity during the previous step interval. If there was
       // then the init position will move forward by 1, otherwise it will be older. No activity
       // means the previous interval should be set to the `init` value.
-      previous.set((lastInit == stepTime - 1) ? v : init);
+      previous = (lastInit == stepTime - 1) ? v : init;
     }
   }
 
@@ -70,7 +70,7 @@ public class StepDouble implements StepValue {
   /** Get the value for the last completed interval. */
   public double poll() {
     rollCount(clock.wallTime());
-    return previous.get();
+    return previous;
   }
 
   /** Get the value for the last completed interval as a rate per second. */
@@ -87,7 +87,7 @@ public class StepDouble implements StepValue {
 
   @Override public String toString() {
     return "StepDouble{init="  + init
-        + ", previous=" + previous.get()
+        + ", previous=" + previous
         + ", current=" + current.get()
         + ", lastInitPos=" + lastInitPos.get() + '}';
   }
