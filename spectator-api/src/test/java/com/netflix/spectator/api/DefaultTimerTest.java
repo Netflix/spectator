@@ -117,6 +117,16 @@ public class DefaultTimerTest {
     Assert.assertEquals(t.totalTime(), 400L);
   }
 
+  private int square(int v) {
+    return v * v;
+  }
+
+  @Test
+  public void testCallable() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    int v2 = t.record(() -> square(42));
+  }
+
   @Test
   public void testMeasure() {
     Timer t = new DefaultTimer(clock, new DefaultId("foo"));

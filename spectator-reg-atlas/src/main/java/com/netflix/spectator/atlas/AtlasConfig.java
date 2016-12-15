@@ -35,6 +35,14 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
+   * Returns true if publishing to Atlas is enabled. Default is true.
+   */
+  default boolean enabled() {
+    String v = get("atlas.enabled");
+    return (v == null) ? true : Boolean.valueOf(v);
+  }
+
+  /**
    * Returns the number of threads to use with the scheduler. The default is
    * 2 threads.
    */
@@ -50,6 +58,38 @@ public interface AtlasConfig extends RegistryConfig {
   default String uri() {
     String v = get("atlas.uri");
     return (v == null) ? "http://localhost:7101/api/v1/publish" : v;
+  }
+
+  /**
+   * Returns true if streaming to Atlas LWC is enabled. Default is false.
+   */
+  default boolean lwcEnabled() {
+    String v = get("atlas.lwc.enabled");
+    return (v == null) ? false : Boolean.valueOf(v);
+  }
+
+  /** Returns the frequency for refreshing config settings from the LWC service. */
+  default Duration configRefreshFrequency() {
+    String v = get("atlas.configRefreshFrequency");
+    return (v == null) ? Duration.ofSeconds(10) : Duration.parse(v);
+  }
+
+  /**
+   * Returns the URI for the Atlas LWC endpoint to retrieve current subscriptions.
+   * The default is {@code http://localhost:7101/lwc/api/v1/expressions/local-dev}.
+   */
+  default String configUri() {
+    String v = get("atlas.config-uri");
+    return (v == null) ? "http://localhost:7101/lwc/api/v1/expressions/local-dev" : v;
+  }
+
+  /**
+   * Returns the URI for the Atlas LWC endpoint to evaluate the data for a suscription.
+   * The default is {@code http://localhost:7101/lwc/api/v1/evaluate}.
+   */
+  default String evalUri() {
+    String v = get("atlas.eval-uri");
+    return (v == null) ? "http://localhost:7101/lwc/api/v1/evaluate" : v;
   }
 
   /**
