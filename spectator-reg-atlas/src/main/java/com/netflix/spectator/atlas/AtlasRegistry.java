@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -49,26 +50,45 @@ public final class AtlasRegistry extends AbstractRegistry {
   private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
 
   private final Clock clock;
+
+  private final boolean enabled;
   private final Duration step;
   private final long stepMillis;
   private final URI uri;
+
+  private final boolean lwcEnabled;
+  private final Duration configRefreshFrequency;
+  private final URI configUri;
+  private final URI evalUri;
+
   private final int connectTimeout;
   private final int readTimeout;
   private final int batchSize;
   private final int numThreads;
   private final Map<String, String> commonTags;
 
+  private final ObjectMapper jsonMapper;
+  private final ObjectMapper smileMapper;
+
   private Scheduler scheduler;
 
-  private final ObjectMapper mapper;
+  private volatile List<Subscription> subscriptions;
 
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     super(new StepClock(clock, config.step().toMillis()), config);
     this.clock = clock;
+
+    this.enabled = config.enabled();
     this.step = config.step();
     this.stepMillis = step.toMillis();
     this.uri = URI.create(config.uri());
+
+    this.lwcEnabled = config.lwcEnabled();
+    this.configRefreshFrequency = config.configRefreshFrequency();
+    this.configUri = URI.create(config.configUri());
+    this.evalUri = URI.create(config.evalUri());
+
     this.connectTimeout = (int) config.connectTimeout().toMillis();
     this.readTimeout = (int) config.readTimeout().toMillis();
     this.batchSize = config.batchSize();
@@ -77,7 +97,8 @@ public final class AtlasRegistry extends AbstractRegistry {
 
     SimpleModule module = new SimpleModule()
         .addSerializer(Measurement.class, new MeasurementSerializer());
-    this.mapper = new ObjectMapper(new SmileFactory()).registerModule(module);
+    this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
+    this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
   }
 
   /**
@@ -85,15 +106,29 @@ public final class AtlasRegistry extends AbstractRegistry {
    */
   public void start() {
     if (scheduler == null) {
-      Scheduler.Options options = new Scheduler.Options()
-          .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
-          .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
-          .withStopOnFailure(false);
+      // Setup main collection for publishing to Atlas
+      if (enabled || lwcEnabled) {
+        Scheduler.Options options = new Scheduler.Options()
+            .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
+            .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
+            .withStopOnFailure(false);
+        scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
+        scheduler.schedule(options, this::collectData);
+        logger.info("started collecting metrics every {} reporting to {}", step, uri);
+        logger.info("common tags: {}", commonTags);
+      } else {
+        logger.info("publishing is not enabled");
+      }
 
-      scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
-      scheduler.schedule(options, this::collectData);
-      logger.info("started collecting metrics every {} reporting to {}", step, uri);
-      logger.info("common tags: {}", commonTags);
+      // Setup collection for subscriptions
+      if (lwcEnabled) {
+        Scheduler.Options options = new Scheduler.Options()
+            .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
+            .withStopOnFailure(false);
+        scheduler.schedule(options, this::fetchSubscriptions);
+      } else {
+        logger.info("subscriptions are not enabled");
+      }
     } else {
       logger.warn("registry already started, ignoring duplicate request");
     }
@@ -135,17 +170,77 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private void collectData() {
-    try {
-      for (List<Measurement> batch : getBatches()) {
-        PublishPayload p = new PublishPayload(commonTags, batch);
-        HttpResponse res = HttpClient.DEFAULT.newRequest("spectator-reg-atlas", uri)
+    // Send data for any subscriptions
+    if (lwcEnabled) {
+      try {
+        handleSubscriptions();
+      } catch (Exception e) {
+        logger.warn("failed to handle subscriptions", e);
+      }
+    }
+
+    // Publish to Atlas
+    if (enabled) {
+      try {
+        for (List<Measurement> batch : getBatches()) {
+          PublishPayload p = new PublishPayload(commonTags, batch);
+          HttpResponse res = HttpClient.DEFAULT.newRequest("spectator-reg-atlas", uri)
+              .withMethod("POST")
+              .withConnectTimeout(connectTimeout)
+              .withReadTimeout(readTimeout)
+              .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
+              .send();
+          Instant date = res.dateHeader("Date");
+          recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+        }
+      } catch (Exception e) {
+        logger.warn("failed to send metrics", e);
+      }
+    }
+  }
+
+  private void handleSubscriptions() {
+    List<Subscription> subs = subscriptions;
+    if (!subs.isEmpty()) {
+      List<TagsValuePair> ms = getMeasurements().stream()
+          .map(m -> TagsValuePair.from(commonTags, m))
+          .collect(Collectors.toList());
+      List<EvalPayload.Metric> metrics = new ArrayList<>();
+      for (Subscription s : subs) {
+        DataExpr expr = Parser.parseDataExpr(s.getExpression());
+        for (TagsValuePair pair : expr.eval(ms)) {
+          EvalPayload.Metric m = new EvalPayload.Metric(s.getId(), pair.tags(), pair.value());
+          metrics.add(m);
+        }
+      }
+      try {
+        String json = jsonMapper.writeValueAsString(new EvalPayload(clock().wallTime(), metrics));
+        HttpClient.DEFAULT.newRequest("spectator-lwc-eval", evalUri)
             .withMethod("POST")
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
-            .withContent("application/x-jackson-smile", mapper.writeValueAsBytes(p))
-            .send();
-        Instant date = res.dateHeader("Date");
-        recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+            .withJsonContent(json)
+            .send()
+            .decompress();
+      } catch (Exception e) {
+        logger.warn("failed to send metrics for subscriptions", e);
+      }
+    }
+  }
+
+  private void fetchSubscriptions() {
+    try {
+      HttpResponse res = HttpClient.DEFAULT.newRequest("spectator-lwc-subs", configUri)
+          .withMethod("GET")
+          .withConnectTimeout(connectTimeout)
+          .withReadTimeout(readTimeout)
+          .send()
+          .decompress();
+      if (res.status() != 200) {
+        logger.warn("failed to update subscriptions, received status {}", res.status());
+      } else {
+        Subscriptions subs = jsonMapper.readValue(res.entity(), Subscriptions.class);
+        subscriptions = subs.validated();
       }
     } catch (Exception e) {
       logger.warn("failed to send metrics", e);

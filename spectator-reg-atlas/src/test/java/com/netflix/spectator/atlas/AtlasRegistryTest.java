@@ -117,4 +117,5 @@ public class AtlasRegistryTest {
     long d = registry.getInitialDelay(10000);
     Assert.assertEquals(2123, d);
   }
+
 }
