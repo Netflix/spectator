@@ -112,7 +112,11 @@ Or by using `withTag` and `withTags` on an existing id:
 
 ```java
 public class HttpServer {
-  private static final Id BASE_ID = registry.createId("server.requestCount");
+  private final Id BASE_ID;
+
+  public HttpServer(Registry registry) {
+    BASE_ID = registry.createId("server.requestCount");
+  }
 
   private void handleRequestComplete(HttpRequest req, HttpResponse res) {
     // Remember Id is immutable, withTags will return a copy with the
