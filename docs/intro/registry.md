@@ -112,12 +112,16 @@ Or by using `withTag` and `withTags` on an existing id:
 
 ```java
 public class HttpServer {
-  private static final Id BASE_ID = registry.createId("server.requestCount");
+  private final Id baseId;
+
+  public HttpServer(Registry registry) {
+    baseId = registry.createId("server.requestCount");
+  }
 
   private void handleRequestComplete(HttpRequest req, HttpResponse res) {
     // Remember Id is immutable, withTags will return a copy with the
     // the additional metadata
-    Id reqId = BASE_ID.withTags(
+    Id reqId = baseId.withTags(
       "status", res.getStatus(),
       "method", req.getMethod().name());
     registry.counter(reqId).increment();
@@ -126,7 +130,7 @@ public class HttpServer {
   private void handleRequestError(HttpRequest req, Throwable t) {
     // Can also be added individually using `withTag`. However, it is better
     // for performance to batch modifications using `withTags`.
-    Id reqId = BASE_ID
+    Id reqId = baseId
       .withTag("error",  t.getClass().getSimpleName())
       .withTag("method", req.getMethod().name());
     registry.counter(reqId).increment();
