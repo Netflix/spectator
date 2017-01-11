@@ -51,6 +51,16 @@ public class ServoGaugeTest {
   }
 
   @Test
+  public void testGet() {
+    final ServoRegistry r = new ServoRegistry(clock);
+    Gauge g = r.gauge(r.createId("foo"));
+    g.set(1.0);
+
+    Assert.assertEquals(1, r.getMonitors().size());
+    Assert.assertEquals(1.0, (Double) r.getMonitors().get(0).getValue(0), 1e-12);
+  }
+
+  @Test
   public void expiration() {
     final long initTime = TimeUnit.MINUTES.toMillis(30);
     final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);

@@ -120,7 +120,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   @Override public List<Monitor<?>> getMonitors() {
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
-      if (!meter.hasExpired()) {
+      if (!meter.hasExpired() && meter instanceof ServoMeter) {
         ((ServoMeter) meter).addMonitors(monitors);
       }
     }

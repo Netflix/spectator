@@ -16,6 +16,7 @@
 package com.netflix.spectator.servo;
 
 import com.netflix.servo.monitor.AbstractMonitor;
+import com.netflix.servo.monitor.Monitor;
 import com.netflix.servo.monitor.MonitorConfig;
 import com.netflix.servo.monitor.NumericMonitor;
 import com.netflix.spectator.api.Clock;
@@ -24,13 +25,14 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.impl.AtomicDouble;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Reports a constant value passed into the constructor.
  */
 final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
-    implements Gauge, NumericMonitor<Double> {
+    implements Gauge, ServoMeter, NumericMonitor<Double> {
 
   private final Clock clock;
   private final AtomicDouble value;
@@ -70,5 +72,9 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
 
   @Override public Double getValue(int pollerIndex) {
     return value();
+  }
+
+  @Override public void addMonitors(List<Monitor<?>> monitors) {
+    monitors.add(this);
   }
 }
