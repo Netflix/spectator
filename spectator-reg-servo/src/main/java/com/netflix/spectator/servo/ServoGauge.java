@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,11 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
 
   @Override public Iterable<Measurement> measure() {
     return null;
+  }
+
+  @Override public void set(double v) {
+    value.set(v);
+    lastUpdated.set(clock.wallTime());
   }
 
   @Override public double value() {
