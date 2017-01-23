@@ -29,7 +29,7 @@ import java.io.IOException;
  * valid set as they are written out by replacing invalid characters with
  * an '_'.
  */
-class MeasurementSerializer extends JsonSerializer<Measurement> {
+public class MeasurementSerializer extends JsonSerializer<Measurement> {
   @Override
   public void serialize(
       Measurement value,

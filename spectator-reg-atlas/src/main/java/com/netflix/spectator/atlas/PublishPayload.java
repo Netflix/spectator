@@ -24,7 +24,7 @@ import java.util.Map;
  * Wraps a list of measurements with a set of common tags. The common tags are
  * typically used for things like the application and instance id.
  */
-class PublishPayload {
+public class PublishPayload {
 
   private final Map<String, String> tags;
   private final List<Measurement> metrics;
