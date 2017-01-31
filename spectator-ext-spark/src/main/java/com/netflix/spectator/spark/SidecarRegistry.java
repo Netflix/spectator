@@ -58,9 +58,7 @@ public class SidecarRegistry extends AbstractRegistry {
       } else {
         Map<String, String> tagMap = new HashMap<>();
         SparkConf conf = env.conf();
-        put(tagMap, conf, "spark.app.id", "appId");
         put(tagMap, conf, "spark.app.name", "appName");
-        put(tagMap, conf, "spark.executor.id", "executorId");
         return tagMap;
       }
     }
