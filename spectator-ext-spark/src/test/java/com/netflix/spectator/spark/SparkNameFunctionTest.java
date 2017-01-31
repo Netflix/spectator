@@ -25,6 +25,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @RunWith(JUnit4.class)
 public class SparkNameFunctionTest {
 
@@ -35,122 +38,84 @@ public class SparkNameFunctionTest {
     Assert.assertEquals(Utils.normalize(expected), Utils.normalize(actual));
   }
 
+  //EXECUTOR
   @Test
-  public void executorName() {
-    final String name = "app-20150309231421-0000.0.executor.filesystem.file.largeRead_ops";
-    final Id expected = registry.createId("spark.filesystem.file.largeRead_ops")
+  public void executorMetric() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.executor.filesystem.file.largeRead_ops";
+    final Id expected = registry.createId("spark.executor.filesystem.file.largeRead_ops")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
+        .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
   }
 
   @Test
-  public void executorName2() {
-    final String name = "20150626-185518-1776258826-5050-2845-S1.executor.filesystem.file.largeRead_ops";
-    final Id expected = registry.createId("spark.filesystem.file.largeRead_ops")
+  public void executorJvmMetric() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.jvm.heap.committed";
+    final Id expected = registry.createId("spark.jvm.heap.committed")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
+        .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
   }
 
   @Test
-  public void executorName3() {
-    final String name = "12345.1.3.executor.filesystem.file.largeRead_ops";
-    final Id expected = registry.createId("spark.filesystem.file.largeRead_ops")
+  public void executorCodeGenerator() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.CodeGenerator.compilationTime";
+    final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
+        .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
   }
 
-    @Test
-  public void driverName() {
-    final String name = "app-20150309231421-0000.driver.BlockManager.disk.diskSpaceUsed_MB";
-    final Id expected = registry.createId("spark.disk.diskSpaceUsed")
-        .withTag("role", "driver")
-        .withTag("source", "BlockManager");
+  // DRIVER
+  @Test
+  public void driverMetric() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.BlockManager.disk.diskSpaceUsed_MB";
+    final Id expected = registry.createId("spark.BlockManager.disk.diskSpaceUsed_MB")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("role", "driver");
     assertEquals(expected, f.apply(name));
   }
 
   @Test
-  public void driverName2() {
-    final String name = "app-20150309231421-0000.driver.DAGScheduler.job.activeJobs";
-    final Id expected = registry.createId("spark.job.activeJobs")
-        .withTag("role", "driver")
-        .withTag("source", "DAGScheduler");
+  public void driverJvmMetric() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.jvm.heap.committed";
+    final Id expected = registry.createId("spark.jvm.heap.committed")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("role", "driver");
     assertEquals(expected, f.apply(name));
   }
 
-  @Test
-  public void driverName3() {
-    final String name = "local-1429219722964.<driver>.DAGScheduler.job.activeJobs";
-    final Id expected = registry.createId("spark.job.activeJobs")
-        .withTag("role", "driver")
-        .withTag("source", "DAGScheduler");
-    assertEquals(expected, f.apply(name));
-  }
-
+  // Streaming
   @Test
   public void driverStreamingSimple() {
-    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.receivers";
-    final Id expected = registry.createId("spark.streaming.receivers")
-        .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics");
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.HdfsWordCount.StreamingMetrics.streaming.lastCompletedBatch_processingDelay";
+    final Id expected = registry.createId("spark.streaming.lastCompletedBatch_processingDelay")
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("role", "driver");
     assertEquals(expected, f.apply(name));
   }
 
-  @Test
-  public void driverStreamingTotal() {
-    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.totalCompletedBatches";
-    final Id expected = registry.createId("spark.streaming.totalCompletedBatches")
-        .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics");
-    assertEquals(expected, f.apply(name));
+
+ @Test
+  public void JustPatternMatching() {
+
+    final String pattern_string = "^([^.]+)\\.(driver)\\.((CodeGenerator|DAGScheduler|BlockManager|jvm)\\..*)$";
+    final String metric = "97278898-4bd4-49c2-9889-aa5f969a7816-0023.driver.jvm.pools.PS-Old-Gen.used";
+    final Pattern pattern = Pattern.compile(pattern_string);
+    final Matcher m = pattern.matcher(metric);
+
+    Assert.assertEquals(true, m.matches());
+    Assert.assertEquals("97278898-4bd4-49c2-9889-aa5f969a7816-0023", m.group(1));
+    Assert.assertEquals("driver", m.group(2));
+    Assert.assertEquals("jvm.pools.PS-Old-Gen.used", m.group(3));
+    Assert.assertEquals("jvm", m.group(4));
   }
 
-  @Test
-  public void driverStreamingDelay() {
-    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
-    final Id expected = registry.createId("spark.streaming.lastReceivedBatch_submissionDelay")
-        .withTag("role", "driver")
-        .withTag("source", "StreamingMetrics");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void driverStreamingTime() {
-    final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionTime";
-    Assert.assertNull(f.apply(name));
-  }
-
-  @Test
-  public void applicationName() {
-    final String name = "application.Spark shell.1425968061869.cores";
-    final Id expected = registry.createId("spark.cores")
-        .withTag("role", "application")
-        .withTag("appName", "Spark shell");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void applicationName2() {
-    final String name = "application.SubscriptionEnded.1429226958083.runtime_ms";
-    final Id expected = registry.createId("spark.runtime")
-        .withTag("role", "application")
-        .withTag("appName", "SubscriptionEnded");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void masterName() {
-    final String name = "master.apps";
-    final Id expected = registry.createId("spark.apps")
-        .withTag("role", "master");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void workerName() {
-    final String name = "worker.memFree_MB";
-    final Id expected = registry.createId("spark.memFree")
-        .withTag("role", "worker");
-    assertEquals(expected, f.apply(name));
-  }
 
 }

@@ -85,10 +85,15 @@ public final class SparkNameFunction implements NameFunction {
         for (Map.Entry<String, Integer> entry : tags.entrySet()) {
           id = id.withTag(entry.getKey(), m.group(entry.getValue()));
         }
+        // separate executor jvm metrics from driver executor metrics
+        if (!tags.containsKey("role")) {
+          id = id.withTag("role", "executor");
+        }
         return id;
       } else {
         return DROP_METRIC;
       }
+
     }
   }
 
