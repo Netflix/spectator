@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,14 +69,15 @@ final class MappingExpr {
     String[] parts = expr.split("[,\\s]+");
     for (String part : parts) {
       switch (part) {
-        case ":add": binaryOp(stack, (a, b) -> a + b); break;
-        case ":sub": binaryOp(stack, (a, b) -> a - b); break;
-        case ":mul": binaryOp(stack, (a, b) -> a * b); break;
-        case ":div": binaryOp(stack, (a, b) -> a / b); break;
+        case ":add":        binaryOp(stack, (a, b) -> a + b); break;
+        case ":sub":        binaryOp(stack, (a, b) -> a - b); break;
+        case ":mul":        binaryOp(stack, (a, b) -> a * b); break;
+        case ":div":        binaryOp(stack, (a, b) -> a / b); break;
+        case ":if-changed": ifChanged(stack);                 break;
         default:
           if (part.startsWith("{") && part.endsWith("}")) {
             Number v = vars.get(part.substring(1, part.length() - 1));
-            if (v == null) return null;
+            if (v == null) v = Double.NaN;
             stack.addFirst(v.doubleValue());
           } else {
             stack.addFirst(Double.parseDouble(part));
@@ -91,5 +92,30 @@ final class MappingExpr {
     double b = stack.removeFirst();
     double a = stack.removeFirst();
     stack.addFirst(op.applyAsDouble(a, b));
+  }
+
+  /**
+   * Helper to zero out a value if there is not a change. For a stack with {@code num v1 v2},
+   * if {@code v1 == v2}, then push 0.0 otherwise push {@code num}.
+   *
+   * For some values placed in JMX they are not regularly updated in all circumstances and
+   * reporting the same value for each polling iteration gives the false impression of activity
+   * when there is none. A common example is timers with the metrics library where the reservoir
+   * is not rescaled during a fetch.
+   *
+   * https://github.com/dropwizard/metrics/issues/1030
+   *
+   * This operator can be used in conjunction with the previous variables to zero out the
+   * misleading snapshots based on the count. For example:
+   *
+   * <pre>
+   *   {50thPercentile},{Count},{previous:Count},:if-changed
+   * </pre>
+   */
+  private static void ifChanged(Deque<Double> stack) {
+    double v2 = stack.removeFirst();
+    double v1 = stack.removeFirst();
+    double num = stack.removeFirst();
+    stack.addFirst((Double.compare(v1, v2) == 0) ? 0.0 : num);
   }
 }

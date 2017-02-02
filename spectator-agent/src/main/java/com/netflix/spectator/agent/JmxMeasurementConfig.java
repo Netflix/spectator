@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.typesafe.config.Config;
 
+import javax.management.ObjectName;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,7 +57,8 @@ final class JmxMeasurementConfig {
   private final String valueMapping;
   private final boolean counter;
 
-  private final Map<Id, AtomicLong> previous;
+  private final Map<ObjectName, JmxData> previousData;
+  private final Map<Id, AtomicLong> previousCount;
 
   /** Create a new instance. */
   JmxMeasurementConfig(
@@ -67,7 +70,8 @@ final class JmxMeasurementConfig {
     this.tagMappings = tagMappings;
     this.valueMapping = valueMapping;
     this.counter = counter;
-    this.previous = new ConcurrentHashMap<>();
+    this.previousData = new ConcurrentHashMap<>();
+    this.previousCount = new ConcurrentHashMap<>();
   }
 
   /**
@@ -81,8 +85,18 @@ final class JmxMeasurementConfig {
     Id id = registry
         .createId(MappingExpr.substitute(nameMapping, data.getStringAttrs()))
         .withTags(tags);
-    Double v = MappingExpr.eval(valueMapping, data.getNumberAttrs());
-    if (v != null) {
+
+    Map<String, Number> numberAttrs = new HashMap<>(data.getNumberAttrs());
+    JmxData previous = previousData.put(data.getName(), data);
+    if (previous != null) {
+      previous.getNumberAttrs().entrySet().forEach(e ->
+          numberAttrs.put("previous:" + e.getKey(), e.getValue())
+      );
+    }
+
+    Double v = MappingExpr.eval(valueMapping, numberAttrs);
+
+    if (v != null && !v.isNaN()) {
       if (counter) {
         updateCounter(registry, id, v.longValue());
       } else {
@@ -92,7 +106,7 @@ final class JmxMeasurementConfig {
   }
 
   private void updateCounter(Registry registry, Id id, long v) {
-    AtomicLong prev = previous.computeIfAbsent(id, i -> new AtomicLong(0L));
+    AtomicLong prev = previousCount.computeIfAbsent(id, i -> new AtomicLong(0L));
     long p = prev.get();
     if (prev.compareAndSet(p, v) && p != 0) {
       registry.counter(id).increment(v - p);
