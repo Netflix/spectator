@@ -76,7 +76,16 @@ public class SparkNameFunctionTest {
   @Test
   public void driverMetric() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.BlockManager.disk.diskSpaceUsed_MB";
-    final Id expected = registry.createId("spark.BlockManager.disk.diskSpaceUsed_MB")
+    final Id expected = registry.createId("spark.BlockManager.disk.diskSpaceUsed")  // Trailing _MB removed
+        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+        .withTag("role", "driver");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverMetricNoUnits() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.DAGScheduler.messageProcessingTime";
+    final Id expected = registry.createId("spark.DAGScheduler.messageProcessingTime")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
         .withTag("role", "driver");
     assertEquals(expected, f.apply(name));
