@@ -63,6 +63,7 @@ public class SparkSink implements Sink {
     final Config config = loadConfig();
     sidecarRegistry = new SidecarRegistry();
     reporter = SpectatorReporter.forRegistry(registry)
+        .withSpectatorRegistry(sidecarRegistry)
         .withNameFunction(SparkNameFunction.fromConfig(config, sidecarRegistry))
         .withValueFunction(SparkValueFunction.fromConfig(config))
         .withGaugeCounters(Pattern.compile(config.getString("spectator.spark.gauge-counters")))

@@ -39,6 +39,12 @@ public class SparkValueFunctionTest {
   }
 
   @Test
+  public void driverStreamingTime() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0129.driver.HdfsWordCount.StreamingMetrics.streaming.lastCompletedBatch_processingEndTime";
+    Assert.assertEquals(42.0 / 1000.0, f.convert(name, 42.0), 1e-12);
+  }
+
+  @Test
   public void driverStreamingDelay() {
     final String name = "app-20150527224111-0014.<driver>.SubscriptionEnded.StreamingMetrics.streaming.lastReceivedBatch_submissionDelay";
     Assert.assertEquals(42.0 / 1000.0, f.convert(name, 42.0), 1e-12);
@@ -50,15 +56,4 @@ public class SparkValueFunctionTest {
     Assert.assertEquals(Double.NaN, f.convert(name, -1.0), 1e-12);
   }
 
-  @Test
-  public void applicationName2() {
-    final String name = "application.SubscriptionEnded.1429226958083.runtime_ms";
-    Assert.assertEquals(42.0 / 1000.0, f.convert(name, 42.0), 1e-12);
-  }
-
-  @Test
-  public void workerName() {
-    final String name = "worker.memFree_MB";
-    Assert.assertEquals(42.0 * 1e6, f.convert(name, 42.0), 1e-12);
-  }
 }
