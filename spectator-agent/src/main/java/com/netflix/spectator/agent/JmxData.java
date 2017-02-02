@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +87,8 @@ class JmxData {
    */
   JmxData(ObjectName name, Map<String, String> stringAttrs, Map<String, Number> numberAttrs) {
     this.name = name;
-    this.stringAttrs = stringAttrs;
-    this.numberAttrs = numberAttrs;
+    this.stringAttrs = Collections.unmodifiableMap(stringAttrs);
+    this.numberAttrs = Collections.unmodifiableMap(numberAttrs);
   }
 
   /** Return the name of the bean. */

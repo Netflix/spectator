@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ public class MappingExprTest {
   public void evalMissing() {
     Map<String, Number> vars = new HashMap<>();
     Double v = MappingExpr.eval("{foo}", vars);
-    Assert.assertNull(v);
+    Assert.assertTrue(v.isNaN());
   }
 
   @Test
@@ -126,5 +126,23 @@ public class MappingExprTest {
     vars.put("foo", 2.0);
     Double v = MappingExpr.eval("42.0,{foo},:div", vars);
     Assert.assertEquals(21.0, v, 1e-12);
+  }
+
+  @Test
+  public void evalIfChangedYes() {
+    Map<String, Number> vars = new HashMap<>();
+    vars.put("foo", 2.0);
+    vars.put("previous:foo", 3.0);
+    Double v = MappingExpr.eval("42.0,{foo},{previous:foo},:if-changed", vars);
+    Assert.assertEquals(42.0, v, 1e-12);
+  }
+
+  @Test
+  public void evalIfChangedNo() {
+    Map<String, Number> vars = new HashMap<>();
+    vars.put("foo", 2.0);
+    vars.put("previous:foo", 2.0);
+    Double v = MappingExpr.eval("42.0,{foo},{previous:foo},:if-changed", vars);
+    Assert.assertEquals(0.0, v, 1e-12);
   }
 }
