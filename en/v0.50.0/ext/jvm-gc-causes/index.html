@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>GC Causes - Spectator Docs</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/highlight.css">
+  <link href="../../css/custom.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "GC Causes";
+    var mkdocs_page_input_path = "ext/jvm-gc-causes.md";
+    var mkdocs_page_url = "/ext/jvm-gc-causes/";
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js"></script>
+  <script src="../../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../../js/highlight.pack.js"></script> 
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-82153845-2', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> Spectator Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Getting Started</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/registry/">Registry</a>
+        
+    </li>
+
+        
+            
+    <ul class="subnav">
+    <li><span>Meter Types</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/counter/">Counters</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/timer/">Timers</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/gauge/">Gauges</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/dist-summary/">Distribution Summaries</a>
+        
+    </li>
+
+        
+    </ul>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/clock/">Clock</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/testing/">Testing</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/netflix/">Netflix Integration</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../intro/servo-comparison/">Servo Comparison</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Extensions</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-buffer-pools/">Buffer Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-gc/">Garbage Collection</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 current">
+        <a class="current" href="./">GC Causes</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#gc-causes">GC Causes</a></li>
+                
+                    <li><a class="toctree-l4" href="#systemgc__">System.gc__</a></li>
+                
+                    <li><a class="toctree-l4" href="#fullgcalot">FullGCAlot</a></li>
+                
+                    <li><a class="toctree-l4" href="#scavengealot">ScavengeAlot</a></li>
+                
+                    <li><a class="toctree-l4" href="#allocation_profiler">Allocation_Profiler</a></li>
+                
+                    <li><a class="toctree-l4" href="#jvmtienv_forcegarbagecollection">JvmtiEnv_ForceGarbageCollection</a></li>
+                
+                    <li><a class="toctree-l4" href="#gclocker_initiated_gc">GCLocker_Initiated_GC</a></li>
+                
+                    <li><a class="toctree-l4" href="#heap_inspection_initiated_gc">Heap_Inspection_Initiated_GC</a></li>
+                
+                    <li><a class="toctree-l4" href="#heap_dump_initiated_gc">Heap_Dump_Initiated_GC</a></li>
+                
+                    <li><a class="toctree-l4" href="#whitebox_initiated_young_gc">WhiteBox_Initiated_Young_GC</a></li>
+                
+                    <li><a class="toctree-l4" href="#no_gc">No_GC</a></li>
+                
+                    <li><a class="toctree-l4" href="#allocation_failure">Allocation_Failure</a></li>
+                
+                    <li><a class="toctree-l4" href="#tenured_generation_full">Tenured_Generation_Full</a></li>
+                
+                    <li><a class="toctree-l4" href="#permanent_generation_full">Permanent_Generation_Full</a></li>
+                
+                    <li><a class="toctree-l4" href="#metadata_gc_threshold">Metadata_GC_Threshold</a></li>
+                
+                    <li><a class="toctree-l4" href="#cms_generation_full">CMS_Generation_Full</a></li>
+                
+                    <li><a class="toctree-l4" href="#cms_initial_mark">CMS_Initial_Mark</a></li>
+                
+                    <li><a class="toctree-l4" href="#cms_final_remark">CMS_Final_Remark</a></li>
+                
+                    <li><a class="toctree-l4" href="#cms_concurrent_mark">CMS_Concurrent_Mark</a></li>
+                
+                    <li><a class="toctree-l4" href="#old_generation_expanded_on_last_scavenge">Old_Generation_Expanded_On_Last_Scavenge</a></li>
+                
+                    <li><a class="toctree-l4" href="#old_generation_too_full_to_scavenge">Old_Generation_Too_Full_To_Scavenge</a></li>
+                
+                    <li><a class="toctree-l4" href="#ergonomics">Ergonomics</a></li>
+                
+                    <li><a class="toctree-l4" href="#g1_evacuation_pause">G1_Evacuation_Pause</a></li>
+                
+                    <li><a class="toctree-l4" href="#g1_humongous_allocation">G1_Humongous_Allocation</a></li>
+                
+                    <li><a class="toctree-l4" href="#last_ditch_collection">Last_ditch_collection</a></li>
+                
+                    <li><a class="toctree-l4" href="#illegal_value_-last_gc_cause-_illegal_value">ILLEGAL_VALUE_-last_gc_cause-_ILLEGAL_VALUE</a></li>
+                
+                    <li><a class="toctree-l4" href="#unknown_gccause">unknown_GCCause</a></li>
+                
+            
+            </ul>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../jvm-memory-pools/">Memory Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../log4j2/">Log4j2 Appender</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../placeholders/">Placeholders</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Registries</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/metrics3/">Metrics3</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/servo/">Servo</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../reports/">Build Reports</a>
+        
+    </li>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">Spectator Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Extensions &raquo;</li>
+        
+      
+    
+    <li>GC Causes</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/Netflix/spectator/edit/master/docs/ext/jvm-gc-causes.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="gc-causes">GC Causes<a class="headerlink" href="#gc-causes" title="Permanent link">&para;</a></h1>
+<p>The various GC causes aren't well documented. The list provided here comes from the
+<a href="http://hg.openjdk.java.net/jdk8u/hs-dev/hotspot/file/tip/src/share/vm/gc_interface/gcCause.cpp">gcCause.cpp</a>
+file in the jdk and we include some information on what these mean for the application.</p>
+<h3 id="systemgc__">System.gc__<a class="headerlink" href="#systemgc__" title="Permanent link">&para;</a></h3>
+<p>Something called <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/System.html#gc()">System.gc()</a>.
+If you are seeing this once an hour it is likely related to the RMI GC interval. For more
+details see:</p>
+<ul>
+<li><a href="http://www-01.ibm.com/support/docview.wss?uid=swg21173431">Unexplained System.gc() calls due to Remote Method Invocation (RMI) or explict garbage collections</a></li>
+<li><a href="http://docs.oracle.com/javase/6/docs/technotes/guides/rmi/sunrmiproperties.html">sun.rmi.dgc.client.gcInterval</a></li>
+</ul>
+<h3 id="fullgcalot">FullGCAlot<a class="headerlink" href="#fullgcalot" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. In debug builds of the jdk there is an option,
+<code>-XX:+FullGCALot</code>, that will trigger a full GC at a regular interval for testing purposes.</p>
+<h3 id="scavengealot">ScavengeAlot<a class="headerlink" href="#scavengealot" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. In debug builds of the jdk there is an option,
+<code>-XX:+ScavengeALot</code>, that will trigger a minor GC at a regular interval for testing purposes.</p>
+<h3 id="allocation_profiler">Allocation_Profiler<a class="headerlink" href="#allocation_profiler" title="Permanent link">&para;</a></h3>
+<p>Prior to java 8 you would see this if running with the <code>-Xaprof</code> setting. It would be triggered
+just before the jvm exits. The <code>-Xaprof</code> option was removed in java 8.</p>
+<h3 id="jvmtienv_forcegarbagecollection">JvmtiEnv_ForceGarbageCollection<a class="headerlink" href="#jvmtienv_forcegarbagecollection" title="Permanent link">&para;</a></h3>
+<p>Something called the JVM tool interface function
+<a href="http://docs.oracle.com/javase/jp/8/platform/jvmti/jvmti.html#ForceGarbageCollection">ForceGarbageCollection</a>.
+Look at the <code>-agentlib</code> param to java to see what agents are configured.</p>
+<h3 id="gclocker_initiated_gc">GCLocker_Initiated_GC<a class="headerlink" href="#gclocker_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>The GC locker prevents GC from occurring when JNI code is in a
+<a href="http://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/functions.html#GetPrimitiveArrayCritical_ReleasePrimitiveArrayCritical">critical region</a>.
+If GC is needed while a thread is in a critical region, then it will allow them to complete,
+i.e. call the corresponding release function. Other threads will not be permitted to enter a
+critical region. Once all threads are out of critical regions a GC event will be triggered. </p>
+<h3 id="heap_inspection_initiated_gc">Heap_Inspection_Initiated_GC<a class="headerlink" href="#heap_inspection_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>GC was initiated by an inspection operation on the heap. For example you can trigger this
+with <a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jmap.html">jmap</a>:</p>
+<p><code>$ jmap -histo:live &lt;pid&gt;</code></p>
+<h3 id="heap_dump_initiated_gc">Heap_Dump_Initiated_GC<a class="headerlink" href="#heap_dump_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>GC was initiated before dumping the heap. For example you can trigger this with
+<a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jmap.html">jmap</a>:</p>
+<p><code>$ jmap -dump:live,format=b,file=heap.out &lt;pid&gt;</code></p>
+<p>Another common example would be clicking the Heap Dump button on the Monitor tab in
+<a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jvisualvm.html">jvisualvm</a>.</p>
+<h3 id="whitebox_initiated_young_gc">WhiteBox_Initiated_Young_GC<a class="headerlink" href="#whitebox_initiated_young_gc" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. Used for testing hotspot, it indicates something
+called <code>sun.hotspot.WhiteBox.youngGC()</code>. </p>
+<h3 id="no_gc">No_GC<a class="headerlink" href="#no_gc" title="Permanent link">&para;</a></h3>
+<p>Used for CMS. Unfortunately when using the mbeans this is the cause that typically gets
+reported for a major GC.</p>
+<h3 id="allocation_failure">Allocation_Failure<a class="headerlink" href="#allocation_failure" title="Permanent link">&para;</a></h3>
+<p>Usually this means that there is an allocation request that is bigger than the available space
+in young generation and will typically be associated with a minor GC. For G1 this will likely
+be a major GC and it is more common to see <a href="#g1_evacuation_pause">G1_Evacuation_Pause</a> for
+routine minor collections.</p>
+<p>On linux the jvm will trigger a GC if the kernel indicates there isn't much memory left via
+<a href="http://lwn.net/Articles/267013/">mem_notify</a>.</p>
+<h3 id="tenured_generation_full">Tenured_Generation_Full<a class="headerlink" href="#tenured_generation_full" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="permanent_generation_full">Permanent_Generation_Full<a class="headerlink" href="#permanent_generation_full" title="Permanent link">&para;</a></h3>
+<p>Triggered as a result of an allocation failure in
+<a href="https://blogs.oracle.com/poonam/entry/about_g1_garbage_collector_permanent">PermGen</a>. Pre java 8.</p>
+<h3 id="metadata_gc_threshold">Metadata_GC_Threshold<a class="headerlink" href="#metadata_gc_threshold" title="Permanent link">&para;</a></h3>
+<p>Triggered as a result of an allocation failure in
+<a href="https://blogs.oracle.com/poonam/entry/about_g1_garbage_collector_permanent">Metaspace</a>.
+Metaspace replaced PermGen was added in java 8.</p>
+<h3 id="cms_generation_full">CMS_Generation_Full<a class="headerlink" href="#cms_generation_full" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="cms_initial_mark">CMS_Initial_Mark<a class="headerlink" href="#cms_initial_mark" title="Permanent link">&para;</a></h3>
+<p>Initial mark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="cms_final_remark">CMS_Final_Remark<a class="headerlink" href="#cms_final_remark" title="Permanent link">&para;</a></h3>
+<p>Remark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="cms_concurrent_mark">CMS_Concurrent_Mark<a class="headerlink" href="#cms_concurrent_mark" title="Permanent link">&para;</a></h3>
+<p>Concurrent mark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="old_generation_expanded_on_last_scavenge">Old_Generation_Expanded_On_Last_Scavenge<a class="headerlink" href="#old_generation_expanded_on_last_scavenge" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="old_generation_too_full_to_scavenge">Old_Generation_Too_Full_To_Scavenge<a class="headerlink" href="#old_generation_too_full_to_scavenge" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="ergonomics">Ergonomics<a class="headerlink" href="#ergonomics" title="Permanent link">&para;</a></h3>
+<p>This indicates you are using the adaptive size policy, <code>-XX:+UseAdaptiveSizePolicy</code> and is
+on by default for recent versions, with the parallel collector (<code>-XX:+UseParallelGC</code>). For
+more details see <a href="https://blogs.oracle.com/jonthecollector/entry/the_unspoken_the_why_of">The Why of GC Ergonomics</a>.</p>
+<h3 id="g1_evacuation_pause">G1_Evacuation_Pause<a class="headerlink" href="#g1_evacuation_pause" title="Permanent link">&para;</a></h3>
+<p>An evacuation pause is the most common young gen cause for G1 and indicates that it is copying
+live objects from one set of regions, young and sometimes young + old, to another set of
+regions. For more details see <a href="https://blogs.oracle.com/poonam/entry/understanding_g1_gc_logs">Understanding G1 GC Logs</a>.</p>
+<h3 id="g1_humongous_allocation">G1_Humongous_Allocation<a class="headerlink" href="#g1_humongous_allocation" title="Permanent link">&para;</a></h3>
+<p>A humongous allocation is one where the size is greater than 50% of the G1 region size. Before
+a humongous allocation the jvm checks if it should do a routine
+<a href="#g1_evacuation_pause">evacuation pause</a> without regard to the actual allocation size, but if
+triggered due to this check the cause will be listed as humongous allocation. This cause is
+also used for any collections used to free up enough space for the allocation. </p>
+<h3 id="last_ditch_collection">Last_ditch_collection<a class="headerlink" href="#last_ditch_collection" title="Permanent link">&para;</a></h3>
+<p>For perm gen (java 7 or earlier) and metaspace (java 8+) a last ditch collection will be
+triggered if an allocation fails and the memory pool cannot be expanded.</p>
+<h3 id="illegal_value_-last_gc_cause-_illegal_value">ILLEGAL_VALUE_-<em>last_gc_cause</em>-_ILLEGAL_VALUE<a class="headerlink" href="#illegal_value_-last_gc_cause-_illegal_value" title="Permanent link">&para;</a></h3>
+<p>Included for completeness, but you should never see this value.</p>
+<h3 id="unknown_gccause">unknown_GCCause<a class="headerlink" href="#unknown_gccause" title="Permanent link">&para;</a></h3>
+<p>Included for completeness, but you should never see this value.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../jvm-memory-pools/" class="btn btn-neutral float-right" title="Memory Pools">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../jvm-gc/" class="btn btn-neutral" title="Garbage Collection"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+    
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/Netflix/spectator" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../jvm-gc/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../jvm-memory-pools/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script src="../../js/theme.js"></script>
+
+</body>
+</html>

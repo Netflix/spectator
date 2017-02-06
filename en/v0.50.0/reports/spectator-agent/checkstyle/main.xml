@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/Agent.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/JmxConfig.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/JmxData.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/JmxMeasurementConfig.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/JmxMeter.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-agent/src/main/java/com/netflix/spectator/agent/MappingExpr.java">
+</file>
+</checkstyle>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AtlasConfig.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">AtlasConfig.java</span></div><h1>AtlasConfig.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.netflix.spectator.api.RegistryConfig;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
+
+/**
+ * Configuration for Atlas registry.
+ */
+public interface AtlasConfig extends RegistryConfig {
+
+  /**
+   * Returns the step size (reporting frequency) to use. The default is 1 minute.
+   */
+  default Duration step() {
+<span class="fc" id="L33">    String v = get(&quot;atlas.step&quot;);</span>
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofMinutes(1) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns true if publishing to Atlas is enabled. Default is true.
+   */
+  default boolean enabled() {
+<span class="fc" id="L41">    String v = get(&quot;atlas.enabled&quot;);</span>
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">    return (v == null) ? true : Boolean.valueOf(v);</span>
+  }
+
+  /**
+   * Returns the number of threads to use with the scheduler. The default is
+   * 2 threads.
+   */
+  default int numThreads() {
+<span class="fc" id="L50">    String v = get(&quot;atlas.numThreads&quot;);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">    return (v == null) ? 2 : Integer.parseInt(v);</span>
+  }
+
+  /**
+   * Returns the URI for the Atlas backend. The default is
+   * {@code http://localhost:7101/api/v1/publish}.
+   */
+  default String uri() {
+<span class="fc" id="L59">    String v = get(&quot;atlas.uri&quot;);</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">    return (v == null) ? &quot;http://localhost:7101/api/v1/publish&quot; : v;</span>
+  }
+
+  /**
+   * Returns true if streaming to Atlas LWC is enabled. Default is false.
+   */
+  default boolean lwcEnabled() {
+<span class="fc" id="L67">    String v = get(&quot;atlas.lwc.enabled&quot;);</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">    return (v == null) ? false : Boolean.valueOf(v);</span>
+  }
+
+  /** Returns the frequency for refreshing config settings from the LWC service. */
+  default Duration configRefreshFrequency() {
+<span class="fc" id="L73">    String v = get(&quot;atlas.configRefreshFrequency&quot;);</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofSeconds(10) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the URI for the Atlas LWC endpoint to retrieve current subscriptions.
+   * The default is {@code http://localhost:7101/lwc/api/v1/expressions/local-dev}.
+   */
+  default String configUri() {
+<span class="fc" id="L82">    String v = get(&quot;atlas.config-uri&quot;);</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">    return (v == null) ? &quot;http://localhost:7101/lwc/api/v1/expressions/local-dev&quot; : v;</span>
+  }
+
+  /**
+   * Returns the URI for the Atlas LWC endpoint to evaluate the data for a suscription.
+   * The default is {@code http://localhost:7101/lwc/api/v1/evaluate}.
+   */
+  default String evalUri() {
+<span class="fc" id="L91">    String v = get(&quot;atlas.eval-uri&quot;);</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">    return (v == null) ? &quot;http://localhost:7101/lwc/api/v1/evaluate&quot; : v;</span>
+  }
+
+  /**
+   * Returns the connection timeout for requests to the backend. The default is
+   * 1 second.
+   */
+  default Duration connectTimeout() {
+<span class="fc" id="L100">    String v = get(&quot;atlas.connectTimeout&quot;);</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofSeconds(1) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the read timeout for requests to the backend. The default is
+   * 10 seconds.
+   */
+  default Duration readTimeout() {
+<span class="fc" id="L109">    String v = get(&quot;atlas.readTimeout&quot;);</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofSeconds(10) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the number of measurements per request to use for the backend. If more
+   * measurements are found, then multiple requests will be made. The default is
+   * 10,000.
+   */
+  default int batchSize() {
+<span class="fc" id="L119">    String v = get(&quot;atlas.batchSize&quot;);</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">    return (v == null) ? 10000 : Integer.parseInt(v);</span>
+  }
+
+  /**
+   * Returns the common tags to apply to all metrics reported to Atlas.
+   * The default is an empty map.
+   */
+  default Map&lt;String, String&gt; commonTags() {
+<span class="fc" id="L128">    return Collections.emptyMap();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

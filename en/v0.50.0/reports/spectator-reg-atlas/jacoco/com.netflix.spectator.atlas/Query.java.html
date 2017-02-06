@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Query.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">Query.java</span></div><h1>Query.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Query for matching based on tags. For more information see:
+ *
+ * https://github.com/Netflix/atlas/wiki/Stack-Language#query
+ */
+interface Query {
+
+  /** Convert {@code id} to a map. */
+  static Map&lt;String, String&gt; toMap(Id id) {
+<span class="fc" id="L38">    Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">    for (Tag t : id.tags()) {</span>
+<span class="fc" id="L40">      tags.put(t.key(), t.value());</span>
+<span class="fc" id="L41">    }</span>
+<span class="fc" id="L42">    tags.put(&quot;name&quot;, id.name());</span>
+<span class="fc" id="L43">    return tags;</span>
+  }
+
+  /**
+   * Check to see if this query matches a set of tags. Common tags or changes to fix
+   * invalid characters should be performed prior to checking for a match.
+   *
+   * @param tags
+   *     Tags to use when checking for a match.
+   * @return
+   *     True if the query expression matches the tag map.
+   */
+  boolean matches(Map&lt;String, String&gt; tags);
+
+  /**
+   * Check to see if this query matches an id. Equivalent to calling {@link #matches(Map)}
+   * with the result of {@link #toMap(Id)}.
+   *
+   * @param id
+   *     Id to use when checking for a match.
+   * @return
+   *     True if the query expression matches the id.
+   */
+  default boolean matches(Id id) {
+<span class="fc" id="L67">    return matches(toMap(id));</span>
+  }
+
+  /**
+   * Extract the tags from the query that have an exact match for a given value. That
+   * is are specified using an {@link Equal} clause.
+   *
+   * @return
+   *     Tags that are exactly matched as part of the query.
+   */
+  default Map&lt;String, String&gt; exactTags() {
+<span class="fc" id="L78">    return Collections.emptyMap();</span>
+  }
+
+  /** Returns a new query: {@code this AND q}. */
+  default Query and(Query q) {
+<span class="nc" id="L83">    return new And(this, q);</span>
+  }
+
+  /** Returns a new query: {@code this OR q}. */
+  default Query or(Query q) {
+<span class="nc" id="L88">    return new Or(this, q);</span>
+  }
+
+  /** Returns an inverted version of this query. */
+  default Query not() {
+<span class="nc" id="L93">    return new Not(this);</span>
+  }
+
+  /** Query that always matches. */
+<span class="fc" id="L97">  Query TRUE = new Query() {</span>
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L99">      return true;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L103">      return &quot;:true&quot;;</span>
+    }
+  };
+
+  /** Query that never matches. */
+<span class="fc" id="L108">  Query FALSE = new Query() {</span>
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L110">      return false;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L114">      return &quot;:false&quot;;</span>
+    }
+  };
+
+  /** Query that matches if both sub-queries match. */
+  final class And implements Query {
+    private final Query q1;
+    private final Query q2;
+
+    /** Create a new instance. */
+<span class="fc" id="L124">    And(Query q1, Query q2) {</span>
+<span class="fc" id="L125">      this.q1 = Preconditions.checkNotNull(q1, &quot;q1&quot;);</span>
+<span class="fc" id="L126">      this.q2 = Preconditions.checkNotNull(q2, &quot;q2&quot;);</span>
+<span class="fc" id="L127">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc bfc" id="L130" title="All 4 branches covered.">      return q1.matches(tags) &amp;&amp; q2.matches(tags);</span>
+    }
+
+    @Override public Map&lt;String, String&gt; exactTags() {
+<span class="nc" id="L134">      Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L135">      tags.putAll(q1.exactTags());</span>
+<span class="nc" id="L136">      tags.putAll(q2.exactTags());</span>
+<span class="nc" id="L137">      return tags;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L141">      return q1 + &quot;,&quot; + q2 + &quot;,:and&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L145" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L146" title="All 4 branches covered.">      if (obj == null || !(obj instanceof And)) return false;</span>
+<span class="fc" id="L147">      And other = (And) obj;</span>
+<span class="fc bfc" id="L148" title="All 4 branches covered.">      return q1.equals(other.q1) &amp;&amp; q2.equals(other.q2);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L152">      int result = q1.hashCode();</span>
+<span class="fc" id="L153">      result = 31 * result + q2.hashCode();</span>
+<span class="fc" id="L154">      return result;</span>
+    }
+  }
+
+  /** Query that matches if either sub-queries match. */
+  final class Or implements Query {
+    private final Query q1;
+    private final Query q2;
+
+    /** Create a new instance. */
+<span class="fc" id="L164">    Or(Query q1, Query q2) {</span>
+<span class="fc" id="L165">      this.q1 = Preconditions.checkNotNull(q1, &quot;q1&quot;);</span>
+<span class="fc" id="L166">      this.q2 = Preconditions.checkNotNull(q2, &quot;q2&quot;);</span>
+<span class="fc" id="L167">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc bfc" id="L170" title="All 4 branches covered.">      return q1.matches(tags) || q2.matches(tags);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L174">      return q1 + &quot;,&quot; + q2 + &quot;,:or&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L179" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Or)) return false;</span>
+<span class="fc" id="L180">      Or other = (Or) obj;</span>
+<span class="fc bfc" id="L181" title="All 4 branches covered.">      return q1.equals(other.q1) &amp;&amp; q2.equals(other.q2);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L185">      int result = q1.hashCode();</span>
+<span class="fc" id="L186">      result = 31 * result + q2.hashCode();</span>
+<span class="fc" id="L187">      return result;</span>
+    }
+  }
+
+  /** Query that matches if the sub-query does not match. */
+  final class Not implements Query {
+    private final Query q;
+
+    /** Create a new instance. */
+<span class="fc" id="L196">    Not(Query q) {</span>
+<span class="fc" id="L197">      this.q = Preconditions.checkNotNull(q, &quot;q&quot;);</span>
+<span class="fc" id="L198">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc bfc" id="L201" title="All 2 branches covered.">      return !q.matches(tags);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L205">      return q + &quot;,:not&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L209" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L210" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Not)) return false;</span>
+<span class="fc" id="L211">      Not other = (Not) obj;</span>
+<span class="fc" id="L212">      return q.equals(other.q);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L216">      return q.hashCode();</span>
+    }
+  }
+
+  /** Query that matches if the tag map contains a specified key. */
+  final class Has implements Query {
+    private final String k;
+
+    /** Create a new instance. */
+<span class="fc" id="L225">    Has(String k) {</span>
+<span class="fc" id="L226">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L227">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L230">      return tags.containsKey(k);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L234">      return k + &quot;,:has&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L238" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L239" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Has)) return false;</span>
+<span class="fc" id="L240">      Has other = (Has) obj;</span>
+<span class="fc" id="L241">      return k.equals(other.k);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L245">      return k.hashCode();</span>
+    }
+  }
+
+  /** Query that matches if the tag map contains key {@code k} with value {@code v}. */
+  final class Equal implements Query {
+    private final String k;
+    private final String v;
+
+    /** Create a new instance. */
+<span class="fc" id="L255">    Equal(String k, String v) {</span>
+<span class="fc" id="L256">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L257">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L258">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L261">      return v.equals(tags.get(k));</span>
+    }
+
+    @Override public Map&lt;String, String&gt; exactTags() {
+<span class="fc" id="L265">      Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L266">      tags.put(k, v);</span>
+<span class="fc" id="L267">      return tags;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L271">      return k + &quot;,&quot; + v + &quot;,:eq&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L275" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L276" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Equal)) return false;</span>
+<span class="fc" id="L277">      Equal other = (Equal) obj;</span>
+<span class="fc bfc" id="L278" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; v.equals(other.v);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L282">      int result = k.hashCode();</span>
+<span class="fc" id="L283">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L284">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value in the set
+   * {@code vs}.
+   */
+  final class In implements Query {
+    private final String k;
+    private final Set&lt;String&gt; vs;
+
+    /** Create a new instance. */
+<span class="fc" id="L297">    In(String k, Set&lt;String&gt; vs) {</span>
+<span class="fc bfc" id="L298" title="All 2 branches covered.">      Preconditions.checkArg(!vs.isEmpty(), &quot;list of values for :in cannot be empty&quot;);</span>
+<span class="fc" id="L299">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L300">      this.vs = Preconditions.checkNotNull(vs, &quot;vs&quot;);</span>
+<span class="fc" id="L301">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L304">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L305" title="1 of 4 branches missed.">      return s != null &amp;&amp; vs.contains(tags.get(k));</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L309">      String values = vs.stream().collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L310">      return k + &quot;,(,&quot; + values + &quot;,),:in&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L314" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L315" title="All 4 branches covered.">      if (obj == null || !(obj instanceof In)) return false;</span>
+<span class="fc" id="L316">      In other = (In) obj;</span>
+<span class="fc bfc" id="L317" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; vs.equals(other.vs);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L321">      int result = k.hashCode();</span>
+<span class="fc" id="L322">      result = 31 * result + vs.hashCode();</span>
+<span class="fc" id="L323">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value that is lexically
+   * less than {@code v}.
+   */
+  final class LessThan implements Query {
+    private final String k;
+    private final String v;
+
+    /** Create a new instance. */
+<span class="fc" id="L336">    LessThan(String k, String v) {</span>
+<span class="fc" id="L337">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L338">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L339">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L342">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L343" title="1 of 4 branches missed.">      return s != null &amp;&amp; s.compareTo(v) &lt; 0;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L347">      return k + &quot;,&quot; + v + &quot;,:lt&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L351" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L352" title="All 4 branches covered.">      if (obj == null || !(obj instanceof LessThan)) return false;</span>
+<span class="fc" id="L353">      LessThan other = (LessThan) obj;</span>
+<span class="fc bfc" id="L354" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; v.equals(other.v);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L358">      int result = k.hashCode();</span>
+<span class="fc" id="L359">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L360">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value that is lexically
+   * less than or equal to {@code v}.
+   */
+  final class LessThanEqual implements Query {
+    private final String k;
+    private final String v;
+
+    /** Create a new instance. */
+<span class="fc" id="L373">    LessThanEqual(String k, String v) {</span>
+<span class="fc" id="L374">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L375">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L376">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L379">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L380" title="1 of 4 branches missed.">      return s != null &amp;&amp; s.compareTo(v) &lt;= 0;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L384">      return k + &quot;,&quot; + v + &quot;,:le&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L388" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L389" title="All 4 branches covered.">      if (obj == null || !(obj instanceof LessThanEqual)) return false;</span>
+<span class="fc" id="L390">      LessThanEqual other = (LessThanEqual) obj;</span>
+<span class="fc bfc" id="L391" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; v.equals(other.v);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L395">      int result = k.hashCode();</span>
+<span class="fc" id="L396">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L397">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value that is lexically
+   * greater than {@code v}.
+   */
+  final class GreaterThan implements Query {
+    private final String k;
+    private final String v;
+
+    /** Create a new instance. */
+<span class="fc" id="L410">    GreaterThan(String k, String v) {</span>
+<span class="fc" id="L411">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L412">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L413">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L416">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L417" title="1 of 4 branches missed.">      return s != null &amp;&amp; s.compareTo(v) &gt; 0;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L421">      return k + &quot;,&quot; + v + &quot;,:gt&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L425" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L426" title="All 4 branches covered.">      if (obj == null || !(obj instanceof GreaterThan)) return false;</span>
+<span class="fc" id="L427">      GreaterThan other = (GreaterThan) obj;</span>
+<span class="fc bfc" id="L428" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; v.equals(other.v);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L432">      int result = k.hashCode();</span>
+<span class="fc" id="L433">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L434">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value that is lexically
+   * greater than or equal to {@code v}.
+   */
+  final class GreaterThanEqual implements Query {
+    private final String k;
+    private final String v;
+
+    /** Create a new instance. */
+<span class="fc" id="L447">    GreaterThanEqual(String k, String v) {</span>
+<span class="fc" id="L448">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L449">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L450">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L453">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L454" title="1 of 4 branches missed.">      return s != null &amp;&amp; s.compareTo(v) &gt;= 0;</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L458">      return k + &quot;,&quot; + v + &quot;,:ge&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L462" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L463" title="All 4 branches covered.">      if (obj == null || !(obj instanceof GreaterThanEqual)) return false;</span>
+<span class="fc" id="L464">      GreaterThanEqual other = (GreaterThanEqual) obj;</span>
+<span class="fc bfc" id="L465" title="All 4 branches covered.">      return k.equals(other.k) &amp;&amp; v.equals(other.v);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L469">      int result = k.hashCode();</span>
+<span class="fc" id="L470">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L471">      return result;</span>
+    }
+  }
+
+  /**
+   * Query that matches if the tag map contains key {@code k} with a value that matches the
+   * regex in {@code v}. The expression will be automatically anchored to the start to encourage
+   * prefix matches.
+   *
+   * &lt;p&gt;&lt;b&gt;Warning:&lt;/b&gt; regular expressions are often expensive and can add a lot of overhead.
+   * Use them sparingly.&lt;/p&gt;
+   */
+  final class Regex implements Query {
+    private final String k;
+    private final String v;
+    private final Pattern pattern;
+    private final String name;
+
+    /** Create a new instance. */
+    Regex(String k, String v) {
+<span class="fc" id="L491">      this(k, v, 0, &quot;:re&quot;);</span>
+<span class="fc" id="L492">    }</span>
+
+    /** Create a new instance. */
+<span class="fc" id="L495">    Regex(String k, String v, int flags, String name) {</span>
+<span class="fc" id="L496">      this.k = Preconditions.checkNotNull(k, &quot;k&quot;);</span>
+<span class="fc" id="L497">      this.v = Preconditions.checkNotNull(v, &quot;v&quot;);</span>
+<span class="fc" id="L498">      this.pattern = Pattern.compile(&quot;^&quot; + v, flags);</span>
+<span class="fc" id="L499">      this.name = Preconditions.checkNotNull(name, &quot;name&quot;);</span>
+<span class="fc" id="L500">    }</span>
+
+    @Override public boolean matches(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L503">      String s = tags.get(k);</span>
+<span class="pc bpc" id="L504" title="1 of 4 branches missed.">      return s != null &amp;&amp; pattern.matcher(s).find();</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L508">      return k + &quot;,&quot; + v + &quot;,&quot; + name;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L512" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L513" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Regex)) return false;</span>
+<span class="fc" id="L514">      Regex other = (Regex) obj;</span>
+<span class="fc bfc" id="L515" title="All 2 branches covered.">      return k.equals(other.k)</span>
+<span class="fc bfc" id="L516" title="All 2 branches covered.">          &amp;&amp; v.equals(other.v)</span>
+<span class="pc bpc" id="L517" title="1 of 2 branches missed.">          &amp;&amp; pattern.flags() == other.pattern.flags()</span>
+<span class="fc bfc" id="L518" title="All 2 branches covered.">          &amp;&amp; name.equals(other.name);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L522">      int result = k.hashCode();</span>
+<span class="fc" id="L523">      result = 31 * result + v.hashCode();</span>
+<span class="fc" id="L524">      result = 31 * result + pattern.flags();</span>
+<span class="fc" id="L525">      result = 31 * result + name.hashCode();</span>
+<span class="fc" id="L526">      return result;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AbstractRegistry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">AbstractRegistry.java</span></div><h1>AbstractRegistry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.ref.WeakReference;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.function.Function;
+
+/**
+ * Base class to make it easier to implement a simple registry that only needs to customise the
+ * types returned for Counter, DistributionSummary, and Timer calls.
+ */
+public abstract class AbstractRegistry implements Registry {
+  /** Logger instance for the class. */
+  protected final Logger logger;
+
+  private final Clock clock;
+  private final RegistryConfig config;
+
+  private final ConcurrentHashMap&lt;Id, Meter&gt; meters;
+  private final ConcurrentHashMap&lt;Id, Meter&gt; gauges;
+
+<span class="fc" id="L44">  private final Semaphore pollSem = new Semaphore(1);</span>
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   */
+  public AbstractRegistry(Clock clock) {
+<span class="fc" id="L53">    this(clock, Config.defaultConfig());</span>
+<span class="fc" id="L54">  }</span>
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   */
+<span class="fc" id="L64">  public AbstractRegistry(Clock clock, RegistryConfig config) {</span>
+<span class="fc" id="L65">    this.logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L66">    this.clock = clock;</span>
+<span class="fc" id="L67">    this.config = config;</span>
+<span class="fc" id="L68">    this.meters = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L69">    this.gauges = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L70">    GaugePoller.schedule(</span>
+        new WeakReference&lt;&gt;(this),
+<span class="fc" id="L72">        config.gaugePollingFrequency().toMillis(),</span>
+        AbstractRegistry::pollGauges);
+<span class="fc" id="L74">  }</span>
+
+  /**
+   * Create a new counter instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New counter instance.
+   */
+  protected abstract Counter newCounter(Id id);
+
+  /**
+   * Create a new distribution summary instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New distribution summary instance.
+   */
+  protected abstract DistributionSummary newDistributionSummary(Id id);
+
+  /**
+   * Create a new timer instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New timer instance.
+   */
+  protected abstract Timer newTimer(Id id);
+
+  /**
+   * Create a new gauge instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New gauge instance.
+   */
+  protected abstract Gauge newGauge(Id id);
+
+  @Override public final Clock clock() {
+<span class="fc" id="L117">    return clock;</span>
+  }
+
+  @Override public final RegistryConfig config() {
+<span class="fc" id="L121">    return config;</span>
+  }
+
+  @Override public final Id createId(String name) {
+<span class="fc" id="L125">    return new DefaultId(name);</span>
+  }
+
+  @Override public final Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L129">    return new DefaultId(name, ArrayTagSet.create(tags));</span>
+  }
+
+  private void logTypeError(Id id, Class&lt;?&gt; desired, Class&lt;?&gt; found) {
+<span class="fc" id="L133">    final String dtype = desired.getName();</span>
+<span class="fc" id="L134">    final String ftype = found.getName();</span>
+<span class="fc" id="L135">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
+      id, dtype, ftype);
+<span class="fc" id="L137">    propagate(new IllegalStateException(msg));</span>
+<span class="fc" id="L138">  }</span>
+
+  private void addToAggr(Meter aggr, Meter meter) {
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">    if (aggr instanceof AggrMeter) {</span>
+<span class="fc" id="L142">      ((AggrMeter) aggr).add(meter);</span>
+    } else {
+<span class="nc" id="L144">      logTypeError(meter.id(), meter.getClass(), aggr.getClass());</span>
+    }
+<span class="fc" id="L146">  }</span>
+
+  private Meter compute(Meter m, Meter fallback) {
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">    return (meters.size() &gt;= config.maxNumberOfMeters()) ? fallback : m;</span>
+  }
+
+  /**
+   * This method should be used instead of the
+   * {@link ConcurrentHashMap#computeIfAbsent(Object, Function)} call to minimize
+   * thread contention. This method does not require locking for the common case
+   * where the key exists, but potentially performs additional computation when
+   * absent.
+   */
+  private Meter computeIfAbsent(ConcurrentHashMap&lt;Id, Meter&gt; map, Id id, Function&lt;Id, Meter&gt; f) {
+<span class="fc" id="L160">    Meter m = map.get(id);</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">    if (m == null) {</span>
+<span class="fc" id="L162">      Meter tmp = f.apply(id);</span>
+<span class="fc" id="L163">      m = map.putIfAbsent(id, tmp);</span>
+<span class="pc bpc" id="L164" title="1 of 2 branches missed.">      if (m == null) {</span>
+<span class="fc" id="L165">        m = tmp;</span>
+      }
+    }
+<span class="fc" id="L168">    return m;</span>
+  }
+
+  private void handleGaugeException(Id id, Throwable t) {
+<span class="nc" id="L172">    logger.warn(&quot;dropping gauge [{}], exception occurred when polling value&quot;, id, t);</span>
+<span class="nc" id="L173">    gauges.remove(id);</span>
+<span class="nc" id="L174">  }</span>
+
+  /**
+   * Lambda passed to {@link GaugePoller} to avoid having a strong reference to this
+   * registry that would prevent garbage collection.
+   */
+  private static void pollGauges(Registry r) {
+<span class="nc" id="L181">    ((AbstractRegistry) r).pollGauges();</span>
+<span class="nc" id="L182">  }</span>
+
+  /** Poll the values from all registered gauges. */
+  @SuppressWarnings(&quot;PMD&quot;)
+  void pollGauges() {
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">    if (pollSem.tryAcquire()) {</span>
+      try {
+<span class="fc bfc" id="L189" title="All 2 branches covered.">        for (Map.Entry&lt;Id, Meter&gt; e : gauges.entrySet()) {</span>
+<span class="fc" id="L190">          Id id = e.getKey();</span>
+<span class="fc" id="L191">          Meter meter = e.getValue();</span>
+          try {
+<span class="pc bpc" id="L193" title="1 of 2 branches missed.">            if (!meter.hasExpired()) {</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">              for (Measurement m : meter.measure()) {</span>
+<span class="fc" id="L195">                gauge(m.id()).set(m.value());</span>
+<span class="fc" id="L196">              }</span>
+            }
+<span class="nc" id="L198">          } catch (StackOverflowError t) {</span>
+<span class="nc" id="L199">            handleGaugeException(id, t);</span>
+<span class="nc" id="L200">          } catch (VirtualMachineError | ThreadDeath t) {</span>
+            // Avoid catching OutOfMemoryError and other serious problems in the next
+            // catch block.
+<span class="nc" id="L203">            throw t;</span>
+<span class="nc" id="L204">          } catch (Throwable t) {</span>
+            // The sampling is calling user functions and therefore we cannot
+            // make any guarantees they are well-behaved. We catch most Throwables with
+            // the exception of some VM errors and drop the gauge.
+<span class="nc" id="L208">            handleGaugeException(id, t);</span>
+<span class="pc" id="L209">          }</span>
+<span class="fc" id="L210">        }</span>
+      } finally {
+<span class="pc" id="L212">        pollSem.release();</span>
+<span class="fc" id="L213">      }</span>
+    }
+<span class="fc" id="L215">  }</span>
+
+  @Override public void register(Meter meter) {
+<span class="pc bpc" id="L218" title="1 of 2 branches missed.">    Meter aggr = (gauges.size() &gt;= config.maxNumberOfMeters())</span>
+<span class="pc" id="L219">      ? meters.get(meter.id())</span>
+<span class="fc" id="L220">      : computeIfAbsent(gauges, meter.id(), AggrMeter::new);</span>
+<span class="pc bpc" id="L221" title="1 of 2 branches missed.">    if (aggr != null) {</span>
+<span class="fc" id="L222">      addToAggr(aggr, meter);</span>
+    }
+<span class="fc" id="L224">  }</span>
+
+  @Override public final Counter counter(Id id) {
+    try {
+<span class="fc" id="L228">      Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L229">      Meter m = computeIfAbsent(meters, id, i -&gt; compute(newCounter(i), NoopCounter.INSTANCE));</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">      if (!(m instanceof Counter)) {</span>
+<span class="fc" id="L231">        logTypeError(id, Counter.class, m.getClass());</span>
+<span class="fc" id="L232">        m = NoopCounter.INSTANCE;</span>
+      }
+<span class="fc" id="L234">      return (Counter) m;</span>
+<span class="fc" id="L235">    } catch (Exception e) {</span>
+<span class="nc" id="L236">      propagate(e);</span>
+<span class="nc" id="L237">      return NoopCounter.INSTANCE;</span>
+    }
+  }
+
+  @Override public final DistributionSummary distributionSummary(Id id) {
+    try {
+<span class="fc" id="L243">      Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L244">      Meter m = computeIfAbsent(meters, id, i -&gt;</span>
+<span class="fc" id="L245">          compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">      if (!(m instanceof DistributionSummary)) {</span>
+<span class="fc" id="L247">        logTypeError(id, DistributionSummary.class, m.getClass());</span>
+<span class="fc" id="L248">        m = NoopDistributionSummary.INSTANCE;</span>
+      }
+<span class="fc" id="L250">      return (DistributionSummary) m;</span>
+<span class="fc" id="L251">    } catch (Exception e) {</span>
+<span class="nc" id="L252">      propagate(e);</span>
+<span class="nc" id="L253">      return NoopDistributionSummary.INSTANCE;</span>
+    }
+  }
+
+  @Override public final Timer timer(Id id) {
+    try {
+<span class="fc" id="L259">      Meter m = computeIfAbsent(meters, id, i -&gt; compute(newTimer(i), NoopTimer.INSTANCE));</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">      if (!(m instanceof Timer)) {</span>
+<span class="nc" id="L261">        logTypeError(id, Timer.class, m.getClass());</span>
+<span class="nc" id="L262">        m = NoopTimer.INSTANCE;</span>
+      }
+<span class="fc" id="L264">      return (Timer) m;</span>
+<span class="fc" id="L265">    } catch (Exception e) {</span>
+<span class="nc" id="L266">      propagate(e);</span>
+<span class="nc" id="L267">      return NoopTimer.INSTANCE;</span>
+    }
+  }
+
+  @Override public final Gauge gauge(Id id) {
+    try {
+<span class="fc" id="L273">      Meter m = computeIfAbsent(meters, id, i -&gt; compute(newGauge(i), NoopGauge.INSTANCE));</span>
+<span class="pc bpc" id="L274" title="1 of 2 branches missed.">      if (!(m instanceof Gauge)) {</span>
+<span class="nc" id="L275">        logTypeError(id, Gauge.class, m.getClass());</span>
+<span class="nc" id="L276">        m = NoopGauge.INSTANCE;</span>
+      }
+<span class="fc" id="L278">      return (Gauge) m;</span>
+<span class="nc" id="L279">    } catch (Exception e) {</span>
+<span class="nc" id="L280">      propagate(e);</span>
+<span class="nc" id="L281">      return NoopGauge.INSTANCE;</span>
+    }
+  }
+
+  @Override public final Meter get(Id id) {
+<span class="fc" id="L286">    return meters.get(id);</span>
+  }
+
+  @Override public final Iterator&lt;Meter&gt; iterator() {
+    // Force update of gauges before traversing values
+<span class="fc" id="L291">    pollGauges();</span>
+<span class="fc" id="L292">    return meters.values().iterator();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

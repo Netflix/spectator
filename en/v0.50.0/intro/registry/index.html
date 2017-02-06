@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Registry - Spectator Docs</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/highlight.css">
+  <link href="../../css/custom.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Registry";
+    var mkdocs_page_input_path = "intro/registry.md";
+    var mkdocs_page_url = "/intro/registry/";
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js"></script>
+  <script src="../../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../../js/highlight.pack.js"></script> 
+  
+  <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-82153845-2', 'auto');
+      ga('send', 'pageview');
+  </script>
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> Spectator Docs</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../..">Home</a>
+        
+    </li>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Getting Started</span></li>
+
+        
+            
+    <li class="toctree-l1 current">
+        <a class="current" href="./">Registry</a>
+        
+            <ul>
+            
+                <li class="toctree-l3"><a href="#registry">Registry</a></li>
+                
+                    <li><a class="toctree-l4" href="#choosing-an-implementation">Choosing an Implementation</a></li>
+                
+                    <li><a class="toctree-l4" href="#working-with-ids">Working With Ids</a></li>
+                
+                    <li><a class="toctree-l4" href="#collecting-measurements">Collecting Measurements</a></li>
+                
+                    <li><a class="toctree-l4" href="#global-registry">Global Registry</a></li>
+                
+            
+            </ul>
+        
+    </li>
+
+        
+            
+    <ul class="subnav">
+    <li><span>Meter Types</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../counter/">Counters</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../timer/">Timers</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../gauge/">Gauges</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../dist-summary/">Distribution Summaries</a>
+        
+    </li>
+
+        
+    </ul>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../clock/">Clock</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../conventions/">Naming Conventions</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../testing/">Testing</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../netflix/">Netflix Integration</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../servo-comparison/">Servo Comparison</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Extensions</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/jvm-buffer-pools/">Buffer Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/jvm-gc/">Garbage Collection</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/jvm-gc-causes/">GC Causes</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/jvm-memory-pools/">Memory Pools</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/log4j2/">Log4j2 Appender</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../ext/placeholders/">Placeholders</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <ul class="subnav">
+    <li><span>Registries</span></li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/metrics3/">Metrics3</a>
+        
+    </li>
+
+        
+            
+    <li class="toctree-l1 ">
+        <a class="" href="../../registry/servo/">Servo</a>
+        
+    </li>
+
+        
+    </ul>
+<li>
+          
+            <li>
+    <li class="toctree-l1 ">
+        <a class="" href="../../reports/">Build Reports</a>
+        
+    </li>
+<li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">Spectator Docs</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Getting Started &raquo;</li>
+        
+      
+    
+    <li>Registry</li>
+    <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/Netflix/spectator/edit/master/docs/intro/registry.md"
+          class="icon icon-github"> Edit on GitHub</a>
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="registry">Registry<a class="headerlink" href="#registry" title="Permanent link">&para;</a></h1>
+<p>There are a few basic concepts you need to learn to use Spectator.
+The <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/Registry.html">registry</a>
+is the main class for managing a set of meters. A meter is a class for collecting a set of
+measurements about your application.</p>
+<h2 id="choosing-an-implementation">Choosing an Implementation<a class="headerlink" href="#choosing-an-implementation" title="Permanent link">&para;</a></h2>
+<p>The core spectator library, <code>spectator-api</code>, comes with the following registry implementations:</p>
+<p><table>
+   <thead>
+     <th>Class</th>
+     <th>Dependency</th>
+     <th>Description</th>
+   </thead>
+   <tbody>
+     <tr>
+       <td>
+       <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/DefaultRegistry.html">DefaultRegistry</a>
+       </td>
+       <td>spectator-api</td>
+       <td>
+       Updates local counters, frequently used with <a href="../testing/">unit tests</a>.
+       </td>
+     </tr>
+     <tr>
+       <td>
+       <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/NoopRegistry.html">NoopRegistry</a>
+       </td>
+       <td>spectator-api</td>
+       <td>
+       Does nothing, tries to make operations as cheap as possible. This implementation is
+       typically used to help understand the overhead being created due to instrumentation.
+       It can also be useful in testing to help ensure that no side effects were introduced
+       where the instrumentation is now needed in order for the application for function
+       properly.
+       </td>
+     </tr>
+     <tr>
+       <td>
+       <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-reg-servo/com/netflix/spectator/servo/ServoRegistry.html">ServoRegistry</a>
+       </td>
+       <td><a href="../../registry/servo/">spectator-reg-servo</a></td>
+       <td>
+       Map to <a href="https://github.com/Netflix/servo">servo library</a>. This is the implementation
+       typically used at Netflix to report data into <a href="https://github.com/Netflix/atlas">Atlas</a>.
+       </td>
+     </tr>
+     <tr>
+       <td>
+       <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-reg-metrics3/com/netflix/spectator/metrics3/MetricsRegistry.html">MetricsRegistry</a>
+       </td>
+       <td><a href="../../registry/metrics3/">spectator-reg-metrics3</a></td>
+       <td>
+       Map to <a href="http://metrics.dropwizard.io/3.1.0/">metrics3 library</a>. This implementation
+       is typically used for reporting to local files, JMX, or other backends like Graphite.
+       Note that it uses a hierarchical naming scheme rather than the dimensional naming
+       used by Spectator, so the names will get flattened when mapped to this registry.
+       </td>
+     </tr>
+   </tbody>
+ </table></p>
+<p>It is recommended for libraries to write code against the
+<a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/Registry.html">Registry</a>
+interface and allow the implementation to get injected by the user of the library. The
+simplest way is to accept the registry via the constructor, for example:</p>
+<pre><code class="java">public class HttpServer {
+  public HttpServer(Registry registry) {
+    // use registry to collect measurements
+  }
+}
+</code></pre>
+
+<p>The user of the class can then provide the implementation:</p>
+<pre><code class="java">Registry registry = new DefaultRegistry();
+HttpServer server = new HttpServer(registry);
+</code></pre>
+
+<p>More complete examples can be found on the <a href="../testing/">testing page</a> or in the
+<a href="https://github.com/brharrington/spectator-examples">spectator-examples repo</a>.</p>
+<h2 id="working-with-ids">Working With Ids<a class="headerlink" href="#working-with-ids" title="Permanent link">&para;</a></h2>
+<p>Spectator is primarily intended for collecting data for dimensional time series
+backends like <a href="https://github.com/Netflix/atlas">Atlas</a>. The ids used for looking
+up a meter in the registry consist of a name and set of tags. Ids will be consumed
+many times by users after the data has been reported so they should be chosen with
+some care and thought about how they will get used. See the <a href="../conventions/">conventions page</a>
+for some general guidelines.</p>
+<p>Ids are created via the registry, for example:</p>
+<pre><code class="java">Id id = registry.createId(&quot;server.requestCount&quot;);
+</code></pre>
+
+<p>The ids are immutable so they can be freely passed around and used in a concurrent
+context. Tags can be added when an id is created:</p>
+<pre><code class="java">Id id = registry.createId(&quot;server.requestCount&quot;, &quot;status&quot;, &quot;2xx&quot;, &quot;method&quot;, &quot;GET&quot;);
+</code></pre>
+
+<p>Or by using <code>withTag</code> and <code>withTags</code> on an existing id:</p>
+<pre><code class="java">public class HttpServer {
+  private final Id baseId;
+
+  public HttpServer(Registry registry) {
+    baseId = registry.createId(&quot;server.requestCount&quot;);
+  }
+
+  private void handleRequestComplete(HttpRequest req, HttpResponse res) {
+    // Remember Id is immutable, withTags will return a copy with the
+    // the additional metadata
+    Id reqId = baseId.withTags(
+      &quot;status&quot;, res.getStatus(),
+      &quot;method&quot;, req.getMethod().name());
+    registry.counter(reqId).increment();
+  }
+
+  private void handleRequestError(HttpRequest req, Throwable t) {
+    // Can also be added individually using `withTag`. However, it is better
+    // for performance to batch modifications using `withTags`.
+    Id reqId = baseId
+      .withTag(&quot;error&quot;,  t.getClass().getSimpleName())
+      .withTag(&quot;method&quot;, req.getMethod().name());
+    registry.counter(reqId).increment();
+  }
+}
+</code></pre>
+
+<h2 id="collecting-measurements">Collecting Measurements<a class="headerlink" href="#collecting-measurements" title="Permanent link">&para;</a></h2>
+<p>Once you have an id, the registry can be used to get an instance of a meter to
+record a measurement. Meters can roughly be categorized in two groups:</p>
+<h3 id="active">Active<a class="headerlink" href="#active" title="Permanent link">&para;</a></h3>
+<p>Active meters are ones that are called directly when some event occurs. There are
+three basic types supported:</p>
+<ul>
+<li><a href="../counter/">Counters</a>: measures how often something is occuring. This will be
+  reported to backend systems as a rate per second. For example, number of requests
+  processed by web server.</li>
+<li><a href="../timer/">Timers</a>: measures how long something took. For example, latency of
+  requests processed by a web server.</li>
+<li><a href="../dist-summary/">Distribution Summaries</a>: measures the size of something. For
+  example, entity sizes for requests processed by a web server.</li>
+</ul>
+<h3 id="passive">Passive<a class="headerlink" href="#passive" title="Permanent link">&para;</a></h3>
+<p>Passive meters are ones where the registry just has a reference to get the value
+when needed. For example, the number of current connections on a web server or
+the number threads that are currently in use. These will be <a href="../gauge/">gauges</a>.</p>
+<h2 id="global-registry">Global Registry<a class="headerlink" href="#global-registry" title="Permanent link">&para;</a></h2>
+<p>There are some use-cases where injecting the registry is not possible or is too
+cumbersome. The main example from the core spectator libraries is the
+<a href="../../ext/log4j2/">log4j appender</a>. The global registry is useful there because
+logging is often initialized before any other systems and Spectator itself uses
+logging via the slf4j api which is quite likely being bound to log4j when that
+the appender is being used. By using the global registry the logging initialization
+can proceed before the spectator initialization in the application. Though any
+measurements taken before a registry instance has been added will be lost.</p>
+<p>The global registry is accessed using:</p>
+<pre><code class="java">Registry registry = Spectator.globalRegistry();
+</code></pre>
+
+<p>By default it will not record anything. For a specific registry instance you can
+choose to configure it to work with the global registry by calling <code>add</code>:</p>
+<pre><code class="java">public void init() {
+  Registry registry = // Choose an appropriate implementation
+
+  // Add it to the global registry so it will receive
+  // any activity on the global registry
+  Spectator.globalRegistry().add(registry);
+}
+</code></pre>
+
+<p>Any measurements taken while no registries are added to the global instance will
+be lost. If multiple registries are added, all will recieve updates made to the global
+registry.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../counter/" class="btn btn-neutral float-right" title="Counters">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../.." class="btn btn-neutral" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+	  
+        </div>
+      </div>
+
+    </section>
+    
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+          <a href="https://github.com/Netflix/spectator" class="icon icon-github" style="float: left; color: #fcfcfc"> GitHub</a>
+      
+      
+        <span><a href="../.." style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../counter/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script src="../../js/theme.js"></script>
+
+</body>
+</html>

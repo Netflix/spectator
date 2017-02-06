@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>BucketFunctions.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.histogram</a> &gt; <span class="el_source">BucketFunctions.java</span></div><h1>BucketFunctions.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.histogram;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.LongFunction;
+import java.util.function.LongUnaryOperator;
+
+/**
+ * Helpers for creating bucketing functions.
+ */
+public final class BucketFunctions {
+
+  /**
+   * Predefined time formatters used to create the bucket labels.
+   */
+<span class="fc" id="L32">  static final List&lt;ValueFormatter&gt; TIME_FORMATTERS = new ArrayList&lt;&gt;();</span>
+
+  /**
+   * Predefined binary formatters used to create bucket labels. For more information see
+   * &lt;a href=&quot;https://en.wikipedia.org/wiki/Binary_prefix&quot;&gt;binary prefixes wiki&lt;/a&gt;.
+   */
+<span class="fc" id="L38">  static final List&lt;ValueFormatter&gt; BINARY_FORMATTERS = new ArrayList&lt;&gt;();</span>
+
+  /**
+   * Predefined decimal formatters used to created bucket labels. For more informations see
+   * &lt;a href=&quot;https://en.wikipedia.org/wiki/Metric_prefix&quot;&gt;metric prefixes wiki&lt;/a&gt;.
+   */
+<span class="fc" id="L44">  static final List&lt;ValueFormatter&gt; DECIMAL_FORMATTERS = new ArrayList&lt;&gt;();</span>
+
+  static {
+<span class="fc" id="L47">    TIME_FORMATTERS.add(fmt(TimeUnit.NANOSECONDS.toNanos(10),     1, &quot;ns&quot;,  TimeUnit.NANOSECONDS));</span>
+<span class="fc" id="L48">    TIME_FORMATTERS.add(fmt(TimeUnit.NANOSECONDS.toNanos(100),    2, &quot;ns&quot;,  TimeUnit.NANOSECONDS));</span>
+<span class="fc" id="L49">    TIME_FORMATTERS.add(fmt(TimeUnit.MICROSECONDS.toNanos(1),     3, &quot;ns&quot;,  TimeUnit.NANOSECONDS));</span>
+<span class="fc" id="L50">    TIME_FORMATTERS.add(fmt(TimeUnit.MICROSECONDS.toNanos(8),     4, &quot;ns&quot;,  TimeUnit.NANOSECONDS));</span>
+<span class="fc" id="L51">    TIME_FORMATTERS.add(fmt(TimeUnit.MICROSECONDS.toNanos(10),    1, &quot;us&quot;,  TimeUnit.MICROSECONDS));</span>
+<span class="fc" id="L52">    TIME_FORMATTERS.add(fmt(TimeUnit.MICROSECONDS.toNanos(100),   2, &quot;us&quot;,  TimeUnit.MICROSECONDS));</span>
+<span class="fc" id="L53">    TIME_FORMATTERS.add(fmt(TimeUnit.MILLISECONDS.toNanos(1),     3, &quot;us&quot;,  TimeUnit.MICROSECONDS));</span>
+<span class="fc" id="L54">    TIME_FORMATTERS.add(fmt(TimeUnit.MILLISECONDS.toNanos(8),     4, &quot;us&quot;,  TimeUnit.MICROSECONDS));</span>
+<span class="fc" id="L55">    TIME_FORMATTERS.add(fmt(TimeUnit.MILLISECONDS.toNanos(10),    1, &quot;ms&quot;,  TimeUnit.MILLISECONDS));</span>
+<span class="fc" id="L56">    TIME_FORMATTERS.add(fmt(TimeUnit.MILLISECONDS.toNanos(100),   2, &quot;ms&quot;,  TimeUnit.MILLISECONDS));</span>
+<span class="fc" id="L57">    TIME_FORMATTERS.add(fmt(TimeUnit.SECONDS.toNanos(1),          3, &quot;ms&quot;,  TimeUnit.MILLISECONDS));</span>
+<span class="fc" id="L58">    TIME_FORMATTERS.add(fmt(TimeUnit.SECONDS.toNanos(8),          4, &quot;ms&quot;,  TimeUnit.MILLISECONDS));</span>
+<span class="fc" id="L59">    TIME_FORMATTERS.add(fmt(TimeUnit.SECONDS.toNanos(10),         1, &quot;s&quot;,   TimeUnit.SECONDS));</span>
+<span class="fc" id="L60">    TIME_FORMATTERS.add(fmt(TimeUnit.SECONDS.toNanos(100),        2, &quot;s&quot;,   TimeUnit.SECONDS));</span>
+<span class="fc" id="L61">    TIME_FORMATTERS.add(fmt(TimeUnit.MINUTES.toNanos(8),          3, &quot;s&quot;,   TimeUnit.SECONDS));</span>
+<span class="fc" id="L62">    TIME_FORMATTERS.add(fmt(TimeUnit.MINUTES.toNanos(10),         1, &quot;min&quot;, TimeUnit.MINUTES));</span>
+<span class="fc" id="L63">    TIME_FORMATTERS.add(fmt(TimeUnit.MINUTES.toNanos(100),        2, &quot;min&quot;, TimeUnit.MINUTES));</span>
+<span class="fc" id="L64">    TIME_FORMATTERS.add(fmt(TimeUnit.HOURS.toNanos(8),            3, &quot;min&quot;, TimeUnit.MINUTES));</span>
+<span class="fc" id="L65">    TIME_FORMATTERS.add(fmt(TimeUnit.HOURS.toNanos(10),           1, &quot;h&quot;,   TimeUnit.HOURS));</span>
+<span class="fc" id="L66">    TIME_FORMATTERS.add(fmt(TimeUnit.HOURS.toNanos(100),          2, &quot;h&quot;,   TimeUnit.HOURS));</span>
+<span class="fc" id="L67">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(8),             1, &quot;h&quot;,   TimeUnit.HOURS));</span>
+<span class="fc" id="L68">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(10),            1, &quot;d&quot;,   TimeUnit.DAYS));</span>
+<span class="fc" id="L69">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(100),           2, &quot;d&quot;,   TimeUnit.DAYS));</span>
+<span class="fc" id="L70">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(1000),          3, &quot;d&quot;,   TimeUnit.DAYS));</span>
+<span class="fc" id="L71">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(10000),         4, &quot;d&quot;,   TimeUnit.DAYS));</span>
+<span class="fc" id="L72">    TIME_FORMATTERS.add(fmt(TimeUnit.DAYS.toNanos(100000),        5, &quot;d&quot;,   TimeUnit.DAYS));</span>
+<span class="fc" id="L73">    TIME_FORMATTERS.add(fmt(Long.MAX_VALUE,                       6, &quot;d&quot;,   TimeUnit.DAYS));</span>
+    // TimeUnit.NANOSECONDS.toDays(java.lang.Long.MAX_VALUE) == 106751
+
+<span class="fc" id="L76">    final String[] binaryUnits = {&quot;B&quot;, &quot;KiB&quot;, &quot;MiB&quot;, &quot;GiB&quot;, &quot;TiB&quot;, &quot;PiB&quot;};</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">    for (int i = 0; i &lt; binaryUnits.length; ++i) {</span>
+<span class="fc" id="L78">      BINARY_FORMATTERS.add(bin(10,    i, 1, &quot;_&quot; + binaryUnits[i]));</span>
+<span class="fc" id="L79">      BINARY_FORMATTERS.add(bin(100,   i, 2, &quot;_&quot; + binaryUnits[i]));</span>
+<span class="fc" id="L80">      BINARY_FORMATTERS.add(bin(1000,  i, 3, &quot;_&quot; + binaryUnits[i]));</span>
+<span class="fc" id="L81">      BINARY_FORMATTERS.add(bin(10000, i, 4, &quot;_&quot; + binaryUnits[i]));</span>
+    }
+<span class="fc" id="L83">    BINARY_FORMATTERS.add(new ValueFormatter(Long.MAX_VALUE, 4, &quot;_PiB&quot;, v -&gt; v &gt;&gt; 50));</span>
+
+<span class="fc" id="L85">    final String[] decimalUnits = {&quot;&quot;, &quot;_k&quot;, &quot;_M&quot;, &quot;_G&quot;, &quot;_T&quot;, &quot;_P&quot;};</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">    for (int i = 0; i &lt; decimalUnits.length; ++i) {</span>
+<span class="fc" id="L87">      final int pow = i * 3;</span>
+<span class="fc" id="L88">      DECIMAL_FORMATTERS.add(dec(10,   pow, 1, decimalUnits[i]));</span>
+<span class="fc" id="L89">      DECIMAL_FORMATTERS.add(dec(100,  pow, 2, decimalUnits[i]));</span>
+<span class="fc" id="L90">      DECIMAL_FORMATTERS.add(dec(1000, pow, 3, decimalUnits[i]));</span>
+    }
+<span class="fc" id="L92">    DECIMAL_FORMATTERS.add(new ValueFormatter(Long.MAX_VALUE, 1, &quot;_E&quot;, v -&gt; v / pow10(1, 18)));</span>
+<span class="fc" id="L93">  }</span>
+
+  private static ValueFormatter fmt(long max, int width, String suffix, TimeUnit unit) {
+<span class="fc" id="L96">    return new ValueFormatter(max, width, suffix, v -&gt; unit.convert(v, TimeUnit.NANOSECONDS));</span>
+  }
+
+  private static ValueFormatter bin(long max, int pow, int width, String suffix) {
+<span class="fc" id="L100">    final int shift = pow * 10;</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">    final long maxBytes = (shift == 0) ? max : max &lt;&lt; shift;</span>
+<span class="fc" id="L102">    return new ValueFormatter(maxBytes, width, suffix, v -&gt; v &gt;&gt; shift);</span>
+  }
+
+  private static ValueFormatter dec(long max, int pow, int width, String suffix) {
+<span class="fc" id="L106">    final long factor = pow10(1, pow);</span>
+<span class="fc" id="L107">    final long maxBytes = max * factor;</span>
+<span class="fc" id="L108">    return new ValueFormatter(maxBytes, width, suffix, v -&gt; v / factor);</span>
+  }
+
+  private static long pow10(long a, int b) {
+<span class="fc" id="L112">    long r = a;</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">    for (int i = 0; i &lt; b; ++i) {</span>
+<span class="fc" id="L114">      r *= 10;</span>
+    }
+<span class="fc" id="L116">    return r;</span>
+  }
+
+<span class="nc" id="L119">  private BucketFunctions() {</span>
+<span class="nc" id="L120">  }</span>
+
+  private static ValueFormatter getFormatter(List&lt;ValueFormatter&gt; fmts, long max) {
+<span class="fc bfc" id="L123" title="All 2 branches covered.">    for (ValueFormatter f : fmts) {</span>
+<span class="fc bfc" id="L124" title="All 2 branches covered.">      if (max &lt; f.max) {</span>
+<span class="fc" id="L125">        return f;</span>
+      }
+<span class="fc" id="L127">    }</span>
+<span class="fc" id="L128">    return fmts.get(fmts.size() - 1);</span>
+  }
+
+  private static LongFunction&lt;String&gt; biasZero(
+      String ltZero, String gtMax, long max, ValueFormatter f) {
+<span class="fc" id="L133">    List&lt;Bucket&gt; buckets = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L134">    buckets.add(new Bucket(ltZero, -1L));</span>
+<span class="fc" id="L135">    buckets.add(f.newBucket(max / 8));</span>
+<span class="fc" id="L136">    buckets.add(f.newBucket(max / 4));</span>
+<span class="fc" id="L137">    buckets.add(f.newBucket(max / 2));</span>
+<span class="fc" id="L138">    buckets.add(f.newBucket(max));</span>
+<span class="fc" id="L139">    return new ListBucketFunction(buckets, gtMax);</span>
+  }
+
+  private static LongFunction&lt;String&gt; timeBiasZero(
+      String ltZero, String gtMax, long max, TimeUnit unit) {
+<span class="fc" id="L144">    final long v = unit.toNanos(max);</span>
+<span class="fc" id="L145">    final ValueFormatter f = getFormatter(TIME_FORMATTERS, v);</span>
+<span class="fc" id="L146">    return biasZero(ltZero, gtMax, v, f);</span>
+  }
+
+  private static LongFunction&lt;String&gt; biasMax(
+      String ltZero, String gtMax, long max, ValueFormatter f) {
+<span class="fc" id="L151">    List&lt;Bucket&gt; buckets = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L152">    buckets.add(new Bucket(ltZero, -1L));</span>
+<span class="fc" id="L153">    buckets.add(f.newBucket(max - max / 2));</span>
+<span class="fc" id="L154">    buckets.add(f.newBucket(max - max / 4));</span>
+<span class="fc" id="L155">    buckets.add(f.newBucket(max - max / 8));</span>
+<span class="fc" id="L156">    buckets.add(f.newBucket(max));</span>
+<span class="fc" id="L157">    return new ListBucketFunction(buckets, gtMax);</span>
+  }
+
+  private static LongFunction&lt;String&gt; timeBiasMax(
+      String ltZero, String gtMax, long max, TimeUnit unit) {
+<span class="fc" id="L162">    final long v = unit.toNanos(max);</span>
+<span class="fc" id="L163">    final ValueFormatter f = getFormatter(TIME_FORMATTERS, v);</span>
+<span class="fc" id="L164">    return biasMax(ltZero, gtMax, v, f);</span>
+  }
+
+  /**
+   * Returns a function that maps age values to a set of buckets. Example use-case would be
+   * tracking the age of data flowing through a processing pipeline. Values that are less than
+   * 0 will be marked as &quot;future&quot;. These typically occur due to minor variations in the clocks
+   * across nodes. In addition to a bucket at the max, it will create buckets at max / 2, max / 4,
+   * and max / 8.
+   *
+   * @param max
+   *     Maximum expected age of data flowing through. Values greater than this max will be mapped
+   *     to an &quot;old&quot; bucket.
+   * @param unit
+   *     Unit for the max value.
+   * @return
+   *     Function mapping age values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; age(long max, TimeUnit unit) {
+<span class="fc" id="L184">    return timeBiasZero(&quot;future&quot;, &quot;old&quot;, max, unit);</span>
+  }
+
+  /**
+   * Returns a function that maps latencies to a set of buckets. Example use-case would be
+   * tracking the amount of time to process a request on a server. Values that are less than
+   * 0 will be marked as &quot;negative_latency&quot;. These typically occur due to minor variations in the
+   * clocks, e.g., using {@link System#currentTimeMillis()} to measure the latency and having a
+   * time adjustment between the start and end. In addition to a bucket at the max, it will create
+   * buckets at max / 2, max / 4, and max / 8.
+   *
+   * @param max
+   *     Maximum expected age of data flowing through. Values greater than this max will be mapped
+   *     to an &quot;old&quot; bucket.
+   * @param unit
+   *     Unit for the max value.
+   * @return
+   *     Function mapping age values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; latency(long max, TimeUnit unit) {
+<span class="fc" id="L205">    return timeBiasZero(&quot;negative_latency&quot;, &quot;slow&quot;, max, unit);</span>
+  }
+
+  /**
+   * Returns a function that maps age values to a set of buckets. Example use-case would be
+   * tracking the age of data flowing through a processing pipeline. Values that are less than
+   * 0 will be marked as &quot;future&quot;. These typically occur due to minor variations in the clocks
+   * across nodes. In addition to a bucket at the max, it will create buckets at max - max / 8,
+   * max - max / 4, and max - max / 2.
+   *
+   * @param max
+   *     Maximum expected age of data flowing through. Values greater than this max will be mapped
+   *     to an &quot;old&quot; bucket.
+   * @param unit
+   *     Unit for the max value.
+   * @return
+   *     Function mapping age values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; ageBiasOld(long max, TimeUnit unit) {
+<span class="fc" id="L225">    return timeBiasMax(&quot;future&quot;, &quot;old&quot;, max, unit);</span>
+  }
+
+  /**
+   * Returns a function that maps latencies to a set of buckets. Example use-case would be
+   * tracking the amount of time to process a request on a server. Values that are less than
+   * 0 will be marked as &quot;negative_latency&quot;. These typically occur due to minor variations in the
+   * clocks, e.g., using {@link System#currentTimeMillis()} to measure the latency and having a
+   * time adjustment between the start and end. In addition to a bucket at the max, it will create
+   * buckets at max - max / 8, max - max / 4, and max - max / 2.
+   *
+   * @param max
+   *     Maximum expected age of data flowing through. Values greater than this max will be mapped
+   *     to an &quot;old&quot; bucket.
+   * @param unit
+   *     Unit for the max value.
+   * @return
+   *     Function mapping age values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; latencyBiasSlow(long max, TimeUnit unit) {
+<span class="fc" id="L246">    return timeBiasMax(&quot;negative_latency&quot;, &quot;slow&quot;, max, unit);</span>
+  }
+
+  /**
+   * Returns a function that maps size values in bytes to a set of buckets. The buckets will
+   * use &lt;a href=&quot;https://en.wikipedia.org/wiki/Binary_prefix&quot;&gt;binary prefixes&lt;/a&gt; representing
+   * powers of 1024. If you want powers of 1000, then see {@link #decimal(long)}.
+   *
+   * @param max
+   *     Maximum expected size of data being recorded. Values greater than this amount will be
+   *     mapped to a &quot;large&quot; bucket.
+   * @return
+   *     Function mapping size values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; bytes(long max) {
+<span class="fc" id="L262">    ValueFormatter f = getFormatter(BINARY_FORMATTERS, max);</span>
+<span class="fc" id="L263">    return biasZero(&quot;negative&quot;, &quot;large&quot;, max, f);</span>
+  }
+
+  /**
+   * Returns a function that maps size values to a set of buckets. The buckets will
+   * use &lt;a href=&quot;https://en.wikipedia.org/wiki/Metric_prefix&quot;&gt;decimal prefixes&lt;/a&gt; representing
+   * powers of 1000. If you are measuring quantities in bytes and want powers of 1024, then see
+   * {@link #bytes(long)}.
+   *
+   * @param max
+   *     Maximum expected size of data being recorded. Values greater than this amount will be
+   *     mapped to a &quot;large&quot; bucket.
+   * @return
+   *     Function mapping size values to string labels. The labels for buckets will sort
+   *     so they can be used with a simple group by.
+   */
+  public static LongFunction&lt;String&gt; decimal(long max) {
+<span class="fc" id="L280">    ValueFormatter f = getFormatter(DECIMAL_FORMATTERS, max);</span>
+<span class="fc" id="L281">    return biasZero(&quot;negative&quot;, &quot;large&quot;, max, f);</span>
+  }
+
+  /**
+   * Format a value as a bucket label.
+   */
+  static class ValueFormatter {
+    private final long max;
+    private final String fmt;
+    private final LongUnaryOperator cnv;
+
+    /**
+     * Create a new instance.
+     *
+     * @param max
+     *     Maximum value intended to be passed into the apply method. Max value is in nanoseconds.
+     * @param width
+     *     Number of digits to use for the numeric part of the label.
+     * @param suffix
+     *     Unit suffix appended to the label.
+     * @param cnv
+     *     Value conversion function. Converts the input value to the right units for the label.
+     */
+<span class="fc" id="L304">    ValueFormatter(long max, int width, String suffix, LongUnaryOperator cnv) {</span>
+<span class="fc" id="L305">      this.max = max;</span>
+<span class="fc" id="L306">      this.fmt = &quot;%0&quot; + width + &quot;d&quot; + suffix;</span>
+<span class="fc" id="L307">      this.cnv = cnv;</span>
+<span class="fc" id="L308">    }</span>
+
+    /** Return the max value intended for this formatter. */
+    long max() {
+<span class="fc" id="L312">      return max;</span>
+    }
+
+    /** Apply conversion function to value. */
+    long convert(long v) {
+<span class="nc" id="L317">      return cnv.applyAsLong(v);</span>
+    }
+
+    /** Convert the value {@code v} into a bucket label string. */
+    String apply(long v) {
+<span class="fc" id="L322">      return String.format(fmt, cnv.applyAsLong(v));</span>
+    }
+
+    /** Return a new bucket for the specified value. */
+    Bucket newBucket(long v) {
+<span class="fc" id="L327">      return new Bucket(apply(v), v);</span>
+    }
+  }
+
+  private static class ListBucketFunction implements LongFunction&lt;String&gt; {
+    private final List&lt;Bucket&gt; buckets;
+    private final String fallback;
+
+<span class="fc" id="L335">    ListBucketFunction(List&lt;Bucket&gt; buckets, String fallback) {</span>
+<span class="fc" id="L336">      this.buckets = buckets;</span>
+<span class="fc" id="L337">      this.fallback = fallback;</span>
+<span class="fc" id="L338">    }</span>
+
+    @Override public String apply(long amount) {
+<span class="fc bfc" id="L341" title="All 2 branches covered.">      for (Bucket b : buckets) {</span>
+<span class="fc bfc" id="L342" title="All 2 branches covered.">        if (amount &lt;= b.upperBoundary) {</span>
+<span class="fc" id="L343">          return b.name;</span>
+        }
+<span class="fc" id="L345">      }</span>
+<span class="fc" id="L346">      return fallback;</span>
+    }
+  }
+
+  private static class Bucket {
+    private final String name;
+    private final long upperBoundary;
+
+<span class="fc" id="L354">    Bucket(String name, long upperBoundary) {</span>
+<span class="fc" id="L355">      this.name = name;</span>
+<span class="fc" id="L356">      this.upperBoundary = upperBoundary;</span>
+<span class="fc" id="L357">    }</span>
+
+    @Override public String toString() {
+<span class="nc" id="L360">      return String.format(&quot;Bucket(%s,%d)&quot;, name, upperBoundary);</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
