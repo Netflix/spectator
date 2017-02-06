@@ -24,6 +24,5 @@ Injector injector = Guice.createInjector(new AbstractModule() {
   });
 ```
 
-For more information see the [servo example](https://github.com/brharrington/spectator-examples/tree/master/servo).
-Note if running internally at Netflix see the [[Netflix Integration]] docs
-instead.
+For more information see the [servo example](https://github.com/brharrington/spectator-examples/tree/master/servo). Note if running internally at Netflix see the
+[Netflix Integration](../intro/netflix.md) docs instead.
