@@ -137,9 +137,8 @@ public class HttpLogEntry {
       dimensions = dimensions.withTag("client", entry.clientName);
     }
 
-    if (marker == SERVER && entry.requestUri != null) {
-      String path = entry.requestUri.getPath();
-      dimensions = dimensions.withTag("endpoint", longestPrefixMatch(path, "other"));
+    if (marker == SERVER && entry.path != null) {
+      dimensions = dimensions.withTag("endpoint", longestPrefixMatch(entry.path, "other"));
     }
 
     // Update stats for the final attempt after retries are exhausted
@@ -183,8 +182,9 @@ public class HttpLogEntry {
 
   private String requestId = newId();
 
-  private URI originalUri = null;
-  private URI requestUri = null;
+  private String originalUri = null;
+  private String requestUri = null;
+  private String path = null;
   private String method = null;
   private List<Header> requestHeaders = new ArrayList<>();
   private long requestContentLength = -1;
@@ -238,15 +238,30 @@ public class HttpLogEntry {
    * be some alias indicating the group of hosts. The request uri would indicate a specific host
    * used for an actual network request.
    */
-  public HttpLogEntry withOriginalUri(URI uri) {
+  public HttpLogEntry withOriginalUri(String uri) {
     this.originalUri = uri;
+    return this;
+  }
+
+  /**
+   * Set the original uri. In the case of approaches with client-side load balancing this will
+   * be some alias indicating the group of hosts. The request uri would indicate a specific host
+   * used for an actual network request.
+   */
+  public HttpLogEntry withOriginalUri(URI uri) {
+    return withOriginalUri(uri.toString());
+  }
+
+  /** Set the URI for the actual http request. */
+  public HttpLogEntry withRequestUri(String uri, String path) {
+    this.requestUri = uri;
+    this.path = path;
     return this;
   }
 
   /** Set the URI for the actual http request. */
   public HttpLogEntry withRequestUri(URI uri) {
-    this.requestUri = uri;
-    return this;
+    return withRequestUri(uri.toString(), uri.getPath());
   }
 
   /** Set the method for the request. */
