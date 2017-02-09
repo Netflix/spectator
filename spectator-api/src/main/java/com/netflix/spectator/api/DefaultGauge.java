@@ -19,7 +19,7 @@ import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
 
-/** Counter implementation for the default registry. */
+/** Gauge implementation for the default registry. */
 class DefaultGauge implements Gauge {
 
   private final Clock clock;
