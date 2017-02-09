@@ -28,10 +28,11 @@ pages:
   - Metrics3: registry/metrics3.md
   - Servo: registry/servo.md
 - 'Build Reports': reports.md
-theme: readthedocs
+theme: material
 extra_css:
 - css/custom.css
 markdown_extensions:
 - admonition
+- codehilite
 - toc:
     permalink: True
