@@ -1,5 +1,5 @@
 /**
- * Copyright 2015 Netflix, Inc.
+ * Copyright 2015-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,10 @@ public enum Statistic implements Tag {
   activeTasks,
 
   /** Duration of a running task. */
-  duration;
+  duration,
+
+  /** Amount of time since last recorded activity for an interval counter. */
+  interval;
 
   @Override public String key() {
     return "statistic";
