@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AtlasCounter.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">AtlasCounter.java</span></div><h1>AtlasCounter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.StepLong;
+
+import java.util.Collections;
+
+/**
+ * Counter that reports a rate per second to Atlas. Note that {@link #count()} will
+ * report the number events in the last complete interval rather than the total for
+ * the life of the process.
+ */
+class AtlasCounter implements Counter {
+
+  private final Id id;
+  private final StepLong value;
+  private final Id stat;
+
+  /** Create a new instance. */
+<span class="fc" id="L38">  AtlasCounter(Id id, Clock clock, long step) {</span>
+<span class="fc" id="L39">    this.id = id;</span>
+<span class="fc" id="L40">    this.value = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L41">    this.stat = id.withTag(DsType.rate);</span>
+<span class="fc" id="L42">  }</span>
+
+  @Override public Id id() {
+<span class="fc" id="L45">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L49">    return false;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L53">    final double rate = value.pollAsRate();</span>
+<span class="fc" id="L54">    final Measurement m = new Measurement(stat, value.timestamp(), rate);</span>
+<span class="fc" id="L55">    return Collections.singletonList(m);</span>
+  }
+
+  @Override public void increment() {
+<span class="fc" id="L59">    value.getCurrent().incrementAndGet();</span>
+<span class="fc" id="L60">  }</span>
+
+  @Override public void increment(long amount) {
+<span class="fc" id="L63">    value.getCurrent().addAndGet(amount);</span>
+<span class="fc" id="L64">  }</span>
+
+  @Override public long count() {
+<span class="fc" id="L67">    return value.poll();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

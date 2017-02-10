@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>ExtendedRegistry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">ExtendedRegistry.java</span></div><h1>ExtendedRegistry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentMap;
+
+/**
+ * Wraps a registry and provides additional helper methods to make it easier to use.
+ *
+ * @deprecated This class was used prior to java 8 for adding extension methods to the registry
+ * without breaking all classes implementing the interface. The extension methods have now been
+ * moved to Registry interface as default methods.
+ */
+@Deprecated
+public final class ExtendedRegistry implements Registry {
+
+  private final Registry impl;
+
+  /** Create a new instance. */
+<span class="fc" id="L36">  public ExtendedRegistry(Registry impl) {</span>
+<span class="fc" id="L37">    this.impl = Preconditions.checkNotNull(impl, &quot;impl&quot;);</span>
+<span class="fc" id="L38">  }</span>
+
+  /** Returns the underlying registry implementation that is being wrapped. */
+  public Registry underlying() {
+<span class="nc" id="L42">    return impl;</span>
+  }
+
+  @Override public Clock clock() {
+<span class="nc" id="L46">    return impl.clock();</span>
+  }
+
+  @Override public Id createId(String name) {
+<span class="nc" id="L50">    return impl.createId(name);</span>
+  }
+
+  @Override public Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="nc" id="L54">    return impl.createId(name, tags);</span>
+  }
+
+  @Override public void register(Meter meter) {
+<span class="nc" id="L58">    impl.register(meter);</span>
+<span class="nc" id="L59">  }</span>
+
+  @Override public ConcurrentMap&lt;Id, Object&gt; state() {
+<span class="nc" id="L62">    return impl.state();</span>
+  }
+
+  @Override public Counter counter(Id id) {
+<span class="nc" id="L66">    return impl.counter(id);</span>
+  }
+
+  @Override public DistributionSummary distributionSummary(Id id) {
+<span class="nc" id="L70">    return impl.distributionSummary(id);</span>
+  }
+
+  @Override public Timer timer(Id id) {
+<span class="nc" id="L74">    return impl.timer(id);</span>
+  }
+
+  @Override public Gauge gauge(Id id) {
+<span class="nc" id="L78">    return impl.gauge(id);</span>
+  }
+
+  @Override public Meter get(Id id) {
+<span class="nc" id="L82">    return impl.get(id);</span>
+  }
+
+  @Override public Iterator&lt;Meter&gt; iterator() {
+<span class="nc" id="L86">    return impl.iterator();</span>
+  }
+
+  /////////////////////////////////////////////////////////////////
+  // Additional helper methods below
+
+  @Override
+  public String toString() {
+<span class="nc" id="L94">    return &quot;ExtendedRegistry(impl=&quot; + impl + ')';</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

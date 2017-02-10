@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AtlasDistributionSummary.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">AtlasDistributionSummary.java</span></div><h1>AtlasDistributionSummary.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.impl.StepDouble;
+import com.netflix.spectator.impl.StepLong;
+import com.netflix.spectator.impl.StepValue;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Distribution summary that reports four measurements to Atlas:
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;&lt;b&gt;count:&lt;/b&gt; counter incremented each time record is called&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;totalTime:&lt;/b&gt; counter incremented by the recorded amount&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;totalOfSquares:&lt;/b&gt; counter incremented by the recorded amount&lt;sup&gt;2&lt;/sup&gt;&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;max:&lt;/b&gt; maximum recorded amount&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;Having an explicit {@code totalTime} and {@code count} on the backend
+ * can be used to calculate an accurate average for an arbitrary grouping. The
+ * {@code totalOfSquares} is used for computing a standard deviation.&lt;/p&gt;
+ *
+ * &lt;p&gt;Note that the {@link #count()} and {@link #totalAmount()} will report
+ * the values since the last complete interval rather than the total for the
+ * life of the process.&lt;/p&gt;
+ */
+class AtlasDistributionSummary implements DistributionSummary {
+
+  private final Id id;
+  private final StepLong count;
+  private final StepLong total;
+  private final StepDouble totalOfSquares;
+  private final StepLong max;
+
+  private final Id[] stats;
+
+  /** Create a new instance. */
+<span class="fc" id="L60">  AtlasDistributionSummary(Id id, Clock clock, long step) {</span>
+<span class="fc" id="L61">    this.id = id;</span>
+<span class="fc" id="L62">    this.count = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L63">    this.total = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L64">    this.totalOfSquares = new StepDouble(0.0, clock, step);</span>
+<span class="fc" id="L65">    this.max = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L66">    this.stats = new Id[] {</span>
+<span class="fc" id="L67">        id.withTags(DsType.rate,  Statistic.count),</span>
+<span class="fc" id="L68">        id.withTags(DsType.rate,  Statistic.totalAmount),</span>
+<span class="fc" id="L69">        id.withTags(DsType.rate,  Statistic.totalOfSquares),</span>
+<span class="fc" id="L70">        id.withTags(DsType.gauge, Statistic.max)</span>
+    };
+<span class="fc" id="L72">  }</span>
+
+  @Override public Id id() {
+<span class="fc" id="L75">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L79">    return false;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L83">    List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(4);</span>
+<span class="fc" id="L84">    ms.add(newMeasurement(stats[0], count));</span>
+<span class="fc" id="L85">    ms.add(newMeasurement(stats[1], total));</span>
+<span class="fc" id="L86">    ms.add(newMeasurement(stats[2], totalOfSquares));</span>
+<span class="fc" id="L87">    ms.add(newMaxMeasurement(stats[3], max));</span>
+<span class="fc" id="L88">    return ms;</span>
+  }
+
+  private Measurement newMeasurement(Id mid, StepValue v) {
+    // poll needs to be called before accessing the timestamp to ensure
+    // the counters have been rotated if there was no activity in the
+    // current interval.
+<span class="fc" id="L95">    double rate = v.pollAsRate();</span>
+<span class="fc" id="L96">    long timestamp = v.timestamp();</span>
+<span class="fc" id="L97">    return new Measurement(mid, timestamp, rate);</span>
+  }
+
+  private Measurement newMaxMeasurement(Id mid, StepLong v) {
+    // poll needs to be called before accessing the timestamp to ensure
+    // the counters have been rotated if there was no activity in the
+    // current interval.
+<span class="fc" id="L104">    double maxValue = v.poll();</span>
+<span class="fc" id="L105">    long timestamp = v.timestamp();</span>
+<span class="fc" id="L106">    return new Measurement(mid, timestamp, maxValue);</span>
+  }
+
+  @Override public void record(long amount) {
+<span class="fc bfc" id="L110" title="All 2 branches covered.">    if (amount &gt; 0) {</span>
+<span class="fc" id="L111">      count.getCurrent().incrementAndGet();</span>
+<span class="fc" id="L112">      total.getCurrent().addAndGet(amount);</span>
+<span class="fc" id="L113">      totalOfSquares.getCurrent().addAndGet((double) amount * amount);</span>
+<span class="fc" id="L114">      updateMax(max.getCurrent(), amount);</span>
+    }
+<span class="fc" id="L116">  }</span>
+
+  private void updateMax(AtomicLong maxValue, long v) {
+<span class="fc" id="L119">    long p = maxValue.get();</span>
+<span class="pc bpc" id="L120" title="1 of 4 branches missed.">    while (v &gt; p &amp;&amp; !maxValue.compareAndSet(p, v)) {</span>
+<span class="nc" id="L121">      p = maxValue.get();</span>
+    }
+<span class="fc" id="L123">  }</span>
+
+  @Override public long count() {
+<span class="fc" id="L126">    return count.poll();</span>
+  }
+
+  @Override public long totalAmount() {
+<span class="fc" id="L130">    return total.poll();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

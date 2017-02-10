@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MeasurementSerializer.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">MeasurementSerializer.java</span></div><h1>MeasurementSerializer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+
+import java.io.IOException;
+
+/**
+ * Jackson serializer for measurements. Values will be converted to a
+ * valid set as they are written out by replacing invalid characters with
+ * an '_'.
+ */
+<span class="fc" id="L32">class MeasurementSerializer extends JsonSerializer&lt;Measurement&gt; {</span>
+  @Override
+  public void serialize(
+      Measurement value,
+      JsonGenerator gen,
+      SerializerProvider serializers) throws IOException, JsonProcessingException {
+<span class="fc" id="L38">    gen.writeStartObject();</span>
+<span class="fc" id="L39">    gen.writeObjectFieldStart(&quot;tags&quot;);</span>
+<span class="fc" id="L40">    gen.writeStringField(&quot;name&quot;, ValidCharacters.toValidCharset(value.id().name()));</span>
+<span class="fc" id="L41">    boolean explicitDsType = false;</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">    for (Tag t : value.id().tags()) {</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">      if (&quot;atlas.dstype&quot;.equals(t.key())) {</span>
+<span class="fc" id="L44">        explicitDsType = true;</span>
+      }
+<span class="fc" id="L46">      final String k = ValidCharacters.toValidCharset(t.key());</span>
+<span class="fc" id="L47">      final String v = ValidCharacters.toValidCharset(t.value());</span>
+<span class="fc" id="L48">      gen.writeStringField(k, v);</span>
+<span class="fc" id="L49">    }</span>
+
+    // If the dstype has not been explicitly set, then the value must be coming in
+    // as a gauge. Go ahead and explicitly mark it as such because the backend will
+    // default to a rate.
+<span class="fc bfc" id="L54" title="All 2 branches covered.">    if (!explicitDsType) {</span>
+<span class="fc" id="L55">      gen.writeStringField(&quot;atlas.dstype&quot;, &quot;gauge&quot;);</span>
+    }
+<span class="fc" id="L57">    gen.writeEndObject();</span>
+<span class="fc" id="L58">    gen.writeNumberField(&quot;timestamp&quot;, value.timestamp());</span>
+<span class="fc" id="L59">    gen.writeNumberField(&quot;value&quot;, value.value());</span>
+<span class="fc" id="L60">    gen.writeEndObject();</span>
+<span class="fc" id="L61">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

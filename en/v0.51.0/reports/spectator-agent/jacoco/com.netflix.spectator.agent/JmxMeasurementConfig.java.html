@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>JmxMeasurementConfig.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-agent</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.agent</a> &gt; <span class="el_source">JmxMeasurementConfig.java</span></div><h1>JmxMeasurementConfig.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.agent;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Registry;
+import com.typesafe.config.Config;
+
+import javax.management.ObjectName;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+
+/**
+ * Config for extracting a measurment from a JMX bean.
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;&lt;b&gt;name:&lt;/b&gt; name pattern to use, see {@link MappingExpr#substitute(String, Map)}&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;tags:&lt;/b&gt; tags to add on, values can use patterns,
+ *   see {@link MappingExpr#substitute(String, Map)}&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;value:&lt;/b&gt; value expression, see {@link MappingExpr#eval(String, Map)}&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;counter:&lt;/b&gt; is the value a monotonically increasing counter value?&lt;/li&gt;
+ * &lt;/ul&gt;
+ */
+final class JmxMeasurementConfig {
+
+  /** Create from a Typesafe Config object. */
+  static JmxMeasurementConfig from(Config config) {
+<span class="fc" id="L46">    String name = config.getString(&quot;name&quot;);</span>
+<span class="fc" id="L47">    Map&lt;String, String&gt; tags = config.getConfigList(&quot;tags&quot;)</span>
+<span class="fc" id="L48">        .stream()</span>
+<span class="fc" id="L49">        .collect(Collectors.toMap(c -&gt; c.getString(&quot;key&quot;), c -&gt; c.getString(&quot;value&quot;)));</span>
+<span class="fc" id="L50">    String value = config.getString(&quot;value&quot;);</span>
+<span class="pc bpc" id="L51" title="1 of 4 branches missed.">    boolean counter = config.hasPath(&quot;counter&quot;) &amp;&amp; config.getBoolean(&quot;counter&quot;);</span>
+<span class="fc" id="L52">    return new JmxMeasurementConfig(name, tags, value, counter);</span>
+  }
+
+  private final String nameMapping;
+  private final Map&lt;String, String&gt; tagMappings;
+  private final String valueMapping;
+  private final boolean counter;
+
+  private final Map&lt;ObjectName, JmxData&gt; previousData;
+  private final Map&lt;Id, AtomicLong&gt; previousCount;
+
+  /** Create a new instance. */
+  JmxMeasurementConfig(
+      String nameMapping,
+      Map&lt;String, String&gt; tagMappings,
+      String valueMapping,
+<span class="fc" id="L68">      boolean counter) {</span>
+<span class="fc" id="L69">    this.nameMapping = nameMapping;</span>
+<span class="fc" id="L70">    this.tagMappings = tagMappings;</span>
+<span class="fc" id="L71">    this.valueMapping = valueMapping;</span>
+<span class="fc" id="L72">    this.counter = counter;</span>
+<span class="fc" id="L73">    this.previousData = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L74">    this.previousCount = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L75">  }</span>
+
+  /**
+   * Fill in {@code ms} with measurements extracted from {@code data}.
+   */
+  void measure(Registry registry, JmxData data, List&lt;Measurement&gt; ms) {
+<span class="fc" id="L81">    Map&lt;String, String&gt; tags = tagMappings.entrySet().stream().collect(Collectors.toMap(</span>
+        Map.Entry::getKey,
+<span class="fc" id="L83">        e -&gt; MappingExpr.substitute(e.getValue(), data.getStringAttrs())</span>
+    ));
+<span class="fc" id="L85">    Id id = registry</span>
+<span class="fc" id="L86">        .createId(MappingExpr.substitute(nameMapping, data.getStringAttrs()))</span>
+<span class="fc" id="L87">        .withTags(tags);</span>
+
+<span class="fc" id="L89">    Map&lt;String, Number&gt; numberAttrs = new HashMap&lt;&gt;(data.getNumberAttrs());</span>
+<span class="fc" id="L90">    JmxData previous = previousData.put(data.getName(), data);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (previous != null) {</span>
+<span class="fc" id="L92">      previous.getNumberAttrs().entrySet().forEach(e -&gt;</span>
+<span class="fc" id="L93">          numberAttrs.put(&quot;previous:&quot; + e.getKey(), e.getValue())</span>
+      );
+    }
+
+<span class="fc" id="L97">    Double v = MappingExpr.eval(valueMapping, numberAttrs);</span>
+
+<span class="pc bpc" id="L99" title="2 of 4 branches missed.">    if (v != null &amp;&amp; !v.isNaN()) {</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">      if (counter) {</span>
+<span class="nc" id="L101">        updateCounter(registry, id, v.longValue());</span>
+      } else {
+<span class="fc" id="L103">        ms.add(new Measurement(id, registry.clock().wallTime(), v));</span>
+      }
+    }
+<span class="fc" id="L106">  }</span>
+
+  private void updateCounter(Registry registry, Id id, long v) {
+<span class="nc" id="L109">    AtomicLong prev = previousCount.computeIfAbsent(id, i -&gt; new AtomicLong(0L));</span>
+<span class="nc" id="L110">    long p = prev.get();</span>
+<span class="nc bnc" id="L111" title="All 4 branches missed.">    if (prev.compareAndSet(p, v) &amp;&amp; p != 0) {</span>
+<span class="nc" id="L112">      registry.counter(id).increment(v - p);</span>
+    }
+<span class="nc" id="L114">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
