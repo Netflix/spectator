@@ -265,4 +265,19 @@ public final class Utils {
     }
     return v;
   }
+
+  /**
+   * Propagate a type error exception.
+   * Used in situations where an existing id has already been registered but with a different
+   * class.
+   */
+  public static void propagateTypeError(Registry registry, Id id,
+                                        Class<?> desiredClass, Class<?> actualClass) {
+    final String dType = desiredClass.getName();
+    final String aType = actualClass.getName();
+    final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
+        id, dType, aType);
+    registry.propagate(new IllegalStateException(msg));
+  }
+
 }

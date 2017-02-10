@@ -38,7 +38,10 @@ public enum Statistic implements Tag {
   activeTasks,
 
   /** Duration of a running task. */
-  duration;
+  duration,
+
+   /** Amount of time since last recorded activity for an interval counter. */
+  interval;
 
   @Override public String key() {
     return "statistic";

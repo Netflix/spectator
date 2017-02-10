@@ -51,11 +51,7 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
     ConcurrentMap<Id, Object> state = registry.state();
     Object t = Utils.computeIfAbsent(state, id, i -> new LongTaskTimer(registry, id));
     if (!(t instanceof LongTaskTimer)) {
-      final String dtype = LongTaskTimer.class.getName();
-      final String ftype = t.getClass().getName();
-      final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
-          id, dtype, ftype);
-      registry.propagate(new IllegalStateException(msg));
+      Utils.propagateTypeError(registry, id, LongTaskTimer.class, t.getClass());
       t = new LongTaskTimer(new NoopRegistry(), id);
     }
     return (LongTaskTimer) t;
