@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -67,6 +68,17 @@ public interface Registry extends Iterable<Meter> {
    * Add a custom meter to the registry.
    */
   void register(Meter meter);
+
+  /**
+   * Returns a map that can be used to associate state with the registry. Users instrumenting
+   * their application will most likely never need to use this method.
+   *
+   * The primary use case is for building custom meter types that need some additional state
+   * beyond the core types supported by the registry. This map can be used to store the state
+   * so that the lifecycle of the data is connected to the registry. For an example, see some
+   * of the built in patterns such as {@link com.netflix.spectator.api.patterns.LongTaskTimer}.
+   */
+  ConcurrentMap<Id, Object> state();
 
   /**
    * Measures the rate of some activity. A counter is for continuously incrementing sources like
@@ -302,9 +314,10 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    */
   default LongTaskTimer longTaskTimer(Id id) {
-    LongTaskTimer taskTimer = new DefaultLongTaskTimer(clock(), id);
-    register(taskTimer); // the AggrMeter has the right semantics for these type of timers
-    return taskTimer;
+    // Note: this method is only included in the registry for historical reasons to
+    // maintain compatibility. Future patterns should just use the registry not be
+    // created by the registry.
+    return com.netflix.spectator.api.patterns.LongTaskTimer.get(this, id);
   }
 
   /**

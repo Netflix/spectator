@@ -18,6 +18,7 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Wraps a registry and provides additional helper methods to make it easier to use.
@@ -55,6 +56,10 @@ public final class ExtendedRegistry implements Registry {
 
   @Override public void register(Meter meter) {
     impl.register(meter);
+  }
+
+  @Override public ConcurrentMap<Id, Object> state() {
+    return impl.state();
   }
 
   @Override public Counter counter(Id id) {

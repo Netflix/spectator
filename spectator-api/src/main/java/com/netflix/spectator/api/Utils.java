@@ -23,6 +23,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
@@ -243,5 +245,24 @@ public final class Utils {
       ts.add(new BasicTag(tags[i], tags[i + 1]));
     }
     return ts;
+  }
+
+  /**
+   * This method should be used instead of the
+   * {@link ConcurrentMap#computeIfAbsent(Object, Function)} call to minimize
+   * thread contention. This method does not require locking for the common case
+   * where the key exists, but potentially performs additional computation when
+   * absent.
+   */
+  public static <K, V> V computeIfAbsent(ConcurrentMap<K, V> map, K k, Function<K, V> f) {
+    V v = map.get(k);
+    if (v == null) {
+      V tmp = f.apply(k);
+      v = map.putIfAbsent(k, tmp);
+      if (v == null) {
+        v = tmp;
+      }
+    }
+    return v;
   }
 }

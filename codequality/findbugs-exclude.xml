@@ -24,4 +24,10 @@
       <Bug pattern="EI_EXPOSE_REP2"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.api.patterns.LongTaskTimer"/>
+      <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
+    </And>
+  </Match>
 </FindBugsFilter>

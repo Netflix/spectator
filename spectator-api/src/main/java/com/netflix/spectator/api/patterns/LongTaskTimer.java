@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +30,36 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** Long task timer implementation used by the extended registry. */
-final class DefaultLongTaskTimer implements LongTaskTimer {
+/**
+ * Timer intended to track a small number of long running tasks. Example would be something like
+ * a batch hadoop job. Though "long running" is a bit subjective the assumption is that anything
+ * over a minute is long running.
+ */
+public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTimer {
+
+  /**
+   * Creates a timer for tracking long running tasks.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Timer instance.
+   */
+  public static LongTaskTimer get(Registry registry, Id id) {
+    ConcurrentMap<Id, Object> state = registry.state();
+    Object t = Utils.computeIfAbsent(state, id, i -> new LongTaskTimer(registry, id));
+    if (!(t instanceof LongTaskTimer)) {
+      final String dtype = LongTaskTimer.class.getName();
+      final String ftype = t.getClass().getName();
+      final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
+          id, dtype, ftype);
+      registry.propagate(new IllegalStateException(msg));
+      t = new LongTaskTimer(new NoopRegistry(), id);
+    }
+    return (LongTaskTimer) t;
+  }
 
   private static final double NANOS_PER_SECOND = (double) TimeUnit.SECONDS.toNanos(1L);
 
@@ -33,9 +69,11 @@ final class DefaultLongTaskTimer implements LongTaskTimer {
   private final AtomicLong nextTask = new AtomicLong(0L);
 
   /** Create a new instance. */
-  DefaultLongTaskTimer(Clock clock, Id id) {
-    this.clock = clock;
+  private LongTaskTimer(Registry registry, Id id) {
+    this.clock = registry.clock();
     this.id = id;
+    registry.gauge(id.withTag(Statistic.activeTasks), this, LongTaskTimer::activeTasks);
+    registry.gauge(id.withTag(Statistic.duration),    this, t -> t.duration() / NANOS_PER_SECOND);
   }
 
   @Override public Id id() {
