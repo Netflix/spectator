@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,28 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.api.patterns;
 
+import com.netflix.spectator.api.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class DefaultLongTaskTimerTest {
+public class LongTaskTimerTest {
   private final ManualClock clock = new ManualClock();
+  private final Registry registry = new DefaultRegistry(clock);
+  private final Id id = registry.createId("test");
 
   @Test
   public void testInit() {
-    LongTaskTimer t = new DefaultLongTaskTimer(clock, NoopId.INSTANCE);
+    com.netflix.spectator.api.LongTaskTimer t = LongTaskTimer.get(registry, id);
     Assert.assertEquals(t.duration(), 0L);
     Assert.assertEquals(t.activeTasks(), 0L);
   }
 
-
   @Test
   public void testStart() {
-    LongTaskTimer t = new DefaultLongTaskTimer(clock, NoopId.INSTANCE);
+    com.netflix.spectator.api.LongTaskTimer t = LongTaskTimer.get(registry, id);
 
     long task1 = t.start();
     long task2 = t.start();
@@ -46,7 +48,7 @@ public class DefaultLongTaskTimerTest {
 
   @Test
   public void testStop() {
-    LongTaskTimer t = new DefaultLongTaskTimer(clock, NoopId.INSTANCE);
+    com.netflix.spectator.api.LongTaskTimer t = LongTaskTimer.get(registry, id);
 
     long task1 = t.start();
     long task2 = t.start();
@@ -64,7 +66,20 @@ public class DefaultLongTaskTimerTest {
     Assert.assertEquals(t.duration(), 5L);
   }
 
-  static void assertLongTaskTimer(Meter t, long timestamp, int activeTasks, double duration) {
+  @Test
+  public void stateIsPreservedAcrossGets() {
+    long t1 = LongTaskTimer.get(registry, id).start();
+    long t2 = LongTaskTimer.get(registry, id).start();
+    Assert.assertFalse(t1 == t2);
+
+    Assert.assertEquals(LongTaskTimer.get(registry, id).activeTasks(), 2);
+    clock.setMonotonicTime(5L);
+    Assert.assertEquals(LongTaskTimer.get(registry, id).duration(), 10L);
+    LongTaskTimer.get(registry, id).stop(t1);
+    Assert.assertEquals(LongTaskTimer.get(registry, id).duration(), 5L);
+  }
+
+  private void assertLongTaskTimer(Meter t, long timestamp, int activeTasks, double duration) {
     for (Measurement m : t.measure()) {
       Assert.assertEquals(m.timestamp(), timestamp);
       if (m.id().equals(t.id().withTag(Statistic.activeTasks))) {
@@ -79,7 +94,7 @@ public class DefaultLongTaskTimerTest {
 
   @Test
   public void testMeasure() {
-    LongTaskTimer t = new DefaultLongTaskTimer(clock, new DefaultId("foo"));
+    com.netflix.spectator.api.LongTaskTimer t = LongTaskTimer.get(registry, id);
     long task1 = t.start();
     clock.setMonotonicTime(1_000_000_000L);
     clock.setWallTime(1L);

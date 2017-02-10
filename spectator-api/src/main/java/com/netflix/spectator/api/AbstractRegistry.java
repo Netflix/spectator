@@ -24,8 +24,8 @@ import java.lang.ref.WeakReference;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
-import java.util.function.Function;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
@@ -40,6 +40,7 @@ public abstract class AbstractRegistry implements Registry {
 
   private final ConcurrentHashMap<Id, Meter> meters;
   private final ConcurrentHashMap<Id, Meter> gauges;
+  private final ConcurrentHashMap<Id, Object> state;
 
   private final Semaphore pollSem = new Semaphore(1);
 
@@ -67,6 +68,7 @@ public abstract class AbstractRegistry implements Registry {
     this.config = config;
     this.meters = new ConcurrentHashMap<>();
     this.gauges = new ConcurrentHashMap<>();
+    this.state = new ConcurrentHashMap<>();
     GaugePoller.schedule(
         new WeakReference<>(this),
         config.gaugePollingFrequency().toMillis(),
@@ -149,25 +151,6 @@ public abstract class AbstractRegistry implements Registry {
     return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
-  /**
-   * This method should be used instead of the
-   * {@link ConcurrentHashMap#computeIfAbsent(Object, Function)} call to minimize
-   * thread contention. This method does not require locking for the common case
-   * where the key exists, but potentially performs additional computation when
-   * absent.
-   */
-  private Meter computeIfAbsent(ConcurrentHashMap<Id, Meter> map, Id id, Function<Id, Meter> f) {
-    Meter m = map.get(id);
-    if (m == null) {
-      Meter tmp = f.apply(id);
-      m = map.putIfAbsent(id, tmp);
-      if (m == null) {
-        m = tmp;
-      }
-    }
-    return m;
-  }
-
   private void handleGaugeException(Id id, Throwable t) {
     logger.warn("dropping gauge [{}], exception occurred when polling value", id, t);
     gauges.remove(id);
@@ -217,16 +200,20 @@ public abstract class AbstractRegistry implements Registry {
   @Override public void register(Meter meter) {
     Meter aggr = (gauges.size() >= config.maxNumberOfMeters())
       ? meters.get(meter.id())
-      : computeIfAbsent(gauges, meter.id(), AggrMeter::new);
+      : Utils.computeIfAbsent(gauges, meter.id(), AggrMeter::new);
     if (aggr != null) {
       addToAggr(aggr, meter);
     }
   }
 
+  @Override public ConcurrentMap<Id, Object> state() {
+    return state;
+  }
+
   @Override public final Counter counter(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = computeIfAbsent(meters, id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
+      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(newCounter(i), NoopCounter.INSTANCE));
       if (!(m instanceof Counter)) {
         logTypeError(id, Counter.class, m.getClass());
         m = NoopCounter.INSTANCE;
@@ -241,7 +228,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final DistributionSummary distributionSummary(Id id) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = computeIfAbsent(meters, id, i ->
+      Meter m = Utils.computeIfAbsent(meters, id, i ->
           compute(newDistributionSummary(i), NoopDistributionSummary.INSTANCE));
       if (!(m instanceof DistributionSummary)) {
         logTypeError(id, DistributionSummary.class, m.getClass());
@@ -256,7 +243,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Timer timer(Id id) {
     try {
-      Meter m = computeIfAbsent(meters, id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
+      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
       if (!(m instanceof Timer)) {
         logTypeError(id, Timer.class, m.getClass());
         m = NoopTimer.INSTANCE;
@@ -270,7 +257,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Gauge gauge(Id id) {
     try {
-      Meter m = computeIfAbsent(meters, id, i -> compute(newGauge(i), NoopGauge.INSTANCE));
+      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(newGauge(i), NoopGauge.INSTANCE));
       if (!(m instanceof Gauge)) {
         logTypeError(id, Gauge.class, m.getClass());
         m = NoopGauge.INSTANCE;

@@ -17,6 +17,8 @@ package com.netflix.spectator.api;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Registry implementation that does nothing. This is typically used to allow for performance tests
@@ -24,6 +26,10 @@ import java.util.Iterator;
  * minimum amount possible without requiring code changes for users.
  */
 public final class NoopRegistry implements Registry {
+
+  // Since we don't know how callers might be using this a noop implementation
+  // of the map could cause unexpected issues.
+  private final ConcurrentMap<Id, Object> state = new ConcurrentHashMap<>();
 
   @Override public Clock clock() {
     return Clock.SYSTEM;
@@ -38,6 +44,10 @@ public final class NoopRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
+  }
+
+  @Override public ConcurrentMap<Id, Object> state() {
+    return state;
   }
 
   @Override public Counter counter(Id id) {

@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Semaphore;
 
@@ -35,6 +36,7 @@ public final class CompositeRegistry implements Registry {
   private final CopyOnWriteArraySet<Registry> registries;
 
   private final ConcurrentHashMap<Id, AggrMeter> gauges;
+  private final ConcurrentHashMap<Id, Object> state;
 
   private final Semaphore pollSem = new Semaphore(1);
 
@@ -43,6 +45,7 @@ public final class CompositeRegistry implements Registry {
     this.clock = clock;
     this.registries = new CopyOnWriteArraySet<>();
     this.gauges = new ConcurrentHashMap<>();
+    this.state = new ConcurrentHashMap<>();
     GaugePoller.schedule(
         new WeakReference<>(this),
         10000L,
@@ -87,24 +90,6 @@ public final class CompositeRegistry implements Registry {
   }
 
   /**
-   * This method should be used instead of the computeIfAbsent call on the map to
-   * minimize thread contention. This method does not require locking for the common
-   * case where the key exists, but potentially performs additional computation when
-   * absent.
-   */
-  private AggrMeter computeIfAbsent(Id id) {
-    AggrMeter m = gauges.get(id);
-    if (m == null) {
-      AggrMeter tmp = new AggrMeter(id);
-      m = gauges.putIfAbsent(id, tmp);
-      if (m == null) {
-        m = tmp;
-      }
-    }
-    return m;
-  }
-
-  /**
    * Find the first registry in the composite that is an instance of {@code c}. If no match is
    * found then null will be returned.
    */
@@ -146,8 +131,12 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    AggrMeter m = computeIfAbsent(meter.id());
+    AggrMeter m = Utils.computeIfAbsent(gauges, meter.id(), AggrMeter::new);
     m.add(meter);
+  }
+
+  @Override public ConcurrentMap<Id, Object> state() {
+    return state;
   }
 
   @Override public Counter counter(Id id) {
