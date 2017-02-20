@@ -111,9 +111,9 @@ class AtlasTimer implements Timer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
+    count.getCurrent().incrementAndGet();
     if (amount > 0) {
       final long nanos = unit.toNanos(amount);
-      count.getCurrent().incrementAndGet();
       total.getCurrent().addAndGet(nanos);
       totalOfSquares.getCurrent().addAndGet((double) nanos * nanos);
       updateMax(max.getCurrent(), nanos);

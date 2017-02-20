@@ -110,14 +110,14 @@ public class AtlasTimerTest {
   public void recordZero() {
     dist.record(0, TimeUnit.NANOSECONDS);
     clock.setWallTime(step + 1);
-    checkValue(0, 0, 0, 0);
+    checkValue(1, 0, 0, 0);
   }
 
   @Test
   public void recordNegativeValue() {
     dist.record(-2, TimeUnit.NANOSECONDS);
     clock.setWallTime(step + 1);
-    checkValue(0, 0, 0, 0);
+    checkValue(1, 0, 0, 0);
   }
 
   @Test
