@@ -92,14 +92,14 @@ public class AtlasDistributionSummaryTest {
   public void recordZero() {
     dist.record(0);
     clock.setWallTime(step + 1);
-    checkValue(0, 0, 0, 0);
+    checkValue(1, 0, 0, 0);
   }
 
   @Test
   public void recordNegativeValue() {
     dist.record(-2);
     clock.setWallTime(step + 1);
-    checkValue(0, 0, 0, 0);
+    checkValue(1, 0, 0, 0);
   }
 
   @Test

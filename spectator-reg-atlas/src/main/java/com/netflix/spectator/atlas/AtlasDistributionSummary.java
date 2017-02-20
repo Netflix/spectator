@@ -107,8 +107,8 @@ class AtlasDistributionSummary implements DistributionSummary {
   }
 
   @Override public void record(long amount) {
+    count.getCurrent().incrementAndGet();
     if (amount > 0) {
-      count.getCurrent().incrementAndGet();
       total.getCurrent().addAndGet(amount);
       totalOfSquares.getCurrent().addAndGet((double) amount * amount);
       updateMax(max.getCurrent(), amount);
