@@ -26,6 +26,7 @@ import com.typesafe.config.ConfigFactory;
 
 import java.lang.instrument.Instrumentation;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,10 +49,26 @@ public final class Agent {
     return config.getConfig("netflix.spectator.agent");
   }
 
+  /**
+   * To make debugging easier since we usually create a fat jar, system properties can
+   * be created so that all jar versions can easily be accessed via JMX or using tools
+   * like {@code jinfo}.
+   */
+  private static void createDependencyProperties(Config config) {
+    if (config.hasPath("dependencies")) {
+      List<String> deps = config.getStringList("dependencies");
+      for (int i = 0; i < deps.size(); ++i) {
+        String prop = String.format("netflix.spectator.agent.dependency.%03d", i);
+        System.setProperty(prop, deps.get(i));
+      }
+    }
+  }
+
   /** Entry point for the agent. */
   public static void premain(String arg, Instrumentation instrumentation) throws Exception {
     // Setup logging
     Config config = loadConfig(arg);
+    createDependencyProperties(config);
 
     // Setup Registry
     AtlasRegistry registry = new AtlasRegistry(Clock.SYSTEM, new AgentAtlasConfig(config));
