@@ -632,6 +632,23 @@ public interface Registry extends Iterable<Meter> {
   }
 
   /**
+   * Returns a stream of all registered gauges. This operation is mainly used for testing as a
+   * convenient way to get an aggregated value. For example, to generate a summary of
+   * the values for all gauges with name "foo":
+   *
+   * <pre>
+   * DoubleSummaryStatistics valueSummary = r.gauges()
+   *   .filter(Functions.nameEquals("foo"))
+   *   .collect(Collectors.summarizingDouble(Gauge::value));
+   *
+   * double sum = (double) valueSummary.getSum();
+   * </pre>
+   */
+  default Stream<Gauge> gauges() {
+    return stream().filter(m -> m instanceof Gauge).map(m -> (Gauge) m);
+  }
+
+  /**
    * Log a warning and if enabled propagate the exception {@code t}. As a general rule
    * instrumentation code should degrade gracefully and avoid impacting the core application. If
    * the user makes a mistake and causes something to break, then it should not impact the
