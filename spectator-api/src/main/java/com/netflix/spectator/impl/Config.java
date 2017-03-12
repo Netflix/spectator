@@ -123,7 +123,7 @@ public final class Config {
   public static <T> T createProxy(Class<T> cls, Function<String, String> props) {
     final Constructor<MethodHandles.Lookup> constructor = getConstructor();
     final Class<?>[] interfaces = new Class<?>[] {cls};
-    final Object obj = Proxy.newProxyInstance(classLoader(), interfaces, (proxy, method, args) -> {
+    return (T) Proxy.newProxyInstance(classLoader(), interfaces, (proxy, method, args) -> {
       final String name = method.getName();
       if (method.isDefault()) {
         final Class<?> declaringClass = method.getDeclaringClass();
@@ -142,7 +142,6 @@ public final class Config {
         return valueOf(rt, v);
       }
     });
-    return (T) obj;
   }
 
   /**

@@ -35,7 +35,7 @@ public interface RegistryConfig {
   /** Should an exception be thrown for warnings? */
   default boolean propagateWarnings() {
     String v = get("propagateWarnings");
-    return (v == null) ? false : Boolean.valueOf(v);
+    return v != null && Boolean.valueOf(v);
   }
 
   /**
