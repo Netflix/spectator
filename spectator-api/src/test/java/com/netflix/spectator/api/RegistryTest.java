@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.DoubleSummaryStatistics;
 import java.util.LinkedHashMap;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
@@ -31,7 +32,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
-public class ExtendedRegistryTest {
+public class RegistryTest {
 
   private final ManualClock clock = new ManualClock();
 
@@ -344,6 +345,23 @@ public class ExtendedRegistryTest {
     Assert.assertEquals(3L, totalSummary.getCount());
     Assert.assertEquals(16L, totalSummary.getSum());
     Assert.assertEquals(13L, totalSummary.getMax());
+  }
+
+  @Test
+  public void gauges() {
+    Registry r = newRegistry(true, 10000);
+    r.gauge(r.createId("foo", "a", "1")).set(1.0);
+    r.gauge(r.createId("foo", "a", "2")).set(2.0);
+    r.gauge(r.createId("bar")).set(7.0);
+
+    Assert.assertEquals(3, r.gauges().count());
+
+    final DoubleSummaryStatistics valueSummary = r.gauges()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingDouble(Gauge::value));
+    Assert.assertEquals(2, valueSummary.getCount());
+    Assert.assertEquals(3.0, valueSummary.getSum(), 1e-12);
+    Assert.assertEquals(1.5, valueSummary.getAverage(), 1e-12);
   }
 
   @Test
