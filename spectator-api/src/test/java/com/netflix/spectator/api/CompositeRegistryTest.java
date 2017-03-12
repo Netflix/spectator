@@ -66,6 +66,7 @@ public class CompositeRegistryTest {
     c.increment();
     Assert.assertEquals(c.count(), 1L);
     r.register(c);
+    ((CompositeRegistry) r).pollGauges();
     Meter meter = r.get(c.id());
     for (Measurement m : meter.measure()) {
       Assert.assertEquals(m.value(), 2.0, 1e-12);
@@ -269,5 +270,41 @@ public class CompositeRegistryTest {
         Assert.assertEquals(id, m.id());
       }
     }
+  }
+
+  @Test
+  public void correctTypeForCountersStream() {
+    Registry r = newRegistry(5, false);
+    r.counter("a").increment();
+    r.counter("b").increment();
+    Assert.assertEquals(2, r.counters().count());
+    Assert.assertEquals(2, r.stream().filter(m -> m instanceof Counter).count());
+  }
+
+  @Test
+  public void correctTypeForTimersStream() {
+    Registry r = newRegistry(5, false);
+    r.timer("a").record(1, TimeUnit.MICROSECONDS);
+    r.timer("b").record(1, TimeUnit.MICROSECONDS);
+    Assert.assertEquals(2, r.timers().count());
+    Assert.assertEquals(2, r.stream().filter(m -> m instanceof Timer).count());
+  }
+
+  @Test
+  public void correctTypeForDistSummariesStream() {
+    Registry r = newRegistry(5, false);
+    r.distributionSummary("a").record(1);
+    r.distributionSummary("b").record(1);
+    Assert.assertEquals(2, r.distributionSummaries().count());
+    Assert.assertEquals(2, r.stream().filter(m -> m instanceof DistributionSummary).count());
+  }
+
+  @Test
+  public void correctTypeForGaugesStream() {
+    Registry r = newRegistry(5, false);
+    r.gauge(r.createId("a")).set(1.0);
+    r.gauge(r.createId("b")).set(2.0);
+    Assert.assertEquals(2, r.gauges().count());
+    Assert.assertEquals(2, r.stream().filter(m -> m instanceof Gauge).count());
   }
 }
