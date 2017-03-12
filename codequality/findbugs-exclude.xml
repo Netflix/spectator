@@ -30,4 +30,10 @@
       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.impl.AsciiSet"/>
+      <Bug pattern="REC_CATCH_EXCEPTION"/>
+    </And>
+  </Match>
 </FindBugsFilter>

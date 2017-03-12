@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,20 +21,26 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AsciiSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Collections;
+import java.util.Map;
 
 
 @RunWith(JUnit4.class)
 public class MeasurementSerializerTest {
 
+  private AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
+  private Map<String, AsciiSet> overrides =
+      Collections.singletonMap("cluster", AsciiSet.fromPattern("-._A-Za-z0-9^~"));
+
   private DefaultRegistry registry = new DefaultRegistry();
   private SimpleModule module = new SimpleModule()
-      .addSerializer(Measurement.class, new MeasurementSerializer());
+      .addSerializer(Measurement.class, new MeasurementSerializer(set, overrides));
   private ObjectMapper mapper = new ObjectMapper().registerModule(module);
 
   @Test
@@ -83,6 +89,16 @@ public class MeasurementSerializerTest {
     Measurement m = new Measurement(id, 42L, 3.0);
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"bar\":\"b__\",\"atlas.dstype\":\"gauge\"}";
+    String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
+    Assert.assertEquals(expected, json);
+  }
+
+  @Test
+  public void valueCharsetOverrides() throws Exception {
+    Id id = registry.createId("foo", "bar", "abc^~def", "cluster", "abc^~def");
+    Measurement m = new Measurement(id, 42L, 3.0);
+    String json = mapper.writeValueAsString(m);
+    String tags = "{\"name\":\"foo\",\"bar\":\"abc__def\",\"cluster\":\"abc^~def\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     Assert.assertEquals(expected, json);
   }

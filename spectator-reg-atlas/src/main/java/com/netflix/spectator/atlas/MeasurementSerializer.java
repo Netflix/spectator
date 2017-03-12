@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.AsciiSet;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Jackson serializer for measurements. Values will be converted to a
@@ -30,6 +32,33 @@ import java.io.IOException;
  * an '_'.
  */
 class MeasurementSerializer extends JsonSerializer<Measurement> {
+
+  private final AsciiSet set;
+  private final Map<String, AsciiSet> overrides;
+
+  /**
+   * Create a new instance of the serializer.
+   *
+   * @param set
+   *     The set of characters that are allowed to be used for tag keys.
+   * @param overrides
+   *     Overrides for the set of characters allowed to be used for tag values.
+   */
+  MeasurementSerializer(AsciiSet set, Map<String, AsciiSet> overrides) {
+    super();
+    this.set = set;
+    this.overrides = overrides;
+  }
+
+  private String fixKey(String k) {
+    return set.replaceNonMembers(k, '_');
+  }
+
+  private String fixValue(String k, String v) {
+    AsciiSet s = overrides.getOrDefault(k, set);
+    return s.replaceNonMembers(v, '_');
+  }
+
   @Override
   public void serialize(
       Measurement value,
@@ -37,14 +66,14 @@ class MeasurementSerializer extends JsonSerializer<Measurement> {
       SerializerProvider serializers) throws IOException, JsonProcessingException {
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
-    gen.writeStringField("name", ValidCharacters.toValidCharset(value.id().name()));
+    gen.writeStringField("name", fixValue("name", value.id().name()));
     boolean explicitDsType = false;
     for (Tag t : value.id().tags()) {
       if ("atlas.dstype".equals(t.key())) {
         explicitDsType = true;
       }
-      final String k = ValidCharacters.toValidCharset(t.key());
-      final String v = ValidCharacters.toValidCharset(t.value());
+      final String k = fixKey(t.key());
+      final String v = fixValue(k, t.value());
       gen.writeStringField(k, v);
     }
 

@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.junit.Assert;
@@ -52,7 +53,16 @@ public class DataExprTest {
       String value = String.format("%f", vs[i]);
       ms.add(new Measurement(registry.createId(name, "i", pos, "v", value), 0L, vs[i]));
     }
-    return ms.stream().map(TagsValuePair::from).collect(Collectors.toList());
+    return ms.stream().map(this::newTagsValuePair).collect(Collectors.toList());
+  }
+
+  private TagsValuePair newTagsValuePair(Measurement m) {
+    Map<String, String> tags = new HashMap<>();
+    for (Tag t : m.id().tags()) {
+      tags.put(t.key(), t.value());
+    }
+    tags.put("name", m.id().name());
+    return new TagsValuePair(tags, m.value());
   }
 
   @Test
