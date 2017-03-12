@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,6 +125,23 @@ public interface AtlasConfig extends RegistryConfig {
    * The default is an empty map.
    */
   default Map<String, String> commonTags() {
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Returns a pattern indicating the valid characters for a tag key or value. The character
+   * set for tag values can be overridden for a particular tag key using
+   * {@link #validTagValueCharacters()}. The default is {@code -._A-Za-z0-9}.
+   */
+  default String validTagCharacters() {
+    return "-._A-Za-z0-9";
+  }
+
+  /**
+   * Returns a map from tag key to a pattern indicating the valid characters for the values
+   * of that key. The default is an empty map.
+   */
+  default Map<String, String> validTagValueCharacters() {
     return Collections.emptyMap();
   }
 }

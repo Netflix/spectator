@@ -15,39 +15,47 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.impl.AsciiSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-
+// Suite for removed ValidCharacters class. Test case was kept and changed to use AsciiSet
+// to help verify the new validation.
 @RunWith(JUnit4.class)
 public class ValidCharactersTest {
+
+  private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
+
+  private String toValidCharset(String str) {
+    return set.replaceNonMembers(str, '_');
+  }
 
   @Test(expected = NullPointerException.class)
   public void nullValue() throws Exception {
     String input = null;
-    ValidCharacters.toValidCharset(input);
+    toValidCharset(input);
   }
 
   @Test
   public void empty() throws Exception {
     String input = "";
-    String actual = ValidCharacters.toValidCharset(input);
+    String actual = toValidCharset(input);
     Assert.assertEquals("", actual);
   }
 
   @Test
   public void allValid() throws Exception {
     String input = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
-    String actual = ValidCharacters.toValidCharset(input);
+    String actual = toValidCharset(input);
     Assert.assertEquals(input, actual);
   }
 
   @Test
   public void invalidConvertsToUnderscore() throws Exception {
     String input = "a,b%c^d&e|f{g}h:i;";
-    String actual = ValidCharacters.toValidCharset(input);
+    String actual = toValidCharset(input);
     Assert.assertEquals("a_b_c_d_e_f_g_h_i_", actual);
   }
 }

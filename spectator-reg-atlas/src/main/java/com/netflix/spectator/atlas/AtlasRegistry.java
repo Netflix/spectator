@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,9 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.sandbox.HttpClient;
 import com.netflix.spectator.sandbox.HttpResponse;
@@ -35,6 +37,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -67,6 +70,9 @@ public final class AtlasRegistry extends AbstractRegistry {
   private final int numThreads;
   private final Map<String, String> commonTags;
 
+  private final AsciiSet charset;
+  private final Map<String, AsciiSet> overrides;
+
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
 
@@ -95,8 +101,12 @@ public final class AtlasRegistry extends AbstractRegistry {
     this.numThreads = config.numThreads();
     this.commonTags = new TreeMap<>(config.commonTags());
 
+    this.charset = AsciiSet.fromPattern(config.validTagCharacters());
+    this.overrides = config.validTagValueCharacters()
+        .keySet().stream()
+        .collect(Collectors.toMap(k -> k, AsciiSet::fromPattern));
     SimpleModule module = new SimpleModule()
-        .addSerializer(Measurement.class, new MeasurementSerializer());
+        .addSerializer(Measurement.class, new MeasurementSerializer(charset, overrides));
     this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
   }
@@ -203,7 +213,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     List<Subscription> subs = subscriptions;
     if (!subs.isEmpty()) {
       List<TagsValuePair> ms = getMeasurements().stream()
-          .map(m -> TagsValuePair.from(commonTags, m))
+          .map(this::newTagsValuePair)
           .collect(Collectors.toList());
       List<EvalPayload.Metric> metrics = new ArrayList<>();
       for (Subscription s : subs) {
@@ -272,6 +282,27 @@ public final class AtlasRegistry extends AbstractRegistry {
       }
       logger.debug("clock skew between client and server: {}ms", delta);
     }
+  }
+
+  private Map<String, String> toMap(Id id) {
+    Map<String, String> tags = new HashMap<>();
+
+    for (Tag t : id.tags()) {
+      String k = charset.replaceNonMembers(t.key(), '_');
+      String v = overrides.getOrDefault(k, charset).replaceNonMembers(t.value(), '_');
+      tags.put(k, v);
+    }
+
+    String name = overrides.getOrDefault("name", charset).replaceNonMembers(id.name(), '_');
+    tags.put("name", name);
+
+    return tags;
+  }
+
+  private TagsValuePair newTagsValuePair(Measurement m) {
+    Map<String, String> tags = toMap(m.id());
+    tags.putAll(commonTags);
+    return new TagsValuePair(tags, m.value());
   }
 
   /** Get a list of all measurements from the registry. */
