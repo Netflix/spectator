@@ -156,7 +156,23 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Meter get(Id id) {
-    return new CompositeMeter(id, registries);
+    for (Registry r : registries) {
+      Meter m = r.get(id);
+      if (m != null) {
+        if (m instanceof Counter) {
+          return counter(id);
+        } else if (m instanceof Timer) {
+          return timer(id);
+        } else if (m instanceof DistributionSummary) {
+          return distributionSummary(id);
+        } else if (m instanceof Gauge) {
+          return gauge(id);
+        } else {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   @Override public Iterator<Meter> iterator() {
