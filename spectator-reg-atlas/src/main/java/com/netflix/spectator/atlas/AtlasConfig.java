@@ -39,7 +39,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean enabled() {
     String v = get("atlas.enabled");
-    return (v == null) ? true : Boolean.valueOf(v);
+    return v == null || Boolean.valueOf(v);
   }
 
   /**
@@ -65,7 +65,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean lwcEnabled() {
     String v = get("atlas.lwc.enabled");
-    return (v == null) ? false : Boolean.valueOf(v);
+    return v != null && Boolean.valueOf(v);
   }
 
   /** Returns the frequency for refreshing config settings from the LWC service. */
