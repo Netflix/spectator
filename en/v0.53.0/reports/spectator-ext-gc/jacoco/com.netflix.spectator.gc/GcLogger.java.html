@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>GcLogger.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-gc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.gc</a> &gt; <span class="el_source">GcLogger.java</span></div><h1>GcLogger.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.gc;
+
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.Preconditions;
+import com.sun.management.GarbageCollectionNotificationInfo;
+import com.sun.management.GcInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.management.ListenerNotFoundException;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.openmbean.CompositeData;
+import java.lang.management.GarbageCollectorMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Logger to collect GC notifcation events.
+ */
+public final class GcLogger {
+
+<span class="nc" id="L50">  private static final Logger LOGGER = LoggerFactory.getLogger(GcLogger.class);</span>
+
+  // One major GC per hour would require 168 for a week
+  // One minor GC per minute would require 180 for three hours
+  private static final int BUFFER_SIZE = 256;
+
+  // Max size of old generation memory pool
+  private static final AtomicLong MAX_DATA_SIZE =
+<span class="nc" id="L58">    Spectator.globalRegistry().gauge(&quot;jvm.gc.maxDataSize&quot;, new AtomicLong(0L));</span>
+
+  // Size of old generation memory pool after a full GC
+  private static final AtomicLong LIVE_DATA_SIZE =
+<span class="nc" id="L62">    Spectator.globalRegistry().gauge(&quot;jvm.gc.liveDataSize&quot;, new AtomicLong(0L));</span>
+
+  // Incremented for any positive increases in the size of the old generation memory pool
+  // before GC to after GC
+  private static final Counter PROMOTION_RATE =
+<span class="nc" id="L67">    Spectator.globalRegistry().counter(&quot;jvm.gc.promotionRate&quot;);</span>
+
+  // Incremented for the increase in the size of the young generation memory pool after one GC
+  // to before the next
+  private static final Counter ALLOCATION_RATE =
+<span class="nc" id="L72">    Spectator.globalRegistry().counter(&quot;jvm.gc.allocationRate&quot;);</span>
+
+  // Pause time due to GC event
+<span class="nc" id="L75">  private static final Id PAUSE_TIME = Spectator.globalRegistry().createId(&quot;jvm.gc.pause&quot;);</span>
+
+  // Time spent in concurrent phases of GC
+<span class="nc" id="L78">  private static final Id CONCURRENT_PHASE_TIME =</span>
+<span class="nc" id="L79">      Spectator.globalRegistry().createId(&quot;jvm.gc.concurrentPhaseTime&quot;);</span>
+
+  private final long jvmStartTime;
+
+<span class="nc" id="L83">  private final ConcurrentHashMap&lt;String, CircularBuffer&lt;GcEvent&gt;&gt; gcLogs = new ConcurrentHashMap&lt;&gt;();</span>
+
+<span class="nc" id="L85">  private long youngGenSizeAfter = 0L;</span>
+
+<span class="nc" id="L87">  private String youngGenPoolName = null;</span>
+<span class="nc" id="L88">  private String oldGenPoolName = null;</span>
+
+<span class="nc" id="L90">  private GcNotificationListener notifListener = null;</span>
+
+<span class="nc" id="L92">  private GcEventListener eventListener = null;</span>
+
+  /** Create a new instance. */
+<span class="nc" id="L95">  public GcLogger() {</span>
+<span class="nc" id="L96">    jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">    for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {</span>
+<span class="nc" id="L98">      CircularBuffer&lt;GcEvent&gt; buffer = new CircularBuffer&lt;&gt;(BUFFER_SIZE);</span>
+<span class="nc" id="L99">      gcLogs.put(mbean.getName(), buffer);</span>
+<span class="nc" id="L100">    }</span>
+
+<span class="nc bnc" id="L102" title="All 2 branches missed.">    for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">      if (HelperFunctions.isYoungGenPool(mbean.getName())) {</span>
+<span class="nc" id="L104">        youngGenPoolName = mbean.getName();</span>
+      }
+<span class="nc bnc" id="L106" title="All 2 branches missed.">      if (HelperFunctions.isOldGenPool(mbean.getName())) {</span>
+<span class="nc" id="L107">        oldGenPoolName = mbean.getName();</span>
+      }
+<span class="nc" id="L109">    }</span>
+<span class="nc" id="L110">  }</span>
+
+  /**
+   * Start collecting data about GC events.
+   *
+   * @param listener
+   *     If not null, the listener will be called with the event objects after metrics and the
+   *     log buffer is updated.
+   */
+  public synchronized void start(GcEventListener listener) {
+    // TODO: this class has a bad mix of static fields used from an instance of the class. For now
+    // this has been changed not to throw to make the dependency injection use-cases work. A
+    // more general refactor of the GcLogger class is needed.
+<span class="nc bnc" id="L123" title="All 2 branches missed.">    if (notifListener != null) {</span>
+<span class="nc" id="L124">      LOGGER.warn(&quot;logger already started&quot;);</span>
+<span class="nc" id="L125">      return;</span>
+    }
+<span class="nc" id="L127">    eventListener = listener;</span>
+<span class="nc" id="L128">    notifListener = new GcNotificationListener();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">    for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">      if (mbean instanceof NotificationEmitter) {</span>
+<span class="nc" id="L131">        final NotificationEmitter emitter = (NotificationEmitter) mbean;</span>
+<span class="nc" id="L132">        emitter.addNotificationListener(notifListener, null, null);</span>
+      }
+<span class="nc" id="L134">    }</span>
+<span class="nc" id="L135">  }</span>
+
+  /** Stop collecting GC events. */
+  public synchronized void stop() {
+<span class="nc bnc" id="L139" title="All 2 branches missed.">    Preconditions.checkState(notifListener != null, &quot;logger has not been started&quot;);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">    for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">      if (mbean instanceof NotificationEmitter) {</span>
+<span class="nc" id="L142">        final NotificationEmitter emitter = (NotificationEmitter) mbean;</span>
+        try {
+<span class="nc" id="L144">          emitter.removeNotificationListener(notifListener);</span>
+<span class="nc" id="L145">        } catch (ListenerNotFoundException e) {</span>
+<span class="nc" id="L146">          LOGGER.warn(&quot;could not remove gc listener&quot;, e);</span>
+<span class="nc" id="L147">        }</span>
+      }
+<span class="nc" id="L149">    }</span>
+<span class="nc" id="L150">    notifListener = null;</span>
+<span class="nc" id="L151">  }</span>
+
+  /** Return the current set of GC events in the in-memory log. */
+  public List&lt;GcEvent&gt; getLogs() {
+<span class="nc" id="L155">    final List&lt;GcEvent&gt; logs = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">    for (CircularBuffer&lt;GcEvent&gt; buffer : gcLogs.values()) {</span>
+<span class="nc" id="L157">      logs.addAll(buffer.toList());</span>
+<span class="nc" id="L158">    }</span>
+<span class="nc" id="L159">    Collections.sort(logs, GcEvent.REVERSE_TIME_ORDER);</span>
+<span class="nc" id="L160">    return logs;</span>
+  }
+
+  private void updateMetrics(String name, GcInfo info) {
+<span class="nc" id="L164">    final Map&lt;String, MemoryUsage&gt; before = info.getMemoryUsageBeforeGc();</span>
+<span class="nc" id="L165">    final Map&lt;String, MemoryUsage&gt; after = info.getMemoryUsageAfterGc();</span>
+
+<span class="nc bnc" id="L167" title="All 2 branches missed.">    if (oldGenPoolName != null) {</span>
+<span class="nc" id="L168">      final long oldBefore = before.get(oldGenPoolName).getUsed();</span>
+<span class="nc" id="L169">      final long oldAfter = after.get(oldGenPoolName).getUsed();</span>
+<span class="nc" id="L170">      final long delta = oldAfter - oldBefore;</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">      if (delta &gt; 0L) {</span>
+<span class="nc" id="L172">        PROMOTION_RATE.increment(delta);</span>
+      }
+
+      // Some GCs such as G1 can reduce the old gen size as part of a minor GC. To track the
+      // live data size we record the value if we see a reduction in the old gen heap size or
+      // after a major GC.
+<span class="nc bnc" id="L178" title="All 4 branches missed.">      if (oldAfter &lt; oldBefore || HelperFunctions.getGcType(name) == GcType.OLD) {</span>
+<span class="nc" id="L179">        LIVE_DATA_SIZE.set(oldAfter);</span>
+<span class="nc" id="L180">        final long oldMaxAfter = after.get(oldGenPoolName).getMax();</span>
+<span class="nc" id="L181">        MAX_DATA_SIZE.set(oldMaxAfter);</span>
+      }
+    }
+
+<span class="nc bnc" id="L185" title="All 2 branches missed.">    if (youngGenPoolName != null) {</span>
+<span class="nc" id="L186">      final long youngBefore = before.get(youngGenPoolName).getUsed();</span>
+<span class="nc" id="L187">      final long youngAfter = after.get(youngGenPoolName).getUsed();</span>
+<span class="nc" id="L188">      final long delta = youngBefore - youngGenSizeAfter;</span>
+<span class="nc" id="L189">      youngGenSizeAfter = youngAfter;</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">      if (delta &gt; 0L) {</span>
+<span class="nc" id="L191">        ALLOCATION_RATE.increment(delta);</span>
+      }
+    }
+<span class="nc" id="L194">  }</span>
+
+  private void processGcEvent(GarbageCollectionNotificationInfo info) {
+<span class="nc" id="L197">    GcEvent event = new GcEvent(info, jvmStartTime + info.getGcInfo().getStartTime());</span>
+<span class="nc" id="L198">    gcLogs.get(info.getGcName()).add(event);</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">    if (LOGGER.isDebugEnabled()) {</span>
+<span class="nc" id="L200">      LOGGER.debug(event.toString());</span>
+    }
+
+    // Update pause timer for the action and cause...
+<span class="nc bnc" id="L204" title="All 2 branches missed.">    Id eventId = (isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)</span>
+<span class="nc" id="L205">      .withTag(&quot;action&quot;, info.getGcAction())</span>
+<span class="nc" id="L206">      .withTag(&quot;cause&quot;, info.getGcCause());</span>
+<span class="nc" id="L207">    Timer timer = Spectator.globalRegistry().timer(eventId);</span>
+<span class="nc" id="L208">    timer.record(info.getGcInfo().getDuration(), TimeUnit.MILLISECONDS);</span>
+
+    // Update promotion and allocation counters
+<span class="nc" id="L211">    updateMetrics(info.getGcName(), info.getGcInfo());</span>
+
+    // Notify an event listener if registered
+<span class="nc bnc" id="L214" title="All 2 branches missed.">    if (eventListener != null) {</span>
+      try {
+<span class="nc" id="L216">        eventListener.onComplete(event);</span>
+<span class="nc" id="L217">      } catch (Exception e) {</span>
+<span class="nc" id="L218">        LOGGER.warn(&quot;exception thrown by event listener&quot;, e);</span>
+<span class="nc" id="L219">      }</span>
+    }
+<span class="nc" id="L221">  }</span>
+
+  private boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
+    // So far the only indicator known is that the cause will be reported as &quot;No GC&quot;
+    // when using CMS.
+<span class="nc" id="L226">    return &quot;No GC&quot;.equals(info.getGcCause());</span>
+  }
+
+<span class="nc" id="L229">  private class GcNotificationListener implements NotificationListener {</span>
+    public void handleNotification(Notification notification, Object ref) {
+<span class="nc" id="L231">      final String type = notification.getType();</span>
+<span class="nc bnc" id="L232" title="All 2 branches missed.">      if (type.equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {</span>
+<span class="nc" id="L233">        CompositeData cd = (CompositeData) notification.getUserData();</span>
+<span class="nc" id="L234">        GarbageCollectionNotificationInfo info = GarbageCollectionNotificationInfo.from(cd);</span>
+<span class="nc" id="L235">        processGcEvent(info);</span>
+      }
+<span class="nc" id="L237">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

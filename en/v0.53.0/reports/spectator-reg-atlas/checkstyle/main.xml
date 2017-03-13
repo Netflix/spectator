@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasConfig.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasCounter.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasDistributionSummary.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasGauge.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasRegistry.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/AtlasTimer.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/DataExpr.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/DsType.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/EvalPayload.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/MeasurementSerializer.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/Parser.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/PublishPayload.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/Query.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/StepClock.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/Subscription.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/Subscriptions.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-atlas/src/main/java/com/netflix/spectator/atlas/TagsValuePair.java">
+</file>
+</checkstyle>

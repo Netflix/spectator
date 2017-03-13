@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Agent.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-agent</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.agent</a> &gt; <span class="el_source">Agent.java</span></div><h1>Agent.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.agent;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.atlas.AtlasConfig;
+import com.netflix.spectator.atlas.AtlasRegistry;
+import com.netflix.spectator.gc.GcLogger;
+import com.netflix.spectator.jvm.Jmx;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+import java.lang.instrument.Instrumentation;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Agent that can be added to JVM to get basic stats about GC, memory, and optionally
+ * JMX.
+ */
+public final class Agent {
+
+<span class="nc" id="L38">  private Agent() {</span>
+<span class="nc" id="L39">  }</span>
+
+  private static Config loadConfig(String userResources) {
+<span class="nc" id="L42">    Config config = ConfigFactory.load(&quot;agent&quot;);</span>
+<span class="nc bnc" id="L43" title="All 4 branches missed.">    if (userResources != null &amp;&amp; !&quot;&quot;.equals(userResources)) {</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">      for (String userResource : userResources.split(&quot;[,\\s]+]&quot;)) {</span>
+<span class="nc" id="L45">        Config user = ConfigFactory.load(userResource);</span>
+<span class="nc" id="L46">        config = user.withFallback(config);</span>
+      }
+    }
+<span class="nc" id="L49">    return config.getConfig(&quot;netflix.spectator.agent&quot;);</span>
+  }
+
+  /**
+   * To make debugging easier since we usually create a fat jar, system properties can
+   * be created so that all jar versions can easily be accessed via JMX or using tools
+   * like {@code jinfo}.
+   */
+  private static void createDependencyProperties(Config config) {
+<span class="nc bnc" id="L58" title="All 2 branches missed.">    if (config.hasPath(&quot;dependencies&quot;)) {</span>
+<span class="nc" id="L59">      List&lt;String&gt; deps = config.getStringList(&quot;dependencies&quot;);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">      for (int i = 0; i &lt; deps.size(); ++i) {</span>
+<span class="nc" id="L61">        String prop = String.format(&quot;netflix.spectator.agent.dependency.%03d&quot;, i);</span>
+<span class="nc" id="L62">        System.setProperty(prop, deps.get(i));</span>
+      }
+    }
+<span class="nc" id="L65">  }</span>
+
+  /** Entry point for the agent. */
+  public static void premain(String arg, Instrumentation instrumentation) throws Exception {
+    // Setup logging
+<span class="nc" id="L70">    Config config = loadConfig(arg);</span>
+<span class="nc" id="L71">    createDependencyProperties(config);</span>
+
+    // Setup Registry
+<span class="nc" id="L74">    AtlasRegistry registry = new AtlasRegistry(Clock.SYSTEM, new AgentAtlasConfig(config));</span>
+
+    // Add to global registry for http stats and GC logger
+<span class="nc" id="L77">    Spectator.globalRegistry().add(registry);</span>
+
+    // Enable GC logger
+<span class="nc" id="L80">    GcLogger gcLogger = new GcLogger();</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    if (config.getBoolean(&quot;collection.gc&quot;)) {</span>
+<span class="nc" id="L82">      gcLogger.start(null);</span>
+    }
+
+    // Enable JVM data collection
+<span class="nc bnc" id="L86" title="All 2 branches missed.">    if (config.getBoolean(&quot;collection.jvm&quot;)) {</span>
+<span class="nc" id="L87">      Jmx.registerStandardMXBeans(registry);</span>
+    }
+
+    // Enable JMX query collection
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    if (config.getBoolean(&quot;collection.jmx&quot;)) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">      for (Config cfg : config.getConfigList(&quot;jmx.mappings&quot;)) {</span>
+<span class="nc" id="L93">        registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));</span>
+<span class="nc" id="L94">      }</span>
+    }
+
+    // Start collection for the registry
+<span class="nc" id="L98">    registry.start();</span>
+
+    // Shutdown registry
+<span class="nc" id="L101">    Runtime.getRuntime().addShutdownHook(new Thread(registry::stop, &quot;spectator-agent-shutdown&quot;));</span>
+<span class="nc" id="L102">  }</span>
+
+  private static class AgentAtlasConfig implements AtlasConfig {
+
+    private final Config config;
+
+<span class="nc" id="L108">    AgentAtlasConfig(Config config) {</span>
+<span class="nc" id="L109">      this.config = config;</span>
+<span class="nc" id="L110">    }</span>
+
+    @Override public String get(String k) {
+<span class="nc bnc" id="L113" title="All 2 branches missed.">      return config.hasPath(k) ? config.getString(k) : null;</span>
+    }
+
+    @Override public Map&lt;String, String&gt; commonTags() {
+<span class="nc" id="L117">      Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">      for (Config cfg : config.getConfigList(&quot;atlas.tags&quot;)) {</span>
+        // These are often populated by environment variables that can sometimes be empty
+        // rather than not set when missing. Empty strings are not allowed by Atlas.
+<span class="nc" id="L121">        String value = cfg.getString(&quot;value&quot;);</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (!value.isEmpty()) {</span>
+<span class="nc" id="L123">          tags.put(cfg.getString(&quot;key&quot;), cfg.getString(&quot;value&quot;));</span>
+        }
+<span class="nc" id="L125">      }</span>
+<span class="nc" id="L126">      return tags;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

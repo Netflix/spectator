@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AtlasTimer.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">AtlasTimer.java</span></div><h1>AtlasTimer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.StepDouble;
+import com.netflix.spectator.impl.StepLong;
+import com.netflix.spectator.impl.StepValue;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Timer that reports four measurements to Atlas:
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;&lt;b&gt;count:&lt;/b&gt; counter incremented each time record is called&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;totalTime:&lt;/b&gt; counter incremented by the recorded amount&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;totalOfSquares:&lt;/b&gt; counter incremented by the recorded amount&lt;sup&gt;2&lt;/sup&gt;&lt;/li&gt;
+ *   &lt;li&gt;&lt;b&gt;max:&lt;/b&gt; maximum recorded amount&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;Having an explicit {@code totalTime} and {@code count} on the backend
+ * can be used to calculate an accurate average for an arbitrary grouping. The
+ * {@code totalOfSquares} is used for computing a standard deviation.&lt;/p&gt;
+ *
+ * &lt;p&gt;Note that the {@link #count()} and {@link #totalTime()} will report
+ * the values since the last complete interval rather than the total for the
+ * life of the process.&lt;/p&gt;
+ */
+class AtlasTimer implements Timer {
+
+  private final Id id;
+  private final Clock clock;
+  private final StepLong count;
+  private final StepLong total;
+  private final StepDouble totalOfSquares;
+  private final StepLong max;
+
+  private final Id[] stats;
+
+  /** Create a new instance. */
+<span class="fc" id="L63">  AtlasTimer(Id id, Clock clock, long step) {</span>
+<span class="fc" id="L64">    this.id = id;</span>
+<span class="fc" id="L65">    this.clock = clock;</span>
+<span class="fc" id="L66">    this.count = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L67">    this.total = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L68">    this.totalOfSquares = new StepDouble(0.0, clock, step);</span>
+<span class="fc" id="L69">    this.max = new StepLong(0L, clock, step);</span>
+<span class="fc" id="L70">    this.stats = new Id[] {</span>
+<span class="fc" id="L71">        id.withTags(DsType.rate,  Statistic.count),</span>
+<span class="fc" id="L72">        id.withTags(DsType.rate,  Statistic.totalTime),</span>
+<span class="fc" id="L73">        id.withTags(DsType.rate,  Statistic.totalOfSquares),</span>
+<span class="fc" id="L74">        id.withTags(DsType.gauge, Statistic.max)</span>
+    };
+<span class="fc" id="L76">  }</span>
+
+  @Override public Id id() {
+<span class="fc" id="L79">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L83">    return false;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L87">    List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(4);</span>
+<span class="fc" id="L88">    ms.add(newMeasurement(stats[0], count, 1.0));</span>
+<span class="fc" id="L89">    ms.add(newMeasurement(stats[1], total, 1e-9));</span>
+<span class="fc" id="L90">    ms.add(newMeasurement(stats[2], totalOfSquares, 1e-18));</span>
+<span class="fc" id="L91">    ms.add(newMaxMeasurement(stats[3], max));</span>
+<span class="fc" id="L92">    return ms;</span>
+  }
+
+  private Measurement newMeasurement(Id mid, StepValue v, double f) {
+    // poll needs to be called before accessing the timestamp to ensure
+    // the counters have been rotated if there was no activity in the
+    // current interval.
+<span class="fc" id="L99">    double rate = v.pollAsRate() * f;</span>
+<span class="fc" id="L100">    long timestamp = v.timestamp();</span>
+<span class="fc" id="L101">    return new Measurement(mid, timestamp, rate);</span>
+  }
+
+  private Measurement newMaxMeasurement(Id mid, StepLong v) {
+    // poll needs to be called before accessing the timestamp to ensure
+    // the counters have been rotated if there was no activity in the
+    // current interval.
+<span class="fc" id="L108">    double maxValue = v.poll() / 1e9;</span>
+<span class="fc" id="L109">    long timestamp = v.timestamp();</span>
+<span class="fc" id="L110">    return new Measurement(mid, timestamp, maxValue);</span>
+  }
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L114">    count.getCurrent().incrementAndGet();</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">    if (amount &gt; 0) {</span>
+<span class="fc" id="L116">      final long nanos = unit.toNanos(amount);</span>
+<span class="fc" id="L117">      total.getCurrent().addAndGet(nanos);</span>
+<span class="fc" id="L118">      totalOfSquares.getCurrent().addAndGet((double) nanos * nanos);</span>
+<span class="fc" id="L119">      updateMax(max.getCurrent(), nanos);</span>
+    }
+<span class="fc" id="L121">  }</span>
+
+  private void updateMax(AtomicLong maxValue, long v) {
+<span class="fc" id="L124">    long p = maxValue.get();</span>
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">    while (v &gt; p &amp;&amp; !maxValue.compareAndSet(p, v)) {</span>
+<span class="nc" id="L126">      p = maxValue.get();</span>
+    }
+<span class="fc" id="L128">  }</span>
+
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="fc" id="L131">    final long start = clock.monotonicTime();</span>
+    try {
+<span class="fc" id="L133">      return f.call();</span>
+    } finally {
+<span class="pc" id="L135">      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+    }
+  }
+
+  @Override public void record(Runnable f) {
+<span class="fc" id="L140">    final long start = clock.monotonicTime();</span>
+    try {
+<span class="fc" id="L142">      f.run();</span>
+    } finally {
+<span class="pc" id="L144">      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L145">    }</span>
+<span class="fc" id="L146">  }</span>
+
+  @Override public long count() {
+<span class="fc" id="L149">    return count.poll();</span>
+  }
+
+  @Override public long totalTime() {
+<span class="fc" id="L153">    return total.poll();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

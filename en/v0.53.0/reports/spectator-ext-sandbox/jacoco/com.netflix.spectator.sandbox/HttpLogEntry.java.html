@@ -1,0 +1,556 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>HttpLogEntry.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-sandbox</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.sandbox</a> &gt; <span class="el_source">HttpLogEntry.java</span></div><h1>HttpLogEntry.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.sandbox;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
+import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Helper for logging http request related information.
+ */
+<span class="fc" id="L38">public class HttpLogEntry {</span>
+
+<span class="fc" id="L40">  private static final Logger LOGGER = LoggerFactory.getLogger(HttpLogEntry.class);</span>
+
+<span class="fc" id="L42">  private static final Marker CLIENT = MarkerFactory.getMarker(&quot;http-client&quot;);</span>
+<span class="fc" id="L43">  private static final Marker SERVER = MarkerFactory.getMarker(&quot;http-server&quot;);</span>
+
+<span class="fc" id="L45">  private static final Registry REGISTRY = Spectator.globalRegistry();</span>
+<span class="fc" id="L46">  private static final Id COMPLETE = REGISTRY.createId(&quot;http.req.complete&quot;);</span>
+<span class="fc" id="L47">  private static final Id ATTEMPT = REGISTRY.createId(&quot;http.req.attempt&quot;);</span>
+<span class="fc" id="L48">  private static final Id REQ_HEADER_SIZE = REGISTRY.createId(&quot;http.req.headerSize&quot;);</span>
+<span class="fc" id="L49">  private static final Id REQ_ENTITY_SIZE = REGISTRY.createId(&quot;http.req.entitySize&quot;);</span>
+<span class="fc" id="L50">  private static final Id RES_HEADER_SIZE = REGISTRY.createId(&quot;http.res.headerSize&quot;);</span>
+<span class="fc" id="L51">  private static final Id RES_ENTITY_SIZE = REGISTRY.createId(&quot;http.res.entitySize&quot;);</span>
+
+  private static final BucketFunction BUCKETS =
+<span class="fc" id="L54">      BucketFunctions.latency(maxLatency(), TimeUnit.MILLISECONDS);</span>
+
+  /**
+   * Including the endpoint is useful, but we need to be careful about the number of
+   * matches. A fixed prefix list is fairly easy to use and makes the number and set of matches
+   * explicit.
+   */
+<span class="fc" id="L61">  private static final List&lt;String&gt; ENDPOINT_PREFIXES = parseEndpoints(endpointPrefixes());</span>
+
+  private static long maxLatency() {
+<span class="fc" id="L64">    return Long.parseLong(System.getProperty(&quot;spectator.http.maxLatency&quot;, &quot;8000&quot;));</span>
+  }
+
+  private static String endpointPrefixes() {
+<span class="fc" id="L68">    return System.getProperty(&quot;spectator.http.endpointPrefixes&quot;, &quot;/healthcheck&quot;);</span>
+  }
+
+  private static List&lt;String&gt; parseEndpoints(String s) {
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">    String[] prefixes = (s == null) ? new String[] {} : s.split(&quot;[,\\s]+&quot;);</span>
+<span class="fc" id="L73">    List&lt;String&gt; buf = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    for (String prefix : prefixes) {</span>
+<span class="fc" id="L75">      String tmp = prefix.trim();</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">      if (tmp.length() &gt; 0) {</span>
+<span class="fc" id="L77">        buf.add(prefix);</span>
+      }
+    }
+<span class="fc" id="L80">    Collections.sort(buf);</span>
+<span class="fc" id="L81">    return buf;</span>
+  }
+
+  private static String longestPrefixMatch(String path, String dflt) {
+<span class="nc bnc" id="L85" title="All 4 branches missed.">    if (path == null || path.length() == 0) {</span>
+<span class="nc" id="L86">      return dflt;</span>
+    }
+
+<span class="nc" id="L89">    int length = 0;</span>
+<span class="nc" id="L90">    String longest = null;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    for (String prefix : ENDPOINT_PREFIXES) {</span>
+<span class="nc bnc" id="L92" title="All 4 branches missed.">      if (path.startsWith(prefix) &amp;&amp; prefix.length() &gt; length) {</span>
+<span class="nc" id="L93">        longest = prefix;</span>
+<span class="nc" id="L94">        length = prefix.length();</span>
+      }
+<span class="nc" id="L96">    }</span>
+
+<span class="nc bnc" id="L98" title="All 2 branches missed.">    return (longest == null) ? dflt : longest;</span>
+  }
+
+  /** Log a client request. */
+  public static void logClientRequest(HttpLogEntry entry) {
+<span class="nc" id="L103">    log(LOGGER, CLIENT, entry);</span>
+<span class="nc" id="L104">  }</span>
+
+  /**
+   * Log a client request.
+   * @deprecated Use {@link #logClientRequest(HttpLogEntry)} instead.
+   */
+  @Deprecated
+  public static void logClientRequest(Logger logger, HttpLogEntry entry) {
+<span class="nc" id="L112">    log(logger, CLIENT, entry);</span>
+<span class="nc" id="L113">  }</span>
+
+  /** Log a request received by a server. */
+  public static void logServerRequest(HttpLogEntry entry) {
+<span class="nc" id="L117">    log(LOGGER, SERVER, entry);</span>
+<span class="nc" id="L118">  }</span>
+
+  /**
+   * Log a request received by a server.
+   * @deprecated Use {@link #logServerRequest(HttpLogEntry)} instead.
+   */
+  @Deprecated
+  public static void logServerRequest(Logger logger, HttpLogEntry entry) {
+<span class="nc" id="L126">    log(logger, SERVER, entry);</span>
+<span class="nc" id="L127">  }</span>
+
+  private static void log(Logger logger, Marker marker, HttpLogEntry entry) {
+<span class="nc" id="L130">    Id dimensions = REGISTRY.createId(&quot;tags&quot;)</span>
+<span class="nc" id="L131">        .withTag(&quot;mode&quot;, marker.getName())</span>
+<span class="nc" id="L132">        .withTag(&quot;status&quot;, entry.getStatusTag())</span>
+<span class="nc" id="L133">        .withTag(&quot;statusCode&quot;, entry.getStatusCodeTag())</span>
+<span class="nc" id="L134">        .withTag(&quot;method&quot;, entry.method);</span>
+
+<span class="nc bnc" id="L136" title="All 2 branches missed.">    if (entry.clientName != null) {</span>
+<span class="nc" id="L137">      dimensions = dimensions.withTag(&quot;client&quot;, entry.clientName);</span>
+    }
+
+<span class="nc bnc" id="L140" title="All 4 branches missed.">    if (marker == SERVER &amp;&amp; entry.path != null) {</span>
+<span class="nc" id="L141">      dimensions = dimensions.withTag(&quot;endpoint&quot;, longestPrefixMatch(entry.path, &quot;other&quot;));</span>
+    }
+
+    // Update stats for the final attempt after retries are exhausted
+<span class="nc bnc" id="L145" title="All 4 branches missed.">    if (!entry.canRetry || entry.attempt &gt;= entry.maxAttempts) {</span>
+<span class="nc" id="L146">      BucketTimer.get(REGISTRY, COMPLETE.withTags(dimensions.tags()), BUCKETS)</span>
+<span class="nc" id="L147">          .record(entry.getOverallLatency(), TimeUnit.MILLISECONDS);</span>
+    }
+
+    // Update stats for every actual http request
+<span class="nc" id="L151">    BucketTimer.get(REGISTRY, ATTEMPT.withTags(dimensions.tags()), BUCKETS)</span>
+<span class="nc" id="L152">        .record(entry.getLatency(), TimeUnit.MILLISECONDS);</span>
+<span class="nc" id="L153">    REGISTRY.distributionSummary(REQ_HEADER_SIZE.withTags(dimensions.tags()))</span>
+<span class="nc" id="L154">        .record(entry.getRequestHeadersLength());</span>
+<span class="nc" id="L155">    REGISTRY.distributionSummary(REQ_ENTITY_SIZE.withTags(dimensions.tags()))</span>
+<span class="nc" id="L156">        .record(entry.requestContentLength);</span>
+<span class="nc" id="L157">    REGISTRY.distributionSummary(RES_HEADER_SIZE.withTags(dimensions.tags()))</span>
+<span class="nc" id="L158">        .record(entry.getResponseHeadersLength());</span>
+<span class="nc" id="L159">    REGISTRY.distributionSummary(RES_ENTITY_SIZE.withTags(dimensions.tags()))</span>
+<span class="nc" id="L160">        .record(entry.responseContentLength);</span>
+
+    // Write data out to logger if enabled. For many monitoring use-cases there tend to be
+    // frequent requests that can be quite noisy so the log level is set to debug. This class is
+    // mostly intended to generate something like an access log so it presumes users who want the
+    // information will configure an appender based on the markers to send the data to a
+    // dedicated file. Others shouldn't have to deal with the spam in the logs, so debug for the
+    // level seems reasonable.
+<span class="nc bnc" id="L168" title="All 2 branches missed.">    if (logger.isDebugEnabled(marker)) {</span>
+<span class="nc" id="L169">      logger.debug(marker, entry.toString());</span>
+    }
+<span class="nc" id="L171">  }</span>
+
+  /** Generate a new request id. */
+  private static String newId() {
+<span class="fc" id="L175">    return UUID.randomUUID().toString();</span>
+  }
+
+  // Cannot be static constant, date format is not thread-safe
+<span class="fc" id="L179">  private final SimpleDateFormat isoDate = new SimpleDateFormat(&quot;yyyy-MM-dd'T'HH:mm:ss&quot;);</span>
+
+<span class="fc" id="L181">  private String clientName = null;</span>
+
+<span class="fc" id="L183">  private String requestId = newId();</span>
+
+<span class="fc" id="L185">  private String originalUri = null;</span>
+<span class="fc" id="L186">  private String requestUri = null;</span>
+<span class="fc" id="L187">  private String path = null;</span>
+<span class="fc" id="L188">  private String method = null;</span>
+<span class="fc" id="L189">  private List&lt;Header&gt; requestHeaders = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L190">  private long requestContentLength = -1;</span>
+
+<span class="fc" id="L192">  private String remoteAddr = null;</span>
+<span class="fc" id="L193">  private int remotePort = -1;</span>
+
+<span class="fc" id="L195">  private String attemptId = requestId;</span>
+<span class="fc" id="L196">  private int attempt = 1;</span>
+<span class="fc" id="L197">  private int maxAttempts = -1;</span>
+<span class="fc" id="L198">  private boolean canRetry = false;</span>
+
+<span class="fc" id="L200">  private int redirect = 0;</span>
+
+<span class="fc" id="L202">  private Throwable exception = null;</span>
+
+<span class="fc" id="L204">  private int statusCode = -1;</span>
+<span class="fc" id="L205">  private String statusReason = null;</span>
+<span class="fc" id="L206">  private List&lt;Header&gt; responseHeaders = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L207">  private long responseContentLength = -1;</span>
+
+<span class="fc" id="L209">  private List&lt;Event&gt; events = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L210">  private long latency = -1;</span>
+<span class="fc" id="L211">  private long originalStart = -1;</span>
+
+  private void reset(int redir) {
+<span class="pc bpc" id="L214" title="2 of 4 branches missed.">    if (originalStart &lt; 0 &amp;&amp; !events.isEmpty()) {</span>
+<span class="nc" id="L215">      originalStart = events.get(0).timestamp();</span>
+    }
+<span class="fc" id="L217">    requestHeaders.clear();</span>
+<span class="fc" id="L218">    requestContentLength = -1;</span>
+<span class="fc" id="L219">    remoteAddr = null;</span>
+<span class="fc" id="L220">    remotePort = -1;</span>
+<span class="fc" id="L221">    redirect = redir;</span>
+<span class="fc" id="L222">    exception = null;</span>
+<span class="fc" id="L223">    statusCode = -1;</span>
+<span class="fc" id="L224">    responseHeaders.clear();</span>
+<span class="fc" id="L225">    responseContentLength = -1;</span>
+<span class="fc" id="L226">    events.clear();</span>
+<span class="fc" id="L227">    latency = -1;</span>
+<span class="fc" id="L228">  }</span>
+
+  /** Set the name of the client, often used for clients to identify a particular config. */
+  public HttpLogEntry withClientName(String name) {
+<span class="fc" id="L232">    this.clientName = name;</span>
+<span class="fc" id="L233">    return this;</span>
+  }
+
+  /**
+   * Set the original uri. In the case of approaches with client-side load balancing this will
+   * be some alias indicating the group of hosts. The request uri would indicate a specific host
+   * used for an actual network request.
+   */
+  public HttpLogEntry withOriginalUri(String uri) {
+<span class="nc" id="L242">    this.originalUri = uri;</span>
+<span class="nc" id="L243">    return this;</span>
+  }
+
+  /**
+   * Set the original uri. In the case of approaches with client-side load balancing this will
+   * be some alias indicating the group of hosts. The request uri would indicate a specific host
+   * used for an actual network request.
+   */
+  public HttpLogEntry withOriginalUri(URI uri) {
+<span class="nc" id="L252">    return withOriginalUri(uri.toString());</span>
+  }
+
+  /** Set the URI for the actual http request. */
+  public HttpLogEntry withRequestUri(String uri, String path) {
+<span class="fc" id="L257">    this.requestUri = uri;</span>
+<span class="fc" id="L258">    this.path = path;</span>
+<span class="fc" id="L259">    return this;</span>
+  }
+
+  /** Set the URI for the actual http request. */
+  public HttpLogEntry withRequestUri(URI uri) {
+<span class="fc" id="L264">    return withRequestUri(uri.toString(), uri.getPath());</span>
+  }
+
+  /** Set the method for the request. */
+  public HttpLogEntry withMethod(String httpMethod) {
+<span class="nc" id="L269">    this.method = httpMethod;</span>
+<span class="nc" id="L270">    return this;</span>
+  }
+
+  /** Add a header that was on the request. */
+  public HttpLogEntry withRequestHeader(String name, String value) {
+<span class="nc" id="L275">    requestHeaders.add(new Header(name, value));</span>
+<span class="nc" id="L276">    return this;</span>
+  }
+
+  /** Set the content-length for the request. */
+  public HttpLogEntry withRequestContentLength(long size) {
+<span class="nc" id="L281">    this.requestContentLength = size;</span>
+<span class="nc" id="L282">    return this;</span>
+  }
+
+  /**
+   * Set the remote address. For a client making a request this should be the server, for a
+   * server receiving a request it should be the client.
+   */
+  public HttpLogEntry withRemoteAddr(String addr) {
+<span class="nc" id="L290">    this.remoteAddr = addr;</span>
+<span class="nc" id="L291">    return this;</span>
+  }
+
+  /**
+   * Set the remote port. For a client making a request this should be the server, for a
+   * server receiving a request it should be the client.
+   */
+  public HttpLogEntry withRemotePort(int port) {
+<span class="nc" id="L299">    this.remotePort = port;</span>
+<span class="nc" id="L300">    return this;</span>
+  }
+
+  /** Set the attempt if retries are used, should only be used after the initial request. */
+  public HttpLogEntry withAttempt(int n) {
+<span class="fc" id="L305">    this.attempt = n;</span>
+<span class="fc" id="L306">    this.attemptId = newId();</span>
+<span class="fc" id="L307">    reset(0);</span>
+<span class="fc" id="L308">    return this;</span>
+  }
+
+  /** Set the attempt if redirect occurs, should only be used after the initial request. */
+  public HttpLogEntry withRedirect(URI loc) {
+<span class="nc" id="L313">    reset(redirect + 1);</span>
+<span class="nc" id="L314">    return withRequestUri(loc);</span>
+  }
+
+  /** Set the max number of attempts that will be tried. */
+  public HttpLogEntry withMaxAttempts(int attempts) {
+<span class="fc" id="L319">    this.maxAttempts = attempts;</span>
+<span class="fc" id="L320">    return this;</span>
+  }
+
+  /** Set to true if the error is one that can be retried. */
+  public HttpLogEntry withCanRetry(boolean retry) {
+<span class="nc" id="L325">    this.canRetry = retry;</span>
+<span class="nc" id="L326">    return this;</span>
+  }
+
+  /** Set the exception if there is a failure such as a connect timeout. */
+  public HttpLogEntry withException(Throwable t) {
+<span class="nc" id="L331">    exception = t;</span>
+<span class="nc" id="L332">    return this;</span>
+  }
+
+  /** Set the status code from the response. */
+  public HttpLogEntry withStatusCode(int code) {
+<span class="nc" id="L337">    this.statusCode = code;</span>
+<span class="nc" id="L338">    return this;</span>
+  }
+
+  /** Set the status reason from the response. */
+  public HttpLogEntry withStatusReason(String reason) {
+<span class="nc" id="L343">    this.statusReason = reason;</span>
+<span class="nc" id="L344">    return this;</span>
+  }
+
+  /** Add a header that was on the response. */
+  public HttpLogEntry withResponseHeader(String name, String value) {
+<span class="nc" id="L349">    responseHeaders.add(new Header(name, value));</span>
+<span class="nc" id="L350">    return this;</span>
+  }
+
+  /** Set the content-length from the response. */
+  public HttpLogEntry withResponseContentLength(long size) {
+<span class="nc" id="L355">    this.responseContentLength = size;</span>
+<span class="nc" id="L356">    return this;</span>
+  }
+
+  /** Set the latency for the request. */
+  public HttpLogEntry withRequestLatency(long t) {
+<span class="nc" id="L361">    this.latency = t;</span>
+<span class="nc" id="L362">    return this;</span>
+  }
+
+  /** Mark the time an event occurred. Should include at least the start and end of a request. */
+  public HttpLogEntry mark(String name) {
+<span class="nc" id="L367">    events.add(new Event(name, System.currentTimeMillis()));</span>
+<span class="nc" id="L368">    return this;</span>
+  }
+
+  /** Mark the time an event occurred. Should include at least the start and end of a request. */
+  public HttpLogEntry mark(String name, long timestamp) {
+<span class="nc" id="L373">    events.add(new Event(name, timestamp));</span>
+<span class="nc" id="L374">    return this;</span>
+  }
+
+  /** Return the request id. */
+  public String getRequestId() {
+<span class="nc" id="L379">    return requestId;</span>
+  }
+
+  /** Return the attempt id. */
+  public String getAttemptId() {
+<span class="nc" id="L384">    return attemptId;</span>
+  }
+
+  /**
+   * Return the latency for the request. If not explicitly set it will be calculated from the
+   * events.
+   */
+  public long getLatency() {
+<span class="nc bnc" id="L392" title="All 2 branches missed.">    if (latency &gt;= 0L) {</span>
+<span class="nc" id="L393">      return latency;</span>
+<span class="nc bnc" id="L394" title="All 2 branches missed.">    } else if (events.size() &gt;= 2) {</span>
+<span class="nc" id="L395">      return events.get(events.size() - 1).timestamp() - events.get(0).timestamp();</span>
+    } else {
+<span class="nc" id="L397">      return -1;</span>
+    }
+  }
+
+  /** Return the overall latency for a group of requests including all retries. */
+  public long getOverallLatency() {
+<span class="nc bnc" id="L403" title="All 4 branches missed.">    if (maxAttempts &lt;= 1 || originalStart &lt; 0) {</span>
+<span class="nc" id="L404">      return getLatency();</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">    } else if (events.isEmpty()) {</span>
+<span class="nc" id="L406">      return -1;</span>
+    } else {
+<span class="nc" id="L408">      return events.get(events.size() - 1).timestamp() - originalStart;</span>
+    }
+  }
+
+  /** Return the starting time for the request. */
+  public String getStartTime() {
+<span class="nc bnc" id="L414" title="All 2 branches missed.">    return events.isEmpty()</span>
+        ? &quot;unknown&quot;
+<span class="nc" id="L416">        : isoDate.format(new Date(events.get(0).timestamp()));</span>
+  }
+
+  private int getHeadersLength(List&lt;Header&gt; headers) {
+<span class="nc" id="L420">    int size = 0;</span>
+<span class="nc bnc" id="L421" title="All 2 branches missed.">    for (Header h : headers) {</span>
+<span class="nc" id="L422">      size += h.numBytes();</span>
+<span class="nc" id="L423">    }</span>
+<span class="nc" id="L424">    return size;</span>
+  }
+
+  /** Return the size in bytes of all request headers. */
+  public int getRequestHeadersLength() {
+<span class="nc" id="L429">    return getHeadersLength(requestHeaders);</span>
+  }
+
+  /** Return the size in bytes of all response headers. */
+  public int getResponseHeadersLength() {
+<span class="nc" id="L434">    return getHeadersLength(responseHeaders);</span>
+  }
+
+  /** Return a time line based on marked events. */
+  public String getTimeline() {
+<span class="nc" id="L439">    StringBuilder builder = new StringBuilder();</span>
+<span class="nc bnc" id="L440" title="All 2 branches missed.">    for (Event event : events) {</span>
+<span class="nc" id="L441">      builder.append(event.name()).append(&quot;:&quot;).append(event.timestamp()).append(&quot;;&quot;);</span>
+<span class="nc" id="L442">    }</span>
+<span class="nc" id="L443">    return builder.toString();</span>
+  }
+
+  private String getExceptionClass() {
+<span class="nc bnc" id="L447" title="All 2 branches missed.">    return (exception == null)</span>
+        ? &quot;null&quot;
+<span class="nc" id="L449">        : exception.getClass().getName();</span>
+  }
+
+  private String getExceptionMessage() {
+<span class="nc bnc" id="L453" title="All 2 branches missed.">    return (exception == null)</span>
+        ? &quot;null&quot;
+<span class="nc" id="L455">        : exception.getMessage();</span>
+  }
+
+  private String getHeaders(List&lt;Header&gt; headers) {
+<span class="nc" id="L459">    StringBuilder builder = new StringBuilder();</span>
+<span class="nc bnc" id="L460" title="All 2 branches missed.">    for (Header h : headers) {</span>
+<span class="nc" id="L461">      builder.append(h.name()).append(':').append(h.value()).append(';');</span>
+<span class="nc" id="L462">    }</span>
+<span class="nc" id="L463">    return builder.toString();</span>
+  }
+
+  /** Return a summary of all request headers. */
+  public String getRequestHeaders() {
+<span class="nc" id="L468">    return getHeaders(requestHeaders);</span>
+  }
+
+  /** Return a summary of all response headers. */
+  public String getResponseHeaders() {
+<span class="nc" id="L473">    return getHeaders(responseHeaders);</span>
+  }
+
+  private String getStatusTag() {
+<span class="nc bnc" id="L477" title="All 2 branches missed.">    return (exception != null)</span>
+<span class="nc bnc" id="L478" title="All 2 branches missed.">        ? exception.getClass().getSimpleName()</span>
+        : (statusCode &gt;= 100 ? (statusCode / 100) + &quot;xx&quot; : &quot;unknown&quot;);
+  }
+
+  private String getStatusCodeTag() {
+<span class="nc bnc" id="L483" title="All 2 branches missed.">    return (exception != null)</span>
+<span class="nc bnc" id="L484" title="All 2 branches missed.">        ? exception.getClass().getSimpleName()</span>
+        : (statusCode &gt;= 100 ? &quot;&quot; + statusCode : &quot;unknown&quot;);
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L489">    return new StringBuilder()</span>
+<span class="nc" id="L490">        .append(clientName).append('\t')</span>
+<span class="nc" id="L491">        .append(getStartTime()).append('\t')</span>
+<span class="nc" id="L492">        .append(getLatency()).append('\t')</span>
+<span class="nc" id="L493">        .append(getOverallLatency()).append('\t')</span>
+<span class="nc" id="L494">        .append(getTimeline()).append('\t')</span>
+<span class="nc" id="L495">        .append(method).append('\t')</span>
+<span class="nc" id="L496">        .append(originalUri).append('\t')</span>
+<span class="nc" id="L497">        .append(requestUri).append('\t')</span>
+<span class="nc" id="L498">        .append(remoteAddr).append('\t')</span>
+<span class="nc" id="L499">        .append(remotePort).append('\t')</span>
+<span class="nc" id="L500">        .append(statusCode).append('\t')</span>
+<span class="nc" id="L501">        .append(statusReason).append('\t')</span>
+<span class="nc" id="L502">        .append(getExceptionClass()).append('\t')</span>
+<span class="nc" id="L503">        .append(getExceptionMessage()).append('\t')</span>
+<span class="nc" id="L504">        .append(getRequestHeadersLength()).append('\t')</span>
+<span class="nc" id="L505">        .append(requestContentLength).append('\t')</span>
+<span class="nc" id="L506">        .append(getResponseHeadersLength()).append('\t')</span>
+<span class="nc" id="L507">        .append(responseContentLength).append('\t')</span>
+<span class="nc" id="L508">        .append(getRequestHeaders()).append('\t')</span>
+<span class="nc" id="L509">        .append(getResponseHeaders()).append('\t')</span>
+<span class="nc" id="L510">        .append(redirect).append('\t')</span>
+<span class="nc" id="L511">        .append(attempt).append('\t')</span>
+<span class="nc" id="L512">        .append(maxAttempts)</span>
+<span class="nc" id="L513">        .toString();</span>
+  }
+
+  private static class Header {
+    private final String name;
+    private final String value;
+
+<span class="nc" id="L520">    Header(String name, String value) {</span>
+<span class="nc" id="L521">      this.name = name;</span>
+<span class="nc" id="L522">      this.value = value;</span>
+<span class="nc" id="L523">    }</span>
+
+    String name() {
+<span class="nc" id="L526">      return name;</span>
+    }
+
+    String value() {
+<span class="nc" id="L530">      return value;</span>
+    }
+
+    int numBytes() {
+<span class="nc" id="L534">      return name.length() + &quot;: &quot;.length() + value.length() + &quot;\n&quot;.length();</span>
+    }
+  }
+
+  private static class Event {
+    private final String name;
+    private final long timestamp;
+
+<span class="nc" id="L542">    Event(String name, long timestamp) {</span>
+<span class="nc" id="L543">      this.name = name;</span>
+<span class="nc" id="L544">      this.timestamp = timestamp;</span>
+<span class="nc" id="L545">    }</span>
+
+    String name() {
+<span class="nc" id="L548">      return name;</span>
+    }
+
+    long timestamp() {
+<span class="nc" id="L552">      return timestamp;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

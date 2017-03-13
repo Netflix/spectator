@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>AsciiSet.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">AsciiSet.java</span></div><h1>AsciiSet.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
+
+/**
+ * Utility class for quickly checking if a string contains only characters contained within
+ * the given set. The set is limited to basic ascii with ranges, if you need more advanced
+ * patterns then regular expressions are a better option though it will likely come with a
+ * steep performance penalty.
+ *
+ * &lt;p&gt;&lt;b&gt;This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.&lt;/b&gt;&lt;/p&gt;
+ */
+public final class AsciiSet {
+
+  private static final MethodHandle STRING_CONSTRUCTOR;
+  static {
+    MethodHandle handle;
+    try {
+<span class="fc" id="L37">      Constructor&lt;String&gt; ctor = String.class.getDeclaredConstructor(char[].class, boolean.class);</span>
+<span class="fc" id="L38">      ctor.setAccessible(true);</span>
+<span class="fc" id="L39">      handle = MethodHandles.lookup().unreflectConstructor(ctor);</span>
+<span class="nc" id="L40">    } catch (Exception e) {</span>
+<span class="nc" id="L41">      handle = null;</span>
+<span class="fc" id="L42">    }</span>
+<span class="fc" id="L43">    STRING_CONSTRUCTOR = handle;</span>
+<span class="fc" id="L44">  }</span>
+
+  /**
+   * Creates a new string without copying the buffer if possible. The String class has a
+   * package private constructor that allows the buffer to be shared.
+   */
+  @SuppressWarnings(&quot;PMD.AvoidCatchingThrowable&quot;)
+  private static String newString(char[] buf) {
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">    if (STRING_CONSTRUCTOR != null) {</span>
+      try {
+<span class="fc" id="L54">        return (String) STRING_CONSTRUCTOR.invokeExact(buf, true);</span>
+<span class="nc" id="L55">      } catch (Throwable t) {</span>
+        // Note: `invokeExact` explicitly throws Throwable to propagate any exception of the
+        // method unchanged. For our purposes we just fallback to the string constructor.
+<span class="nc" id="L58">        return new String(buf);</span>
+      }
+    } else {
+<span class="nc" id="L61">      return new String(buf);</span>
+    }
+  }
+
+  /**
+   * Create a set containing ascii characters using a simple pattern. The pattern is similar
+   * to a character set in regex. For example, {@code ABC} would contain the characters
+   * {@code A}, {@code B}, and {@code C}. Ranges are supported so all uppercase letters could
+   * be specified as {@code A-Z}. The dash, {@code -}, will be included as part of the set if
+   * it is at the start or end of the pattern.
+   *
+   * @param pattern
+   *     String specification of the character set.
+   * @return
+   *     Set containing the characters specified in {@code pattern}.
+   */
+  public static AsciiSet fromPattern(String pattern) {
+<span class="fc" id="L78">    final boolean[] members = new boolean[128];</span>
+<span class="fc" id="L79">    final int n = pattern.length();</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    for (int i = 0; i &lt; n; ++i) {</span>
+<span class="fc" id="L81">      final char c = pattern.charAt(i);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">      if (c &gt;= members.length) {</span>
+<span class="fc" id="L83">        throw new IllegalArgumentException(&quot;invalid pattern, '&quot; + c + &quot;' is not ascii&quot;);</span>
+      }
+
+<span class="fc bfc" id="L86" title="All 4 branches covered.">      final boolean isStartOrEnd = i == 0 || i == n - 1;</span>
+<span class="fc bfc" id="L87" title="All 4 branches covered.">      if (isStartOrEnd || c != '-') {</span>
+<span class="fc" id="L88">        members[c] = true;</span>
+      } else {
+<span class="fc" id="L90">        final char s = pattern.charAt(i - 1);</span>
+<span class="fc" id="L91">        final char e = pattern.charAt(i + 1);</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        for (char v = s; v &lt;= e; ++v) {</span>
+<span class="fc" id="L93">          members[v] = true;</span>
+        }
+      }
+    }
+<span class="fc" id="L97">    return new AsciiSet(members);</span>
+  }
+
+  /**
+   * Converts the members array to a pattern string. Used to provide a user friendly toString
+   * implementation for the set.
+   */
+  private static String toPattern(boolean[] members) {
+<span class="fc" id="L105">    StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L106">    boolean previous = false;</span>
+<span class="fc" id="L107">    char s = 0;</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">    for (int i = 0; i &lt; members.length; ++i) {</span>
+<span class="fc bfc" id="L109" title="All 4 branches covered.">      if (members[i] &amp;&amp; !previous) {</span>
+<span class="fc" id="L110">        s = (char) i;</span>
+<span class="fc bfc" id="L111" title="All 4 branches covered.">      } else if (!members[i] &amp;&amp; previous) {</span>
+<span class="fc" id="L112">        final char e = (char) (i - 1);</span>
+<span class="fc" id="L113">        append(buf, s, e);</span>
+      }
+<span class="fc" id="L115">      previous = members[i];</span>
+    }
+<span class="fc bfc" id="L117" title="All 2 branches covered.">    if (previous) {</span>
+<span class="fc" id="L118">      final char e = (char) (members.length - 1);</span>
+<span class="fc" id="L119">      append(buf, s, e);</span>
+    }
+<span class="fc" id="L121">    return buf.toString();</span>
+  }
+
+  private static void append(StringBuilder buf, char s, char e) {
+<span class="fc bfc" id="L125" title="All 3 branches covered.">    switch (e - s) {</span>
+<span class="fc" id="L126">      case 0:  buf.append(s);                       break;</span>
+<span class="fc" id="L127">      case 1:  buf.append(s).append(e);             break;</span>
+<span class="fc" id="L128">      default: buf.append(s).append('-').append(e); break;</span>
+    }
+<span class="fc" id="L130">  }</span>
+
+  private final String pattern;
+  private final boolean[] members;
+
+<span class="fc" id="L135">  private AsciiSet(boolean[] members) {</span>
+<span class="fc" id="L136">    this.members = Preconditions.checkNotNull(members, &quot;members array cannot be null&quot;);</span>
+<span class="fc" id="L137">    this.pattern = toPattern(members);</span>
+<span class="fc" id="L138">  }</span>
+
+  /**
+   * Returns true if the character contained within the set. This is a constant time
+   * operation.
+   */
+  public boolean contains(char c) {
+<span class="fc bfc" id="L145" title="All 4 branches covered.">    return c &lt; 128 &amp;&amp; members[c];</span>
+  }
+
+  /**
+   * Returns true if all characters in the string are contained within the set.
+   */
+  public boolean containsAll(CharSequence str) {
+<span class="fc" id="L152">    final int n = str.length();</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">    for (int i = 0; i &lt; n; ++i) {</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">      if (!contains(str.charAt(i))) {</span>
+<span class="fc" id="L155">        return false;</span>
+      }
+    }
+<span class="fc" id="L158">    return true;</span>
+  }
+
+  /**
+   * Replace all characters in the input string with the replacement character.
+   */
+  public String replaceNonMembers(String input, char replacement) {
+<span class="fc bfc" id="L165" title="All 2 branches covered.">    if (!contains(replacement)) {</span>
+<span class="fc" id="L166">      throw new IllegalArgumentException(replacement + &quot; is not a member of &quot; + pattern);</span>
+    }
+<span class="fc bfc" id="L168" title="All 2 branches covered.">    return containsAll(input) ? input : replaceNonMembersImpl(input, replacement);</span>
+  }
+
+  private String replaceNonMembersImpl(String input, char replacement) {
+<span class="fc" id="L172">    final int n = input.length();</span>
+<span class="fc" id="L173">    final char[] buf = input.toCharArray();</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">    for (int i = 0; i &lt; n; ++i) {</span>
+<span class="fc" id="L175">      final char c = buf[i];</span>
+<span class="fc bfc" id="L176" title="All 2 branches covered.">      if (!contains(c)) {</span>
+<span class="fc" id="L177">        buf[i] = replacement;</span>
+      }
+    }
+<span class="fc" id="L180">    return newString(buf);</span>
+  }
+
+  @Override public String toString() {
+<span class="fc" id="L184">    return pattern;</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc" id="L188">    return pattern.hashCode();</span>
+  }
+
+  @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L192" title="All 2 branches covered.">    if (this == obj) return true;</span>
+<span class="fc bfc" id="L193" title="All 4 branches covered.">    if (obj == null || !(obj instanceof AsciiSet)) return false;</span>
+<span class="fc" id="L194">    AsciiSet other = (AsciiSet) obj;</span>
+<span class="fc" id="L195">    return pattern.equals(other.pattern);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

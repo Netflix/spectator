@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>TagMeasurementFilter.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers.filter</a> &gt; <span class="el_source">TagMeasurementFilter.java</span></div><h1>TagMeasurementFilter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.netflix.spectator.controllers.filter;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+
+
+/**
+ * A simple MeasurementFilter based on meter/tag names and values.
+ */
+public class TagMeasurementFilter implements Predicate&lt;Measurement&gt; {
+  private final Pattern meterNamePattern;
+  private final Pattern tagNamePattern;
+  private final Pattern tagValuePattern;
+
+  private static Pattern regexToPatternOrNull(String regex) {
+<span class="pc bpc" id="L36" title="2 of 6 branches missed.">    if (regex != null &amp;&amp; !regex.isEmpty() &amp;&amp; !regex.equals(&quot;.*&quot;)) {</span>
+<span class="fc" id="L37">      return Pattern.compile(regex);</span>
+    }
+<span class="fc" id="L39">    return null;</span>
+  }
+
+  private static boolean stringMatches(String text, Pattern pattern) {
+<span class="fc bfc" id="L43" title="All 4 branches covered.">    return pattern == null || pattern.matcher(text).matches();</span>
+  }
+
+  /**
+   * Constructor.
+   */
+<span class="fc" id="L49">  public TagMeasurementFilter(String meterNameRegex, String tagNameRegex, String tagValueRegex) {</span>
+<span class="fc" id="L50">    meterNamePattern = regexToPatternOrNull(meterNameRegex);</span>
+<span class="fc" id="L51">    tagNamePattern = regexToPatternOrNull(tagNameRegex);</span>
+<span class="fc" id="L52">    tagValuePattern = regexToPatternOrNull(tagValueRegex);</span>
+<span class="fc" id="L53">  }</span>
+
+  /**
+   * Implements MeasurementFilter interface.
+   */
+  @SuppressWarnings(&quot;PMD.JUnit4TestShouldUseTestAnnotation&quot;)
+  public boolean test(Measurement measurement) {
+<span class="fc" id="L60">    Id id = measurement.id();</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    if (!stringMatches(id.name(), meterNamePattern)) {</span>
+<span class="fc" id="L62">        return false;</span>
+    }
+
+<span class="fc bfc" id="L65" title="All 4 branches covered.">    if (tagNamePattern != null || tagValuePattern != null) {</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">      for (Tag tag : id.tags()) {</span>
+<span class="fc" id="L67">        boolean nameOk = stringMatches(tag.key(), tagNamePattern);</span>
+<span class="fc" id="L68">        boolean valueOk = stringMatches(tag.value(), tagValuePattern);</span>
+<span class="fc bfc" id="L69" title="All 4 branches covered.">        if (nameOk &amp;&amp; valueOk) {</span>
+<span class="fc" id="L70">          return true;</span>
+        }
+<span class="fc" id="L72">      }</span>
+<span class="fc" id="L73">      return false;</span>
+    }
+
+<span class="fc" id="L76">    return true;</span>
+  }
+};
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

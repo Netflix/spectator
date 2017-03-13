@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>Utils.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Utils.java</span></div><h1>Utils.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+/**
+ * Helper functions for working with a sequence of measurements.
+ */
+public final class Utils {
+
+<span class="fc" id="L35">  private static final Logger REGISTRY_LOGGER = LoggerFactory.getLogger(Registry.class);</span>
+
+<span class="nc" id="L37">  private Utils() {</span>
+<span class="nc" id="L38">  }</span>
+
+  /** Search for a method in the class and all superclasses. */
+  static Method getMethod(Class&lt;?&gt; cls, String name) throws NoSuchMethodException {
+<span class="fc" id="L42">    NoSuchMethodException firstExc = null;</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">    for (Class&lt;?&gt; c = cls; c != null; c = c.getSuperclass()) {</span>
+      try {
+<span class="fc" id="L45">        return c.getDeclaredMethod(name);</span>
+<span class="fc" id="L46">      } catch (NoSuchMethodException e) {</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        if (firstExc == null) {</span>
+<span class="fc" id="L48">          firstExc = e;</span>
+        }
+      }
+    }
+<span class="fc" id="L52">    throw firstExc;</span>
+  }
+
+  /** Return a method supplying a value for a gauge. */
+  static Method getGaugeMethod(Registry registry, Id id, Object obj, String method) {
+    try {
+<span class="fc" id="L58">      final Method m = Utils.getMethod(obj.getClass(), method);</span>
+      try {
+        // Make sure we can cast the response to a Number
+<span class="fc" id="L61">        final Number n = (Number) m.invoke(obj);</span>
+<span class="fc" id="L62">        REGISTRY_LOGGER.debug(</span>
+            &quot;registering gauge {}, using method [{}], with initial value {}&quot;, id, m, n);
+<span class="fc" id="L64">        return m;</span>
+<span class="fc" id="L65">      } catch (Exception e) {</span>
+<span class="fc" id="L66">        final String msg = &quot;exception thrown invoking method [&quot; + m</span>
+            + &quot;], skipping registration of gauge &quot; + id;
+<span class="fc" id="L68">        registry.propagate(msg, e);</span>
+      }
+<span class="fc" id="L70">    } catch (NoSuchMethodException e) {</span>
+<span class="fc" id="L71">      final String mname = obj.getClass().getName() + &quot;.&quot; + method;</span>
+<span class="fc" id="L72">      final String msg = &quot;invalid method [&quot; + mname + &quot;], skipping registration of gauge &quot; + id;</span>
+<span class="fc" id="L73">      registry.propagate(msg, e);</span>
+<span class="fc" id="L74">    }</span>
+<span class="fc" id="L75">    return null;</span>
+  }
+
+  /**
+   * Returns a new id with the tag list sorted by key and with no duplicate keys.
+   */
+  public static Id normalize(Id id) {
+<span class="nc" id="L82">    return (new DefaultId(id.name())).withTags(id.tags()).normalize();</span>
+  }
+
+  /**
+   * Returns the value associated with with a given key or null if no such key is present in the
+   * set of tags.
+   *
+   * @param id
+   *     Identifier with a set of tags to search.
+   * @param k
+   *     Key to search for.
+   * @return
+   *     Value for the key or null if the key is not present.
+   */
+  public static String getTagValue(Id id, String k) {
+<span class="fc" id="L97">    Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L98">    return getTagValue(id.tags(), k);</span>
+  }
+
+  /**
+   * Returns the value associated with with a given key or null if no such key is present in the
+   * set of tags.
+   *
+   * @param tags
+   *     Set of tags to search.
+   * @param k
+   *     Key to search for.
+   * @return
+   *     Value for the key or null if the key is not present.
+   */
+  public static String getTagValue(Iterable&lt;Tag&gt; tags, String k) {
+<span class="fc" id="L113">    Preconditions.checkNotNull(tags, &quot;tags&quot;);</span>
+<span class="fc" id="L114">    Preconditions.checkNotNull(k, &quot;key&quot;);</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">    for (Tag t : tags) {</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">      if (k.equals(t.key())) {</span>
+<span class="fc" id="L117">        return t.value();</span>
+      }
+<span class="fc" id="L119">    }</span>
+<span class="fc" id="L120">    return null;</span>
+  }
+
+  /**
+   * Returns the first measurement with a given tag value.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param t
+   *     The key and value to search for.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(Iterable&lt;Measurement&gt; ms, Tag t) {
+<span class="fc" id="L134">    return first(ms, t.key(), t.value());</span>
+  }
+
+  /**
+   * Returns the first measurement with a given tag value.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param k
+   *     Key to search for.
+   * @param v
+   *     Value that should be associated with k on the ids.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(final Iterable&lt;Measurement&gt; ms, final String k, final String v) {
+<span class="fc" id="L150">    return first(ms, value -&gt; v.equals(getTagValue(value.id(), k)));</span>
+  }
+
+  /**
+   * Returns the first measurement that matches the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param p
+   *     Predicate to use for selecting values.
+   * @return
+   *     Measurement or null if no matches are found.
+   */
+  public static Measurement first(Iterable&lt;Measurement&gt; ms, Predicate&lt;Measurement&gt; p) {
+<span class="fc" id="L164">    Iterator&lt;Measurement&gt; it = filter(ms, p).iterator();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">    return it.hasNext() ? it.next() : null;</span>
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param t
+   *     The key and value to search for.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable&lt;Measurement&gt; filter(Iterable&lt;Measurement&gt; ms, Tag t) {
+<span class="fc" id="L179">    return filter(ms, t.key(), t.value());</span>
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param k
+   *     Key to search for.
+   * @param v
+   *     Value that should be associated with k on the ids.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable&lt;Measurement&gt; filter(
+      final Iterable&lt;Measurement&gt; ms, final String k, final String v) {
+<span class="fc" id="L196">    return filter(ms, value -&gt; v.equals(getTagValue(value.id(), k)));</span>
+  }
+
+  /**
+   * Returns a new iterable restricted to measurements that match the predicate.
+   *
+   * @param ms
+   *     A set of measurements.
+   * @param p
+   *     Predicate to use for selecting values.
+   * @return
+   *     Measurements matching the predicate.
+   */
+  public static Iterable&lt;Measurement&gt; filter(
+      final Iterable&lt;Measurement&gt; ms, final Predicate&lt;Measurement&gt; p) {
+<span class="fc" id="L211">    return () -&gt; new FilteredIterator&lt;&gt;(ms.iterator(), p);</span>
+  }
+
+  /**
+   * Returns a list with a copy of the data from the iterable.
+   */
+  public static &lt;T&gt; List&lt;T&gt; toList(Iterable&lt;T&gt; iter) {
+<span class="fc" id="L218">    List&lt;T&gt; buf = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">    for (T v : iter) {</span>
+<span class="fc" id="L220">      buf.add(v);</span>
+<span class="fc" id="L221">    }</span>
+<span class="fc" id="L222">    return buf;</span>
+  }
+
+  /**
+   * Returns a list with the data from the iterator.
+   */
+  public static &lt;T&gt; List&lt;T&gt; toList(Iterator&lt;T&gt; iter) {
+<span class="fc" id="L229">    List&lt;T&gt; buf = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">    while (iter.hasNext()) {</span>
+<span class="fc" id="L231">      buf.add(iter.next());</span>
+    }
+<span class="fc" id="L233">    return buf;</span>
+  }
+
+  /**
+   * Returns an iterable of tags based on a string array.
+   */
+  static Iterable&lt;Tag&gt; toIterable(String[] tags) {
+<span class="fc bfc" id="L240" title="All 2 branches covered.">    if (tags.length % 2 == 1) {</span>
+<span class="fc" id="L241">      throw new IllegalArgumentException(&quot;size must be even, it is a set of key=value pairs&quot;);</span>
+    }
+<span class="fc" id="L243">    ArrayList&lt;Tag&gt; ts = new ArrayList&lt;&gt;(tags.length);</span>
+<span class="fc bfc" id="L244" title="All 2 branches covered.">    for (int i = 0; i &lt; tags.length; i += 2) {</span>
+<span class="fc" id="L245">      ts.add(new BasicTag(tags[i], tags[i + 1]));</span>
+    }
+<span class="fc" id="L247">    return ts;</span>
+  }
+
+  /**
+   * This method should be used instead of the
+   * {@link ConcurrentMap#computeIfAbsent(Object, Function)} call to minimize
+   * thread contention. This method does not require locking for the common case
+   * where the key exists, but potentially performs additional computation when
+   * absent.
+   */
+  public static &lt;K, V&gt; V computeIfAbsent(ConcurrentMap&lt;K, V&gt; map, K k, Function&lt;K, V&gt; f) {
+<span class="fc" id="L258">    V v = map.get(k);</span>
+<span class="fc bfc" id="L259" title="All 2 branches covered.">    if (v == null) {</span>
+<span class="fc" id="L260">      V tmp = f.apply(k);</span>
+<span class="fc" id="L261">      v = map.putIfAbsent(k, tmp);</span>
+<span class="pc bpc" id="L262" title="1 of 2 branches missed.">      if (v == null) {</span>
+<span class="fc" id="L263">        v = tmp;</span>
+      }
+    }
+<span class="fc" id="L266">    return v;</span>
+  }
+
+  /**
+   * Propagate a type error exception.
+   * Used in situations where an existing id has already been registered but with a different
+   * class.
+   */
+  public static void propagateTypeError(Registry registry, Id id,
+                                        Class&lt;?&gt; desiredClass, Class&lt;?&gt; actualClass) {
+<span class="nc" id="L276">    final String dType = desiredClass.getName();</span>
+<span class="nc" id="L277">    final String aType = actualClass.getName();</span>
+<span class="nc" id="L278">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
+        id, dType, aType);
+<span class="nc" id="L280">    registry.propagate(new IllegalStateException(msg));</span>
+<span class="nc" id="L281">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>

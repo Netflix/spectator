@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MappingExpr.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-agent</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.agent</a> &gt; <span class="el_source">MappingExpr.java</span></div><h1>MappingExpr.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.agent;
+
+import java.beans.Introspector;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.function.DoubleBinaryOperator;
+
+/**
+ * Helper for handling basic expressions uses as part of the mapping config.
+ */
+final class MappingExpr {
+
+<span class="nc" id="L29">  private MappingExpr() {</span>
+<span class="nc" id="L30">  }</span>
+
+  /**
+   * Substitute named variables in the pattern string with the corresponding
+   * values in the variables map.
+   *
+   * @param pattern
+   *     Pattern string with placeholders, name surounded by curly braces, e.g.:
+   *     {@code {variable name}}.
+   * @param vars
+   *     Map of variable substitutions that are available.
+   * @return
+   *     String with values substituted in. If no matching key is found for a
+   *     placeholder, then it will not be modified and left in place.
+   */
+  static String substitute(String pattern, Map&lt;String, String&gt; vars) {
+<span class="fc" id="L46">    String value = pattern;</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; entry : vars.entrySet()) {</span>
+<span class="fc" id="L48">      String v = Introspector.decapitalize(entry.getValue());</span>
+<span class="fc" id="L49">      value = value.replace(&quot;{&quot; + entry.getKey() + &quot;}&quot;, v);</span>
+<span class="fc" id="L50">    }</span>
+<span class="fc" id="L51">    return value;</span>
+  }
+
+  /**
+   * Evaluate a simple stack expression for the value.
+   *
+   * @param expr
+   *     Basic stack expression that supports placeholders, numeric constants,
+   *     and basic binary operations (:add, :sub, :mul, :div).
+   * @param vars
+   *     Map of variable substitutions that are available.
+   * @return
+   *     Double value for the expression. If the expression cannot be evaluated
+   *     properly, then null will be returned.
+   */
+  @SuppressWarnings(&quot;PMD&quot;)
+  static Double eval(String expr, Map&lt;String, ? extends Number&gt; vars) {
+<span class="fc" id="L68">    Deque&lt;Double&gt; stack = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L69">    String[] parts = expr.split(&quot;[,\\s]+&quot;);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">    for (String part : parts) {</span>
+<span class="pc bpc" id="L71" title="5 of 22 branches missed.">      switch (part) {</span>
+<span class="fc" id="L72">        case &quot;:add&quot;:        binaryOp(stack, (a, b) -&gt; a + b); break;</span>
+<span class="fc" id="L73">        case &quot;:sub&quot;:        binaryOp(stack, (a, b) -&gt; a - b); break;</span>
+<span class="fc" id="L74">        case &quot;:mul&quot;:        binaryOp(stack, (a, b) -&gt; a * b); break;</span>
+<span class="fc" id="L75">        case &quot;:div&quot;:        binaryOp(stack, (a, b) -&gt; a / b); break;</span>
+<span class="fc" id="L76">        case &quot;:if-changed&quot;: ifChanged(stack);                 break;</span>
+        default:
+<span class="pc bpc" id="L78" title="1 of 4 branches missed.">          if (part.startsWith(&quot;{&quot;) &amp;&amp; part.endsWith(&quot;}&quot;)) {</span>
+<span class="fc" id="L79">            Number v = vars.get(part.substring(1, part.length() - 1));</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (v == null) v = Double.NaN;</span>
+<span class="fc" id="L81">            stack.addFirst(v.doubleValue());</span>
+<span class="fc" id="L82">          } else {</span>
+<span class="fc" id="L83">            stack.addFirst(Double.parseDouble(part));</span>
+          }
+          break;
+      }
+    }
+<span class="fc" id="L88">    return stack.removeFirst();</span>
+  }
+
+  private static void binaryOp(Deque&lt;Double&gt; stack, DoubleBinaryOperator op) {
+<span class="fc" id="L92">    double b = stack.removeFirst();</span>
+<span class="fc" id="L93">    double a = stack.removeFirst();</span>
+<span class="fc" id="L94">    stack.addFirst(op.applyAsDouble(a, b));</span>
+<span class="fc" id="L95">  }</span>
+
+  /**
+   * Helper to zero out a value if there is not a change. For a stack with {@code num v1 v2},
+   * if {@code v1 == v2}, then push 0.0 otherwise push {@code num}.
+   *
+   * For some values placed in JMX they are not regularly updated in all circumstances and
+   * reporting the same value for each polling iteration gives the false impression of activity
+   * when there is none. A common example is timers with the metrics library where the reservoir
+   * is not rescaled during a fetch.
+   *
+   * https://github.com/dropwizard/metrics/issues/1030
+   *
+   * This operator can be used in conjunction with the previous variables to zero out the
+   * misleading snapshots based on the count. For example:
+   *
+   * &lt;pre&gt;
+   *   {50thPercentile},{Count},{previous:Count},:if-changed
+   * &lt;/pre&gt;
+   */
+  private static void ifChanged(Deque&lt;Double&gt; stack) {
+<span class="fc" id="L116">    double v2 = stack.removeFirst();</span>
+<span class="fc" id="L117">    double v1 = stack.removeFirst();</span>
+<span class="fc" id="L118">    double num = stack.removeFirst();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">    stack.addFirst((Double.compare(v1, v2) == 0) ? 0.0 : num);</span>
+<span class="fc" id="L120">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.6.201602180812</span></div></body></html>
