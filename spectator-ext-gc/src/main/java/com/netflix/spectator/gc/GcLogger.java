@@ -74,6 +74,10 @@ public final class GcLogger {
   // Pause time due to GC event
   private static final Id PAUSE_TIME = Spectator.globalRegistry().createId("jvm.gc.pause");
 
+  // Time spent in concurrent phases of GC
+  private static final Id CONCURRENT_PHASE_TIME =
+      Spectator.globalRegistry().createId("jvm.gc.concurrentPhaseTime");
+
   private final long jvmStartTime;
 
   private final ConcurrentHashMap<String, CircularBuffer<GcEvent>> gcLogs = new ConcurrentHashMap<>();
@@ -197,7 +201,7 @@ public final class GcLogger {
     }
 
     // Update pause timer for the action and cause...
-    Id eventId = PAUSE_TIME
+    Id eventId = (isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)
       .withTag("action", info.getGcAction())
       .withTag("cause", info.getGcCause());
     Timer timer = Spectator.globalRegistry().timer(eventId);
@@ -214,6 +218,12 @@ public final class GcLogger {
         LOGGER.warn("exception thrown by event listener", e);
       }
     }
+  }
+
+  private boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
+    // So far the only indicator known is that the cause will be reported as "No GC"
+    // when using CMS.
+    return "No GC".equals(info.getGcCause());
   }
 
   private class GcNotificationListener implements NotificationListener {
