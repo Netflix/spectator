@@ -66,8 +66,7 @@ called `sun.hotspot.WhiteBox.youngGC()`.
 
 ### No_GC
 
-Used for CMS. Unfortunately when using the mbeans this is the cause that typically gets
-reported for a major GC.
+Used for CMS to indicate concurrent phases.
 
 ### Allocation_Failure
 
