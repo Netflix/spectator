@@ -48,7 +48,7 @@ ${GC_TYPE}: ${COLLECTOR_NAME}, id=${N}, at=${START_TIME}, duration=${T}ms, cause
 ```
 
 The id can be used to verify events were not skipped or correlate with other sources like
-detailed GC logs. See [[GC causes]] for more details on the possible causes.
+detailed GC logs. See [GC causes](jvm-gc-causes.md) for more details on the possible causes.
 
 Sample:
 
@@ -121,7 +121,7 @@ pauses.
    ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcAction())).
    There is no guarantee, but the typical values seen are `end_of_major_GC` and `end_of_minor_GC`.
 * `cause`: cause that instigated GC ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcCause())).
-  For an explanation of common causes see the [[GC Causes]] page.
+  For an explanation of common causes see the [GC causes](jvm-gc-causes.md) page.
 
 ### jvm.gc.concurrentPhaseTime
 
@@ -140,7 +140,7 @@ pauses.
   ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcAction())).
   There is no guarantee, but the typical values seen are `end_of_major_GC` and `end_of_minor_GC`.
 * `cause`: cause that instigated GC ([javadoc](http://docs.oracle.com/javase/7/docs/jre/api/management/extension/com/sun/management/GarbageCollectionNotificationInfo.html#getGcCause())).
-  For an explanation of common causes see the [[GC Causes]] page.
+  For an explanation of common causes see the [GC causes](jvm-gc-causes.md) page.
 
 ## Alerting
 
