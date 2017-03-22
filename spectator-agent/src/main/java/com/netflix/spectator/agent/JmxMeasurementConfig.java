@@ -106,9 +106,9 @@ final class JmxMeasurementConfig {
   }
 
   private void updateCounter(Registry registry, Id id, long v) {
-    AtomicLong prev = previousCount.computeIfAbsent(id, i -> new AtomicLong(0L));
+    AtomicLong prev = previousCount.computeIfAbsent(id, i -> new AtomicLong(Long.MIN_VALUE));
     long p = prev.get();
-    if (prev.compareAndSet(p, v) && p != 0) {
+    if (prev.compareAndSet(p, v) && p != Long.MIN_VALUE) {
       registry.counter(id).increment(v - p);
     }
   }
