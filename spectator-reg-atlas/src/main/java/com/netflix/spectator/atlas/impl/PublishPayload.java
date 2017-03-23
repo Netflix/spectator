@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.Measurement;
 
@@ -23,14 +23,17 @@ import java.util.Map;
 /**
  * Wraps a list of measurements with a set of common tags. The common tags are
  * typically used for things like the application and instance id.
+ *
+ * <b>Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.</b>
  */
-class PublishPayload {
+public class PublishPayload {
 
   private final Map<String, String> tags;
   private final List<Measurement> metrics;
 
   /** Create a new instance. */
-  PublishPayload(Map<String, String> tags, List<Measurement> metrics) {
+  public PublishPayload(Map<String, String> tags, List<Measurement> metrics) {
     this.tags = tags;
     this.metrics = metrics;
   }
