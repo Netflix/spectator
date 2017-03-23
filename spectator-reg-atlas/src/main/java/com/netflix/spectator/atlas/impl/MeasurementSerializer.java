@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.atlas.impl;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,8 +30,11 @@ import java.util.Map;
  * Jackson serializer for measurements. Values will be converted to a
  * valid set as they are written out by replacing invalid characters with
  * an '_'.
+ *
+ * <b>Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.</b>
  */
-class MeasurementSerializer extends JsonSerializer<Measurement> {
+public class MeasurementSerializer extends JsonSerializer<Measurement> {
 
   private final AsciiSet set;
   private final Map<String, AsciiSet> overrides;
@@ -44,7 +47,7 @@ class MeasurementSerializer extends JsonSerializer<Measurement> {
    * @param overrides
    *     Overrides for the set of characters allowed to be used for tag values.
    */
-  MeasurementSerializer(AsciiSet set, Map<String, AsciiSet> overrides) {
+  public MeasurementSerializer(AsciiSet set, Map<String, AsciiSet> overrides) {
     super();
     this.set = set;
     this.overrides = overrides;

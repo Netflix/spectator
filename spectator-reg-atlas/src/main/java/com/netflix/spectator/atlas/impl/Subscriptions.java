@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.atlas.impl;
 
 import java.util.List;
 
 /**
  * Model object for subscriptions payload coming from LWC service.
+ *
+ * <b>Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.</b>
  */
-class Subscriptions {
+public class Subscriptions {
 
   private List<Subscription> expressions;
 
   /** Create a new instance. */
-  Subscriptions() {
+  public Subscriptions() {
     // Will get filled in with set methods
   }
 
   /** Returns the subscriptions with validated expressions. */
-  List<Subscription> validated() {
+  public List<Subscription> validated() {
     return expressions;
   }
 
