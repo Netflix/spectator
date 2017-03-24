@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.atlas.impl;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -24,8 +24,11 @@ import java.util.regex.Pattern;
 
 /**
  * Parses an Atlas data or query expression.
+ *
+ * <b>Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.</b>
  */
-final class Parser {
+public final class Parser {
 
   private Parser() {
   }
@@ -34,16 +37,24 @@ final class Parser {
    * Parse an <a href="https://github.com/Netflix/atlas/wiki/Reference-data">Atlas data
    * expression</a>.
    */
-  static DataExpr parseDataExpr(String expr) {
-    return (DataExpr) parse(expr);
+  public static DataExpr parseDataExpr(String expr) {
+    try {
+      return (DataExpr) parse(expr);
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException("invalid data expression: " + expr, e);
+    }
   }
 
   /**
    * Parse an <a href="https://github.com/Netflix/atlas/wiki/Reference-query">Atlas query
    * expression</a>.
    */
-  static Query parseQuery(String expr) {
-    return (Query) parse(expr);
+  public static Query parseQuery(String expr) {
+    try {
+      return (Query) parse(expr);
+    } catch (ClassCastException e) {
+      throw new IllegalArgumentException("invalid query expression: " + expr, e);
+    }
   }
 
   @SuppressWarnings({"unchecked", "PMD"})

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Tag;
@@ -30,8 +30,11 @@ import java.util.stream.Collectors;
  * Query for matching based on tags. For more information see:
  *
  * https://github.com/Netflix/atlas/wiki/Stack-Language#query
+ *
+ * <b>Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.</b>
  */
-interface Query {
+public interface Query {
 
   /** Convert {@code id} to a map. */
   static Map<String, String> toMap(Id id) {

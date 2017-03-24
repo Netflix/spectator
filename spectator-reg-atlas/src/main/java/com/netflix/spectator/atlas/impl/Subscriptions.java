@@ -23,7 +23,7 @@ import java.util.List;
  * <b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
-public class Subscriptions {
+public final class Subscriptions {
 
   private List<Subscription> expressions;
 
@@ -34,6 +34,9 @@ public class Subscriptions {
 
   /** Returns the subscriptions with validated expressions. */
   public List<Subscription> validated() {
+    // Get the data expression to force parsing and ensure the string
+    // from the payload is valid.
+    expressions.forEach(Subscription::dataExpr);
     return expressions;
   }
 
@@ -45,5 +48,26 @@ public class Subscriptions {
   /** Set the available subscriptions. */
   public void setExpressions(List<Subscription> expressions) {
     this.expressions = expressions;
+  }
+
+  /** Set the available subscriptions. */
+  public Subscriptions withExpressions(List<Subscription> expressions) {
+    this.expressions = expressions;
+    return this;
+  }
+
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Subscriptions that = (Subscriptions) o;
+    return expressions.equals(that.expressions);
+  }
+
+  @Override public int hashCode() {
+    return expressions.hashCode();
+  }
+
+  @Override public String toString() {
+    return "Subscriptions(" + expressions + ")";
   }
 }

@@ -21,15 +21,25 @@ package com.netflix.spectator.atlas.impl;
  * <b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
-public class Subscription {
+public final class Subscription {
 
   private String id;
   private String expression;
   private long frequency;
 
+  private DataExpr expr;
+
   /** Create a new instance. */
   public Subscription() {
     // Will get filled in with set methods
+  }
+
+  /** Return the data expression for this subscription. */
+  public DataExpr dataExpr() {
+    if (expr == null) {
+      expr = Parser.parseDataExpr(expression);
+    }
+    return expr;
   }
 
   /** Id for a subscription.  */
@@ -42,6 +52,12 @@ public class Subscription {
     this.id = id;
   }
 
+  /** Set the subscription id. */
+  public Subscription withId(String id) {
+    this.id = id;
+    return this;
+  }
+
   /** Expression for the subscription. */
   public String getExpression() {
     return expression;
@@ -52,6 +68,12 @@ public class Subscription {
     this.expression = expression;
   }
 
+  /** Set the expression for the subscription. */
+  public Subscription withExpression(String expression) {
+    this.expression = expression;
+    return this;
+  }
+
   /** Requested frequency to send data for the subscription. */
   public long getFrequency() {
     return frequency;
@@ -60,6 +82,30 @@ public class Subscription {
   /** Set the requested frequency to send data for the subscription. */
   public void setFrequency(long frequency) {
     this.frequency = frequency;
+  }
+
+  /** Set the requested frequency to send data for the subscription. */
+  public Subscription withFrequency(long frequency) {
+    this.frequency = frequency;
+    return this;
+  }
+
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Subscription that = (Subscription) o;
+    return frequency == that.frequency
+        && id.equals(that.id)
+        && expression.equals(that.expression)
+        && expr.equals(that.expr);
+  }
+
+  @Override public int hashCode() {
+    int result = id.hashCode();
+    result = 31 * result + expression.hashCode();
+    result = 31 * result + (int) (frequency ^ (frequency >>> 32));
+    result = 31 * result + expr.hashCode();
+    return result;
   }
 
   @Override public String toString() {

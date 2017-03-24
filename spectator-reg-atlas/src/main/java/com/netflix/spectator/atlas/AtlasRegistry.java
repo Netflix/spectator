@@ -29,10 +29,12 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.atlas.impl.EvalPayload;
+import com.netflix.spectator.atlas.impl.Evaluator;
 import com.netflix.spectator.atlas.impl.MeasurementSerializer;
 import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.atlas.impl.Subscription;
 import com.netflix.spectator.atlas.impl.Subscriptions;
+import com.netflix.spectator.atlas.impl.TagsValuePair;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.sandbox.HttpClient;
@@ -220,16 +222,10 @@ public final class AtlasRegistry extends AbstractRegistry {
       List<TagsValuePair> ms = getMeasurements().stream()
           .map(this::newTagsValuePair)
           .collect(Collectors.toList());
-      List<EvalPayload.Metric> metrics = new ArrayList<>();
-      for (Subscription s : subs) {
-        DataExpr expr = Parser.parseDataExpr(s.getExpression());
-        for (TagsValuePair pair : expr.eval(ms)) {
-          EvalPayload.Metric m = new EvalPayload.Metric(s.getId(), pair.tags(), pair.value());
-          metrics.add(m);
-        }
-      }
+      Evaluator evaluator = new Evaluator().addGroupSubscriptions("local", subs);
+      EvalPayload payload = evaluator.eval("local", clock().wallTime(), ms);
       try {
-        String json = jsonMapper.writeValueAsString(new EvalPayload(clock().wallTime(), metrics));
+        String json = jsonMapper.writeValueAsString(payload);
         HttpClient.DEFAULT.newRequest("spectator-lwc-eval", evalUri)
             .withMethod("POST")
             .withConnectTimeout(connectTimeout)
