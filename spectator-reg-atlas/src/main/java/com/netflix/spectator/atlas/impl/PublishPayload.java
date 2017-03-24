@@ -27,7 +27,7 @@ import java.util.Map;
  * <b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
-public class PublishPayload {
+public final class PublishPayload {
 
   private final Map<String, String> tags;
   private final List<Measurement> metrics;
@@ -46,5 +46,23 @@ public class PublishPayload {
   /** Return the list of measurements. Needs to be public for Jackson bean mapper. */
   public List<Measurement> getMetrics() {
     return metrics;
+  }
+
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    PublishPayload that = (PublishPayload) o;
+    return tags.equals(that.tags)
+        && metrics.equals(that.metrics);
+  }
+
+  @Override public int hashCode() {
+    int result = tags.hashCode();
+    result = 31 * result + metrics.hashCode();
+    return result;
+  }
+
+  @Override public String toString() {
+    return "PublishPayload(tags=" + tags + ", metrics=" + metrics + ")";
   }
 }

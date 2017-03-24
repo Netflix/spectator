@@ -25,7 +25,7 @@ import java.util.Map;
  * <b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
-public class EvalPayload {
+public final class EvalPayload {
 
   private final long timestamp;
   private final List<Metric> metrics;
@@ -46,8 +46,25 @@ public class EvalPayload {
     return metrics;
   }
 
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    EvalPayload payload = (EvalPayload) o;
+    return timestamp == payload.timestamp && metrics.equals(payload.metrics);
+  }
+
+  @Override public int hashCode() {
+    int result = (int) (timestamp ^ (timestamp >>> 32));
+    result = 31 * result + metrics.hashCode();
+    return result;
+  }
+
+  @Override public String toString() {
+    return "EvalPayload(timestamp=" + timestamp + ", metrics=" + metrics + ")";
+  }
+
   /** Metric value. */
-  public static class Metric {
+  public static final class Metric {
     private final String id;
     private final Map<String, String> tags;
     private final double value;
@@ -72,6 +89,29 @@ public class EvalPayload {
     /** Value for the metric. */
     public double getValue() {
       return value;
+    }
+
+    @Override public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      Metric metric = (Metric) o;
+      return Double.compare(metric.value, value) == 0
+          && id.equals(metric.id)
+          && tags.equals(metric.tags);
+    }
+
+    @Override public int hashCode() {
+      int result;
+      long temp;
+      result = id.hashCode();
+      result = 31 * result + tags.hashCode();
+      temp = Double.doubleToLongBits(value);
+      result = 31 * result + (int) (temp ^ (temp >>> 32));
+      return result;
+    }
+
+    @Override public String toString() {
+      return "Metric(id=" + id + ", tags=" + tags + ", value=" + value + ")";
     }
   }
 }
