@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
@@ -86,6 +87,16 @@ public class ServoGaugeTest {
     g.set(1.0);
     Assert.assertEquals(g.value(), 1.0, 1e-12);
     Assert.assertFalse(g.hasExpired());
+  }
+
+  @Test
+  public void hasGaugeType() {
+    final ServoRegistry r = new ServoRegistry(clock);
+    Gauge g = r.gauge(r.createId("foo"));
+    g.set(1.0);
+
+    Map<String, String> tags = r.getMonitors().get(0).getConfig().getTags().asMap();
+    Assert.assertEquals("GAUGE", tags.get("type"));
   }
 
 }

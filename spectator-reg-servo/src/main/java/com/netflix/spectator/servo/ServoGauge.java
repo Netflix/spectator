@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.servo;
 
+import com.netflix.servo.annotations.DataSourceType;
 import com.netflix.servo.monitor.AbstractMonitor;
 import com.netflix.servo.monitor.Monitor;
 import com.netflix.servo.monitor.MonitorConfig;
@@ -42,7 +43,7 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
    * Create a new monitor that returns {@code value}.
    */
   ServoGauge(Clock clock, MonitorConfig config) {
-    super(config);
+    super(config.withAdditionalTag(DataSourceType.GAUGE));
     this.clock = clock;
     this.value = new AtomicDouble(Double.NaN);
     this.lastUpdated = new AtomicLong(0L);
