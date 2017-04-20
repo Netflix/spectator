@@ -62,6 +62,7 @@ public final class Parser {
     DataExpr.AggregateFunction af;
     Query q, q1, q2;
     String k, v;
+    List<String> tmp;
     List<String> vs = null;
     String[] parts = expr.split(",");
     Deque<Object> stack = new ArrayDeque<>(parts.length);
@@ -112,9 +113,9 @@ public final class Parser {
           stack.push(new Query.Equal(k, v));
           break;
         case ":in":
-          vs = (List<String>) stack.pop();
+          tmp = (List<String>) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.In(k, new TreeSet<>(vs)));
+          stack.push(new Query.In(k, new TreeSet<>(tmp)));
           break;
         case ":lt":
           v = (String) stack.pop();
@@ -167,19 +168,19 @@ public final class Parser {
           stack.push(new DataExpr.Count(q));
           break;
         case ":by":
-          vs = (List<String>) stack.pop();
+          tmp = (List<String>) stack.pop();
           af = (DataExpr.AggregateFunction) stack.pop();
-          stack.push(new DataExpr.GroupBy(af, vs));
+          stack.push(new DataExpr.GroupBy(af, tmp));
           break;
         case ":rollup-drop":
-          vs = (List<String>) stack.pop();
+          tmp = (List<String>) stack.pop();
           af = (DataExpr.AggregateFunction) stack.pop();
-          stack.push(new DataExpr.DropRollup(af, vs));
+          stack.push(new DataExpr.DropRollup(af, tmp));
           break;
         case ":rollup-keep":
-          vs = (List<String>) stack.pop();
+          tmp = (List<String>) stack.pop();
           af = (DataExpr.AggregateFunction) stack.pop();
-          stack.push(new DataExpr.KeepRollup(af, vs));
+          stack.push(new DataExpr.KeepRollup(af, tmp));
           break;
         default:
           if (token.startsWith(":")) {

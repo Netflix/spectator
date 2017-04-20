@@ -200,6 +200,12 @@ public class DataExprTest {
   }
 
   @Test
+  public void inWithGroupBy() {
+    // https://github.com/Netflix/spectator/issues/391
+    parse("statistic,(,totalAmount,totalTime,),:in,name,jvm.gc.pause,:eq,:and,:sum,(,nf.asg,nf.node,),:by");
+  }
+
+  @Test
   public void allEqualsContract() {
     EqualsVerifier
         .forClass(DataExpr.All.class)
