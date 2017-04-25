@@ -12,7 +12,7 @@ buildscript {
 }
 
 plugins {
-  id 'nebula.netflixoss' version '3.5.2'
+  id 'nebula.netflixoss' version '3.6.0'
   id 'me.champeau.gradle.jmh' version '0.3.0'
 }
 
