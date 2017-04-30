@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /** Registry that maps spectator types to servo. */
@@ -43,9 +44,6 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
    */
   static final long EXPIRATION_TIME_MILLIS = getExpirationTimeMillis();
 
-  private static final MonitorConfig DEFAULT_CONFIG =
-    (new MonitorConfig.Builder("spectator.registry")).build();
-
   private static long getExpirationTimeMillis() {
     final String key = "spectator.servo.expirationTimeInMinutes";
     long minutes = 15;
@@ -59,6 +57,14 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     return TimeUnit.MINUTES.toMillis(minutes);
   }
 
+  // Create an id for the composite monitor that will be used with Servo. This
+  // id will not get reported since the composite will get flattened. The UUID
+  // is to avoid having multiple instances of ServoRegistry clobber each other.
+  private MonitorConfig defaultConfig() {
+    return (new MonitorConfig.Builder("spectator.registry"))
+        .withTag("id", UUID.randomUUID().toString()).build();
+  }
+
   private final MonitorConfig config;
 
   /** Create a new instance. */
@@ -68,13 +74,13 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
 
   /** Create a new instance. */
   public ServoRegistry(Clock clock) {
-    this(clock, DEFAULT_CONFIG);
+    this(clock, null);
   }
 
   /** Create a new instance. */
   ServoRegistry(Clock clock, MonitorConfig config) {
     super(clock);
-    this.config = config;
+    this.config = (config == null) ? defaultConfig() : config;
     DefaultMonitorRegistry.getInstance().register(this);
   }
 
