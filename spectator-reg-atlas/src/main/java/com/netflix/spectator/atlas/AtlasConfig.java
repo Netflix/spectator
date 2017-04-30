@@ -74,6 +74,11 @@ public interface AtlasConfig extends RegistryConfig {
     return (v == null) ? Duration.ofSeconds(10) : Duration.parse(v);
   }
 
+  /** Returns the TTL for subscriptions from the LWC service. */
+  default Duration configTTL() {
+    return configRefreshFrequency().multipliedBy(15);
+  }
+
   /**
    * Returns the URI for the Atlas LWC endpoint to retrieve current subscriptions.
    * The default is {@code http://localhost:7101/lwc/api/v1/expressions/local-dev}.

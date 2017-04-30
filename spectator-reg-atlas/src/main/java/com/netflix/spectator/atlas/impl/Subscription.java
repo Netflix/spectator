@@ -36,9 +36,6 @@ public final class Subscription {
 
   /** Return the data expression for this subscription. */
   public DataExpr dataExpr() {
-    if (expr == null) {
-      expr = Parser.parseDataExpr(expression);
-    }
     return expr;
   }
 
@@ -66,11 +63,12 @@ public final class Subscription {
   /** Set the expression for the subscription. */
   public void setExpression(String expression) {
     this.expression = expression;
+    this.expr = Parser.parseDataExpr(expression);
   }
 
   /** Set the expression for the subscription. */
   public Subscription withExpression(String expression) {
-    this.expression = expression;
+    setExpression(expression);
     return this;
   }
 
@@ -95,17 +93,25 @@ public final class Subscription {
     if (o == null || getClass() != o.getClass()) return false;
     Subscription that = (Subscription) o;
     return frequency == that.frequency
-        && id.equals(that.id)
-        && expression.equals(that.expression)
-        && expr.equals(that.expr);
+        && equalsOrNull(id, that.id)
+        && equalsOrNull(expression, that.expression)
+        && equalsOrNull(expr, that.expr);
+  }
+
+  private boolean equalsOrNull(Object a, Object b) {
+    return (a == null && b == null) || (a != null && a.equals(b));
   }
 
   @Override public int hashCode() {
-    int result = id.hashCode();
-    result = 31 * result + expression.hashCode();
+    int result = hashCodeOrZero(id);
+    result = 31 * result + hashCodeOrZero(expression);
     result = 31 * result + (int) (frequency ^ (frequency >>> 32));
-    result = 31 * result + expr.hashCode();
+    result = 31 * result + hashCodeOrZero(expr);
     return result;
+  }
+
+  private int hashCodeOrZero(Object o) {
+    return (o == null) ? 0 : o.hashCode();
   }
 
   @Override public String toString() {

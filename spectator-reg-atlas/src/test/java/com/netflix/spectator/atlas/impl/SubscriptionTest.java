@@ -29,7 +29,7 @@ public class SubscriptionTest {
   @Test
   public void equalsContract() {
     EqualsVerifier.forClass(Subscription.class)
-        .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+        .suppress(Warning.NONFINAL_FIELDS)
         .verify();
   }
 
@@ -41,7 +41,6 @@ public class SubscriptionTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void dataExprInvalid() {
-    Subscription sub = new Subscription().withExpression(":true");
-    sub.dataExpr();
+    new Subscription().withExpression(":true");
   }
 }
