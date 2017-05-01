@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -68,6 +69,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private final boolean lwcEnabled;
   private final Duration configRefreshFrequency;
+  private final long configTTL;
   private final URI configUri;
   private final URI evalUri;
 
@@ -85,7 +87,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private Scheduler scheduler;
 
-  private volatile List<Subscription> subscriptions;
+  private final Map<Subscription, Long> subscriptions = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
@@ -99,6 +101,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
     this.lwcEnabled = config.lwcEnabled();
     this.configRefreshFrequency = config.configRefreshFrequency();
+    this.configTTL = config.configTTL().toMillis();
     this.configUri = URI.create(config.configUri());
     this.evalUri = URI.create(config.evalUri());
 
@@ -217,7 +220,7 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private void handleSubscriptions() {
-    List<Subscription> subs = subscriptions;
+    List<Subscription> subs = new ArrayList<>(subscriptions.keySet());
     if (!subs.isEmpty()) {
       List<TagsValuePair> ms = getMeasurements().stream()
           .map(this::newTagsValuePair)
@@ -251,7 +254,8 @@ public final class AtlasRegistry extends AbstractRegistry {
         logger.warn("failed to update subscriptions, received status {}", res.status());
       } else {
         Subscriptions subs = jsonMapper.readValue(res.entity(), Subscriptions.class);
-        subscriptions = subs.validated();
+        long now = clock.wallTime();
+        subs.update(subscriptions, now, now + configTTL);
       }
     } catch (Exception e) {
       logger.warn("failed to send metrics", e);
