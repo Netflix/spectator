@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,18 @@
 package com.netflix.spectator.api;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 
 /**
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
@@ -32,10 +35,20 @@ import java.util.concurrent.Semaphore;
  */
 public final class CompositeRegistry implements Registry {
 
-  private final Clock clock;
-  private final CopyOnWriteArraySet<Registry> registries;
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock.ReadLock rlock = lock.readLock();
+  private final ReentrantReadWriteLock.WriteLock wlock = lock.writeLock();
 
-  private final ConcurrentHashMap<Id, AggrMeter> gauges;
+  private final Clock clock;
+
+  private final List<Registry> registries;
+
+  private final ConcurrentHashMap<Id, SwapCounter> counters;
+  private final ConcurrentHashMap<Id, SwapDistributionSummary> distSummaries;
+  private final ConcurrentHashMap<Id, SwapTimer> timers;
+  private final ConcurrentHashMap<Id, SwapGauge> gauges;
+
+  private final ConcurrentHashMap<Id, AggrMeter> aggrGauges;
   private final ConcurrentHashMap<Id, Object> state;
 
   private final Semaphore pollSem = new Semaphore(1);
@@ -43,8 +56,12 @@ public final class CompositeRegistry implements Registry {
   /** Creates a new instance. */
   CompositeRegistry(Clock clock) {
     this.clock = clock;
-    this.registries = new CopyOnWriteArraySet<>();
+    this.registries = new ArrayList<>();
+    this.counters = new ConcurrentHashMap<>();
+    this.distSummaries = new ConcurrentHashMap<>();
+    this.timers = new ConcurrentHashMap<>();
     this.gauges = new ConcurrentHashMap<>();
+    this.aggrGauges = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
     GaugePoller.schedule(
         new WeakReference<>(this),
@@ -61,7 +78,7 @@ public final class CompositeRegistry implements Registry {
   void pollGauges() {
     if (pollSem.tryAcquire()) {
       try {
-        for (Map.Entry<Id, AggrMeter> e : gauges.entrySet()) {
+        for (Map.Entry<Id, AggrMeter> e : aggrGauges.entrySet()) {
           Id id = e.getKey();
           Meter meter = e.getValue();
           try {
@@ -71,7 +88,7 @@ public final class CompositeRegistry implements Registry {
               }
             }
           } catch (StackOverflowError t) {
-            gauges.remove(id);
+            aggrGauges.remove(id);
           } catch (VirtualMachineError | ThreadDeath t) {
             // Avoid catching OutOfMemoryError and other serious problems in the next
             // catch block.
@@ -80,7 +97,7 @@ public final class CompositeRegistry implements Registry {
             // The sampling is calling user functions and therefore we cannot
             // make any guarantees they are well-behaved. We catch most Throwables with
             // the exception of some VM errors and drop the gauge.
-            gauges.remove(id);
+            aggrGauges.remove(id);
           }
         }
       } finally {
@@ -105,17 +122,42 @@ public final class CompositeRegistry implements Registry {
 
   /** Add a registry to the composite. */
   public void add(Registry registry) {
-    registries.add(registry);
+    wlock.lock();
+    try {
+      registries.add(registry);
+      updateMeters();
+    } finally {
+      wlock.unlock();
+    }
   }
 
   /** Remove a registry from the composite. */
   public void remove(Registry registry) {
-    registries.remove(registry);
+    wlock.lock();
+    try {
+      registries.remove(registry);
+      updateMeters();
+    } finally {
+      wlock.unlock();
+    }
   }
 
   /** Remove all registries from the composite. */
   public void removeAll() {
-    registries.clear();
+    wlock.lock();
+    try {
+      registries.clear();
+      updateMeters();
+    } finally {
+      wlock.unlock();
+    }
+  }
+
+  private void updateMeters() {
+    counters.forEach((id, c) -> c.setUnderlying(newCounter(id)));
+    distSummaries.forEach((id, d) -> d.setUnderlying(newDistributionSummary(id)));
+    timers.forEach((id, t) -> t.setUnderlying(newTimer(id)));
+    gauges.forEach((id, g) -> g.setUnderlying(newGauge(id)));
   }
 
   @Override public Clock clock() {
@@ -131,7 +173,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    AggrMeter m = Utils.computeIfAbsent(gauges, meter.id(), AggrMeter::new);
+    AggrMeter m = Utils.computeIfAbsent(aggrGauges, meter.id(), AggrMeter::new);
     m.add(meter);
   }
 
@@ -139,66 +181,175 @@ public final class CompositeRegistry implements Registry {
     return state;
   }
 
+  private Counter newCounter(Id id) {
+    rlock.lock();
+    try {
+      Counter c;
+      switch (registries.size()) {
+        case 0:
+          c = NoopCounter.INSTANCE;
+          break;
+        case 1:
+          c = registries.get(0).counter(id);
+          break;
+        default:
+          List<Counter> cs = registries.stream()
+              .map(r -> r.counter(id))
+              .collect(Collectors.toList());
+          c = new CompositeCounter(id, cs);
+          break;
+      }
+      return c;
+    } finally {
+      rlock.unlock();
+    }
+  }
+
   @Override public Counter counter(Id id) {
-    return new CompositeCounter(id, registries);
+    return Utils.computeIfAbsent(counters, id, i -> new SwapCounter(newCounter(i)));
+  }
+
+  private DistributionSummary newDistributionSummary(Id id) {
+    rlock.lock();
+    try {
+      DistributionSummary t;
+      switch (registries.size()) {
+        case 0:
+          t = NoopDistributionSummary.INSTANCE;
+          break;
+        case 1:
+          t = registries.get(0).distributionSummary(id);
+          break;
+        default:
+          List<DistributionSummary> ds = registries.stream()
+              .map(r -> r.distributionSummary(id))
+              .collect(Collectors.toList());
+          t = new CompositeDistributionSummary(id, ds);
+          break;
+      }
+      return t;
+    } finally {
+      rlock.unlock();
+    }
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
-    return new CompositeDistributionSummary(id, registries);
+    return Utils.computeIfAbsent(distSummaries, id, i -> new SwapDistributionSummary(newDistributionSummary(i)));
+  }
+
+  private Timer newTimer(Id id) {
+    rlock.lock();
+    try {
+      Timer t;
+      switch (registries.size()) {
+        case 0:
+          t = NoopTimer.INSTANCE;
+          break;
+        case 1:
+          t = registries.get(0).timer(id);
+          break;
+        default:
+          List<Timer> ts = registries.stream()
+              .map(r -> r.timer(id))
+              .collect(Collectors.toList());
+          t = new CompositeTimer(id, clock, ts);
+          break;
+      }
+      return t;
+    } finally {
+      rlock.unlock();
+    }
   }
 
   @Override public Timer timer(Id id) {
-    return new CompositeTimer(id, clock, registries);
+    return Utils.computeIfAbsent(timers, id, i -> new SwapTimer(newTimer(i)));
+  }
+
+  private Gauge newGauge(Id id) {
+    rlock.lock();
+    try {
+      Gauge t;
+      switch (registries.size()) {
+        case 0:
+          t = NoopGauge.INSTANCE;
+          break;
+        case 1:
+          t = registries.get(0).gauge(id);
+          break;
+        default:
+          List<Gauge> gs = registries.stream()
+              .map(r -> r.gauge(id))
+              .collect(Collectors.toList());
+          t = new CompositeGauge(id, gs);
+          break;
+      }
+      return t;
+    } finally {
+      rlock.unlock();
+    }
   }
 
   @Override public Gauge gauge(Id id) {
-    return new CompositeGauge(id, registries);
+    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(newGauge(i)));
   }
 
   @Override public Meter get(Id id) {
-    for (Registry r : registries) {
-      Meter m = r.get(id);
-      if (m != null) {
-        if (m instanceof Counter) {
-          return counter(id);
-        } else if (m instanceof Timer) {
-          return timer(id);
-        } else if (m instanceof DistributionSummary) {
-          return distributionSummary(id);
-        } else if (m instanceof Gauge) {
-          return gauge(id);
-        } else {
-          return null;
+    rlock.lock();
+    try {
+      for (Registry r : registries) {
+        Meter m = r.get(id);
+        if (m != null) {
+          if (m instanceof Counter) {
+            return counter(id);
+          } else if (m instanceof Timer) {
+            return timer(id);
+          } else if (m instanceof DistributionSummary) {
+            return distributionSummary(id);
+          } else if (m instanceof Gauge) {
+            return gauge(id);
+          } else {
+            return null;
+          }
         }
       }
+      return null;
+    } finally {
+      rlock.unlock();
     }
-    return null;
   }
 
   @Override public Iterator<Meter> iterator() {
-    if (registries.isEmpty()) {
-      return Collections.<Meter>emptyList().iterator();
-    } else {
-      final Set<Id> ids = new HashSet<>();
-      for (Registry r : registries) {
-        for (Meter m : r) ids.add(m.id());
+    rlock.lock();
+    try {
+      if (registries.isEmpty()) {
+        return Collections.<Meter>emptyList().iterator();
+      } else {
+        final Set<Id> ids = new HashSet<>();
+        for (Registry r : registries) {
+          for (Meter m : r) ids.add(m.id());
+        }
+
+        return new Iterator<Meter>() {
+          private final Iterator<Id> idIter = ids.iterator();
+
+          @Override
+          public boolean hasNext() {
+            return idIter.hasNext();
+          }
+
+          @Override
+          public Meter next() {
+            return get(idIter.next());
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
       }
-
-      return new Iterator<Meter>() {
-        private final Iterator<Id> idIter = ids.iterator();
-
-        @Override public boolean hasNext() {
-          return idIter.hasNext();
-        }
-
-        @Override public Meter next() {
-          return get(idIter.next());
-        }
-
-        @Override public void remove() {
-          throw new UnsupportedOperationException();
-        }
-      };
+    } finally {
+      rlock.unlock();
     }
   }
 }

@@ -15,55 +15,52 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-/** Timer implementation for the composite registry. */
-final class CompositeTimer extends CompositeMeter<Timer> implements Timer {
+/** Wraps another timer allowing the underlying type to be swapped. */
+final class SwapTimer implements Timer {
 
-  private final Clock clock;
+  private volatile Timer underlying;
 
   /** Create a new instance. */
-  CompositeTimer(Id id, Clock clock, Collection<Timer> timers) {
-    super(id, timers);
-    this.clock = clock;
+  SwapTimer(Timer underlying) {
+    this.underlying = underlying;
+  }
+
+  void setUnderlying(Timer t) {
+    underlying = t;
+  }
+
+  @Override public Id id() {
+    return underlying.id();
+  }
+
+  @Override public Iterable<Measurement> measure() {
+    return underlying.measure();
+  }
+
+  @Override public boolean hasExpired() {
+    return underlying.hasExpired();
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    for (Timer t : meters) {
-      t.record(amount, unit);
-    }
+    underlying.record(amount, unit);
   }
 
   @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
+    return underlying.record(f);
   }
 
   @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
+    underlying.record(f);
   }
 
   @Override public long count() {
-    Iterator<Timer> it = meters.iterator();
-    return it.hasNext() ? it.next().count() : 0L;
+    return underlying.count();
   }
 
   @Override public long totalTime() {
-    Iterator<Timer> it = meters.iterator();
-    return it.hasNext() ? it.next().totalTime() : 0L;
+    return underlying.totalTime();
   }
 }

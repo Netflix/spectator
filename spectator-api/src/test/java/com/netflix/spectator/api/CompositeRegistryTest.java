@@ -248,7 +248,8 @@ public class CompositeRegistryTest {
 
     Registry r1 = new DefaultRegistry(clock);
     r.add(r1);
-    Assert.assertTrue(c1.hasExpired());
+    // depends on registry type, some will be expired until first increment
+    Assert.assertFalse(c1.hasExpired());
 
     c1.increment();
     Assert.assertFalse(c1.hasExpired());

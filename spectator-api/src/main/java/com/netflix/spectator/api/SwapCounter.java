@@ -15,31 +15,41 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.Collection;
-import java.util.Iterator;
+/** Wraps another counter allowing the underlying type to be swapped. */
+final class SwapCounter implements Counter {
 
-/** Counter implementation for the composite registry. */
-final class CompositeCounter extends CompositeMeter<Counter> implements Counter {
+  private volatile Counter underlying;
 
   /** Create a new instance. */
-  CompositeCounter(Id id, Collection<Counter> counters) {
-    super(id, counters);
+  SwapCounter(Counter underlying) {
+    this.underlying = underlying;
+  }
+
+  void setUnderlying(Counter c) {
+    underlying = c;
+  }
+
+  @Override public Id id() {
+    return underlying.id();
+  }
+
+  @Override public Iterable<Measurement> measure() {
+    return underlying.measure();
+  }
+
+  @Override public boolean hasExpired() {
+    return underlying.hasExpired();
   }
 
   @Override public void increment() {
-    for (Counter c : meters) {
-      c.increment();
-    }
+    underlying.increment();
   }
 
   @Override public void increment(long amount) {
-    for (Counter c : meters) {
-      c.increment(amount);
-    }
+    underlying.increment(amount);
   }
 
   @Override public long count() {
-    Iterator<Counter> it = meters.iterator();
-    return it.hasNext() ? it.next().count() : 0L;
+    return underlying.count();
   }
 }

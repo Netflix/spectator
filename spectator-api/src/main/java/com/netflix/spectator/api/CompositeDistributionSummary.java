@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,26 +19,26 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /** Distribution summary implementation for the composite registry. */
-final class CompositeDistributionSummary extends CompositeMeter implements DistributionSummary {
+final class CompositeDistributionSummary extends CompositeMeter<DistributionSummary> implements DistributionSummary {
 
   /** Create a new instance. */
-  CompositeDistributionSummary(Id id, Collection<Registry> registries) {
-    super(id, registries);
+  CompositeDistributionSummary(Id id, Collection<DistributionSummary> summaries) {
+    super(id, summaries);
   }
 
   @Override public void record(long amount) {
-    for (Registry r : registries) {
-      r.distributionSummary(id).record(amount);
+    for (DistributionSummary d : meters) {
+      d.record(amount);
     }
   }
 
   @Override public long count() {
-    Iterator<Registry> it = registries.iterator();
-    return it.hasNext() ? it.next().distributionSummary(id).count() : 0L;
+    Iterator<DistributionSummary> it = meters.iterator();
+    return it.hasNext() ? it.next().count() : 0L;
   }
 
   @Override public long totalAmount() {
-    Iterator<Registry> it = registries.iterator();
-    return it.hasNext() ? it.next().distributionSummary(id).totalAmount() : 0L;
+    Iterator<DistributionSummary> it = meters.iterator();
+    return it.hasNext() ? it.next().totalAmount() : 0L;
   }
 }

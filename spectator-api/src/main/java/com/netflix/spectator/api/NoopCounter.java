@@ -27,7 +27,7 @@ enum NoopCounter implements Counter {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    return true;
   }
 
   @Override public void increment() {

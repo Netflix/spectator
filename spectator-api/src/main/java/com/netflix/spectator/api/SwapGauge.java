@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,37 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.Collections;
+/** Wraps another gauge allowing the underlying type to be swapped. */
+final class SwapGauge implements Gauge {
 
-/** Distribution summary implementation for the no-op registry. */
-enum NoopDistributionSummary implements DistributionSummary {
+  private volatile Gauge underlying;
 
-  /** Singleton instance. */
-  INSTANCE;
+  /** Create a new instance. */
+  SwapGauge(Gauge underlying) {
+    this.underlying = underlying;
+  }
+
+  void setUnderlying(Gauge g) {
+    underlying = g;
+  }
 
   @Override public Id id() {
-    return NoopId.INSTANCE;
-  }
-
-  @Override public boolean hasExpired() {
-    return true;
-  }
-
-  @Override public void record(long amount) {
+    return underlying.id();
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
+    return underlying.measure();
   }
 
-  @Override public long count() {
-    return 0L;
+  @Override public boolean hasExpired() {
+    return underlying.hasExpired();
   }
 
-  @Override public long totalAmount() {
-    return 0L;
+  @Override public void set(double value) {
+    underlying.set(value);
+  }
+
+  @Override public double value() {
+    return underlying.value();
   }
 }

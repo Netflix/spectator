@@ -78,6 +78,7 @@ subprojects {
     warmupIterations = 10
     iterations = 10
     fork = 1
+    threads = 1
     profilers = ['stack']
     include '.*Counters.*'
   }

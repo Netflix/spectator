@@ -25,7 +25,7 @@ public class NoopDistributionSummaryTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopDistributionSummary.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertFalse(NoopDistributionSummary.INSTANCE.hasExpired());
+    Assert.assertTrue(NoopDistributionSummary.INSTANCE.hasExpired());
   }
 
   @Test
