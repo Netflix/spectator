@@ -1,8 +1,16 @@
 language: java
 jdk:
 - oraclejdk8
+- oraclejdk9
 sudo: required
 dist: trusty
+addons:
+  apt:
+    packages:
+      - oracle-java9-installer
+matrix:
+  allow_failures:
+    - jdk: oraclejdk9
 install: ./installViaTravis.sh
 script: ./buildViaTravis.sh
 env:
