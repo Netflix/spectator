@@ -23,7 +23,10 @@ import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +38,8 @@ import java.util.Map;
  */
 public final class Agent {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(Agent.class);
+
   private Agent() {
   }
 
@@ -42,8 +47,16 @@ public final class Agent {
     Config config = ConfigFactory.load("agent");
     if (userResources != null && !"".equals(userResources)) {
       for (String userResource : userResources.split("[,\\s]+]")) {
-        Config user = ConfigFactory.load(userResource);
-        config = user.withFallback(config);
+        if (userResource.startsWith("file:")) {
+          File file = new File(userResource.substring("file:".length()));
+          LOGGER.info("loading configuration from file: {}", file);
+          Config user = ConfigFactory.parseFile(file).resolve();
+          config = user.withFallback(config);
+        } else {
+          LOGGER.info("loading configuration from resource: {}", userResource);
+          Config user = ConfigFactory.load(userResource);
+          config = user.withFallback(config);
+        }
       }
     }
     return config.getConfig("netflix.spectator.agent");
