@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +19,21 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /** Counter implementation for the composite registry. */
-final class CompositeGauge extends CompositeMeter implements Gauge {
+final class CompositeGauge extends CompositeMeter<Gauge> implements Gauge {
 
   /** Create a new instance. */
-  CompositeGauge(Id id, Collection<Registry> registries) {
-    super(id, registries);
+  CompositeGauge(Id id, Collection<Gauge> gauges) {
+    super(id, gauges);
   }
 
   @Override public void set(double v) {
-    for (Registry r : registries) {
-      r.gauge(id).set(v);
+    for (Gauge g : meters) {
+      g.set(v);
     }
   }
 
   @Override public double value() {
-    Iterator<Registry> it = registries.iterator();
-    return it.hasNext() ? it.next().gauge(id).value() : Double.NaN;
+    Iterator<Gauge> it = meters.iterator();
+    return it.hasNext() ? it.next().value() : Double.NaN;
   }
 }

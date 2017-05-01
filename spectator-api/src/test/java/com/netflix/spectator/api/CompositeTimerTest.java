@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class CompositeTimerTest {
@@ -36,7 +37,10 @@ public class CompositeTimerTest {
   private List<Registry> registries;
 
   private Timer newTimer() {
-    return new CompositeTimer(new DefaultId("foo"), clock, registries);
+    List<Timer> ts = registries.stream()
+        .map(r -> r.timer(id))
+        .collect(Collectors.toList());
+    return new CompositeTimer(new DefaultId("foo"), clock, ts);
   }
 
   private void assertCountEquals(Timer t, long expected) {
@@ -63,7 +67,7 @@ public class CompositeTimerTest {
 
   @Test
   public void empty() {
-    Timer t = new CompositeTimer(NoopId.INSTANCE, clock, Collections.<Registry>emptyList());
+    Timer t = new CompositeTimer(NoopId.INSTANCE, clock, Collections.emptyList());
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
     t.record(1L, TimeUnit.SECONDS);

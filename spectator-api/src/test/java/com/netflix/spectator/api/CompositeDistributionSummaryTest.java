@@ -24,6 +24,7 @@ import org.junit.runners.JUnit4;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class CompositeDistributionSummaryTest {
@@ -34,7 +35,10 @@ public class CompositeDistributionSummaryTest {
   private List<Registry> registries;
 
   private DistributionSummary newDistributionSummary() {
-    return new CompositeDistributionSummary(id, registries);
+    List<DistributionSummary> ds = registries.stream()
+        .map(r -> r.distributionSummary(id))
+        .collect(Collectors.toList());
+    return new CompositeDistributionSummary(id, ds);
   }
 
   private void assertCountEquals(DistributionSummary t, long expected) {
@@ -62,7 +66,7 @@ public class CompositeDistributionSummaryTest {
   @Test
   public void empty() {
     DistributionSummary t = new CompositeDistributionSummary(
-      NoopId.INSTANCE, Collections.<Registry>emptyList());
+      NoopId.INSTANCE, Collections.emptyList());
     assertCountEquals(t, 0L);
     assertTotalEquals(t, 0L);
     t.record(1L);

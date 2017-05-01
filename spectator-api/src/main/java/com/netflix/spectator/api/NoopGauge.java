@@ -31,7 +31,7 @@ enum NoopGauge implements Gauge {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    return true;
   }
 
   @Override public double value() {

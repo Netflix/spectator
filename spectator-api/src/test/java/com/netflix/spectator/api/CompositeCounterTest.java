@@ -24,6 +24,7 @@ import org.junit.runners.JUnit4;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class CompositeCounterTest {
@@ -34,7 +35,10 @@ public class CompositeCounterTest {
   private List<Registry> registries;
 
   private Counter newCounter() {
-    return new CompositeCounter(id, registries);
+    List<Counter> cs = registries.stream()
+        .map(r -> r.counter(id))
+        .collect(Collectors.toList());
+    return new CompositeCounter(id, cs);
   }
 
   private void assertCountEquals(Counter c, long expected) {
@@ -54,7 +58,7 @@ public class CompositeCounterTest {
 
   @Test
   public void empty() {
-    Counter c = new CompositeCounter(NoopId.INSTANCE, Collections.<Registry>emptyList());
+    Counter c = new CompositeCounter(NoopId.INSTANCE, Collections.emptyList());
     assertCountEquals(c, 0L);
     c.increment();
     assertCountEquals(c, 0L);

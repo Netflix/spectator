@@ -29,7 +29,7 @@ enum NoopTimer implements Timer {
   }
 
   @Override public boolean hasExpired() {
-    return false;
+    return true;
   }
 
   @Override public void record(long amount, TimeUnit unit) {

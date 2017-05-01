@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,25 @@ import java.util.List;
 /**
  * Base class for composite implementations of core meter types.
  */
-class CompositeMeter implements Meter {
+class CompositeMeter<T extends Meter> implements Meter {
 
   /** Identifier for the meter. */
   protected final Id id;
 
-  /** Underlying registries that are keeping the data. */
-  protected final Collection<Registry> registries;
+  /** Underlying meters that are keeping the data. */
+  protected final Collection<T> meters;
 
   /**
    * Create a new instance.
    *
    * @param id
    *     Identifier for the meter.
+   * @param meters
+   *     Set of meters that make up the composite.
    */
-  public CompositeMeter(Id id, Collection<Registry> registries) {
+  public CompositeMeter(Id id, Collection<T> meters) {
     this.id = id;
-    this.registries = registries;
+    this.meters = meters;
   }
 
   @Override public Id id() {
@@ -47,8 +49,7 @@ class CompositeMeter implements Meter {
   }
 
   @Override public boolean hasExpired() {
-    for (Registry r : registries) {
-      Meter m = r.get(id);
+    for (Meter m : meters) {
       if (m != null && !m.hasExpired()) return false;
     }
     return true;
@@ -56,8 +57,7 @@ class CompositeMeter implements Meter {
 
   @Override public Iterable<Measurement> measure() {
     final List<Measurement> ms = new ArrayList<>();
-    for (Registry r : registries) {
-      Meter m = r.get(id);
+    for (Meter m : meters) {
       if (m != null) {
         for (Measurement measurement : m.measure()) {
           ms.add(measurement);

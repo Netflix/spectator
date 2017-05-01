@@ -25,7 +25,7 @@ public class NoopCounterTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopCounter.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertFalse(NoopCounter.INSTANCE.hasExpired());
+    Assert.assertTrue(NoopCounter.INSTANCE.hasExpired());
   }
 
   @Test

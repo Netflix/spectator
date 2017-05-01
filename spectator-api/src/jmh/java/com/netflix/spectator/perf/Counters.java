@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
@@ -30,8 +29,58 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.Random;
 import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Summary of results on m4.16xlarge:
+ *
+ * <pre>
+ *  ### T1 Composite(Empty)
+ *
+ *  ```
+ *  Benchmark                Mode  Cnt          Score         Error  Units
+ *  Counters.cached         thrpt   10  222995027.222 ± 5812215.685  ops/s
+ *  Counters.lookup         thrpt   10   34596370.526 ± 7975715.214  ops/s
+ *  Counters.random         thrpt   10    5699426.669 ±  604639.108  ops/s
+ *  ```
+ *
+ *  ### T1 Composite(Noop)
+ *
+ *  ```
+ *  Benchmark                Mode  Cnt          Score         Error  Units
+ *  Counters.cached         thrpt   10  221034201.857 ± 9204618.077  ops/s
+ *  Counters.lookup         thrpt   10   33410400.013 ± 7828970.416  ops/s
+ *  Counters.random         thrpt   10    5977032.777 ±  679753.009  ops/s
+ *  ```
+ *
+ *  ### T1 Composite(Default)
+ *
+ *  ```
+ *  Benchmark                Mode  Cnt         Score         Error  Units
+ *  Counters.cached         thrpt   10  61043422.331 ± 3085269.565  ops/s
+ *  Counters.lookup         thrpt   10  25989379.563 ± 4981909.126  ops/s
+ *  Counters.random         thrpt   10   4299422.647 ±  394069.294  ops/s
+ *  ```
+ *
+ *  ### T1 Composite(Noop, Noop)
+ *
+ *  ```
+ *  Benchmark                Mode  Cnt         Score         Error  Units
+ *  Counters.cached         thrpt   10  65781502.616 ± 3124211.952  ops/s
+ *  Counters.lookup         thrpt   10  23914193.535 ± 6256980.210  ops/s
+ *  Counters.random         thrpt   10   3907696.564 ±  383335.366  ops/s
+ *  ```
+ *
+ *  ### T1 Composite(Default, Default)
+ *
+ *  ```
+ *  Benchmark                Mode  Cnt         Score         Error  Units
+ *  Counters.cached         thrpt   10  37594426.749 ± 1302829.135  ops/s
+ *  Counters.lookup         thrpt   10  17151030.656 ± 3776435.406  ops/s
+ *  Counters.random         thrpt   10   2228890.157 ±  186029.279  ops/s
+ *  ```
+ * </pre>
+ */
 @State(Scope.Thread)
 public class Counters {
 
@@ -43,21 +92,19 @@ public class Counters {
     String[] newNames;
 
     public Data() {
+      names = new String[100000];
       newNames = new String[100000];
       for (int i = 0; i < 100000; ++i) {
-        registry.counter(UUID.randomUUID().toString()).increment();
+        names[i] = UUID.randomUUID().toString();
+        registry.counter(names[i]).increment();
         newNames[i] = UUID.randomUUID().toString();
       }
-      names = registry.counters()
-          .map(c -> c.id().name())
-          .collect(Collectors.toList())
-          .toArray(new String[]{});
     }
   }
 
   @State(Scope.Thread)
   public static class Metrics {
-    private Random random = new Random();
+    private Random random = ThreadLocalRandom.current();
 
     Counter get(Data data) {
       // Assumes about 5% of lookups will be for a new or expired counter. This is
@@ -70,166 +117,24 @@ public class Counters {
     }
   }
 
-  @Threads(1)
-  @Benchmark
-  public void cached_T001(Data data) {
-    data.cached.increment();
+  private long incrementAndGet(Counter c) {
+    c.increment();
+    return c.count();
   }
 
-  @Threads(1)
   @Benchmark
-  public void lookup_T001(Data data) {
-    data.registry.counter("lookup").increment();
+  public long cached(Data data) {
+    return incrementAndGet(data.cached);
   }
 
-  @Threads(1)
   @Benchmark
-  public void random_T001(Data data, Metrics metrics) {
-    metrics.get(data).increment();
+  public long lookup(Data data) {
+    return incrementAndGet(data.registry.counter("lookup"));
   }
 
-  @Threads(2)
   @Benchmark
-  public void cached_T002(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(2)
-  @Benchmark
-  public void lookup_T002(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(2)
-  @Benchmark
-  public void random_T002(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(4)
-  @Benchmark
-  public void cached_T004(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(4)
-  @Benchmark
-  public void lookup_T004(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(4)
-  @Benchmark
-  public void random_T004(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(8)
-  @Benchmark
-  public void cached_T008(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(8)
-  @Benchmark
-  public void lookup_T008(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(8)
-  @Benchmark
-  public void random_T008(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(16)
-  @Benchmark
-  public void cached_T016(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(16)
-  @Benchmark
-  public void lookup_T016(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(16)
-  @Benchmark
-  public void random_T016(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(32)
-  @Benchmark
-  public void cached_T032(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(32)
-  @Benchmark
-  public void lookup_T032(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(32)
-  @Benchmark
-  public void random_T032(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(64)
-  @Benchmark
-  public void cached_T064(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(64)
-  @Benchmark
-  public void lookup_T064(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(64)
-  @Benchmark
-  public void random_T064(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(128)
-  @Benchmark
-  public void cached_T128(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(128)
-  @Benchmark
-  public void lookup_T128(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(128)
-  @Benchmark
-  public void random_T128(Data data, Metrics metrics) {
-    metrics.get(data).increment();
-  }
-
-  @Threads(256)
-  @Benchmark
-  public void cached_T256(Data data) {
-    data.cached.increment();
-  }
-
-  @Threads(256)
-  @Benchmark
-  public void lookup_T256(Data data) {
-    data.registry.counter("lookup").increment();
-  }
-
-  @Threads(256)
-  @Benchmark
-  public void random_T256(Data data, Metrics metrics) {
-    metrics.get(data).increment();
+  public long random(Data data, Metrics metrics) {
+    return incrementAndGet(metrics.get(data));
   }
 
   @TearDown
