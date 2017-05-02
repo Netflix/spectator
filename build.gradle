@@ -37,7 +37,6 @@ subprojects {
   apply plugin: 'build-dashboard'
   apply plugin: 'jacoco'
   apply plugin: 'checkstyle'
-  apply plugin: 'findbugs'
   apply plugin: 'pmd'
 
   repositories {
@@ -106,7 +105,7 @@ subprojects {
     exclude '**/tdunning/**'
   }
   
-  findbugs {
+  /*findbugs {
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
@@ -117,7 +116,7 @@ subprojects {
       xml.enabled = false
       html.enabled = true
     }
-  }
+  }*/
 
   pmd {
     toolVersion = '5.5.4'
