@@ -1,12 +1,21 @@
 language: java
 jdk:
 - oraclejdk8
+- oraclejdk9
 sudo: required
 dist: trusty
+addons:
+  apt:
+    packages:
+      - oracle-java9-installer
+matrix:
+  allow_failures:
+    - jdk: oraclejdk9
 install: ./installViaTravis.sh
 script: ./buildViaTravis.sh
 env:
   global:
+  - JAVA_OPTS="-XX:+IgnoreUnrecognizedVMOptions --permit-illegal-access --show-version --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED"
   - secure: SMDLZidvlVSx+Fb7GBklScg+FtVahoysKZdLPfX1dtf0meuDIttTS+a2Jbj/+CTMfblq7mmM0YlrW2PElCNAi2I+Gzm0v8ZHZPfVvMkJRaX0TGpb+Pcsx/T2xIwMFMuKUzP1j9ifIKDVYlB9mcIZl+8p8PwIy4tkBX3CwCIZ5XM=
   - secure: M/0m7dlUrOMdc0daFGHqyf3HZWT+2QIYZp4roiHyLQGzuXwX721Wt/Hi3xxchtX85Qulx0BV1h54SrDfIqxwYq38EiamzVR1n0uqoRC/TNo4JgB6oFd8/PLS9pLiUClG6GNOelulNyK6pl0WdL4G1xdvHla0/4wMulygbWmxKPU=
   - secure: Vyc7iLE+lnQJEXD4X7O5PFF3ffeSqAyeQgJ/Gn4pJbZ2A6JtdPIZlHXDtV+mC+ZIgOGQI6vUzCWulc/p21zpphXWrCtCrLVDhP/AtKzyuxBGXZxTaqcApD3MMTvKPOzIjgxNfFEgqmbCx1wAFJy2w1gTR5zy6qcPzanqKtv/epE=

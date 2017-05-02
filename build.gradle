@@ -1,7 +1,7 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.12.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.14.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:3.6.3'
 
     // This is a workaround for getting the shadow plugin to work correctly
@@ -37,7 +37,6 @@ subprojects {
   apply plugin: 'build-dashboard'
   apply plugin: 'jacoco'
   apply plugin: 'checkstyle'
-  apply plugin: 'findbugs'
   apply plugin: 'pmd'
 
   repositories {
@@ -84,7 +83,7 @@ subprojects {
   }
 
   jacoco {
-    toolVersion = "0.7.6.201602180812"
+    toolVersion = "0.7.8"
   }
 
   jacocoTestReport {
@@ -106,7 +105,7 @@ subprojects {
     exclude '**/tdunning/**'
   }
   
-  findbugs {
+  /*findbugs {
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
@@ -117,7 +116,7 @@ subprojects {
       xml.enabled = false
       html.enabled = true
     }
-  }
+  }*/
 
   pmd {
     toolVersion = '5.5.4'
