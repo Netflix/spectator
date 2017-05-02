@@ -14,6 +14,7 @@ matrix:
 install: ./installViaTravis.sh
 script: ./buildViaTravis.sh
 env:
+  - JAVA_OPTS="-XX:+IgnoreUnrecognizedVMOptions --permit-illegal-access --show-version"
   global:
   - secure: SMDLZidvlVSx+Fb7GBklScg+FtVahoysKZdLPfX1dtf0meuDIttTS+a2Jbj/+CTMfblq7mmM0YlrW2PElCNAi2I+Gzm0v8ZHZPfVvMkJRaX0TGpb+Pcsx/T2xIwMFMuKUzP1j9ifIKDVYlB9mcIZl+8p8PwIy4tkBX3CwCIZ5XM=
   - secure: M/0m7dlUrOMdc0daFGHqyf3HZWT+2QIYZp4roiHyLQGzuXwX721Wt/Hi3xxchtX85Qulx0BV1h54SrDfIqxwYq38EiamzVR1n0uqoRC/TNo4JgB6oFd8/PLS9pLiUClG6GNOelulNyK6pl0WdL4G1xdvHla0/4wMulygbWmxKPU=
