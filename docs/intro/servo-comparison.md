@@ -190,11 +190,11 @@ present. Since it is a weak reference, nothing will prevent an instance of
 
 Annotations are not supported, use the appropriate meter type:
 
-| DataSourceType | Spectator Alternative  |
-|----------------|------------------------|
-| COUNTER        | [[Counter Usage]]      |
-| GAUGE          | [[Gauge Usage]]        |
-| INFORMATIONAL  | Not supported          |
+| DataSourceType | Spectator Alternative       |
+|----------------|-----------------------------|
+| COUNTER        | [Counter Usage](counter.md) |
+| GAUGE          | [Gauge Usage](gauge.md)     |
+| INFORMATIONAL  | Not supported               |
 
 ### BasicCounter
 
