@@ -57,6 +57,8 @@ final class ArrayTagSet implements Iterable<Tag> {
   private final Tag[] tags;
   private final int length;
 
+  private int cachedHashCode;
+
   private ArrayTagSet(Tag[] tags) {
     this(tags, tags.length);
   }
@@ -67,6 +69,7 @@ final class ArrayTagSet implements Iterable<Tag> {
     }
     this.tags = tags;
     this.length = length;
+    this.cachedHashCode = 0;
   }
 
   @Override public Iterator<Tag> iterator() {
@@ -240,11 +243,14 @@ final class ArrayTagSet implements Iterable<Tag> {
   }
 
   @Override public int hashCode() {
-    int result = length;
-    for (int i = 0; i < length; ++i) {
-      result = 31 * result + tags[i].hashCode();
+    if (cachedHashCode == 0) {
+      int result = length;
+      for (int i = 0; i < length; ++i) {
+        result = 31 * result + tags[i].hashCode();
+      }
+      cachedHashCode = result;
     }
-    return result;
+    return cachedHashCode;
   }
 
   @Override public String toString() {
