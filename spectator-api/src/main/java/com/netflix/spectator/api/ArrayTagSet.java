@@ -196,6 +196,10 @@ final class ArrayTagSet implements Iterable<Tag> {
   ArrayTagSet addAll(Tag[] ts, int tsLength) {
     if (tsLength == 0) {
       return this;
+    } else if (length == 0) {
+      Arrays.sort(ts, 0, tsLength, TAG_COMPARATOR);
+      int len = dedup(ts, 0, ts, 0, tsLength);
+      return new ArrayTagSet(ts, len);
     } else {
       Tag[] newTags = new Tag[length + tsLength];
       Arrays.sort(ts, 0, tsLength, TAG_COMPARATOR);
@@ -226,8 +230,9 @@ final class ArrayTagSet implements Iterable<Tag> {
       } else {
         // Newer tags should override, use source B if there are duplicate keys.
         // If source B has duplicates, then use the last value for the given key.
+        final String k = a.key();
         int j = bi + 1;
-        for (; j < lengthB && a.key().equals(srcB[j].key()); ++j) {
+        for (; j < lengthB && k.equals(srcB[j].key()); ++j) {
           b = srcB[j];
         }
         dst[i++] = BasicTag.convert(b);
@@ -240,8 +245,7 @@ final class ArrayTagSet implements Iterable<Tag> {
       System.arraycopy(srcA, ai, dst, i, lengthA - ai);
       i += lengthA - ai;
     } else if (bi < lengthB) {
-      System.arraycopy(srcB, bi, dst, i, lengthB - bi);
-      i = dedup(dst, i, i + lengthB - bi);
+      i = dedup(srcB, bi, dst, i, lengthB - bi);
     }
 
     return i;
@@ -252,18 +256,24 @@ final class ArrayTagSet implements Iterable<Tag> {
    * key will get selected. Input data must already be sorted by the tag key. Returns the
    * length of the overall deduped array.
    */
-  private int dedup(Tag[] ts, int s, int e) {
-    String k = ts[s].key();
-    int j = s;
-    for (int i = s; i < e; ++i) {
-      if (k.equals(ts[i].key())) {
-        ts[j] = BasicTag.convert(ts[i]);
-      } else {
-        k = ts[i].key();
-        ts[++j] = BasicTag.convert(ts[i]);
+  private int dedup(Tag[] src, int ss, Tag[] dst, int ds, int len) {
+    if (len == 0) {
+      return ds;
+    } else {
+      dst[ds] = BasicTag.convert(src[ss]);
+      String k = src[ss].key();
+      int j = ds;
+      final int e = ss + len;
+      for (int i = ss + 1; i < e; ++i) {
+        if (k.equals(src[i].key())) {
+          dst[j] = BasicTag.convert(src[i]);
+        } else {
+          k = src[i].key();
+          dst[++j] = BasicTag.convert(src[i]);
+        }
       }
+      return j + 1;
     }
-    return j + 1;
   }
 
   @Override public boolean equals(Object o) {
