@@ -80,7 +80,7 @@ subprojects {
     fork = 1
     threads = 1
     profilers = ['stack']
-    include '.*Counters.*'
+    include '.*Ids.*'
   }
 
   jacoco {

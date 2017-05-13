@@ -100,29 +100,31 @@ final class ArrayTagSet implements Iterable<Tag> {
   }
 
   /** Add a new tag to the set. */
+  @SuppressWarnings("PMD.AvoidArrayLoops")
   ArrayTagSet add(Tag tag) {
-    Tag[] newTags;
-    int pos = Arrays.binarySearch(tags, 0, length, tag, TAG_COMPARATOR);
-    if (pos < 0) {
-      // Not found in list
-      newTags = new Tag[length + 1];
-      int i = -pos - 1;
-      if (i == 0) { // Prepend
-        System.arraycopy(tags, 0, newTags, 1, length);
-      } else if (i == length) { // Append
-        System.arraycopy(tags, 0, newTags, 0, length);
-      } else { // Insert
-        System.arraycopy(tags, 0, newTags, 0, i);
-        System.arraycopy(tags, i, newTags, i + 1, length - i);
-      }
-      newTags[i] = BasicTag.convert(tag);
+    Tag newTag = BasicTag.convert(tag);
+    if (length == 0) {
+      return new ArrayTagSet(new Tag[] {newTag});
     } else {
-      // Override
-      newTags = new Tag[length];
-      System.arraycopy(tags, 0, newTags, 0, length);
-      newTags[pos] = BasicTag.convert(tag);
+      Tag[] newTags = new Tag[length + 1];
+      String k = newTag.key();
+      int i = 0;
+      for (; i < length && tags[i].key().compareTo(k) < 0; ++i) {
+        newTags[i] = tags[i];
+      }
+      if (i < length && tags[i].key().equals(k)) {
+        // Override
+        newTags[i++] = newTag;
+        System.arraycopy(tags, i, newTags, i, length - i);
+        i = length;
+      } else {
+        // Insert
+        newTags[i] = newTag;
+        System.arraycopy(tags, i, newTags, i + 1, length - i);
+        i = newTags.length;
+      }
+      return new ArrayTagSet(newTags, i);
     }
-    return new ArrayTagSet(newTags);
   }
 
   /** Add a collection of tags to the set. */
