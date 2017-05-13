@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -313,5 +313,22 @@ public class ArrayTagSetTest {
     Collection<Tag> tags = Collections.singletonList(new BasicTag("app", "foo"));
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(tags::iterator);
     Assert.assertEquals(ArrayTagSet.EMPTY.addAll(tags), ts);
+  }
+
+  @Test
+  public void addAllDedupEmpty() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new String[] {"a", "1", "a", "2", "a", "3"});
+    Assert.assertEquals(ArrayTagSet.EMPTY.add(new BasicTag("a", "3")), ts);
+  }
+
+  @Test
+  public void addAllDedupMerge() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY
+        .addAll(new String[] {"a", "1", "a", "2", "a", "3"})
+        .addAll(new String[] {"a", "4", "a", "5", "a", "6", "b", "1"});
+    ArrayTagSet expected = ArrayTagSet.EMPTY
+        .add(new BasicTag("a", "6"))
+        .add(new BasicTag("b", "1"));
+    Assert.assertEquals(expected, ts);
   }
 }

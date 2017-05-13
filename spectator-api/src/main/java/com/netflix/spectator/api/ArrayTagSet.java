@@ -1,5 +1,5 @@
-/**
- * Copyright 2014-2016 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,14 +137,13 @@ final class ArrayTagSet implements Iterable<Tag> {
       if (data.isEmpty()) {
         return this;
       } else {
-        Tag[] newTags = new Tag[length + data.size()];
-        System.arraycopy(tags, 0, newTags, 0, length);
+        Tag[] newTags = new Tag[data.size()];
         int i = 0;
         for (Tag t : data) {
-          newTags[length + i] = BasicTag.convert(t);
+          newTags[i] = BasicTag.convert(t);
           ++i;
         }
-        return dedup(newTags);
+        return addAll(newTags);
       }
     } else {
       List<Tag> data = new ArrayList<>();
@@ -160,13 +159,12 @@ final class ArrayTagSet implements Iterable<Tag> {
     if (ts.isEmpty()) {
       return this;
     } else {
-      Tag[] newTags = new Tag[length + ts.size()];
-      System.arraycopy(tags, 0, newTags, 0, length);
-      int i = length;
+      Tag[] newTags = new Tag[ts.size()];
+      int i = 0;
       for (Map.Entry<String, String> entry : ts.entrySet()) {
         newTags[i++] = new BasicTag(entry.getKey(), entry.getValue());
       }
-      return dedup(newTags);
+      return addAll(newTags);
     }
   }
 
@@ -180,13 +178,12 @@ final class ArrayTagSet implements Iterable<Tag> {
       return this;
     } else {
       int tsLength = ts.length / 2;
-      Tag[] newTags = new Tag[length + tsLength];
-      System.arraycopy(tags, 0, newTags, 0, length);
+      Tag[] newTags = new Tag[tsLength];
       for (int i = 0; i < tsLength; ++i) {
         final int j = i * 2;
-        newTags[length + i] = new BasicTag(ts[j], ts[j + 1]);
+        newTags[i] = new BasicTag(ts[j], ts[j + 1]);
       }
-      return dedup(newTags);
+      return addAll(newTags, tsLength);
     }
   }
 
@@ -201,34 +198,72 @@ final class ArrayTagSet implements Iterable<Tag> {
       return this;
     } else {
       Tag[] newTags = new Tag[length + tsLength];
-      System.arraycopy(tags, 0, newTags, 0, length);
-      for (int i = 0; i < tsLength; ++i) {
-        newTags[length + i] = BasicTag.convert(ts[i]);
-      }
-      return dedup(newTags);
+      Arrays.sort(ts, 0, tsLength, TAG_COMPARATOR);
+      int newLength = merge(newTags, tags, length, ts, tsLength);
+      return new ArrayTagSet(newTags, newLength);
     }
   }
 
   /**
-   * Dedup any entries in {@code ts} that have the same key. The last entry with a given
-   * key will get selected.
+   * Merge and dedup any entries in {@code ts} that have the same key. The last entry
+   * with a given key will get selected.
    */
-  private ArrayTagSet dedup(Tag[] ts) {
-    // It is important for this sort to be stable for the override behavior to work
-    // correctly.
-    Arrays.sort(ts, TAG_COMPARATOR);
+  private int merge(Tag[] dst, Tag[] srcA, int lengthA, Tag[] srcB, int lengthB) {
+    int i = 0;
+    int ai = 0;
+    int bi = 0;
 
-    String k = ts[0].key();
-    int j = 0;
-    for (int i = 0; i < ts.length; ++i) {
-      if (k.equals(ts[i].key())) {
-        ts[j] = ts[i];
+    while (ai < lengthA && bi < lengthB) {
+      Tag a = srcA[ai];
+      Tag b = srcB[bi];
+      int cmp = a.key().compareTo(b.key());
+      if (cmp < 0) {
+        dst[i++] = a;
+        ++ai;
+      } else if (cmp > 0) {
+        dst[i++] = BasicTag.convert(b);
+        ++bi;
       } else {
-        k = ts[i].key();
-        ts[++j] = ts[i];
+        // Newer tags should override, use source B if there are duplicate keys.
+        // If source B has duplicates, then use the last value for the given key.
+        int j = bi + 1;
+        for (; j < lengthB && a.key().equals(srcB[j].key()); ++j) {
+          b = srcB[j];
+        }
+        dst[i++] = BasicTag.convert(b);
+        bi = j;
+        ++ai; // Ignore
       }
     }
-    return new ArrayTagSet(ts, j + 1);
+
+    if (ai < lengthA) {
+      System.arraycopy(srcA, ai, dst, i, lengthA - ai);
+      i += lengthA - ai;
+    } else if (bi < lengthB) {
+      System.arraycopy(srcB, bi, dst, i, lengthB - bi);
+      i = dedup(dst, i, i + lengthB - bi);
+    }
+
+    return i;
+  }
+
+  /**
+   * Dedup any entries in {@code ts} that have the same key. The last entry with a given
+   * key will get selected. Input data must already be sorted by the tag key. Returns the
+   * length of the overall deduped array.
+   */
+  private int dedup(Tag[] ts, int s, int e) {
+    String k = ts[s].key();
+    int j = s;
+    for (int i = s; i < e; ++i) {
+      if (k.equals(ts[i].key())) {
+        ts[j] = BasicTag.convert(ts[i]);
+      } else {
+        k = ts[i].key();
+        ts[++j] = BasicTag.convert(ts[i]);
+      }
+    }
+    return j + 1;
   }
 
   @Override public boolean equals(Object o) {
