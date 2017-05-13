@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,21 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * <pre>
+ * Benchmark                         Mode  Cnt          Score         Error  Units
+ * Ids.append1                      thrpt   10   24,832,015.561 ±  775914.547  ops/s
+ * Ids.append2                      thrpt   10   15,115,152.153 ±  500615.433  ops/s
+ * Ids.append4                      thrpt   10    5,082,342.853 ±  118696.678  ops/s
+ * Ids.append4sorted                thrpt   10    6,243,473.482 ±  203665.016  ops/s
+ * Ids.baseline                     thrpt   10   17,854,792.417 ±  663244.744  ops/s
+ * Ids.justName                     thrpt   10  160,126,776.622 ± 8846354.045  ops/s
+ * Ids.withTag                      thrpt   10    1,696,380.648 ±   35774.917  ops/s
+ * Ids.withTagsMap                  thrpt   10    2,080,491.447 ±   35497.396  ops/s
+ * Ids.withTagsVararg               thrpt   10    2,142,907.363 ±   53384.402  ops/s
+ * Ids.withTagsVarargSorted         thrpt   10    4,234,550.555 ±  130956.068  ops/s
+ * </pre>
+ */
 @State(Scope.Thread)
 public class Ids {
 
@@ -126,6 +141,26 @@ public class Ids {
 
   @Threads(1)
   @Benchmark
+  public void withTagsVarargSorted(Blackhole bh) {
+    Id id = registry.createId("http.req.complete").withTags(
+            "client", "ab",
+           "country", "US",
+            "device", "xbox",
+            "nf.ami", "ami-0987654321",
+            "nf.app", "test_app",
+            "nf.asg", "test_app-main-v042",
+        "nf.cluster", "test_app-main",
+           "nf.node", "i-1234567890",
+         "nf.region", "us-east-1",
+          "nf.stack", "main",
+           "nf.zone", "us-east-1e",
+            "status", "200"
+    );
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
   public void withTagsMap(Blackhole bh) {
     Id id = registry.createId("http.req.complete").withTags(tags);
     bh.consume(id);
@@ -155,6 +190,17 @@ public class Ids {
          "device", "xbox",
          "status", "200",
          "client", "ab");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void append4sorted(Blackhole bh) {
+    Id id = baseId.withTags(
+        "client", "ab",
+       "country", "US",
+        "device", "xbox",
+        "status", "200");
     bh.consume(id);
   }
 
