@@ -66,7 +66,9 @@ public class Ids {
     return m;
   }
 
-  private final Id baseId = registry.createId("http.req.complete")
+  private final Id emptyId = registry.createId("http.req.complete");
+
+  private final Id baseId = emptyId
       .withTag(    "nf.app", "test_app")
       .withTag("nf.cluster", "test_app-main")
       .withTag(    "nf.asg", "test_app-main-v042")
@@ -199,6 +201,44 @@ public class Ids {
     Id id = baseId.withTags(
         "client", "ab",
        "country", "US",
+        "device", "xbox",
+        "status", "200");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void emptyAppend1(Blackhole bh) {
+    Id id = emptyId.withTag("country", "US");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void emptyAppend2(Blackhole bh) {
+    Id id = emptyId.withTags(
+        "country", "US",
+        "device", "xbox");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void emptyAppend4(Blackhole bh) {
+    Id id = emptyId.withTags(
+        "country", "US",
+        "device", "xbox",
+        "status", "200",
+        "client", "ab");
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void emptyAppend4sorted(Blackhole bh) {
+    Id id = emptyId.withTags(
+        "client", "ab",
+        "country", "US",
         "device", "xbox",
         "status", "200");
     bh.consume(id);

@@ -27,13 +27,48 @@ public interface Id {
   /** Other dimensions that can be used to classify the measurement. */
   Iterable<Tag> tags();
 
-  /** New id with an additional tag value. */
+  /** Return a new id with an additional tag value. */
   Id withTag(String k, String v);
 
-  /** New id with an additional tag value. */
+  /** Return a new id with an additional tag value. */
   Id withTag(Tag t);
 
-  /** New id with additional tag values. */
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  default Id withTags(String k1, String v1) {
+    return withTag(k1, v1);
+  }
+
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  @SuppressWarnings("PMD.UseObjectForClearerAPI")
+  default Id withTags(String k1, String v1, String k2, String v2) {
+    final Tag[] ts = new Tag[] {
+        new BasicTag(k1, v1),
+        new BasicTag(k2, v2)
+    };
+    return withTags(ts);
+  }
+
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  @SuppressWarnings("PMD.UseObjectForClearerAPI")
+  default Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
+    final Tag[] ts = new Tag[] {
+        new BasicTag(k1, v1),
+        new BasicTag(k2, v2),
+        new BasicTag(k3, v3)
+    };
+    return withTags(ts);
+  }
+
+  /** Return a new id with additional tag values. */
   default Id withTags(String... tags) {
     Id tmp = this;
     for (int i = 0; i < tags.length; i += 2) {
@@ -42,7 +77,7 @@ public interface Id {
     return tmp;
   }
 
-  /** New id with additional tag values. */
+  /** Return a new id with additional tag values. */
   default Id withTags(Tag... tags) {
     Id tmp = this;
     for (Tag t : tags) {
@@ -51,7 +86,7 @@ public interface Id {
     return tmp;
   }
 
-  /** New id with additional tag values. */
+  /** Return a new id with additional tag values. */
   default Id withTags(Iterable<Tag> tags) {
     Id tmp = this;
     for (Tag t : tags) {
@@ -60,7 +95,7 @@ public interface Id {
     return tmp;
   }
 
-  /** New id with additional tag values. */
+  /** Return a new id with additional tag values. */
   default Id withTags(Map<String, String> tags) {
     Id tmp = this;
     for (Map.Entry<String, String> entry : tags.entrySet()) {
