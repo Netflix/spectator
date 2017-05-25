@@ -14,6 +14,7 @@ buildscript {
 plugins {
   id 'nebula.netflixoss' version '3.6.0'
   id 'me.champeau.gradle.jmh' version '0.3.0'
+  id "com.github.spotbugs" version "1.0" apply false
 }
 
 // Establish version and status
@@ -36,8 +37,8 @@ subprojects {
   apply plugin: 'java'
   apply plugin: 'build-dashboard'
   apply plugin: 'jacoco'
+  apply plugin: 'com.github.spotbugs'
   apply plugin: 'checkstyle'
-  apply plugin: 'findbugs'
   apply plugin: 'pmd'
 
   repositories {
@@ -106,13 +107,14 @@ subprojects {
     exclude '**/tdunning/**'
   }
   
-  findbugs {
+  spotbugs {
+    // Spotbugs plugin still pulls in findbugs so this version does not work...
+    //toolVersion "3.1.0-RC2"
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
   }
   tasks.withType(FindBugs) {
-    findbugs.toolVersion "3.0.1"
     reports {
       xml.enabled = false
       html.enabled = true
