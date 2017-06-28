@@ -65,7 +65,13 @@ public interface Registry extends Iterable<Meter> {
   Id createId(String name, Iterable<Tag> tags);
 
   /**
-   * Add a custom meter to the registry.
+   * Register a passive gauge. In most cases users should not use this method directly. Use
+   * one of the helper methods for working with gauges.
+   *
+   * @see #gauge(Id, Number)
+   * @see #gauge(Id, Object, ToDoubleFunction)
+   * @see #collectionSize(Id, Collection)
+   * @see #mapSize(Id, Map)
    */
   void register(Meter meter);
 
