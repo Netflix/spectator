@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,10 +48,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * the values since the last complete interval rather than the total for the
  * life of the process.</p>
  */
-class AtlasTimer implements Timer {
+class AtlasTimer extends AtlasMeter implements Timer {
 
-  private final Id id;
-  private final Clock clock;
   private final StepLong count;
   private final StepLong total;
   private final StepDouble totalOfSquares;
@@ -60,9 +58,8 @@ class AtlasTimer implements Timer {
   private final Id[] stats;
 
   /** Create a new instance. */
-  AtlasTimer(Id id, Clock clock, long step) {
-    this.id = id;
-    this.clock = clock;
+  AtlasTimer(Id id, Clock clock, long ttl, long step) {
+    super(id, clock, ttl);
     this.count = new StepLong(0L, clock, step);
     this.total = new StepLong(0L, clock, step);
     this.totalOfSquares = new StepDouble(0.0, clock, step);
@@ -73,14 +70,6 @@ class AtlasTimer implements Timer {
         id.withTags(DsType.rate,  Statistic.totalOfSquares),
         id.withTags(DsType.gauge, Statistic.max)
     };
-  }
-
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public boolean hasExpired() {
-    return false;
   }
 
   @Override public Iterable<Measurement> measure() {
@@ -118,6 +107,7 @@ class AtlasTimer implements Timer {
       totalOfSquares.getCurrent().addAndGet((double) nanos * nanos);
       updateMax(max.getCurrent(), nanos);
     }
+    updateLastModTime();
   }
 
   private void updateMax(AtomicLong maxValue, long v) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ public class AtlasTimerTest {
   private ManualClock clock = new ManualClock();
   private Registry registry = new DefaultRegistry();
   private long step = 10000L;
-  private AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step);
+  private AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step, step);
 
   private void checkValue(long count, long amount, double square, long max) {
     int num = 0;
@@ -155,5 +155,18 @@ public class AtlasTimerTest {
     checkValue(1, 42, 42 * 42, 42);
     clock.setWallTime(step + step + 1);
     checkValue(0, 0, 0, 0);
+  }
+
+  @Test
+  public void expiration() {
+    long start = clock.wallTime();
+    clock.setWallTime(start + step * 2);
+    Assert.assertTrue(dist.hasExpired());
+
+    dist.record(42, TimeUnit.MICROSECONDS);
+    Assert.assertFalse(dist.hasExpired());
+
+    clock.setWallTime(start + step * 3 + 1);
+    Assert.assertTrue(dist.hasExpired());
   }
 }

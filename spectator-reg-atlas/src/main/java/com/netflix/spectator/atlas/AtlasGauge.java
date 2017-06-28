@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,27 +26,16 @@ import java.util.Collections;
 /**
  * Counter that reports a rate per second to Atlas.
  */
-class AtlasGauge implements Gauge {
+class AtlasGauge extends AtlasMeter implements Gauge {
 
-  private final Id id;
-  private final Clock clock;
   private final AtomicDouble value;
   private final Id stat;
 
   /** Create a new instance. */
-  AtlasGauge(Id id, Clock clock) {
-    this.id = id;
-    this.clock = clock;
+  AtlasGauge(Id id, Clock clock, long ttl) {
+    super(id, clock, ttl);
     this.value = new AtomicDouble(0.0);
     this.stat = id.withTag(DsType.gauge);
-  }
-
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public boolean hasExpired() {
-    return false;
   }
 
   @Override public Iterable<Measurement> measure() {
@@ -56,6 +45,7 @@ class AtlasGauge implements Gauge {
 
   @Override public void set(double v) {
     value.set(v);
+    updateLastModTime();
   }
 
   @Override public double value() {

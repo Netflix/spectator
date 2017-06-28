@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,25 +28,16 @@ import java.util.Collections;
  * report the number events in the last complete interval rather than the total for
  * the life of the process.
  */
-class AtlasCounter implements Counter {
+class AtlasCounter extends AtlasMeter implements Counter {
 
-  private final Id id;
   private final StepLong value;
   private final Id stat;
 
   /** Create a new instance. */
-  AtlasCounter(Id id, Clock clock, long step) {
-    this.id = id;
+  AtlasCounter(Id id, Clock clock, long ttl, long step) {
+    super(id, clock, ttl);
     this.value = new StepLong(0L, clock, step);
     this.stat = id.withTag(DsType.rate);
-  }
-
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public boolean hasExpired() {
-    return false;
   }
 
   @Override public Iterable<Measurement> measure() {
@@ -57,10 +48,12 @@ class AtlasCounter implements Counter {
 
   @Override public void increment() {
     value.getCurrent().incrementAndGet();
+    updateLastModTime();
   }
 
   @Override public void increment(long amount) {
     value.getCurrent().addAndGet(amount);
+    updateLastModTime();
   }
 
   @Override public long count() {

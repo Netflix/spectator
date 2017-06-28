@@ -35,6 +35,15 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
+   * Returns the TTL for meters that do not have any activity. After this period the meter
+   * will be considered expired and will not get reported. Default is 15 minutes.
+   */
+  default Duration meterTTL() {
+    String v = get("atlas.meterTTL");
+    return (v == null) ? Duration.ofMinutes(15) : Duration.parse(v);
+  }
+
+  /**
    * Returns true if publishing to Atlas is enabled. Default is true.
    */
   default boolean enabled() {
