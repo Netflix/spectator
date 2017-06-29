@@ -17,6 +17,7 @@ package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 
@@ -58,6 +59,14 @@ public interface PlaceholderFactory {
    *     The newly created identifier.
    */
   PlaceholderId createId(String name, Iterable<TagFactory> tagFactories);
+
+  /**
+   * Represents a value sampled at a given time.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Gauge gauge(PlaceholderId id);
 
   /**
    * Measures the rate of some activity.  A counter is for continuously incrementing sources like
