@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -116,6 +117,20 @@ public class AtlasRegistryTest {
     clock.setWallTime(12123);
     long d = registry.getInitialDelay(10000);
     Assert.assertEquals(2123, d);
+  }
+
+  @Test
+  public void batchesExpiration() {
+    for (int i = 0; i < 9; ++i) {
+      registry.counter("" + i).increment();
+    }
+    Assert.assertEquals(3, registry.getBatches().size());
+    for (List<Measurement> batch : registry.getBatches()) {
+      Assert.assertEquals(3, batch.size());
+    }
+
+    clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
+    Assert.assertEquals(0, registry.getBatches().size());
   }
 
 }

@@ -65,6 +65,7 @@ public final class AtlasRegistry extends AbstractRegistry {
   private final boolean enabled;
   private final Duration step;
   private final long stepMillis;
+  private final long meterTTL;
   private final URI uri;
 
   private final boolean lwcEnabled;
@@ -97,6 +98,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     this.enabled = config.enabled();
     this.step = config.step();
     this.stepMillis = step.toMillis();
+    this.meterTTL = config.meterTTL().toMillis();
     this.uri = URI.create(config.uri());
 
     this.lwcEnabled = config.lwcEnabled();
@@ -313,6 +315,7 @@ public final class AtlasRegistry extends AbstractRegistry {
   /** Get a list of all measurements from the registry. */
   List<Measurement> getMeasurements() {
     return stream()
+        .filter(m -> !m.hasExpired())
         .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
         .collect(Collectors.toList());
   }
@@ -329,20 +332,20 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   @Override protected Counter newCounter(Id id) {
-    return new AtlasCounter(id, clock, stepMillis);
+    return new AtlasCounter(id, clock, meterTTL, stepMillis);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    return new AtlasDistributionSummary(id, clock, stepMillis);
+    return new AtlasDistributionSummary(id, clock, meterTTL, stepMillis);
   }
 
   @Override protected Timer newTimer(Id id) {
-    return new AtlasTimer(id, clock, stepMillis);
+    return new AtlasTimer(id, clock, meterTTL, stepMillis);
   }
 
   @Override protected Gauge newGauge(Id id) {
     // Be sure to get StepClock so the measurements will have step aligned
     // timestamps.
-    return new AtlasGauge(id, clock());
+    return new AtlasGauge(id, clock(), meterTTL);
   }
 }
