@@ -1,5 +1,5 @@
-/**
- * Copyright 2016 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 
@@ -46,6 +47,10 @@ final class DefaultPlaceholderFactory implements PlaceholderFactory {
   @Override
   public PlaceholderId createId(String name, Iterable<TagFactory> tagFactories) {
     return DefaultPlaceholderId.createWithFactories(name, tagFactories, registry);
+  }
+
+  @Override public Gauge gauge(PlaceholderId id) {
+    return new DefaultPlaceholderGauge(id, registry);
   }
 
   @Override
