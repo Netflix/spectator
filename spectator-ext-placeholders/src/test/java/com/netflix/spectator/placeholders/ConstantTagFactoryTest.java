@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * Unit tests for the ConstantTagFactory.
- *
- * Created on 9/17/15.
- */
 @RunWith(JUnit4.class)
 public class ConstantTagFactoryTest {
   @Test(expected = NullPointerException.class)

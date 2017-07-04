@@ -186,7 +186,7 @@ public class QueryTest {
   public void reEqualsContract() {
     EqualsVerifier
         .forClass(Query.Regex.class)
-        .suppress(Warning.NULL_FIELDS)
+        .suppress(Warning.NULL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED)
         .verify();
   }
 
