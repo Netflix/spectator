@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,6 @@ import java.util.stream.Collectors;
 
 /**
  * Default/standard implementation of the PlaceholderId interface.
- *
- * Created on 8/3/15.
  */
 final class DefaultPlaceholderId implements PlaceholderId {
   /**
@@ -184,13 +182,15 @@ final class DefaultPlaceholderId implements PlaceholderId {
 
     // We cannot use tagFactories.equals(that.tagFactories) below, because Java
     // unmodifiable collections do not override equals appropriately.
-    return name.equals(that.name) && tagFactories.size() == that.tagFactories.size()
+    return name.equals(that.name)
+        && registry == that.registry
+        && tagFactories.size() == that.tagFactories.size()
         && tagFactories.containsAll(that.tagFactories);
   }
 
   @Override
   public int hashCode() {
-    return 31 * name.hashCode() + tagFactories.hashCode();
+    return 31 * name.hashCode() + 31 * registry.hashCode() + tagFactories.hashCode();
   }
 
   @Override

@@ -18,6 +18,7 @@ package com.netflix.spectator.impl;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
+import java.util.Arrays;
 
 /**
  * Utility class for quickly checking if a string contains only characters contained within
@@ -185,13 +186,13 @@ public final class AsciiSet {
   }
 
   @Override public int hashCode() {
-    return pattern.hashCode();
+    return pattern.hashCode() + 31 * Arrays.hashCode(members);
   }
 
   @Override public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null || !(obj instanceof AsciiSet)) return false;
     AsciiSet other = (AsciiSet) obj;
-    return pattern.equals(other.pattern);
+    return pattern.equals(other.pattern) && Arrays.equals(members, other.members);
   }
 }

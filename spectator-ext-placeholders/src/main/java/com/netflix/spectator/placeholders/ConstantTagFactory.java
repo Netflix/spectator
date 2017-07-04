@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,5 +56,18 @@ public final class ConstantTagFactory implements TagFactory {
   @Override
   public Tag createTag() {
     return tag;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ConstantTagFactory other = (ConstantTagFactory) o;
+    return tag.equals(other.tag);
+  }
+
+  @Override
+  public int hashCode() {
+    return tag.hashCode();
   }
 }

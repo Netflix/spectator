@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Unit tests for the DefaultPlaceholderId class.
- *
- * Created on 9/17/15.
- */
 @RunWith(JUnit4.class)
 public class DefaultPlaceholderIdTest {
 
