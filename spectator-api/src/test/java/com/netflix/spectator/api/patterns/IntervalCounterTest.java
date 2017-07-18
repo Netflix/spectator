@@ -101,7 +101,7 @@ public class IntervalCounterTest {
     });
 
     final List<Measurement> measurements = getAllMeasurements(r);
-    final double initAge = Utils.first(measurements, Statistic.interval).value();
+    final double initAge = Utils.first(measurements, Statistic.duration).value();
     final double initCount = Utils.first(measurements, Statistic.count).value();
     Assert.assertEquals(61.0, initAge, EPSILON);
     Assert.assertEquals(0.0, initCount, EPSILON);
@@ -109,7 +109,7 @@ public class IntervalCounterTest {
     clock.setWallTime(120000L);
     c.increment();
     final List<Measurement> afterMeasurements = getAllMeasurements(r);
-    final double afterAge = Utils.first(afterMeasurements, Statistic.interval).value();
+    final double afterAge = Utils.first(afterMeasurements, Statistic.duration).value();
     final double afterCount = Utils.first(afterMeasurements, Statistic.count).value();
     Assert.assertEquals(0.0, afterAge, EPSILON);
     Assert.assertEquals(1.0, afterCount, EPSILON);
