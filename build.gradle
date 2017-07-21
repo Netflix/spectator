@@ -14,7 +14,7 @@ buildscript {
 plugins {
   id 'nebula.netflixoss' version '3.6.0'
   id 'me.champeau.gradle.jmh' version '0.3.0'
-  id "com.github.spotbugs" version "1.0" apply false
+  id "com.github.spotbugs" version "1.2" apply false
 }
 
 // Establish version and status
