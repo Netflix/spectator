@@ -58,13 +58,13 @@ class ServoTimer extends AbstractTimer implements ServoMeter {
     totalTime = new AtomicLong(0L);
 
     ServoClock sc = new ServoClock(clock);
-    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count)), sc);
-    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalTime)), sc);
+    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count), null), sc);
+    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalTime), null), sc);
     servoTotalOfSquares = new DoubleCounter(
-        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)), sc);
+        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares), null), sc);
 
     // Constructor that takes a clock param is not public
-    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
+    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max), null));
 
     lastUpdated = new AtomicLong(0L);
   }

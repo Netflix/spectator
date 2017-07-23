@@ -19,6 +19,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +37,7 @@ public class AtlasCounterTest {
   private void checkValue(long expected) {
     int count = 0;
     for (Measurement m : counter.measure()) {
-      Assert.assertEquals(counter.id().withTag(DsType.rate), m.id());
+      Assert.assertEquals(counter.id().withTags(Statistic.count, DsType.rate), m.id());
       Assert.assertEquals(expected / 10.0, m.value(), 1e-12);
       Assert.assertEquals(expected, counter.count());
       ++count;

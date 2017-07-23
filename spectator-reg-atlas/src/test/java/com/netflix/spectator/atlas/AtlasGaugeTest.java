@@ -19,6 +19,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +37,7 @@ public class AtlasGaugeTest {
   private void checkValue(long expected) {
     int count = 0;
     for (Measurement m : gauge.measure()) {
-      Assert.assertEquals(gauge.id().withTag(DsType.gauge), m.id());
+      Assert.assertEquals(gauge.id().withTags(Statistic.gauge, DsType.gauge), m.id());
       Assert.assertEquals(expected, m.value(), 1e-12);
       ++count;
     }

@@ -85,8 +85,11 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   }
 
   /** Converts a spectator id into a MonitorConfig that can be used by servo. */
-  MonitorConfig toMonitorConfig(Id id) {
+  MonitorConfig toMonitorConfig(Id id, Tag stat) {
     MonitorConfig.Builder builder = new MonitorConfig.Builder(id.name());
+    if (stat != null) {
+      builder.withTag(stat.key(), stat.value());
+    }
     for (Tag t : id.tags()) {
       builder.withTag(t.key(), t.value());
     }
@@ -94,7 +97,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   }
 
   @Override protected Counter newCounter(Id id) {
-    MonitorConfig cfg = toMonitorConfig(id);
+    MonitorConfig cfg = toMonitorConfig(id, Statistic.count);
     StepCounter counter = new StepCounter(cfg, new ServoClock(clock()));
     return new ServoCounter(clock(), counter);
   }
@@ -108,7 +111,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   }
 
   @Override protected Gauge newGauge(Id id) {
-    return new ServoGauge(clock(), toMonitorConfig(id));
+    return new ServoGauge(clock(), toMonitorConfig(id, Statistic.gauge));
   }
 
   @Override public Integer getValue() {
