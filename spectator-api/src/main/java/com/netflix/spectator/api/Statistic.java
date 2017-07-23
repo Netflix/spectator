@@ -38,7 +38,10 @@ public enum Statistic implements Tag {
   activeTasks,
 
   /** Duration of a running task. */
-  duration;
+  duration,
+
+  /** Value used to compute a distributed percentile estimate. */
+  percentile;
 
   @Override public String key() {
     return "statistic";

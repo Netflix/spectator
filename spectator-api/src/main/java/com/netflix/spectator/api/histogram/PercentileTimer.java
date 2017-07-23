@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
  */
 package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
 
 import java.util.Collections;
@@ -92,7 +94,7 @@ public final class PercentileTimer implements Timer {
   private Counter counterFor(int i) {
     Counter c = counters.get(i);
     if (c == null) {
-      Id counterId = id.withTag("percentile", TAG_VALUES[i]);
+      Id counterId = id.withTags(Statistic.percentile, new BasicTag("percentile", TAG_VALUES[i]));
       c = registry.counter(counterId);
       counters.set(i, c);
     }
