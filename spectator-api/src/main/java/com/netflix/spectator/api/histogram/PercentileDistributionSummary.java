@@ -15,11 +15,13 @@
  */
 package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -89,7 +91,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
   private Counter counterFor(int i) {
     Counter c = counters.get(i);
     if (c == null) {
-      Id counterId = id.withTag("percentile", TAG_VALUES[i]);
+      Id counterId = id.withTags(Statistic.percentile, new BasicTag("percentile", TAG_VALUES[i]));
       c = registry.counter(counterId);
       counters.set(i, c);
     }
