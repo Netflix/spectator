@@ -46,7 +46,7 @@ final class ArrayTagSet implements Iterable<Tag> {
 
   /** Create a new tag set. */
   static ArrayTagSet create(Iterable<Tag> tags) {
-    return EMPTY.addAll(tags);
+    return (tags instanceof ArrayTagSet) ? (ArrayTagSet) tags : EMPTY.addAll(tags);
   }
 
   /** Create a new tag set. */

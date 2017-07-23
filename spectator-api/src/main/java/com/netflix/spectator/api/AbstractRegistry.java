@@ -243,6 +243,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Timer timer(Id id) {
     try {
+      Preconditions.checkNotNull(id, "id");
       Meter m = Utils.computeIfAbsent(meters, id, i -> compute(newTimer(i), NoopTimer.INSTANCE));
       if (!(m instanceof Timer)) {
         logTypeError(id, Timer.class, m.getClass());
@@ -257,6 +258,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Gauge gauge(Id id) {
     try {
+      Preconditions.checkNotNull(id, "id");
       Meter m = Utils.computeIfAbsent(meters, id, i -> compute(newGauge(i), NoopGauge.INSTANCE));
       if (!(m instanceof Gauge)) {
         logTypeError(id, Gauge.class, m.getClass());

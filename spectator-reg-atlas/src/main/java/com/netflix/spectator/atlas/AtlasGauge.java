@@ -19,6 +19,7 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
@@ -35,7 +36,9 @@ class AtlasGauge extends AtlasMeter implements Gauge {
   AtlasGauge(Id id, Clock clock, long ttl) {
     super(id, clock, ttl);
     this.value = new AtomicDouble(0.0);
-    this.stat = id.withTag(DsType.gauge);
+    // Add the statistic for typing. Re-adding the tags from the id is to retain
+    // the statistic from the id if it was already set
+    this.stat = id.withTag(Statistic.gauge).withTags(id.tags()).withTag(DsType.gauge);
   }
 
   @Override public Iterable<Measurement> measure() {

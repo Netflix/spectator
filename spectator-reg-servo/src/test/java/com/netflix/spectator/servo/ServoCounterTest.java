@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.servo;
 
+import com.netflix.servo.monitor.Monitor;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
@@ -24,6 +25,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
@@ -75,6 +78,15 @@ public class ServoCounterTest {
     c.increment();
     Assert.assertEquals(c.count(), 43);
     Assert.assertFalse(c.hasExpired());
+  }
+
+  @Test
+  public void hasStatistic() {
+    List<Monitor<?>> ms = new ArrayList<>();
+    Counter c = newCounter("foo");
+    ((ServoCounter) c).addMonitors(ms);
+    Assert.assertEquals(1, ms.size());
+    Assert.assertEquals("count", ms.get(0).getConfig().getTags().getValue("statistic"));
   }
 
 }

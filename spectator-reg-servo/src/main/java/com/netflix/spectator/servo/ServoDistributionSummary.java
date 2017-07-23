@@ -53,11 +53,11 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
     count = new AtomicLong(0L);
     totalAmount = new AtomicLong(0L);
 
-    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count)));
-    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalAmount)));
+    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count), null));
+    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalAmount), null));
     servoTotalOfSquares = new StepCounter(
-        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares)));
-    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max)));
+        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares), null));
+    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max), null));
 
     lastUpdated = new AtomicLong(0L);
   }

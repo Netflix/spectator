@@ -19,6 +19,7 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepLong;
 
 import java.util.Collections;
@@ -37,7 +38,9 @@ class AtlasCounter extends AtlasMeter implements Counter {
   AtlasCounter(Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
     this.value = new StepLong(0L, clock, step);
-    this.stat = id.withTag(DsType.rate);
+    // Add the statistic for typing. Re-adding the tags from the id is to retain
+    // the statistic from the id if it was already set
+    this.stat = id.withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
   }
 
   @Override public Iterable<Measurement> measure() {

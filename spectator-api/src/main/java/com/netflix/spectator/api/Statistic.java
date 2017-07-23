@@ -19,6 +19,9 @@ package com.netflix.spectator.api;
  * The valid set of statistics that can be reported by timers and distribution summaries.
  */
 public enum Statistic implements Tag {
+  /** A value sampled at a point in time. */
+  gauge,
+
   /** Rate per second for calls to record. */
   count,
 
