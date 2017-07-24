@@ -1,0 +1,6 @@
+dependencies {
+  compile project(':spectator-api')
+  compile project(':spectator-reg-atlas')
+  compile project(':spectator-reg-servo')
+  compile 'org.openjdk.jol:jol-core:0.8'
+}
