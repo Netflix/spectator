@@ -1,5 +1,6 @@
 include 'spectator-api',
         'spectator-agent',
+        'spectator-perf',
         'spectator-nflx',
         'spectator-nflx-plugin',
         'spectator-ext-aws',
