@@ -131,15 +131,5 @@ subprojects {
   tasks.withType(Pmd) {
     exclude '**/tdunning/**'
   }
-
-  task copyDepsToBuild << {
-    ['compile', 'runtime', 'testCompile', 'testRuntime'].each { conf ->
-      delete "${buildDir}/dependencies/${conf}"
-      copy {
-        from configurations[conf]
-        into "${buildDir}/dependencies/${conf}"
-      }
-    }
-  }
 }
 
