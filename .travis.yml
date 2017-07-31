@@ -1,7 +1,10 @@
 language: java
-jdk:
-- oraclejdk8
-- oraclejdk9
+matrix:
+  include:
+  - jdk: oraclejdk8
+    env: GRADLE_PUBLISH=true
+  - jdk: oraclejdk9
+    env: GRADLE_PUBLISH=false
 sudo: required
 dist: trusty
 install: ./installViaTravis.sh
