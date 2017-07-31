@@ -20,7 +20,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.time.Duration;
 import java.time.Instant;
@@ -106,6 +109,29 @@ public final class Config {
     }
   }
 
+  private static boolean isJava8() {
+    String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
+    return version.startsWith("1.8");
+  }
+
+  private static Object invokeDefault(Object proxy, Method method, Object[] args) throws Throwable {
+    // See: https://github.com/Netflix/spectator/issues/425
+    final Class<?> declaringClass = method.getDeclaringClass();
+    if (isJava8()) {
+      final Constructor<MethodHandles.Lookup> constructor = getConstructor();
+      return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE)
+          .unreflectSpecial(method, declaringClass)
+          .bindTo(proxy)
+          .invokeWithArguments(args);
+    } else {
+      MethodType rt = MethodType.methodType(method.getReturnType());
+      return MethodHandles.lookup()
+          .findSpecial(declaringClass, method.getName(), rt, declaringClass)
+          .bindTo(proxy)
+          .invokeWithArguments(args);
+    }
+  }
+
   /**
    * Create a proxy class that implements the inferface specified.
    *
@@ -121,16 +147,11 @@ public final class Config {
    */
   @SuppressWarnings("unchecked")
   public static <T> T createProxy(Class<T> cls, Function<String, String> props) {
-    final Constructor<MethodHandles.Lookup> constructor = getConstructor();
     final Class<?>[] interfaces = new Class<?>[] {cls};
     return (T) Proxy.newProxyInstance(classLoader(), interfaces, (proxy, method, args) -> {
       final String name = method.getName();
       if (method.isDefault()) {
-        final Class<?> declaringClass = method.getDeclaringClass();
-        return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE)
-            .unreflectSpecial(method, declaringClass)
-            .bindTo(proxy)
-            .invokeWithArguments(args);
+        return invokeDefault(proxy, method, args);
       } else if ("get".equals(method.getName())) {
         return props.apply((String) args[0]);
       } else {

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ import com.netflix.governator.guice.LifecycleInjector;
 import com.netflix.governator.lifecycle.LifecycleManager;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.lang.management.ManagementFactory;
 
 @RunWith(JUnit4.class)
 public class AutoPluginTest {
@@ -35,8 +38,19 @@ public class AutoPluginTest {
     cfg.setProperty("spectator.nflx.enabled", "false");
   }
 
+  private static boolean isJava8() {
+    String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
+    return version.startsWith("1.8");
+  }
+
   @Test
   public void inject() throws Exception {
+    Assume.assumeTrue("requires java 8", isJava8());
+    // On JDK 9:
+    // Caused by: java.lang.ClassNotFoundException: javax.annotation.Resource
+    // at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:582)
+    // at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:185)
+    // at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:496)
     Injector injector = LifecycleInjector.builder()
         .usingBasePackages("com.netflix")
         .build()
