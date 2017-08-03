@@ -34,6 +34,19 @@ public interface Id {
   Id withTag(Tag t);
 
   /**
+   * Return a new id with an additional tag value using {@link Boolean#toString(boolean)} to
+   * convert the boolean value to a string representation. This is merely a convenience function
+   * for:
+   *
+   * <pre>
+   *   id.withTag("key", Boolean.toString(value))
+   * </pre>
+   */
+  default Id withTag(String k, boolean v) {
+    return withTag(k, Boolean.toString(v));
+  }
+
+  /**
    * Return a new id with additional tag values. This overload is to avoid allocating a
    * parameters array for the more generic varargs method {@link #withTags(String...)}.
    */
