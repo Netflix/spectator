@@ -5,7 +5,7 @@ underlying implementation. To use the metrics registry, add a dependency on the
 `spectator-reg-metrics3` library. For gradle:
 
 ```
-com.netflix.spectator:spectator-reg-metrics3:0.57.0
+com.netflix.spectator:spectator-reg-metrics3:0.57.1
 ```
 
 Then when initializing the application, use the `MetricsRegistry`. For more
