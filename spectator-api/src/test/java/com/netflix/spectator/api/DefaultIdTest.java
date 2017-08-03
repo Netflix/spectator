@@ -164,4 +164,31 @@ public class DefaultIdTest {
         .withTag("exception.thrown", "pvr");
     Assert.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
   }
+
+  @Test
+  public void withTagBooleanTrue() {
+    Id id = new DefaultId("test").withTag("bool", true);
+    Assert.assertEquals("test:bool=true", id.toString());
+    Assert.assertEquals(new DefaultId("test").withTag("bool", "true"), id);
+  }
+
+  @Test
+  public void withTagBooleanFalse() {
+    Id id = new DefaultId("test").withTag("bool", false);
+    Assert.assertEquals("test:bool=false", id.toString());
+    Assert.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
+  }
+
+  @Test
+  public void withTagBooleanObjFalse() {
+    Id id = new DefaultId("test").withTag("bool", Boolean.FALSE);
+    Assert.assertEquals("test:bool=false", id.toString());
+    Assert.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void withTagBooleanObjNull() {
+    Boolean value = null;
+    new DefaultId("test").withTag("bool", value);
+  }
 }
