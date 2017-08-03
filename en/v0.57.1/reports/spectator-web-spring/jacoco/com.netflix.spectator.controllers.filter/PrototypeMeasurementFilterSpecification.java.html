@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrototypeMeasurementFilterSpecification.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers.filter</a> &gt; <span class="el_source">PrototypeMeasurementFilterSpecification.java</span></div><h1>PrototypeMeasurementFilterSpecification.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.netflix.spectator.controllers.filter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+
+/**
+ * Represents the specification for a PrototypeMeasurementFilter.
+ */
+<span class="fc" id="L34">public class PrototypeMeasurementFilterSpecification {</span>
+  /**
+   * Specifies how to filter an individual tag (name and value).
+   */
+  public static class TagFilterSpecification {
+    private String key;   // regex
+    private String value; // regex
+
+    public String getKey() {
+<span class="fc" id="L43">        return key;</span>
+    }
+    public String getValue() {
+<span class="fc" id="L46">        return value;</span>
+    }
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L52">    public TagFilterSpecification() {</span>
+<span class="fc" id="L53">        key = null;</span>
+<span class="fc" id="L54">        value = null;</span>
+<span class="fc" id="L55">    }</span>
+
+    /**
+     * Construct a filter with particular regular expressions.
+     */
+<span class="fc" id="L60">    public TagFilterSpecification(String key, String value) {</span>
+<span class="fc" id="L61">      this.key = key;</span>
+<span class="fc" id="L62">      this.value = value;</span>
+<span class="fc" id="L63">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L67" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof TagFilterSpecification)) {</span>
+<span class="nc" id="L68">        return false;</span>
+      }
+<span class="fc" id="L70">      TagFilterSpecification other = (TagFilterSpecification) obj;</span>
+<span class="pc bpc" id="L71" title="2 of 4 branches missed.">      return key.equals(other.key) &amp;&amp; value.equals(other.value);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L76">      return Objects.hash(key, value);</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L81">      return String.format(&quot;%s=%s&quot;, key, value);</span>
+    }
+  }
+
+  /**
+   * Specifies how to filter values.
+   *
+   * Values are identified by a collection of tags, so the filter
+   * is based on having a particular collection of name/value bindings.
+   *
+   * Actual values are not currently considered, but could be added later.
+   */
+  public static class ValueFilterSpecification {
+    /**
+     * A filter that allows everything.
+     */
+<span class="fc" id="L97">    static final ValueFilterSpecification ALL = new ValueFilterSpecification();</span>
+    static {
+<span class="fc" id="L99">        ALL.tags.add(new TagFilterSpecification(&quot;.*&quot;, &quot;.*&quot;));</span>
+<span class="fc" id="L100">    }</span>
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L105">    ValueFilterSpecification() {</span>
+      // empty.
+<span class="fc" id="L107">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L111" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof ValueFilterSpecification)) {</span>
+<span class="nc" id="L112">        return false;</span>
+      }
+<span class="fc" id="L114">      ValueFilterSpecification other = (ValueFilterSpecification) obj;</span>
+<span class="fc" id="L115">      return tags.equals(other.tags);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L120">      return tags.hashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L125">      return tags.toString();</span>
+    }
+
+
+    /**
+     * The tag specifications.
+     */
+    public List&lt;TagFilterSpecification&gt; getTags() {
+<span class="fc" id="L133">        return tags;</span>
+    }
+
+    /**
+     * The minimal list of tag bindings that are covered by this specification.
+     */
+<span class="fc" id="L139">    private final List&lt;TagFilterSpecification&gt; tags</span>
+        = new ArrayList&lt;TagFilterSpecification&gt;();
+  };
+
+  /**
+   * A specification for filtering on a Spectator Meter.
+   *
+   * A meter is a name pattern and collection of tag bindings.
+   */
+  public static class MeterFilterSpecification {
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L152">    public MeterFilterSpecification() {</span>
+      // empty.
+<span class="fc" id="L154">    }</span>
+
+    /**
+     * Constructor injecting a value specification.
+     */
+<span class="fc" id="L159">    public MeterFilterSpecification(List&lt;ValueFilterSpecification&gt; values) {</span>
+<span class="fc" id="L160">        this.values.addAll(values);</span>
+<span class="fc" id="L161">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L165" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof MeterFilterSpecification)) {</span>
+<span class="nc" id="L166">        return false;</span>
+      }
+<span class="fc" id="L168">      MeterFilterSpecification other = (MeterFilterSpecification) obj;</span>
+<span class="fc" id="L169">      return values.equals(other.values);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L174">      return values.hashCode();</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L179">      return values.toString();</span>
+    }
+
+    /**
+     * The metric vlaue specifications.
+     */
+    public List&lt;ValueFilterSpecification&gt; getValues() {
+<span class="fc" id="L186">      return values;</span>
+    }
+
+    /**
+     * The meter can be filtered on one or more collection of tag bindings.
+     * In essence, this permits certain aspects of a meter to be considered
+     * but not others.
+     */
+<span class="fc" id="L194">    private final List&lt;ValueFilterSpecification&gt; values</span>
+        = new ArrayList&lt;ValueFilterSpecification&gt;();
+  };
+
+
+  /**
+   * Loads a specification from a file.
+   */
+  public static PrototypeMeasurementFilterSpecification loadFromPath(String path)
+      throws IOException {
+<span class="fc" id="L204">    byte[] jsonData = Files.readAllBytes(Paths.get(path));</span>
+<span class="fc" id="L205">    ObjectMapper objectMapper = new ObjectMapper();</span>
+<span class="fc" id="L206">    return objectMapper.readValue(</span>
+        jsonData, PrototypeMeasurementFilterSpecification.class);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+<span class="pc bpc" id="L212" title="2 of 4 branches missed.">    if (obj == null || !(obj instanceof PrototypeMeasurementFilterSpecification)) {</span>
+<span class="nc" id="L213">      return false;</span>
+    }
+<span class="fc" id="L215">    PrototypeMeasurementFilterSpecification other</span>
+        = (PrototypeMeasurementFilterSpecification) obj;
+<span class="pc bpc" id="L217" title="2 of 4 branches missed.">    return include.equals(other.include) &amp;&amp; exclude.equals(other.exclude);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L222">    return Objects.hash(include, exclude);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L227">    return String.format(&quot;INCLUDE=%s%nEXCLUDE=%s&quot;,</span>
+<span class="nc" id="L228">                         include.toString(), exclude.toString());</span>
+  }
+
+  /**
+   * The list of specifications for when meters should be included.
+   */
+  public Map&lt;String, MeterFilterSpecification&gt; getInclude() {
+<span class="fc" id="L235">      return include;</span>
+  }
+
+  /**
+   * The list of specifications for when meters should be excluded.
+   */
+  public Map&lt;String, MeterFilterSpecification&gt; getExclude() {
+<span class="fc" id="L242">      return exclude;</span>
+  }
+
+  /**
+   * Maps meter name patterns to the meter specification for that pattern.
+   * The specified filter only passes meter/measurements that can be
+   * traced back to a specification in this list.
+   */
+<span class="fc" id="L250">  private final Map&lt;String, MeterFilterSpecification&gt; include</span>
+      = new HashMap&lt;String, MeterFilterSpecification&gt;();
+
+  /**
+   * Maps meter name patterns to the meter specification for that pattern.
+   * The specified filter does not pass meter/measurements that can be
+   * traced back to a specification in this list.
+   */
+<span class="fc" id="L258">  private final Map&lt;String, MeterFilterSpecification&gt; exclude</span>
+      = new HashMap&lt;String, MeterFilterSpecification&gt;();
+};
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

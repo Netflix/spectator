@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PercentileTimer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.histogram</a> &gt; <span class="el_source">PercentileTimer.java</span></div><h1>PercentileTimer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.histogram;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Timer;
+
+import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+/**
+ * Timer that buckets the counts to allow for estimating percentiles.
+ */
+public final class PercentileTimer implements Timer {
+
+  // Precomputed values for the corresponding buckets. This is done to avoid expensive
+  // String.format calls when creating new instances of a percentile variant. The
+  // String.format calls uses regex internally to parse out the `%` substitutions which
+  // has a lot of overhead.
+  private static final String[] TAG_VALUES;
+
+  static {
+<span class="fc" id="L44">    int length = PercentileBuckets.length();</span>
+<span class="fc" id="L45">    TAG_VALUES = new String[length];</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">    for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L47">      TAG_VALUES[i] = String.format(&quot;T%04X&quot;, i);</span>
+    }
+<span class="fc" id="L49">  }</span>
+
+  /**
+   * Creates a timer object that can be used for estimating percentiles.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Timer that keeps track of counts by buckets that can be used to estimate
+   *     the percentiles for the distribution.
+   */
+  public static PercentileTimer get(Registry registry, Id id) {
+<span class="fc" id="L63">    return new PercentileTimer(registry, id);</span>
+  }
+
+  private final Registry registry;
+  private final Id id;
+  private final Timer timer;
+  private final AtomicReferenceArray&lt;Counter&gt; counters;
+
+  /** Create a new instance. */
+<span class="fc" id="L72">  PercentileTimer(Registry registry, Id id) {</span>
+<span class="fc" id="L73">    this.registry = registry;</span>
+<span class="fc" id="L74">    this.id = id;</span>
+<span class="fc" id="L75">    this.timer = registry.timer(id);</span>
+<span class="fc" id="L76">    this.counters = new AtomicReferenceArray&lt;&gt;(PercentileBuckets.length());</span>
+<span class="fc" id="L77">  }</span>
+
+  @Override public Id id() {
+<span class="nc" id="L80">    return id;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="nc" id="L84">    return Collections.emptyList();</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L88">    return timer.hasExpired();</span>
+  }
+
+  // Lazily load the counter for a given bucket. This avoids the allocation for
+  // creating the id and the map lookup after the first time a given bucket is
+  // accessed for a timer.
+  private Counter counterFor(int i) {
+<span class="fc" id="L95">    Counter c = counters.get(i);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">    if (c == null) {</span>
+<span class="fc" id="L97">      Id counterId = id.withTags(Statistic.percentile, new BasicTag(&quot;percentile&quot;, TAG_VALUES[i]));</span>
+<span class="fc" id="L98">      c = registry.counter(counterId);</span>
+<span class="fc" id="L99">      counters.set(i, c);</span>
+    }
+<span class="fc" id="L101">    return c;</span>
+  }
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L105">    final long nanos = unit.toNanos(amount);</span>
+<span class="fc" id="L106">    timer.record(amount, unit);</span>
+<span class="fc" id="L107">    counterFor(PercentileBuckets.indexOf(nanos)).increment();</span>
+<span class="fc" id="L108">  }</span>
+
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; rf) throws Exception {
+<span class="nc" id="L111">    final Clock clock = registry.clock();</span>
+<span class="nc" id="L112">    final long s = clock.monotonicTime();</span>
+    try {
+<span class="nc" id="L114">      return rf.call();</span>
+    } finally {
+<span class="nc" id="L116">      final long e = clock.monotonicTime();</span>
+<span class="nc" id="L117">      record(e - s, TimeUnit.NANOSECONDS);</span>
+<span class="nc" id="L118">    }</span>
+  }
+
+  @Override public void record(Runnable rf) {
+<span class="nc" id="L122">    final Clock clock = registry.clock();</span>
+<span class="nc" id="L123">    final long s = clock.monotonicTime();</span>
+    try {
+<span class="nc" id="L125">      rf.run();</span>
+    } finally {
+<span class="nc" id="L127">      final long e = clock.monotonicTime();</span>
+<span class="nc" id="L128">      record(e - s, TimeUnit.NANOSECONDS);</span>
+<span class="nc" id="L129">    }</span>
+<span class="nc" id="L130">  }</span>
+
+  /**
+   * Computes the specified percentile for this timer. The unit will be seconds.
+   *
+   * @param p
+   *     Percentile to compute, value must be {@code 0.0 &lt;= p &lt;= 100.0}.
+   * @return
+   *     An approximation of the {@code p}`th percentile in seconds.
+   */
+  public double percentile(double p) {
+<span class="fc" id="L141">    long[] counts = new long[PercentileBuckets.length()];</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">    for (int i = 0; i &lt; counts.length; ++i) {</span>
+<span class="fc" id="L143">      counts[i] = counterFor(i).count();</span>
+    }
+<span class="fc" id="L145">    double v = PercentileBuckets.percentile(counts, p);</span>
+<span class="fc" id="L146">    return v / 1e9;</span>
+  }
+
+  @Override public long count() {
+<span class="nc" id="L150">    return timer.count();</span>
+  }
+
+  @Override public long totalTime() {
+<span class="nc" id="L154">    return timer.totalTime();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

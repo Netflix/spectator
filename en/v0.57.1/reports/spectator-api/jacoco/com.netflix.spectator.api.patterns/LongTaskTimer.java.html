@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LongTaskTimer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.patterns</a> &gt; <span class="el_source">LongTaskTimer.java</span></div><h1>LongTaskTimer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Utils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Timer intended to track a small number of long running tasks. Example would be something like
+ * a batch hadoop job. Though &quot;long running&quot; is a bit subjective the assumption is that anything
+ * over a minute is long running.
+ */
+public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTimer {
+
+  /**
+   * Creates a timer for tracking long running tasks.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Timer instance.
+   */
+  public static LongTaskTimer get(Registry registry, Id id) {
+<span class="fc" id="L51">    ConcurrentMap&lt;Id, Object&gt; state = registry.state();</span>
+<span class="fc" id="L52">    Object t = Utils.computeIfAbsent(state, id, i -&gt; new LongTaskTimer(registry, id));</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">    if (!(t instanceof LongTaskTimer)) {</span>
+<span class="nc" id="L54">      Utils.propagateTypeError(registry, id, LongTaskTimer.class, t.getClass());</span>
+<span class="nc" id="L55">      t = new LongTaskTimer(new NoopRegistry(), id);</span>
+    }
+<span class="fc" id="L57">    return (LongTaskTimer) t;</span>
+  }
+
+<span class="fc" id="L60">  private static final double NANOS_PER_SECOND = (double) TimeUnit.SECONDS.toNanos(1L);</span>
+
+  private final Clock clock;
+  private final Id id;
+<span class="fc" id="L64">  private final ConcurrentMap&lt;Long, Long&gt; tasks = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L65">  private final AtomicLong nextTask = new AtomicLong(0L);</span>
+
+  /** Create a new instance. */
+<span class="fc" id="L68">  private LongTaskTimer(Registry registry, Id id) {</span>
+<span class="fc" id="L69">    this.clock = registry.clock();</span>
+<span class="fc" id="L70">    this.id = id;</span>
+<span class="fc" id="L71">    registry.gauge(id.withTag(Statistic.activeTasks), this, LongTaskTimer::activeTasks);</span>
+<span class="fc" id="L72">    registry.gauge(id.withTag(Statistic.duration),    this, t -&gt; t.duration() / NANOS_PER_SECOND);</span>
+<span class="fc" id="L73">  }</span>
+
+  @Override public Id id() {
+<span class="fc" id="L76">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L80">    return false;</span>
+  }
+
+  @Override public long start() {
+<span class="fc" id="L84">    long task = nextTask.getAndIncrement();</span>
+<span class="fc" id="L85">    tasks.put(task, clock.monotonicTime());</span>
+<span class="fc" id="L86">    return task;</span>
+  }
+
+  @Override public long stop(long task) {
+<span class="fc" id="L90">    Long startTime = tasks.get(task);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (startTime != null) {</span>
+<span class="fc" id="L92">      tasks.remove(task);</span>
+<span class="fc" id="L93">      return clock.monotonicTime() - startTime;</span>
+    } else {
+<span class="fc" id="L95">      return -1L;</span>
+    }
+  }
+
+  @Override public long duration(long task) {
+<span class="fc" id="L100">    Long startTime = tasks.get(task);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">    return (startTime != null) ? (clock.monotonicTime() - startTime) : -1L;</span>
+  }
+
+  @Override public long duration() {
+<span class="fc" id="L105">    long now = clock.monotonicTime();</span>
+<span class="fc" id="L106">    long sum = 0L;</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">    for (long startTime : tasks.values()) {</span>
+<span class="fc" id="L108">      sum += now - startTime;</span>
+<span class="fc" id="L109">    }</span>
+<span class="fc" id="L110">    return sum;</span>
+  }
+
+  @Override public int activeTasks() {
+<span class="fc" id="L114">    return tasks.size();</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L118">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(2);</span>
+<span class="fc" id="L119">    final long now = clock.wallTime();</span>
+<span class="fc" id="L120">    final double durationSeconds = duration() / NANOS_PER_SECOND;</span>
+<span class="fc" id="L121">    ms.add(new Measurement(id.withTag(Statistic.duration), now, durationSeconds));</span>
+<span class="fc" id="L122">    ms.add(new Measurement(id.withTag(Statistic.activeTasks), now, activeTasks()));</span>
+<span class="fc" id="L123">    return ms;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

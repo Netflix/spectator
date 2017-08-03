@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MeasurementSerializer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas.impl</a> &gt; <span class="el_source">MeasurementSerializer.java</span></div><h1>MeasurementSerializer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas.impl;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.AsciiSet;
+
+import java.io.IOException;
+import java.util.Map;
+
+/**
+ * Jackson serializer for measurements. Values will be converted to a
+ * valid set as they are written out by replacing invalid characters with
+ * an '_'.
+ *
+ * &lt;b&gt;Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.&lt;/b&gt;
+ */
+public class MeasurementSerializer extends JsonSerializer&lt;Measurement&gt; {
+
+  private final AsciiSet set;
+  private final Map&lt;String, AsciiSet&gt; overrides;
+
+  /**
+   * Create a new instance of the serializer.
+   *
+   * @param set
+   *     The set of characters that are allowed to be used for tag keys.
+   * @param overrides
+   *     Overrides for the set of characters allowed to be used for tag values.
+   */
+  public MeasurementSerializer(AsciiSet set, Map&lt;String, AsciiSet&gt; overrides) {
+<span class="fc" id="L51">    super();</span>
+<span class="fc" id="L52">    this.set = set;</span>
+<span class="fc" id="L53">    this.overrides = overrides;</span>
+<span class="fc" id="L54">  }</span>
+
+  private String fixKey(String k) {
+<span class="fc" id="L57">    return set.replaceNonMembers(k, '_');</span>
+  }
+
+  private String fixValue(String k, String v) {
+<span class="fc" id="L61">    AsciiSet s = overrides.getOrDefault(k, set);</span>
+<span class="fc" id="L62">    return s.replaceNonMembers(v, '_');</span>
+  }
+
+  @Override
+  public void serialize(
+      Measurement value,
+      JsonGenerator gen,
+      SerializerProvider serializers) throws IOException, JsonProcessingException {
+<span class="fc" id="L70">    gen.writeStartObject();</span>
+<span class="fc" id="L71">    gen.writeObjectFieldStart(&quot;tags&quot;);</span>
+<span class="fc" id="L72">    gen.writeStringField(&quot;name&quot;, fixValue(&quot;name&quot;, value.id().name()));</span>
+<span class="fc" id="L73">    boolean explicitDsType = false;</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">    for (Tag t : value.id().tags()) {</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">      if (&quot;atlas.dstype&quot;.equals(t.key())) {</span>
+<span class="fc" id="L76">        explicitDsType = true;</span>
+      }
+<span class="fc" id="L78">      final String k = fixKey(t.key());</span>
+<span class="fc" id="L79">      final String v = fixValue(k, t.value());</span>
+<span class="fc" id="L80">      gen.writeStringField(k, v);</span>
+<span class="fc" id="L81">    }</span>
+
+    // If the dstype has not been explicitly set, then the value must be coming in
+    // as a gauge. Go ahead and explicitly mark it as such because the backend will
+    // default to a rate.
+<span class="fc bfc" id="L86" title="All 2 branches covered.">    if (!explicitDsType) {</span>
+<span class="fc" id="L87">      gen.writeStringField(&quot;atlas.dstype&quot;, &quot;gauge&quot;);</span>
+    }
+<span class="fc" id="L89">    gen.writeEndObject();</span>
+<span class="fc" id="L90">    gen.writeNumberField(&quot;timestamp&quot;, value.timestamp());</span>
+<span class="fc" id="L91">    gen.writeNumberField(&quot;value&quot;, value.value());</span>
+<span class="fc" id="L92">    gen.writeEndObject();</span>
+<span class="fc" id="L93">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

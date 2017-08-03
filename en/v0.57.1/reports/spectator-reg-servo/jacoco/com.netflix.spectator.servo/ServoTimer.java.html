@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServoTimer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-servo</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.servo</a> &gt; <span class="el_source">ServoTimer.java</span></div><h1>ServoTimer.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.servo;
+
+import com.netflix.servo.monitor.MaxGauge;
+import com.netflix.servo.monitor.Monitor;
+import com.netflix.servo.monitor.NumericMonitor;
+import com.netflix.servo.monitor.StepCounter;
+import com.netflix.spectator.api.AbstractTimer;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Tag;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+/** Timer implementation for the servo registry. */
+class ServoTimer extends AbstractTimer implements ServoMeter {
+
+<span class="fc" id="L36">  private static final double CNV_SECONDS = 1.0 / TimeUnit.SECONDS.toNanos(1L);</span>
+<span class="fc" id="L37">  private static final double CNV_SQUARES = CNV_SECONDS * CNV_SECONDS;</span>
+
+  private final Id id;
+
+  // Local count so that we have more flexibility on servo counter impl without changing the
+  // value returned by the {@link #count()} method.
+  private final AtomicLong count;
+  private final AtomicLong totalTime;
+
+  private final StepCounter servoCount;
+  private final StepCounter servoTotal;
+  private final DoubleCounter servoTotalOfSquares;
+  private final MaxGauge servoMax;
+
+  private final AtomicLong lastUpdated;
+
+  /** Create a new instance. */
+  ServoTimer(ServoRegistry r, Id id) {
+<span class="fc" id="L55">    super(r.clock());</span>
+<span class="fc" id="L56">    this.id = id;</span>
+<span class="fc" id="L57">    count = new AtomicLong(0L);</span>
+<span class="fc" id="L58">    totalTime = new AtomicLong(0L);</span>
+
+<span class="fc" id="L60">    ServoClock sc = new ServoClock(clock);</span>
+<span class="fc" id="L61">    servoCount = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.count), null), sc);</span>
+<span class="fc" id="L62">    servoTotal = new StepCounter(r.toMonitorConfig(id.withTag(Statistic.totalTime), null), sc);</span>
+<span class="fc" id="L63">    servoTotalOfSquares = new DoubleCounter(</span>
+<span class="fc" id="L64">        r.toMonitorConfig(id.withTag(Statistic.totalOfSquares), null), sc);</span>
+
+    // Constructor that takes a clock param is not public
+<span class="fc" id="L67">    servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max), null));</span>
+
+<span class="fc" id="L69">    lastUpdated = new AtomicLong(0L);</span>
+<span class="fc" id="L70">  }</span>
+
+  @Override public void addMonitors(List&lt;Monitor&lt;?&gt;&gt; monitors) {
+<span class="nc" id="L73">    monitors.add(servoCount);</span>
+<span class="nc" id="L74">    monitors.add(new FactorMonitor&lt;&gt;(servoTotal, CNV_SECONDS));</span>
+<span class="nc" id="L75">    monitors.add(new FactorMonitor&lt;&gt;(servoTotalOfSquares, CNV_SQUARES));</span>
+<span class="nc" id="L76">    monitors.add(new FactorMonitor&lt;&gt;(servoMax, CNV_SECONDS));</span>
+<span class="nc" id="L77">  }</span>
+
+  @Override public Id id() {
+<span class="nc" id="L80">    return id;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="fc" id="L84">    long now = clock.wallTime();</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">    return now - lastUpdated.get() &gt; ServoRegistry.EXPIRATION_TIME_MILLIS;</span>
+  }
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">    if (amount &gt;= 0) {</span>
+<span class="fc" id="L90">      final long nanos = unit.toNanos(amount);</span>
+<span class="fc" id="L91">      final double nanosSquared = (double) nanos * (double) nanos;</span>
+<span class="fc" id="L92">      totalTime.addAndGet(nanos);</span>
+<span class="fc" id="L93">      count.incrementAndGet();</span>
+<span class="fc" id="L94">      servoTotal.increment(nanos);</span>
+<span class="fc" id="L95">      servoTotalOfSquares.increment(nanosSquared);</span>
+<span class="fc" id="L96">      servoCount.increment();</span>
+<span class="fc" id="L97">      servoMax.update(nanos);</span>
+<span class="fc" id="L98">      lastUpdated.set(clock.wallTime());</span>
+    }
+<span class="fc" id="L100">  }</span>
+
+  private Measurement newMeasurement(Tag t, long timestamp, Number n) {
+<span class="fc" id="L103">    return new Measurement(id.withTag(t), timestamp, n.doubleValue());</span>
+  }
+
+  private double getValue(NumericMonitor&lt;?&gt; m, double factor) {
+<span class="fc" id="L107">    return m.getValue(0).doubleValue() * factor;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L111">    final long now = clock.wallTime();</span>
+<span class="fc" id="L112">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(2);</span>
+<span class="fc" id="L113">    ms.add(newMeasurement(Statistic.count, now, servoCount.getValue(0)));</span>
+<span class="fc" id="L114">    ms.add(newMeasurement(Statistic.totalTime, now, getValue(servoTotal, CNV_SECONDS)));</span>
+<span class="fc" id="L115">    ms.add(newMeasurement(Statistic.totalOfSquares, now, getValue(servoTotalOfSquares, CNV_SQUARES)));</span>
+<span class="fc" id="L116">    ms.add(newMeasurement(Statistic.max, now, getValue(servoMax, CNV_SECONDS)));</span>
+<span class="fc" id="L117">    return ms;</span>
+  }
+
+  @Override public long count() {
+<span class="fc" id="L121">    return count.get();</span>
+  }
+
+  @Override public long totalTime() {
+<span class="fc" id="L125">    return totalTime.get();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

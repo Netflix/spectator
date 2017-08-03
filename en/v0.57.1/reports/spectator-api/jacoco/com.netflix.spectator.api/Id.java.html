@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Id.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Id.java</span></div><h1>Id.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.util.Map;
+
+/**
+ * Identifier for a meter or measurement.
+ */
+public interface Id {
+  /** Description of the measurement that is being collected. */
+  String name();
+
+  /** Other dimensions that can be used to classify the measurement. */
+  Iterable&lt;Tag&gt; tags();
+
+  /** Return a new id with an additional tag value. */
+  Id withTag(String k, String v);
+
+  /** Return a new id with an additional tag value. */
+  Id withTag(Tag t);
+
+  /**
+   * Return a new id with an additional tag value using {@link Boolean#toString(boolean)} to
+   * convert the boolean value to a string representation. This is merely a convenience function
+   * for:
+   *
+   * &lt;pre&gt;
+   *   id.withTag(&quot;key&quot;, Boolean.toString(value))
+   * &lt;/pre&gt;
+   */
+  default Id withTag(String k, boolean v) {
+<span class="fc" id="L46">    return withTag(k, Boolean.toString(v));</span>
+  }
+
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  default Id withTags(String k1, String v1) {
+<span class="fc" id="L54">    return withTag(k1, v1);</span>
+  }
+
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  @SuppressWarnings(&quot;PMD.UseObjectForClearerAPI&quot;)
+  default Id withTags(String k1, String v1, String k2, String v2) {
+<span class="nc" id="L63">    final Tag[] ts = new Tag[] {</span>
+        new BasicTag(k1, v1),
+        new BasicTag(k2, v2)
+    };
+<span class="nc" id="L67">    return withTags(ts);</span>
+  }
+
+  /**
+   * Return a new id with additional tag values. This overload is to avoid allocating a
+   * parameters array for the more generic varargs method {@link #withTags(String...)}.
+   */
+  @SuppressWarnings(&quot;PMD.UseObjectForClearerAPI&quot;)
+  default Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
+<span class="nc" id="L76">    final Tag[] ts = new Tag[] {</span>
+        new BasicTag(k1, v1),
+        new BasicTag(k2, v2),
+        new BasicTag(k3, v3)
+    };
+<span class="nc" id="L81">    return withTags(ts);</span>
+  }
+
+  /** Return a new id with additional tag values. */
+  default Id withTags(String... tags) {
+<span class="nc" id="L86">    Id tmp = this;</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">    for (int i = 0; i &lt; tags.length; i += 2) {</span>
+<span class="nc" id="L88">      tmp = tmp.withTag(tags[i], tags[i + 1]);</span>
+    }
+<span class="nc" id="L90">    return tmp;</span>
+  }
+
+  /** Return a new id with additional tag values. */
+  default Id withTags(Tag... tags) {
+<span class="nc" id="L95">    Id tmp = this;</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">    for (Tag t : tags) {</span>
+<span class="nc" id="L97">      tmp = tmp.withTag(t);</span>
+    }
+<span class="nc" id="L99">    return tmp;</span>
+  }
+
+  /** Return a new id with additional tag values. */
+  default Id withTags(Iterable&lt;Tag&gt; tags) {
+<span class="nc" id="L104">    Id tmp = this;</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">    for (Tag t : tags) {</span>
+<span class="nc" id="L106">      tmp = tmp.withTag(t);</span>
+<span class="nc" id="L107">    }</span>
+<span class="nc" id="L108">    return tmp;</span>
+  }
+
+  /** Return a new id with additional tag values. */
+  default Id withTags(Map&lt;String, String&gt; tags) {
+<span class="nc" id="L113">    Id tmp = this;</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">    for (Map.Entry&lt;String, String&gt; entry : tags.entrySet()) {</span>
+<span class="nc" id="L115">      tmp = tmp.withTag(entry.getKey(), entry.getValue());</span>
+<span class="nc" id="L116">    }</span>
+<span class="nc" id="L117">    return tmp;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

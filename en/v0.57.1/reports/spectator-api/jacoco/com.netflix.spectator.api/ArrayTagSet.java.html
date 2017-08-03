@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ArrayTagSet.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">ArrayTagSet.java</span></div><h1>ArrayTagSet.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+/**
+ * An immutable set of tags sorted by the tag key.
+ */
+final class ArrayTagSet implements Iterable&lt;Tag&gt; {
+
+<span class="fc" id="L32">  private static final Comparator&lt;Tag&gt; TAG_COMPARATOR = (t1, t2) -&gt; t1.key().compareTo(t2.key());</span>
+
+  /** Empty tag set. */
+<span class="fc" id="L35">  static final ArrayTagSet EMPTY = new ArrayTagSet(new Tag[0]);</span>
+
+  /** Create a new tag set. */
+  static ArrayTagSet create(String... tags) {
+<span class="fc" id="L39">    return EMPTY.addAll(tags);</span>
+  }
+
+  /** Create a new tag set. */
+  static ArrayTagSet create(Tag... tags) {
+<span class="fc" id="L44">    return EMPTY.addAll(tags);</span>
+  }
+
+  /** Create a new tag set. */
+  static ArrayTagSet create(Iterable&lt;Tag&gt; tags) {
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    return (tags instanceof ArrayTagSet) ? (ArrayTagSet) tags : EMPTY.addAll(tags);</span>
+  }
+
+  /** Create a new tag set. */
+  static ArrayTagSet create(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L54">    return EMPTY.addAll(tags);</span>
+  }
+
+  private final Tag[] tags;
+  private final int length;
+
+  private int cachedHashCode;
+
+  private ArrayTagSet(Tag[] tags) {
+<span class="fc" id="L63">    this(tags, tags.length);</span>
+<span class="fc" id="L64">  }</span>
+
+<span class="fc" id="L66">  private ArrayTagSet(Tag[] tags, int length) {</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">    if (length &gt; tags.length) {</span>
+<span class="nc" id="L68">      throw new IllegalArgumentException(&quot;length cannot be larger than tags array&quot;);</span>
+    }
+<span class="fc" id="L70">    this.tags = tags;</span>
+<span class="fc" id="L71">    this.length = length;</span>
+<span class="fc" id="L72">    this.cachedHashCode = 0;</span>
+<span class="fc" id="L73">  }</span>
+
+  @Override public Iterator&lt;Tag&gt; iterator() {
+<span class="fc" id="L76">    return new Iterator&lt;Tag&gt;() {</span>
+<span class="fc" id="L77">      private int i = 0;</span>
+
+      @Override public boolean hasNext() {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        return i &lt; length;</span>
+      }
+
+      @Override public Tag next() {
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (i &gt;= length) {</span>
+<span class="fc" id="L85">          throw new NoSuchElementException(&quot;next called after end of iterator&quot;);</span>
+        }
+<span class="fc" id="L87">        return tags[i++];</span>
+      }
+    };
+  }
+
+  /** Check if this set is empty. */
+  boolean isEmpty() {
+<span class="fc bfc" id="L94" title="All 2 branches covered.">    return length == 0;</span>
+  }
+
+  /** Add a new tag to the set. */
+  ArrayTagSet add(String k, String v) {
+<span class="fc" id="L99">    return add(new BasicTag(k, v));</span>
+  }
+
+  /** Add a new tag to the set. */
+  @SuppressWarnings(&quot;PMD.AvoidArrayLoops&quot;)
+  ArrayTagSet add(Tag tag) {
+<span class="fc" id="L105">    Tag newTag = BasicTag.convert(tag);</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">    if (length == 0) {</span>
+<span class="fc" id="L107">      return new ArrayTagSet(new Tag[] {newTag});</span>
+    } else {
+<span class="fc" id="L109">      Tag[] newTags = new Tag[length + 1];</span>
+<span class="fc" id="L110">      String k = newTag.key();</span>
+<span class="fc" id="L111">      int i = 0;</span>
+<span class="fc bfc" id="L112" title="All 4 branches covered.">      for (; i &lt; length &amp;&amp; tags[i].key().compareTo(k) &lt; 0; ++i) {</span>
+<span class="fc" id="L113">        newTags[i] = tags[i];</span>
+      }
+<span class="fc bfc" id="L115" title="All 4 branches covered.">      if (i &lt; length &amp;&amp; tags[i].key().equals(k)) {</span>
+        // Override
+<span class="fc" id="L117">        newTags[i++] = newTag;</span>
+<span class="fc" id="L118">        System.arraycopy(tags, i, newTags, i, length - i);</span>
+<span class="fc" id="L119">        i = length;</span>
+      } else {
+        // Insert
+<span class="fc" id="L122">        newTags[i] = newTag;</span>
+<span class="fc" id="L123">        System.arraycopy(tags, i, newTags, i + 1, length - i);</span>
+<span class="fc" id="L124">        i = newTags.length;</span>
+      }
+<span class="fc" id="L126">      return new ArrayTagSet(newTags, i);</span>
+    }
+  }
+
+  /** Add a collection of tags to the set. */
+  ArrayTagSet addAll(Iterable&lt;Tag&gt; ts) {
+<span class="fc bfc" id="L132" title="All 2 branches covered.">    if (ts instanceof ArrayTagSet) {</span>
+<span class="fc" id="L133">      ArrayTagSet data = (ArrayTagSet) ts;</span>
+<span class="fc" id="L134">      return addAll(data.tags, data.length);</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">    } else if (ts instanceof Collection) {</span>
+<span class="fc" id="L136">      Collection&lt;Tag&gt; data = (Collection&lt;Tag&gt;) ts;</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">      if (data.isEmpty()) {</span>
+<span class="fc" id="L138">        return this;</span>
+      } else {
+<span class="fc" id="L140">        Tag[] newTags = new Tag[data.size()];</span>
+<span class="fc" id="L141">        int i = 0;</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">        for (Tag t : data) {</span>
+<span class="fc" id="L143">          newTags[i] = BasicTag.convert(t);</span>
+<span class="fc" id="L144">          ++i;</span>
+<span class="fc" id="L145">        }</span>
+<span class="fc" id="L146">        return addAll(newTags);</span>
+      }
+    } else {
+<span class="fc" id="L149">      List&lt;Tag&gt; data = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">      for (Tag t : ts) {</span>
+<span class="fc" id="L151">        data.add(t);</span>
+<span class="fc" id="L152">      }</span>
+<span class="fc" id="L153">      return addAll(data);</span>
+    }
+  }
+
+  /** Add a collection of tags to the set. */
+  ArrayTagSet addAll(Map&lt;String, String&gt; ts) {
+<span class="fc bfc" id="L159" title="All 2 branches covered.">    if (ts.isEmpty()) {</span>
+<span class="fc" id="L160">      return this;</span>
+    } else {
+<span class="fc" id="L162">      Tag[] newTags = new Tag[ts.size()];</span>
+<span class="fc" id="L163">      int i = 0;</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">      for (Map.Entry&lt;String, String&gt; entry : ts.entrySet()) {</span>
+<span class="fc" id="L165">        newTags[i++] = new BasicTag(entry.getKey(), entry.getValue());</span>
+<span class="fc" id="L166">      }</span>
+<span class="fc" id="L167">      return addAll(newTags);</span>
+    }
+  }
+
+  /** Add a collection of tags to the set. */
+  ArrayTagSet addAll(String[] ts) {
+<span class="fc bfc" id="L173" title="All 2 branches covered.">    if (ts.length % 2 != 0) {</span>
+<span class="fc" id="L174">      throw new IllegalArgumentException(&quot;array length must be even, (length=&quot; + ts.length + &quot;)&quot;);</span>
+    }
+
+<span class="fc bfc" id="L177" title="All 2 branches covered.">    if (ts.length == 0) {</span>
+<span class="fc" id="L178">      return this;</span>
+    } else {
+<span class="fc" id="L180">      int tsLength = ts.length / 2;</span>
+<span class="fc" id="L181">      Tag[] newTags = new Tag[tsLength];</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">      for (int i = 0; i &lt; tsLength; ++i) {</span>
+<span class="fc" id="L183">        final int j = i * 2;</span>
+<span class="fc" id="L184">        newTags[i] = new BasicTag(ts[j], ts[j + 1]);</span>
+      }
+<span class="fc" id="L186">      return addAll(newTags, tsLength);</span>
+    }
+  }
+
+  /** Add a collection of tags to the set. */
+  ArrayTagSet addAll(Tag[] ts) {
+<span class="fc" id="L192">    return addAll(ts, ts.length);</span>
+  }
+
+  /** Add a collection of tags to the set. */
+  ArrayTagSet addAll(Tag[] ts, int tsLength) {
+<span class="fc bfc" id="L197" title="All 2 branches covered.">    if (tsLength == 0) {</span>
+<span class="fc" id="L198">      return this;</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">    } else if (length == 0) {</span>
+<span class="fc" id="L200">      Arrays.sort(ts, 0, tsLength, TAG_COMPARATOR);</span>
+<span class="fc" id="L201">      int len = dedup(ts, 0, ts, 0, tsLength);</span>
+<span class="fc" id="L202">      return new ArrayTagSet(ts, len);</span>
+    } else {
+<span class="fc" id="L204">      Tag[] newTags = new Tag[length + tsLength];</span>
+<span class="fc" id="L205">      Arrays.sort(ts, 0, tsLength, TAG_COMPARATOR);</span>
+<span class="fc" id="L206">      int newLength = merge(newTags, tags, length, ts, tsLength);</span>
+<span class="fc" id="L207">      return new ArrayTagSet(newTags, newLength);</span>
+    }
+  }
+
+  /**
+   * Merge and dedup any entries in {@code ts} that have the same key. The last entry
+   * with a given key will get selected.
+   */
+  private int merge(Tag[] dst, Tag[] srcA, int lengthA, Tag[] srcB, int lengthB) {
+<span class="fc" id="L216">    int i = 0;</span>
+<span class="fc" id="L217">    int ai = 0;</span>
+<span class="fc" id="L218">    int bi = 0;</span>
+
+<span class="fc bfc" id="L220" title="All 4 branches covered.">    while (ai &lt; lengthA &amp;&amp; bi &lt; lengthB) {</span>
+<span class="fc" id="L221">      Tag a = srcA[ai];</span>
+<span class="fc" id="L222">      Tag b = srcB[bi];</span>
+<span class="fc" id="L223">      int cmp = a.key().compareTo(b.key());</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">      if (cmp &lt; 0) {</span>
+<span class="fc" id="L225">        dst[i++] = a;</span>
+<span class="fc" id="L226">        ++ai;</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">      } else if (cmp &gt; 0) {</span>
+<span class="fc" id="L228">        dst[i++] = BasicTag.convert(b);</span>
+<span class="fc" id="L229">        ++bi;</span>
+      } else {
+        // Newer tags should override, use source B if there are duplicate keys.
+        // If source B has duplicates, then use the last value for the given key.
+<span class="fc" id="L233">        final String k = a.key();</span>
+<span class="fc" id="L234">        int j = bi + 1;</span>
+<span class="fc bfc" id="L235" title="All 4 branches covered.">        for (; j &lt; lengthB &amp;&amp; k.equals(srcB[j].key()); ++j) {</span>
+<span class="fc" id="L236">          b = srcB[j];</span>
+        }
+<span class="fc" id="L238">        dst[i++] = BasicTag.convert(b);</span>
+<span class="fc" id="L239">        bi = j;</span>
+<span class="fc" id="L240">        ++ai; // Ignore</span>
+      }
+<span class="fc" id="L242">    }</span>
+
+<span class="fc bfc" id="L244" title="All 2 branches covered.">    if (ai &lt; lengthA) {</span>
+<span class="fc" id="L245">      System.arraycopy(srcA, ai, dst, i, lengthA - ai);</span>
+<span class="fc" id="L246">      i += lengthA - ai;</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">    } else if (bi &lt; lengthB) {</span>
+<span class="fc" id="L248">      i = dedup(srcB, bi, dst, i, lengthB - bi);</span>
+    }
+
+<span class="fc" id="L251">    return i;</span>
+  }
+
+  /**
+   * Dedup any entries in {@code ts} that have the same key. The last entry with a given
+   * key will get selected. Input data must already be sorted by the tag key. Returns the
+   * length of the overall deduped array.
+   */
+  private int dedup(Tag[] src, int ss, Tag[] dst, int ds, int len) {
+<span class="pc bpc" id="L260" title="1 of 2 branches missed.">    if (len == 0) {</span>
+<span class="nc" id="L261">      return ds;</span>
+    } else {
+<span class="fc" id="L263">      dst[ds] = BasicTag.convert(src[ss]);</span>
+<span class="fc" id="L264">      String k = src[ss].key();</span>
+<span class="fc" id="L265">      int j = ds;</span>
+<span class="fc" id="L266">      final int e = ss + len;</span>
+<span class="fc bfc" id="L267" title="All 2 branches covered.">      for (int i = ss + 1; i &lt; e; ++i) {</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">        if (k.equals(src[i].key())) {</span>
+<span class="fc" id="L269">          dst[j] = BasicTag.convert(src[i]);</span>
+        } else {
+<span class="fc" id="L271">          k = src[i].key();</span>
+<span class="fc" id="L272">          dst[++j] = BasicTag.convert(src[i]);</span>
+        }
+      }
+<span class="fc" id="L275">      return j + 1;</span>
+    }
+  }
+
+  @Override public boolean equals(Object o) {
+<span class="fc bfc" id="L280" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L281" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="fc" id="L283">    ArrayTagSet other = (ArrayTagSet) o;</span>
+<span class="fc bfc" id="L284" title="All 2 branches covered.">    if (length != other.length) return false;</span>
+
+<span class="fc bfc" id="L286" title="All 2 branches covered.">    for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">      if (!tags[i].equals(other.tags[i])) return false;</span>
+    }
+<span class="fc" id="L289">    return true;</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc bfc" id="L293" title="All 2 branches covered.">    if (cachedHashCode == 0) {</span>
+<span class="fc" id="L294">      int result = length;</span>
+<span class="fc bfc" id="L295" title="All 2 branches covered.">      for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L296">        result = 31 * result + tags[i].hashCode();</span>
+      }
+<span class="fc" id="L298">      cachedHashCode = result;</span>
+    }
+<span class="fc" id="L300">    return cachedHashCode;</span>
+  }
+
+  @Override public String toString() {
+<span class="fc" id="L304">    StringBuilder builder = new StringBuilder();</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">    for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L306">      builder.append(':').append(tags[i].key()).append('=').append(tags[i].value());</span>
+    }
+<span class="fc" id="L308">    return builder.toString();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
