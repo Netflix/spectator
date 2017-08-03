@@ -39,13 +39,13 @@ public final class SpectatorAppender extends AppenderSkeleton {
 
   /** Create a new instance of the appender. */
   public SpectatorAppender(Registry registry) {
+    super();
     this.registry = registry;
 
     final LevelTag[] levels = LevelTag.values();
     numMessages = new Id[levels.length];
     numStackTraces = new Id[levels.length];
     for (int i = 0; i < levels.length; ++i) {
-      String appender = getName() == null ? "unknown" : getName();
       numMessages[i] = registry.createId("log4j.numMessages")
           .withTag(levels[i]);
       numStackTraces[i] = registry.createId("log4j.numStackTraces")

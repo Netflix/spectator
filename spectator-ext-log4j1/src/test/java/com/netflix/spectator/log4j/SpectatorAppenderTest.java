@@ -59,7 +59,7 @@ public class SpectatorAppenderTest {
 
   @Test
   public void numMessagesDEBUG() {
-    Counter c = registry.counter("log4j.numMessages", "unknown", "loglevel", "5_DEBUG");
+    Counter c = registry.counter("log4j.numMessages", "loglevel", "5_DEBUG");
     Assert.assertEquals(0, c.count());
     appender.append(newEvent(Level.DEBUG, null));
     Assert.assertEquals(1, c.count());
