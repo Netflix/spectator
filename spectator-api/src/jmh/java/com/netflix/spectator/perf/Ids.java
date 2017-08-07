@@ -30,16 +30,20 @@ import java.util.Map;
 /**
  * <pre>
  * Benchmark                         Mode  Cnt          Score         Error  Units
- * Ids.append1                      thrpt   10   24,832,015.561 ±  775914.547  ops/s
- * Ids.append2                      thrpt   10   15,115,152.153 ±  500615.433  ops/s
- * Ids.append4                      thrpt   10    5,082,342.853 ±  118696.678  ops/s
- * Ids.append4sorted                thrpt   10    6,243,473.482 ±  203665.016  ops/s
- * Ids.baseline                     thrpt   10   17,854,792.417 ±  663244.744  ops/s
- * Ids.justName                     thrpt   10  160,126,776.622 ± 8846354.045  ops/s
- * Ids.withTag                      thrpt   10    1,696,380.648 ±   35774.917  ops/s
- * Ids.withTagsMap                  thrpt   10    2,080,491.447 ±   35497.396  ops/s
- * Ids.withTagsVararg               thrpt   10    2,142,907.363 ±   53384.402  ops/s
- * Ids.withTagsVarargSorted         thrpt   10    4,234,550.555 ±  130956.068  ops/s
+ * Ids.append1                      thrpt   10   22,932,447.185 ±  558909.207  ops/s
+ * Ids.append2                      thrpt   10   14,126,066.627 ± 2205349.084  ops/s
+ * Ids.append4                      thrpt   10    5,165,821.740 ±  144524.852  ops/s
+ * Ids.append4sorted                thrpt   10    5,923,827.749 ±  258122.285  ops/s
+ * Ids.baseline                     thrpt   10   14,868,887.021 ± 4627616.416  ops/s
+ * Ids.emptyAppend1                 thrpt   10   63,193,729.846 ± 1158843.888  ops/s
+ * Ids.emptyAppend2                 thrpt   10   28,797,024.419 ± 2348775.496  ops/s
+ * Ids.emptyAppend4                 thrpt   10    9,818,389.953 ±  227597.860  ops/s
+ * Ids.emptyAppend4sorted           thrpt   10   11,342,478.015 ±  315543.929  ops/s
+ * Ids.justName                     thrpt   10  166,275,032.184 ± 5252541.293  ops/s
+ * Ids.withTag                      thrpt   10    1,586,379.085 ±   40204.926  ops/s
+ * Ids.withTagsMap                  thrpt   10    1,841,867.329 ±   32378.659  ops/s
+ * Ids.withTagsVararg               thrpt   10    1,946,970.522 ±   37919.937  ops/s
+ * Ids.withTagsVarargSorted         thrpt   10    3,426,008.758 ±  115232.165  ops/s
  * </pre>
  */
 @State(Scope.Thread)
