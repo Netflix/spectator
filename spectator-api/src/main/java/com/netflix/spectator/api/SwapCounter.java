@@ -15,8 +15,10 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.function.Supplier;
+
 /** Wraps another counter allowing the underlying type to be swapped. */
-final class SwapCounter implements Counter {
+final class SwapCounter implements Counter, Supplier<Counter> {
 
   private volatile Counter underlying;
 
@@ -51,5 +53,9 @@ final class SwapCounter implements Counter {
 
   @Override public long count() {
     return underlying.count();
+  }
+
+  @Override public Counter get() {
+    return underlying;
   }
 }

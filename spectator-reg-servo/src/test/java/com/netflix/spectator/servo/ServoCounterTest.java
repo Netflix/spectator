@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,8 @@ public class ServoCounterTest {
   private final ManualClock clock = new ManualClock();
 
   private Counter newCounter(String name) {
-    final Registry r = new ServoRegistry(clock);
-    return r.counter(r.createId(name));
+    final ServoRegistry r = new ServoRegistry(clock);
+    return r.newCounter(r.createId(name));
   }
 
   @Before

@@ -17,9 +17,10 @@ package com.netflix.spectator.api;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
-final class SwapTimer implements Timer {
+final class SwapTimer implements Timer, Supplier<Timer> {
 
   private volatile Timer underlying;
 
@@ -62,5 +63,9 @@ final class SwapTimer implements Timer {
 
   @Override public long totalTime() {
     return underlying.totalTime();
+  }
+
+  @Override public Timer get() {
+    return underlying;
   }
 }

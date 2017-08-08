@@ -15,8 +15,10 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.function.Supplier;
+
 /** Wraps another distribution summary allowing the underlying type to be swapped. */
-final class SwapDistributionSummary implements DistributionSummary {
+final class SwapDistributionSummary implements DistributionSummary, Supplier<DistributionSummary> {
 
   private volatile DistributionSummary underlying;
 
@@ -53,5 +55,9 @@ final class SwapDistributionSummary implements DistributionSummary {
   @Override
   public long totalAmount() {
     return underlying.totalAmount();
+  }
+
+  @Override public DistributionSummary get() {
+    return underlying;
   }
 }
