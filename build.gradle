@@ -131,5 +131,10 @@ subprojects {
   tasks.withType(Pmd) {
     exclude '**/tdunning/**'
   }
+
+  test {
+    dependsOn cleanTest
+    testLogging.showStandardStreams = true
+  }
 }
 
