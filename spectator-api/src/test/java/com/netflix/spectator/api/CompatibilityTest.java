@@ -199,6 +199,9 @@ public class CompatibilityTest {
     for (int i = 0; i < length; ++i) {
       String exp = (i < EXPECTED.size()) ? EXPECTED.get(i) : null;
       String found = (i < actual.size()) ? actual.get(i) : null;
+      if (!exp.equals(found)) {
+        System.err.printf("[%s] != [%s]%n", exp, found);
+      }
       Assert.assertEquals(exp, found);
     }
   }
