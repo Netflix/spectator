@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import java.util.function.ToDoubleFunction;
 /**
  * Gauge that is defined by executing a {@link ToDoubleFunction} on an object.
  */
-class ObjectGauge<T> extends AbstractMeter<T> implements Gauge {
+class ObjectGauge<T> extends AbstractMeter<T> {
 
   private final ToDoubleFunction<T> f;
 
@@ -47,7 +47,8 @@ class ObjectGauge<T> extends AbstractMeter<T> implements Gauge {
     return Collections.singleton(new Measurement(id, clock.wallTime(), value()));
   }
 
-  @Override public double value() {
+  /** Return the current value for evaluating `f` over `obj`. */
+  double value() {
     final T obj = ref.get();
     return (obj == null) ? Double.NaN : f.applyAsDouble(obj);
   }

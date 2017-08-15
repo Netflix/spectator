@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ public interface Gauge extends Meter {
    *     Most recent measured value.
    */
   default void set(double value) {
+    // For backwards compatibility with older versions of spectator prior to set being
+    // required on the gauge. Default implementation should be removed in a future release.
   }
 
   /** Returns the current value. */
