@@ -507,7 +507,7 @@ public interface Registry extends Iterable<Meter> {
    * @param f
    *     Function that is applied on the value for the number.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
    *     Use {@link #monitorValue(Id, Object, ToDoubleFunction)} instead. This method was
@@ -551,7 +551,7 @@ public interface Registry extends Iterable<Meter> {
    * @param f
    *     Function that is applied on the value for the number.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T> T monitorValue(Id id, T obj, ToDoubleFunction<T> f) {
@@ -569,7 +569,7 @@ public interface Registry extends Iterable<Meter> {
    * @param f
    *     Function that is applied on the value for the number.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
    *     Use {@link #monitorValue(Id, Object, ToDoubleFunction)} instead. This method was
@@ -591,7 +591,7 @@ public interface Registry extends Iterable<Meter> {
    * @param f
    *     Function that is applied on the value for the number.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T> T monitorValue(String name, T obj, ToDoubleFunction<T> f) {
@@ -612,7 +612,7 @@ public interface Registry extends Iterable<Meter> {
    * @param collection
    *     Thread-safe implementation of {@link Collection} used to access the value.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
@@ -628,7 +628,7 @@ public interface Registry extends Iterable<Meter> {
    * @param collection
    *     Thread-safe implementation of {@link Collection} used to access the value.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T extends Collection<?>> T collectionSize(String name, T collection) {
@@ -649,7 +649,7 @@ public interface Registry extends Iterable<Meter> {
    * @param collection
    *     Thread-safe implementation of {@link Map} used to access the value.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
@@ -665,7 +665,7 @@ public interface Registry extends Iterable<Meter> {
    * @param collection
    *     Thread-safe implementation of {@link Map} used to access the value.
    * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
+   *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
    */
   default <T extends Map<?, ?>> T mapSize(String name, T collection) {

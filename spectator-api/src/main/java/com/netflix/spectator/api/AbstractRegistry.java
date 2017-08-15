@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.GaugePoller;
 import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,7 +71,7 @@ public abstract class AbstractRegistry implements Registry {
     this.gauges = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
     GaugePoller.schedule(
-        new WeakReference<>(this),
+        new WeakReference<Registry>(this),
         config.gaugePollingFrequency().toMillis(),
         AbstractRegistry::pollGauges);
   }
