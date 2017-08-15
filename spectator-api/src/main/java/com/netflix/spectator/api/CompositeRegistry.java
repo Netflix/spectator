@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.GaugePoller;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,7 +66,7 @@ public final class CompositeRegistry implements Registry {
     this.aggrGauges = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
     GaugePoller.schedule(
-        new WeakReference<>(this),
+        new WeakReference<Registry>(this),
         10000L,
         CompositeRegistry::pollGauges);
   }

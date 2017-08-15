@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.impl;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.Executors;
@@ -30,8 +30,11 @@ import java.util.function.Consumer;
  * single thread. If registered gauge methods are cheap as they should be, then this
  * should be plenty of capacity to process everything regularly. If not, then this will
  * help limit the damage to a single core and avoid causing problems for the application.
+ *
+ * <p><b>This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.</b></p>
  */
-final class GaugePoller {
+public final class GaugePoller {
 
   private static ThreadFactory factory = new ThreadFactory() {
     private final AtomicInteger next = new AtomicInteger();
@@ -49,7 +52,7 @@ final class GaugePoller {
 
   /** Schedule collection of gauges for a registry. */
   @SuppressWarnings("PMD")
-  static void schedule(WeakReference<Registry> ref, long delay, Consumer<Registry> poll) {
+  public static <T> void schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
     final AtomicReference<Future<?>> futureRef = new AtomicReference<>();
     final Runnable cancel = () -> {
       Future<?> f = futureRef.get();
@@ -59,11 +62,9 @@ final class GaugePoller {
     };
     final Runnable task = () -> {
       try {
-        Registry r = ref.get();
+        T r = ref.get();
         if (r != null) {
-          final long s = System.nanoTime();
           poll.accept(r);
-          final long e = System.nanoTime();
         } else {
           cancel.run();
         }
