@@ -15,8 +15,10 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.function.Supplier;
+
 /** Wraps another gauge allowing the underlying type to be swapped. */
-final class SwapGauge implements Gauge {
+final class SwapGauge implements Gauge, Supplier<Gauge> {
 
   private volatile Gauge underlying;
 
@@ -47,5 +49,9 @@ final class SwapGauge implements Gauge {
 
   @Override public double value() {
     return underlying.value();
+  }
+
+  @Override public Gauge get() {
+    return underlying;
   }
 }

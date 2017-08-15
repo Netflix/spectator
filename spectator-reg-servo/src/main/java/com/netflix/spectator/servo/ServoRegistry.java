@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /** Registry that maps spectator types to servo. */
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
@@ -129,10 +130,22 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   @Override public List<Monitor<?>> getMonitors() {
     List<Monitor<?>> monitors = new ArrayList<>();
     for (Meter meter : this) {
-      if (!meter.hasExpired() && meter instanceof ServoMeter) {
-        ((ServoMeter) meter).addMonitors(monitors);
+      ServoMeter sm = getServoMeter(meter);
+      if (!meter.hasExpired() && sm != null) {
+        sm.addMonitors(monitors);
       }
     }
     return monitors;
+  }
+
+  @SuppressWarnings("unchecked")
+  private ServoMeter getServoMeter(Meter meter) {
+    if (meter instanceof Supplier<?>) {
+      return getServoMeter(((Supplier<Meter>) meter).get());
+    } else if (meter instanceof ServoMeter) {
+      return (ServoMeter) meter;
+    } else {
+      return null;
+    }
   }
 }

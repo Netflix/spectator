@@ -36,8 +36,8 @@ public class ServoGaugeTest {
   private final ManualClock clock = new ManualClock();
 
   private Gauge newGauge(String name) {
-    final Registry r = new ServoRegistry(clock);
-    return r.gauge(r.createId(name));
+    final ServoRegistry r = new ServoRegistry(clock);
+    return r.newGauge(r.createId(name));
   }
 
   @Before
