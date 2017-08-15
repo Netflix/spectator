@@ -23,7 +23,7 @@ class HttpServer {
   private AtomicInteger numConnections;
 
   public HttpServer(Registry registry) {
-    numConnections = registry.gauge("server.numConnections", new AtomicInteger(0));
+    numConnections = registry.monitorNumber("server.numConnections", new AtomicInteger(0));
   }
 
   public void onConnectionCreated() {
@@ -66,14 +66,14 @@ implementation should be thread safe. For example:
 
 ```java
 AtomicInteger size = new AtomicInteger();
-registry.gauge("queue.size", size);
+registry.monitorNumber("queue.size", size);
 ```
 
 The call will return the Number so the registration can be inline on the
 assignment:
 
 ```java
-AtomicInteger size = registry.gauge("queue.size", new AtomicInteger());
+AtomicInteger size = registry.monitorNumber("queue.size", new AtomicInteger());
 ```
 
 Updates to the value are preformed by updating the number instance directly.
@@ -87,7 +87,7 @@ public class Queue {
 
   @Inject
   public Queue(Registry registry) {
-    registry.gauge("queue.size", this, Queue::size);
+    registry.monitorValue("queue.size", this, Queue::size);
   }
 
   ...
@@ -101,7 +101,7 @@ public class Queue {
     in object there will be a reference to `this`:
 
     ```
-    registry.gauge("queue.size", this, obj -> size());
+    registry.monitorValue("queue.size", this, obj -> size());
     ```
 
 ### Using Reflection

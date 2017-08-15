@@ -85,11 +85,28 @@ public class MetricsRegistryTest {
   }
 
   @Test
+  public void monitorNumber() {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    AtomicInteger num = r.monitorNumber("foo", new AtomicInteger(42));
+    assertGaugeValue(r, codaRegistry, "foo", 42.0);
+  }
+
+  @Test
   public void gaugeNumberDuplicate() {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     AtomicInteger num1 = r.gauge("foo", new AtomicInteger(42));
     AtomicInteger num2 = r.gauge("foo", new AtomicInteger(21));
+    assertGaugeValue(r, codaRegistry, "foo", 63.0);
+  }
+
+  @Test
+  public void monitorNumberDuplicate() {
+    MetricRegistry codaRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
+    AtomicInteger num1 = r.monitorNumber("foo", new AtomicInteger(42));
+    AtomicInteger num2 = r.monitorNumber("foo", new AtomicInteger(21));
     assertGaugeValue(r, codaRegistry, "foo", 63.0);
   }
 
@@ -120,7 +137,7 @@ public class MetricsRegistryTest {
     codaRegistry.register("foo", (Gauge<Double>) () -> 42.0D);
 
     // Try to register the same gauge via spectator
-    AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
+    AtomicInteger num = r.monitorNumber("foo", new AtomicInteger(42));
 
     // Should be registered with the coda
     Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);

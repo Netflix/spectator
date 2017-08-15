@@ -1,5 +1,5 @@
-/**
- * Copyright 2017 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,9 @@ public final class IntervalCounter implements Counter {
     this.clock = registry.clock();
     this.id = id;
     this.counter = registry.counter(id.withTag(Statistic.count));
-    this.lastUpdated = registry.gauge(id.withTag(Statistic.duration), new AtomicLong(0L),
+    this.lastUpdated = registry.monitorValue(
+        id.withTag(Statistic.duration),
+        new AtomicLong(0L),
         Functions.age(clock));
   }
 

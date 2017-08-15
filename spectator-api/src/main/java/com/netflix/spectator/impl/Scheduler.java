@@ -133,7 +133,7 @@ public class Scheduler {
     this.clock = registry.clock();
 
     registry.collectionSize(newId(registry, id, "queueSize"), queue);
-    activeCount = registry.gauge(newId(registry, id, "activeThreads"), new AtomicInteger());
+    activeCount = registry.monitorNumber(newId(registry, id, "activeThreads"), new AtomicInteger());
     taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
     taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
     skipped = registry.counter(newId(registry, id, "skipped"));
