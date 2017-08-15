@@ -31,7 +31,7 @@ just before the jvm exits. The `-Xaprof` option was removed in java 8.
 ### JvmtiEnv_ForceGarbageCollection
 
 Something called the JVM tool interface function
-[ForceGarbageCollection](http://docs.oracle.com/javase/jp/8/platform/jvmti/jvmti.html#ForceGarbageCollection).
+[ForceGarbageCollection](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#ForceGarbageCollection).
 Look at the `-agentlib` param to java to see what agents are configured.
 
 ### GCLocker_Initiated_GC
