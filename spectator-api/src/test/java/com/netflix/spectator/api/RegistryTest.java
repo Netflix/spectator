@@ -159,11 +159,40 @@ public class RegistryTest {
   }
 
   @Test
+  public void testMonitorNumberHelpers() {
+    AtomicLong al1 = new AtomicLong(1L);
+    AtomicLong al2 = new AtomicLong(2L);
+    AtomicLong al4 = new AtomicLong(4L);
+    Registry r = newRegistry(true, 10000);
+    AtomicLong v1 = r.monitorNumber(r.createId("foo", "bar", "baz", "k", "v"), al1);
+    AtomicLong v2 = r.monitorNumber("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")), al2);
+    AtomicLong v3 = r.monitorNumber("foo", al4);
+    Assert.assertSame(v1, al1);
+    Assert.assertSame(v2, al2);
+    Assert.assertSame(v3, al4);
+    Id id1 = r.createId("foo", "bar", "baz", "k", "v");
+    Id id2 = r.createId("foo");
+    assertGaugeValue(r, id1, 3.0);
+    assertGaugeValue(r, id2, 4.0);
+  }
+
+  @Test
   public void testGaugeHelpersWithFunction() {
     AtomicLong al1 = new AtomicLong(1L);
     Registry r = new DefaultRegistry(new ManualClock(40, 0));
     DoubleFunction<AtomicLong> f = Functions.age(r.clock());
     AtomicLong v1 = r.gauge("foo", al1, f);
+    Assert.assertSame(v1, al1);
+    Id id1 = r.createId("foo");
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
+  }
+
+  @Test
+  public void testMonitorValueHelpers() {
+    AtomicLong al1 = new AtomicLong(1L);
+    Registry r = new DefaultRegistry(new ManualClock(40, 0));
+    DoubleFunction<AtomicLong> f = Functions.age(r.clock());
+    AtomicLong v1 = r.monitorValue("foo", al1, f);
     Assert.assertSame(v1, al1);
     Id id1 = r.createId("foo");
     assertGaugeValue(r, id1, 39.0 / 1000.0);
@@ -186,12 +215,40 @@ public class RegistryTest {
   }
 
   @Test
+  public void testMonitorValueHelpersWithCustomFunction() {
+    AtomicLong al1 = new AtomicLong(1L);
+    Registry r = new DefaultRegistry(new ManualClock(40, 0));
+    DoubleFunction<AtomicLong> f = new DoubleFunction<AtomicLong>() {
+      @Override
+      public double apply(double v) {
+        return (r.clock().wallTime() - v) / 1000.0;
+      }
+    };
+    AtomicLong v1 = r.monitorValue("foo", al1, f);
+    Assert.assertSame(v1, al1);
+    Id id1 = r.createId("foo");
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
+  }
+
+  @Test
   public void testGaugeHelpersWithCustomFunction2() {
     AtomicLong al1 = new AtomicLong(1L);
     Registry r = new DefaultRegistry(new ManualClock(40, 0));
     ToDoubleFunction<AtomicLong> f = (obj) -> (r.clock().wallTime() - obj.doubleValue()) / 1000.0;
 
     AtomicLong v1 = r.gauge("foo", al1, f);
+    Assert.assertSame(v1, al1);
+    Id id1 = r.createId("foo");
+    assertGaugeValue(r, id1, 39.0 / 1000.0);
+  }
+
+  @Test
+  public void testMonitorValueHelpersWithCustomFunction2() {
+    AtomicLong al1 = new AtomicLong(1L);
+    Registry r = new DefaultRegistry(new ManualClock(40, 0));
+    ToDoubleFunction<AtomicLong> f = (obj) -> (r.clock().wallTime() - obj.doubleValue()) / 1000.0;
+
+    AtomicLong v1 = r.monitorValue("foo", al1, f);
     Assert.assertSame(v1, al1);
     Id id1 = r.createId("foo");
     assertGaugeValue(r, id1, 39.0 / 1000.0);
@@ -259,7 +316,7 @@ public class RegistryTest {
   }
 
   @Test
-  public void gaugeUsingLambda() {
+  public void monitorUsingLambda() {
     Registry r = newRegistry(true, 10000);
     GaugeUsingLambda g = new GaugeUsingLambda(r);
     assertGaugeValue(r, r.createId("test"), 84.0);
@@ -268,8 +325,8 @@ public class RegistryTest {
   public static class GaugeUsingLambda {
 
     public GaugeUsingLambda(Registry r) {
-      r.gauge("test", this, (obj) -> obj.getValue());
-      r.gauge("test", this, GaugeUsingLambda::getValue);
+      r.monitorValue("test", this, (obj) -> obj.getValue());
+      r.monitorValue("test", this, GaugeUsingLambda::getValue);
     }
 
     private int getValue() {
