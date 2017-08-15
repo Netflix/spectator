@@ -127,11 +127,7 @@ public interface Registry extends Iterable<Meter> {
    * @param id
    *     Identifier created by a call to {@link #createId}
    */
-  default Gauge gauge(Id id) {
-    // Added in 0.45.0. For backwards compatibility we use a default implementation here that
-    // returns a noop implementation.
-    return NoopGauge.INSTANCE;
-  }
+  Gauge gauge(Id id);
 
   /**
    * Returns the meter associated with a given id.
