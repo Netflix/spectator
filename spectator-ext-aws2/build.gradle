@@ -1,0 +1,5 @@
+dependencies {
+  compileApi project(":spectator-api")
+  compileApi "software.amazon.awssdk:core:2.0.0-preview-2"
+  testCompile "software.amazon.awssdk:cloudwatch:2.0.0-preview-2"
+}
