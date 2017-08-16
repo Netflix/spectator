@@ -42,7 +42,7 @@ public class MonotonicCounterTest {
   @Test
   public void usingAtomicLong() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = MonotonicCounter.monitorNumber(registry, id, count);
+    AtomicLong c = MonotonicCounter.using(registry).withId(id).monitor(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -61,7 +61,7 @@ public class MonotonicCounterTest {
   @Test
   public void usingLongAdder() {
     LongAdder count = new LongAdder();
-    LongAdder c = MonotonicCounter.monitorNumber(registry, id, count);
+    LongAdder c = MonotonicCounter.using(registry).withId(id).monitor(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -80,7 +80,7 @@ public class MonotonicCounterTest {
   @Test
   public void nonMonotonicUpdates() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = MonotonicCounter.monitorNumber(registry, id, count);
+    AtomicLong c = MonotonicCounter.using(registry).withId(id).monitor(count);
 
     Counter counter = registry.counter(id);
     update();
@@ -105,7 +105,7 @@ public class MonotonicCounterTest {
   @Test
   public void expire() throws Exception {
     WeakReference<LongAdder> ref = new WeakReference<>(
-      MonotonicCounter.monitorNumber(registry, id, new LongAdder()));
+      MonotonicCounter.using(registry).withId(id).monitor(new LongAdder()));
     while (ref.get() != null) {
       System.gc();
     }

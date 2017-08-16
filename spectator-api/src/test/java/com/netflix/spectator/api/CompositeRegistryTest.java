@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.api.patterns.PolledGauge;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,7 +67,7 @@ public class CompositeRegistryTest {
     c.increment();
     Assert.assertEquals(c.count(), 1L);
     r.register(c);
-    ((CompositeRegistry) r).pollGauges();
+    PolledGauge.update(r);
     Meter meter = r.get(c.id());
     for (Measurement m : meter.measure()) {
       Assert.assertEquals(m.value(), 2.0, 1e-12);

@@ -1,5 +1,5 @@
-/**
- * Copyright 2014-2016 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.patterns.PolledGauge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,7 +134,9 @@ public class Scheduler {
     this.clock = registry.clock();
 
     registry.collectionSize(newId(registry, id, "queueSize"), queue);
-    activeCount = registry.monitorNumber(newId(registry, id, "activeThreads"), new AtomicInteger());
+    activeCount = PolledGauge.using(registry)
+        .withId(newId(registry, id, "activeThreads"))
+        .monitor(new AtomicInteger());
     taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
     taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
     skipped = registry.counter(newId(registry, id, "skipped"));

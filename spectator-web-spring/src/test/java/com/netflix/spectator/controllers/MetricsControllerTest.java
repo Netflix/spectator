@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers;
 
 import com.netflix.spectator.api.ManualClock;
@@ -34,13 +33,10 @@ import com.netflix.spectator.controllers.model.TestMeter;
 
 import java.util.function.Predicate;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -110,7 +106,7 @@ public class MetricsControllerTest {
 
   @Test
   public void testEncodeCombinedRegistry() {
-    // Multiple occurances of measurements in the same registry
+    // Multiple occurrences of measurements in the same registry
     // (confirm these are handled within the registry itself).
     Measurement measureBXY2 = new Measurement(idBXY, 5, 5.5);
     Meter meterB2 = new TestMeter("ignoreB", measureBXY2);
@@ -133,7 +129,7 @@ public class MetricsControllerTest {
 
   @Test
   public void testEncodeCompositeRegistry() {
-    // Multiple occurances of measurements in the same registry
+    // Multiple occurrences of measurements in the same registry
     // (confirm these are handled within the registry itself).
     // Here measurements are duplicated but meters have different sets.
     Measurement measureAXY2 = new Measurement(idAXY, 20, 20.20);

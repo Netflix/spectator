@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.api.patterns.PolledGauge;
 import com.netflix.spectator.impl.Config;
 import org.slf4j.LoggerFactory;
 
@@ -380,7 +381,7 @@ public interface Registry extends Iterable<Meter> {
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #monitorNumber(Id, Number)} for more information.
+   * it as a gauge. See {@link #gauge(Id, Number)} for more information.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -390,38 +391,21 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link #monitorNumber(Id, Number)} instead. This method was renamed to
-   *     {@code monitorNumber} to reduce user confusion over the difference between
-   *     active and passive gauges. Scheduled to be removed in 2.0.
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Number> T gauge(Id id, T number) {
-    return monitorNumber(id, number);
+    return PolledGauge.using(this).withId(id).monitor(number);
   }
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. The registry will keep a weak reference to the number so it will not prevent
-   * garbage collection. To explicitly tell the registry to ignore the value without waiting
-   * for it to be garbage collected, set the value to {@link Double#NaN}. The number
-   * implementation used should be thread safe. For more information, see
-   * {@link #monitorValue(Id, Object, ToDoubleFunction)}.
-   *
-   * @param id
-   *     Identifier for the metric being registered.
-   * @param number
-   *     Thread-safe implementation of {@link Number} used to access the value.
-   * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
-   *     statement.
-   */
-  default <T extends Number> T monitorNumber(Id id, T number) {
-    return monitorValue(id, number, Number::doubleValue);
-  }
-
-  /**
-   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #monitorNumber(Id, Number)} for more information.
+   * it as a gauge. See {@link PolledGauge.Builder#monitor(Number)} for more information.
    *
    * @param name
    *     Name of the metric being registered.
@@ -431,34 +415,21 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link #monitorNumber(Id, Number)} instead. This method was renamed to
-   *     {@code monitorNumber} to reduce user confusion over the difference between
-   *     active and passive gauges. Scheduled to be removed in 2.0.
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Number> T gauge(String name, T number) {
-    return monitorNumber(createId(name), number);
+    return gauge(createId(name), number);
   }
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #monitorNumber(Id, Number)} for more information.
-   *
-   * @param name
-   *     Name of the metric being registered.
-   * @param number
-   *     Thread-safe implementation of {@link Number} used to access the value.
-   * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
-   *     statement.
-   */
-  default <T extends Number> T monitorNumber(String name, T number) {
-    return monitorNumber(createId(name), number);
-  }
-
-  /**
-   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #monitorNumber(Id, Number)} for more information.
+   * it as a gauge. See {@link #gauge(Id, Number)} for more information.
    *
    * @param name
    *     Name of the metric being registered.
@@ -470,9 +441,12 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link #monitorNumber(Id, Number)} instead. This method was renamed to
-   *     {@code monitorNumber} to reduce user confusion over the difference between
-   *     active and passive gauges. Scheduled to be removed in 2.0.
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Number> T gauge(String name, Iterable<Tag> tags, T number) {
@@ -480,25 +454,7 @@ public interface Registry extends Iterable<Meter> {
   }
 
   /**
-   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #monitorNumber(Id, Number)} for more information.
-   *
-   * @param name
-   *     Name of the metric being registered.
-   * @param tags
-   *     Sequence of dimensions for breaking down the name.
-   * @param number
-   *     Thread-safe implementation of {@link Number} used to access the value.
-   * @return
-   *     The number that was passed in so the registration can be done as part of an assignment
-   *     statement.
-   */
-  default <T extends Number> T monitorNumber(String name, Iterable<Tag> tags, T number) {
-    return monitorNumber(createId(name, tags), number);
-  }
-
-  /**
-   * See {@link #monitorValue(Id, Object, ToDoubleFunction)} for more information.
+   * See {@link #gauge(Id, Object, ToDoubleFunction)} for more information.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -510,57 +466,20 @@ public interface Registry extends Iterable<Meter> {
    *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link #monitorValue(Id, Object, ToDoubleFunction)} instead. This method was
-   *     renamed to {@code monitorValue} to reduce user confusion over the difference between
-   *     active and passive gauges. Scheduled to be removed in 2.0.
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    return monitorValue(id, obj, f);
+    return PolledGauge.using(this).withId(id).monitor(obj, f);
   }
 
   /**
-   * Tells the registry to regularly poll the object using the provided function and report
-   * the returned value as a gauge. The registry will keep a weak reference to the object so
-   * it will not prevent garbage collection. To explicitly tell the registry to ignore the value
-   * without waiting for it to be garbage collected, return a value of {@link Double#NaN}.
-   *
-   * Applying {@code f} on the object should be thread safe and cheap to execute. <b>Never
-   * perform computationally expensive or potentially long running tasks such as disk or network
-   * calls inline.</b>
-   *
-   * Polling frequency will depend on the underlying registry implementation, but users should
-   * assume it will be frequently checked and that the provided function is cheap. Users should
-   * keep in mind that polling will not capture all activity, just sample it at some frequency.
-   * For example, if monitoring a queue, then a gauge will only tell you the last sampled size
-   * when the value is reported. If more details are needed, then one of the activity based types,
-   * e.g., {@link #distributionSummary(Id)}, would need to be used and coded such that every
-   * update is reflected. In the queue example that would mean every update to the queue would
-   * need to result in the size being reported to the {@link DistributionSummary}.
-   *
-   * If multiple values are monitored with the same id, then the values will be aggregated and
-   * the sum will be reported. For example, registering multiple gauges for active threads in
-   * a thread pool with the same id would produce a value that is the overall number
-   * of active threads. For other behaviors, manage it on the user side and avoid multiple
-   * registrations.
-   *
-   * @param id
-   *     Identifier for the metric being registered.
-   * @param obj
-   *     Object used to compute a value.
-   * @param f
-   *     Function that is applied on the value for the number.
-   * @return
-   *     The object that was passed in so the registration can be done as part of an assignment
-   *     statement.
-   */
-  default <T> T monitorValue(Id id, T obj, ToDoubleFunction<T> f) {
-    register(new ObjectGauge<>(clock(), id, obj, f));
-    return obj;
-  }
-
-  /**
-   * See {@link #monitorValue(Id, Object, ToDoubleFunction)} for more information.
+   * See {@link #gauge(Id, Object, ToDoubleFunction)} for more information.
    *
    * @param name
    *     Name of the metric being registered.
@@ -572,30 +491,16 @@ public interface Registry extends Iterable<Meter> {
    *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link #monitorValue(Id, Object, ToDoubleFunction)} instead. This method was
-   *     renamed to {@code monitorValue} to reduce user confusion over the difference between
-   *     active and passive gauges. Scheduled to be removed in 2.0.
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T> T gauge(String name, T obj, ToDoubleFunction<T> f) {
-    return monitorValue(createId(name), obj, f);
-  }
-
-  /**
-   * See {@link #monitorValue(Id, Object, ToDoubleFunction)} for more information.
-   *
-   * @param name
-   *     Name of the metric being registered.
-   * @param obj
-   *     Object used to compute a value.
-   * @param f
-   *     Function that is applied on the value for the number.
-   * @return
-   *     The object that was passed in so the registration can be done as part of an assignment
-   *     statement.
-   */
-  default <T> T monitorValue(String name, T obj, ToDoubleFunction<T> f) {
-    return monitorValue(createId(name), obj, f);
+    return gauge(createId(name), obj, f);
   }
 
   /**
@@ -605,7 +510,7 @@ public interface Registry extends Iterable<Meter> {
    * calling {@link java.util.Collection#size()} can be expensive for some collection
    * implementations and should be considered before registering.
    *
-   * For more information see {@link #monitorValue(Id, Object, ToDoubleFunction)}.
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -614,9 +519,17 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
-    return monitorValue(id, collection, Collection::size);
+    return PolledGauge.using(this).withId(id).monitorSize(collection);
   }
 
   /**
@@ -630,7 +543,15 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default <T extends Collection<?>> T collectionSize(String name, T collection) {
     return collectionSize(createId(name), collection);
   }
@@ -642,7 +563,7 @@ public interface Registry extends Iterable<Meter> {
    * calling {@link java.util.Map#size()} can be expensive for some map
    * implementations and should be considered before registering.
    *
-   * For more information see {@link #monitorValue(Id, Object, ToDoubleFunction)}.
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -651,9 +572,17 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
-    return monitorValue(id, collection, Map::size);
+    return PolledGauge.using(this).withId(id).monitorSize(collection);
   }
 
   /**
@@ -667,7 +596,15 @@ public interface Registry extends Iterable<Meter> {
    * @return
    *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default <T extends Map<?, ?>> T mapSize(String name, T collection) {
     return mapSize(createId(name), collection);
   }
@@ -679,12 +616,12 @@ public interface Registry extends Iterable<Meter> {
    * thread safe and cheap to invoke. <b>Never perform any potentially long running or expensive
    * activity such as IO inline</b>.
    *
-   * To get better compile time type safety, {@link #monitorValue(Id, Object, ToDoubleFunction)}
+   * To get better compile time type safety, {@link #gauge(Id, Object, ToDoubleFunction)}
    * should be preferred. Use this technique only if there access or other restrictions prevent
    * using a proper function reference. However, keep in mind that makes your code more brittle
    * and prone to failure in the future.
    *
-   * For more information see {@link #monitorValue(Id, Object, ToDoubleFunction)}.
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
    *
    * @param id
    *     Identifier for the metric being registered.
@@ -692,11 +629,19 @@ public interface Registry extends Iterable<Meter> {
    *     Object used to compute a value.
    * @param method
    *     Name of the method to invoke on the object.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default void methodValue(Id id, Object obj, String method) {
     final Method m = Utils.getGaugeMethod(this, id, obj, method);
     if (m != null) {
-      monitorValue(id, obj, Functions.invokeMethod(m));
+      PolledGauge.using(this).withId(id).monitor(obj, Functions.invokeMethod(m));
     }
   }
 
@@ -711,7 +656,15 @@ public interface Registry extends Iterable<Meter> {
    *     Object used to compute a value.
    * @param method
    *     Name of the method to invoke on the object.
+   * @deprecated
+   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
    */
+  @Deprecated
   default void methodValue(String name, Object obj, String method) {
     methodValue(createId(name), obj, method);
   }

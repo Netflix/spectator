@@ -68,8 +68,14 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
   private LongTaskTimer(Registry registry, Id id) {
     this.clock = registry.clock();
     this.id = id;
-    registry.monitorValue(id.withTag(Statistic.activeTasks), this, LongTaskTimer::activeTasks);
-    registry.monitorValue(id.withTag(Statistic.duration),    this, t -> t.duration() / NANOS_PER_SECOND);
+    PolledGauge.using(registry)
+        .withId(id)
+        .withTag(Statistic.activeTasks)
+        .monitor(this, LongTaskTimer::activeTasks);
+    PolledGauge.using(registry)
+        .withId(id)
+        .withTag(Statistic.duration)
+        .monitor(this, t -> t.duration() / NANOS_PER_SECOND);
   }
 
   @Override public Id id() {
