@@ -72,7 +72,7 @@ public final class IntervalCounter implements Counter {
     this.lastUpdated = PolledGauge.using(registry)
         .withId(id)
         .withTag(Statistic.duration)
-        .monitor(new AtomicLong(0L), Functions.age(clock));
+        .monitorValue(new AtomicLong(0L), Functions.age(clock));
   }
 
   @Override

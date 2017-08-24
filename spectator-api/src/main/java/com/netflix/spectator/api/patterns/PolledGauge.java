@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api.patterns;
 
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
@@ -31,6 +32,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToLongFunction;
 
 /**
  * Helper for configuring a gauge that will receive a value by regularly polling the
@@ -95,21 +97,30 @@ public final class PolledGauge {
 
   /** Force the polling of all gauges associated with the registry. */
   public static void update(Registry registry) {
-    registry.state().values().forEach(obj -> {
-      if (obj instanceof GaugeTuple) {
-        ((GaugeTuple) obj).doUpdate(registry);
+    Iterator<Map.Entry<Id, Object>> iter = registry.state().entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<Id, Object> entry = iter.next();
+      if (entry.getValue() instanceof GaugeState) {
+        GaugeState tuple = (GaugeState) entry.getValue();
+        tuple.doUpdate(registry);
+        if (tuple.hasExpired()) {
+          iter.remove();
+        }
       }
-    });
+    }
   }
 
   /**
    * Explicitly disable polling for the gauge registered with {@code id}. This is optional
    * and is mostly used if it is desirable for the gauge to go away immediately. The polling
    * will stop automatically when the referred object is garbage collected. See
-   * {@link Builder#monitor(Object, ToDoubleFunction)} for more information.
+   * {@link Builder#monitorValue(Object, ToDoubleFunction)} for more information.
    */
-  public static void remove(Id id) {
-
+  public static void remove(Registry registry, Id id) {
+    Object obj = registry.state().get(id);
+    if (obj instanceof GaugeState) {
+      registry.state().remove(id, obj);
+    }
   }
 
   /**
@@ -137,7 +148,7 @@ public final class PolledGauge {
      * @return
      *     This builder instance to allow chaining of operations.
      */
-    public Builder withExecutor(ScheduledExecutorService executor) {
+    public Builder scheduleOn(ScheduledExecutorService executor) {
       this.executor = executor;
       return this;
     }
@@ -154,21 +165,21 @@ public final class PolledGauge {
      *     The number that was passed in to allow the builder to be used inline as part
      *     of an assignment.
      */
-    public <T extends Number> T monitor(T number) {
-      return monitor(number, Number::doubleValue);
+    public <T extends Number> T monitorValue(T number) {
+      return monitorValue(number, Number::doubleValue);
     }
 
     /**
      * Poll by executing {@code f(obj)} and reporting the returned value. The provided
      * function must be thread safe and cheap to execute. Expensive operations, including
      * any IO or network calls, should not be performed inline unless using a custom
-     * executor by calling {@link #withExecutor(ScheduledExecutorService)}. Assume that the
+     * executor by calling {@link #scheduleOn(ScheduledExecutorService)}. Assume that the
      * function will be called frequently and may be called concurrently.
      *
-     * A weak reference will be kept to {@code obj} so that monitoring the object will
+     * <p>A weak reference will be kept to {@code obj} so that monitoring the object will
      * not prevent garbage collection. The gauge will go away when {@code obj} is collected.
-     * To explicitly disable polling call {@link #remove(Id)} with the same id used with
-     * this builder.
+     * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
+     * this builder.</p>
      *
      * @param obj
      *     Object used to compute a value.
@@ -179,17 +190,97 @@ public final class PolledGauge {
      *     statement.
      */
     @SuppressWarnings("unchecked")
-    public <T> T monitor(T obj, ToDoubleFunction<T> f) {
+    public <T> T monitorValue(T obj, ToDoubleFunction<T> f) {
       final Id id = baseId.withTags(extraTags);
       final Gauge gauge = registry.gauge(id);
-      final ValueTuple<T> tuple = new ValueTuple<>(gauge);
+      final ValueState<T> tuple = new ValueState<>(gauge);
 
       ConcurrentMap<Id, Object> state = registry.state();
       Object c = Utils.computeIfAbsent(state, id, i -> tuple);
-      if (!(c instanceof ValueTuple)) {
+      if (!(c instanceof ValueState)) {
         Utils.propagateTypeError(registry, id, PolledGauge.class, c.getClass());
       } else {
-        ValueTuple<T> t = (ValueTuple<T>) c;
+        ValueState<T> t = (ValueState<T>) c;
+        t.add(obj, f);
+        t.schedule(registry, executor);
+      }
+
+      return obj;
+    }
+
+    /**
+     * Poll the value of the provided {@link Number} and update a counter with the delta
+     * since the last time the value was sampled. The implementation provided must
+     * be thread safe. The most common usages of this are to monitor instances of
+     * {@link java.util.concurrent.atomic.AtomicInteger},
+     * {@link java.util.concurrent.atomic.AtomicLong}, or
+     * {@link java.util.concurrent.atomic.LongAdder}. For more information see
+     * {@link #monitorMonotonicCounter(Object, ToLongFunction)}.
+     *
+     * @param number
+     *     Thread-safe implementation of {@link Number} used to access the value.
+     * @return
+     *     The number that was passed in to allow the builder to be used inline as part
+     *     of an assignment.
+     */
+    public <T extends Number> T monitorMonotonicCounter(T number) {
+      return monitorMonotonicCounter(number, Number::longValue);
+    }
+
+    /**
+     * Map a monotonically increasing long or int value to a counter. Monotonic counters
+     * are frequently used as a simple way for exposing the amount of change. In order to be
+     * useful, they need to be polled frequently so the change can be measured regularly over
+     * time.
+     *
+     * <p>Example monotonic counters provided by the JDK:</p>
+     *
+     * <ul>
+     *   <li>{@link java.util.concurrent.ThreadPoolExecutor#getCompletedTaskCount()}</li>
+     *   <li>{@link java.lang.management.GarbageCollectorMXBean#getCollectionCount()}</li>
+     * </ul>
+     *
+     * <p>Example usage:</p>
+     *
+     * <pre>
+     *   Registry registry = ...
+     *   MonotonicCounter.using(registry)
+     *     .withName("pool.completedTasks")
+     *     .monitor(executor, ThreadPoolExecutor::getCompletedTaskCount);
+     * </pre>
+     *
+     * <p>The value is polled by executing {@code f(obj)} and a counter will be updated with
+     * the delta since the last time the value was sampled. The provided function must be
+     * thread safe and cheap to execute. Expensive operations, including any IO or network
+     * calls, should not be performed inline unless using a custom executor by calling
+     * {@link #scheduleOn(ScheduledExecutorService)}. Assume that the function will be called
+     * frequently and may be called concurrently.</p>
+     *
+     * <p>A weak reference will be kept to {@code obj} so that monitoring the object will
+     * not prevent garbage collection. The gauge will go away when {@code obj} is collected.
+     * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
+     * this builder.</p>
+     *
+     * @param obj
+     *     Object used to compute a value.
+     * @param f
+     *     Function that is applied on the value for the number.
+     * @return
+     *     The object that was passed in so the registration can be done as part of an assignment
+     *     statement.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T monitorMonotonicCounter(T obj, ToLongFunction<T> f) {
+      final Id id = baseId.withTags(extraTags);
+      final Counter counter = registry.counter(id);
+      final CounterState<T> tuple = new CounterState<>(counter);
+
+      ConcurrentMap<Id, Object> state = registry.state();
+      Object c = Utils.computeIfAbsent(state, id, i -> tuple);
+      if (!(c instanceof CounterState)) {
+        Utils.propagateTypeError(registry, id, PolledGauge.class, c.getClass());
+      } else {
+        CounterState<T> t = (CounterState<T>) c;
         t.add(obj, f);
         t.schedule(registry, executor);
       }
@@ -209,7 +300,7 @@ public final class PolledGauge {
      *     of an assignment.
      */
     public <T extends Collection<?>> T monitorSize(T collection) {
-      return monitor(collection, Collection::size);
+      return monitorValue(collection, Collection::size);
     }
 
     /**
@@ -224,7 +315,7 @@ public final class PolledGauge {
      *     of an assignment.
      */
     public <T extends Map<?, ?>> T monitorSize(T map) {
-      return monitor(map, Map::size);
+      return monitorValue(map, Map::size);
     }
   }
 
@@ -238,18 +329,18 @@ public final class PolledGauge {
   @Deprecated
   public static void monitorMeter(Registry registry, Meter meter) {
     ConcurrentMap<Id, Object> state = registry.state();
-    Object c = Utils.computeIfAbsent(state, meter.id(), MeterTuple::new);
-    if (!(c instanceof MeterTuple)) {
-      Utils.propagateTypeError(registry, meter.id(), MeterTuple.class, c.getClass());
+    Object c = Utils.computeIfAbsent(state, meter.id(), MeterState::new);
+    if (!(c instanceof MeterState)) {
+      Utils.propagateTypeError(registry, meter.id(), MeterState.class, c.getClass());
     } else {
-      MeterTuple t = (MeterTuple) c;
+      MeterState t = (MeterState) c;
       t.add(meter);
       t.schedule(registry, null);
     }
   }
 
   /** Base class for gauge tuples used for bookkeeping. */
-  abstract static class GaugeTuple {
+  abstract static class GaugeState {
     private boolean scheduled = false;
 
     /** Return the id for the gauge. */
@@ -277,7 +368,7 @@ public final class PolledGauge {
     void schedule(Registry registry, ScheduledExecutorService executor) {
       if (!scheduled) {
         long delay = registry.config().gaugePollingFrequency().toMillis();
-        WeakReference<GaugeTuple> tupleRef = new WeakReference<>(this);
+        WeakReference<GaugeState> tupleRef = new WeakReference<>(this);
         if (executor == null) {
           GaugePoller.schedule(tupleRef, delay, t -> t.update(registry));
         } else {
@@ -289,19 +380,19 @@ public final class PolledGauge {
   }
 
   /** Keep track of the object reference, counter, and other associated bookkeeping info. */
-  static final class ValueTuple<T> extends GaugeTuple {
+  static final class ValueState<T> extends GaugeState {
     private final Gauge gauge;
-    private final ConcurrentLinkedQueue<RefPair<T>> pairs;
+    private final ConcurrentLinkedQueue<ValueEntry<T>> pairs;
 
     /** Create new instance. */
-    ValueTuple(Gauge gauge) {
+    ValueState(Gauge gauge) {
       super();
       this.gauge = gauge;
       this.pairs = new ConcurrentLinkedQueue<>();
     }
 
     private void add(T obj, ToDoubleFunction<T> f) {
-      pairs.add(new RefPair<>(obj, f));
+      pairs.add(new ValueEntry<>(obj, f));
     }
 
     @Override protected Id id() {
@@ -314,9 +405,9 @@ public final class PolledGauge {
 
     @Override protected void update(Registry registry) {
       double sum = Double.NaN;
-      Iterator<RefPair<T>> iter = pairs.iterator();
+      Iterator<ValueEntry<T>> iter = pairs.iterator();
       while (iter.hasNext()) {
-        final RefPair<T> pair = iter.next();
+        final ValueEntry<T> pair = iter.next();
         final T obj = pair.ref.get();
         if (obj != null) {
           double v = pair.f.applyAsDouble(obj);
@@ -335,24 +426,24 @@ public final class PolledGauge {
    * Pair consisting of weak reference to an object and a function to sample a numeric
    * value from the object.
    */
-  static final class RefPair<T> {
+  static final class ValueEntry<T> {
     private final WeakReference<T> ref;
     private final ToDoubleFunction<T> f;
 
     /** Create new instance. */
-    RefPair(T obj, ToDoubleFunction<T> f) {
+    ValueEntry(T obj, ToDoubleFunction<T> f) {
       this.ref = new WeakReference<T>(obj);
       this.f = f;
     }
   }
 
   /** Keep track of a meter and associated metadata. */
-  static final class MeterTuple extends GaugeTuple {
+  static final class MeterState extends GaugeState {
     private final Id id;
     private final ConcurrentLinkedQueue<Meter> queue;
 
     /** Create a new instance. */
-    MeterTuple(Id id) {
+    MeterState(Id id) {
       super();
       this.id = id;
       this.queue = new ConcurrentLinkedQueue<>();
@@ -396,6 +487,68 @@ public final class PolledGauge {
     @Override protected void update(Registry registry) {
       for (Measurement m : measure()) {
         registry.gauge(m.id()).set(m.value());
+      }
+    }
+  }
+
+  /** Keep track of the object reference, counter, and other associated bookkeeping info. */
+  static final class CounterState<T> extends GaugeState {
+    private final Counter counter;
+    private final ConcurrentLinkedQueue<CounterEntry<T>> entries;
+
+    /** Create new instance. */
+    CounterState(Counter counter) {
+      super();
+      this.counter = counter;
+      this.entries = new ConcurrentLinkedQueue<>();
+    }
+
+    private void add(T obj, ToLongFunction<T> f) {
+      entries.add(new CounterEntry<>(obj, f));
+    }
+
+    @Override protected Id id() {
+      return counter.id();
+    }
+
+    @Override protected boolean hasExpired() {
+      return entries.isEmpty();
+    }
+
+    @Override protected void update(Registry registry) {
+      Iterator<CounterEntry<T>> iter = entries.iterator();
+      while (iter.hasNext()) {
+        CounterEntry<T> state = iter.next();
+        if (state.ref.get() == null) {
+          iter.remove();
+        } else {
+          state.update(counter);
+        }
+      }
+    }
+  }
+
+  /** State for counter entry. */
+  static final class CounterEntry<T> {
+    private final WeakReference<T> ref;
+    private final ToLongFunction<T> f;
+    private long previous;
+
+    /** Create new instance. */
+    CounterEntry(T obj, ToLongFunction<T> f) {
+      this.ref = new WeakReference<T>(obj);
+      this.f = f;
+      this.previous = f.applyAsLong(obj);
+    }
+
+    private void update(Counter counter) {
+      T obj = ref.get();
+      if (obj != null) {
+        long current = f.applyAsLong(obj);
+        if (current > previous) {
+          counter.increment(current - previous);
+        }
+        previous = current;
       }
     }
   }

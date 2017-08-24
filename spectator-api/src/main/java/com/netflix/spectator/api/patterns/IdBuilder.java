@@ -22,7 +22,7 @@ import com.netflix.spectator.api.Registry;
  * Base type for builders that are required to construct an {@link Id} object. This class
  * assists with the creation of a base id and then returns another builder type that can
  * be used for further refinement. By following this pattern the builder will force the
- * user to satisfy the minimal constraints of the id before a final option to contruct
+ * user to satisfy the minimal constraints of the id before a final option to construct
  * or complete the operation is provided.
  *
  * <p>Sample usage:</p>

@@ -136,7 +136,7 @@ public class Scheduler {
     registry.collectionSize(newId(registry, id, "queueSize"), queue);
     activeCount = PolledGauge.using(registry)
         .withId(newId(registry, id, "activeThreads"))
-        .monitor(new AtomicInteger());
+        .monitorValue(new AtomicInteger());
     taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
     taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
     skipped = registry.counter(newId(registry, id, "skipped"));

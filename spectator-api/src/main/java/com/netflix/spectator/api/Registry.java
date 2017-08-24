@@ -400,12 +400,12 @@ public interface Registry extends Iterable<Meter> {
    */
   @Deprecated
   default <T extends Number> T gauge(Id id, T number) {
-    return PolledGauge.using(this).withId(id).monitor(number);
+    return PolledGauge.using(this).withId(id).monitorValue(number);
   }
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link PolledGauge.Builder#monitor(Number)} for more information.
+   * it as a gauge. See {@link PolledGauge.Builder#monitorValue(Number)} for more information.
    *
    * @param name
    *     Name of the metric being registered.
@@ -475,7 +475,7 @@ public interface Registry extends Iterable<Meter> {
    */
   @Deprecated
   default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    return PolledGauge.using(this).withId(id).monitor(obj, f);
+    return PolledGauge.using(this).withId(id).monitorValue(obj, f);
   }
 
   /**
@@ -641,7 +641,7 @@ public interface Registry extends Iterable<Meter> {
   default void methodValue(Id id, Object obj, String method) {
     final Method m = Utils.getGaugeMethod(this, id, obj, method);
     if (m != null) {
-      PolledGauge.using(this).withId(id).monitor(obj, Functions.invokeMethod(m));
+      PolledGauge.using(this).withId(id).monitorValue(obj, Functions.invokeMethod(m));
     }
   }
 
