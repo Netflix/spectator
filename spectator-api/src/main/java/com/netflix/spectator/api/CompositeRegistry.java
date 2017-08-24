@@ -15,19 +15,16 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.impl.GaugePoller;
+import com.netflix.spectator.api.patterns.PolledGauge;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -50,10 +47,7 @@ public final class CompositeRegistry implements Registry {
   private final ConcurrentHashMap<Id, SwapTimer> timers;
   private final ConcurrentHashMap<Id, SwapGauge> gauges;
 
-  private final ConcurrentHashMap<Id, AggrMeter> aggrGauges;
   private final ConcurrentHashMap<Id, Object> state;
-
-  private final Semaphore pollSem = new Semaphore(1);
 
   /** Creates a new instance. */
   CompositeRegistry(Clock clock) {
@@ -63,49 +57,7 @@ public final class CompositeRegistry implements Registry {
     this.distSummaries = new ConcurrentHashMap<>();
     this.timers = new ConcurrentHashMap<>();
     this.gauges = new ConcurrentHashMap<>();
-    this.aggrGauges = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
-    GaugePoller.schedule(
-        new WeakReference<Registry>(this),
-        10000L,
-        CompositeRegistry::pollGauges);
-  }
-
-  private static void pollGauges(Registry r) {
-    ((CompositeRegistry) r).pollGauges();
-  }
-
-  /** Poll the values from all registered gauges. */
-  @SuppressWarnings("PMD")
-  void pollGauges() {
-    if (pollSem.tryAcquire()) {
-      try {
-        for (Map.Entry<Id, AggrMeter> e : aggrGauges.entrySet()) {
-          Id id = e.getKey();
-          Meter meter = e.getValue();
-          try {
-            if (!meter.hasExpired()) {
-              for (Measurement m : meter.measure()) {
-                gauge(m.id()).set(m.value());
-              }
-            }
-          } catch (StackOverflowError t) {
-            aggrGauges.remove(id);
-          } catch (VirtualMachineError | ThreadDeath t) {
-            // Avoid catching OutOfMemoryError and other serious problems in the next
-            // catch block.
-            throw t;
-          } catch (Throwable t) {
-            // The sampling is calling user functions and therefore we cannot
-            // make any guarantees they are well-behaved. We catch most Throwables with
-            // the exception of some VM errors and drop the gauge.
-            aggrGauges.remove(id);
-          }
-        }
-      } finally {
-        pollSem.release();
-      }
-    }
   }
 
   /**
@@ -175,8 +127,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    AggrMeter m = Utils.computeIfAbsent(aggrGauges, meter.id(), AggrMeter::new);
-    m.add(meter);
+    PolledGauge.monitorMeter(this, meter);
   }
 
   @Override public ConcurrentMap<Id, Object> state() {

@@ -69,10 +69,10 @@ public final class IntervalCounter implements Counter {
     this.clock = registry.clock();
     this.id = id;
     this.counter = registry.counter(id.withTag(Statistic.count));
-    this.lastUpdated = registry.monitorValue(
-        id.withTag(Statistic.duration),
-        new AtomicLong(0L),
-        Functions.age(clock));
+    this.lastUpdated = PolledGauge.using(registry)
+        .withId(id)
+        .withTag(Statistic.duration)
+        .monitorValue(new AtomicLong(0L), Functions.age(clock));
   }
 
   @Override

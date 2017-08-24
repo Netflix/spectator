@@ -67,7 +67,7 @@ public class AtlasRegistryTest {
 
   @Test
   public void measurementsWithGauge() {
-    AtomicLong v = registry.monitorNumber("test", new AtomicLong(0L));
+    AtomicLong v = registry.gauge("test", new AtomicLong(0L));
     Assert.assertEquals(1, registry.getMeasurements().size());
   }
 

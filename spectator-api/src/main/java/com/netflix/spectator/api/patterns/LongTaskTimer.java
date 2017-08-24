@@ -49,12 +49,23 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
    */
   public static LongTaskTimer get(Registry registry, Id id) {
     ConcurrentMap<Id, Object> state = registry.state();
-    Object t = Utils.computeIfAbsent(state, id, i -> new LongTaskTimer(registry, id));
-    if (!(t instanceof LongTaskTimer)) {
-      Utils.propagateTypeError(registry, id, LongTaskTimer.class, t.getClass());
-      t = new LongTaskTimer(new NoopRegistry(), id);
+    Object obj = Utils.computeIfAbsent(state, id, i -> {
+      LongTaskTimer timer = new LongTaskTimer(registry, id);
+      PolledGauge.using(registry)
+          .withId(id)
+          .withTag(Statistic.activeTasks)
+          .monitorValue(timer, LongTaskTimer::activeTasks);
+      PolledGauge.using(registry)
+          .withId(id)
+          .withTag(Statistic.duration)
+          .monitorValue(timer, t -> t.duration() / NANOS_PER_SECOND);
+      return timer;
+    });
+    if (!(obj instanceof LongTaskTimer)) {
+      Utils.propagateTypeError(registry, id, LongTaskTimer.class, obj.getClass());
+      obj = new LongTaskTimer(new NoopRegistry(), id);
     }
-    return (LongTaskTimer) t;
+    return (LongTaskTimer) obj;
   }
 
   private static final double NANOS_PER_SECOND = (double) TimeUnit.SECONDS.toNanos(1L);
@@ -68,8 +79,6 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
   private LongTaskTimer(Registry registry, Id id) {
     this.clock = registry.clock();
     this.id = id;
-    registry.monitorValue(id.withTag(Statistic.activeTasks), this, LongTaskTimer::activeTasks);
-    registry.monitorValue(id.withTag(Statistic.duration),    this, t -> t.duration() / NANOS_PER_SECOND);
   }
 
   @Override public Id id() {

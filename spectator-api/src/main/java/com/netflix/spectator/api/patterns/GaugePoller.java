@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.impl;
+package com.netflix.spectator.api.patterns;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.Executors;
@@ -30,13 +30,10 @@ import java.util.function.Consumer;
  * single thread. If registered gauge methods are cheap as they should be, then this
  * should be plenty of capacity to process everything regularly. If not, then this will
  * help limit the damage to a single core and avoid causing problems for the application.
- *
- * <p><b>This class is an internal implementation detail only intended for use within spectator.
- * It is subject to change without notice.</b></p>
  */
-public final class GaugePoller {
+final class GaugePoller {
 
-  private static ThreadFactory factory = new ThreadFactory() {
+  private static final ThreadFactory FACTORY = new ThreadFactory() {
     private final AtomicInteger next = new AtomicInteger();
 
     @Override public Thread newThread(Runnable r) {
@@ -47,12 +44,18 @@ public final class GaugePoller {
     }
   };
 
-  private static ScheduledExecutorService executor =
-      Executors.newSingleThreadScheduledExecutor(factory);
+  private static final ScheduledExecutorService DEFAULT_EXECUTOR =
+      Executors.newSingleThreadScheduledExecutor(FACTORY);
+
+  /** Schedule collection of gauges for a registry. */
+  static <T> void schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
+    schedule(DEFAULT_EXECUTOR, ref, delay, poll);
+  }
 
   /** Schedule collection of gauges for a registry. */
   @SuppressWarnings("PMD")
-  public static <T> void schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
+  static <T> void schedule(
+      ScheduledExecutorService executor, WeakReference<T> ref, long delay, Consumer<T> poll) {
     final AtomicReference<Future<?>> futureRef = new AtomicReference<>();
     final Runnable cancel = () -> {
       Future<?> f = futureRef.get();

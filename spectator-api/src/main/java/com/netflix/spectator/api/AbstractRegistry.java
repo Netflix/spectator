@@ -15,18 +15,15 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.api.patterns.PolledGauge;
 import com.netflix.spectator.impl.Config;
-import com.netflix.spectator.impl.GaugePoller;
 import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ref.WeakReference;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Semaphore;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
@@ -40,10 +37,7 @@ public abstract class AbstractRegistry implements Registry {
   private final RegistryConfig config;
 
   private final ConcurrentHashMap<Id, Meter> meters;
-  private final ConcurrentHashMap<Id, Meter> gauges;
   private final ConcurrentHashMap<Id, Object> state;
-
-  private final Semaphore pollSem = new Semaphore(1);
 
   /**
    * Create a new instance.
@@ -68,12 +62,7 @@ public abstract class AbstractRegistry implements Registry {
     this.clock = clock;
     this.config = config;
     this.meters = new ConcurrentHashMap<>();
-    this.gauges = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
-    GaugePoller.schedule(
-        new WeakReference<Registry>(this),
-        config.gaugePollingFrequency().toMillis(),
-        AbstractRegistry::pollGauges);
   }
 
   /**
@@ -156,71 +145,12 @@ public abstract class AbstractRegistry implements Registry {
     propagate(new IllegalStateException(msg));
   }
 
-  private void addToAggr(Meter aggr, Meter meter) {
-    if (aggr instanceof AggrMeter) {
-      ((AggrMeter) aggr).add(meter);
-    } else {
-      logTypeError(meter.id(), meter.getClass(), aggr.getClass());
-    }
-  }
-
   private Meter compute(Meter m, Meter fallback) {
     return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
-  private void handleGaugeException(Id id, Throwable t) {
-    logger.warn("dropping gauge [{}], exception occurred when polling value", id, t);
-    gauges.remove(id);
-  }
-
-  /**
-   * Lambda passed to {@link GaugePoller} to avoid having a strong reference to this
-   * registry that would prevent garbage collection.
-   */
-  private static void pollGauges(Registry r) {
-    ((AbstractRegistry) r).pollGauges();
-  }
-
-  /** Poll the values from all registered gauges. */
-  @SuppressWarnings("PMD")
-  void pollGauges() {
-    if (pollSem.tryAcquire()) {
-      try {
-        for (Map.Entry<Id, Meter> e : gauges.entrySet()) {
-          Id id = e.getKey();
-          Meter meter = e.getValue();
-          try {
-            if (!meter.hasExpired()) {
-              for (Measurement m : meter.measure()) {
-                gauge(m.id()).set(m.value());
-              }
-            }
-          } catch (StackOverflowError t) {
-            handleGaugeException(id, t);
-          } catch (VirtualMachineError | ThreadDeath t) {
-            // Avoid catching OutOfMemoryError and other serious problems in the next
-            // catch block.
-            throw t;
-          } catch (Throwable t) {
-            // The sampling is calling user functions and therefore we cannot
-            // make any guarantees they are well-behaved. We catch most Throwables with
-            // the exception of some VM errors and drop the gauge.
-            handleGaugeException(id, t);
-          }
-        }
-      } finally {
-        pollSem.release();
-      }
-    }
-  }
-
   @Override public void register(Meter meter) {
-    Meter aggr = (gauges.size() >= config.maxNumberOfMeters())
-      ? meters.get(meter.id())
-      : Utils.computeIfAbsent(gauges, meter.id(), AggrMeter::new);
-    if (aggr != null) {
-      addToAggr(aggr, meter);
-    }
+    PolledGauge.monitorMeter(this, meter);
   }
 
   @Override public ConcurrentMap<Id, Object> state() {
@@ -295,7 +225,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Iterator<Meter> iterator() {
     // Force update of gauges before traversing values
-    pollGauges();
+    PolledGauge.update(this);
     return meters.values().iterator();
   }
 }

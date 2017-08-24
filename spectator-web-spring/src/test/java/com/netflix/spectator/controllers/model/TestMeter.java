@@ -20,8 +20,8 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class TestMeter implements Meter {
@@ -30,11 +30,11 @@ public class TestMeter implements Meter {
 
   public TestMeter(Id id) {
     myId = id;
-    myMeasurements = new ArrayList<Measurement>();
+    myMeasurements = new ArrayList<>();
   }
 
   public TestMeter(String name, Measurement measurement) {
-    this(name, Arrays.asList(measurement));
+    this(name, Collections.singletonList(measurement));
   }
 
   public TestMeter(String name, List<Measurement> measures) {

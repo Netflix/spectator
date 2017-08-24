@@ -15,7 +15,11 @@
  */
 package com.netflix.spectator.api.patterns;
 
-import com.netflix.spectator.api.*;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,17 +36,13 @@ public class MonotonicCounterTest {
   private final Id id = registry.createId("test");
 
   private void update() {
-    registry.state().forEach((id, obj) -> {
-      if (obj instanceof MonotonicCounter.Tuple<?>) {
-        MonotonicCounter.updateCounter(registry, ((MonotonicCounter.Tuple<?>) obj));
-      }
-    });
+    PolledGauge.update(registry);
   }
 
   @Test
   public void usingAtomicLong() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = MonotonicCounter.monitorNumber(registry, id, count);
+    AtomicLong c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -61,7 +61,7 @@ public class MonotonicCounterTest {
   @Test
   public void usingLongAdder() {
     LongAdder count = new LongAdder();
-    LongAdder c = MonotonicCounter.monitorNumber(registry, id, count);
+    LongAdder c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -80,7 +80,7 @@ public class MonotonicCounterTest {
   @Test
   public void nonMonotonicUpdates() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = MonotonicCounter.monitorNumber(registry, id, count);
+    AtomicLong c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
 
     Counter counter = registry.counter(id);
     update();
@@ -105,7 +105,7 @@ public class MonotonicCounterTest {
   @Test
   public void expire() throws Exception {
     WeakReference<LongAdder> ref = new WeakReference<>(
-      MonotonicCounter.monitorNumber(registry, id, new LongAdder()));
+      PolledGauge.using(registry).withId(id).monitorMonotonicCounter(new LongAdder()));
     while (ref.get() != null) {
       System.gc();
     }
@@ -115,5 +115,19 @@ public class MonotonicCounterTest {
     Assert.assertEquals(0, registry.state().size());
   }
 
+  @Test
+  public void removeGauge() throws Exception {
+    LongAdder v = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(new LongAdder());
+    Assert.assertEquals(1, registry.state().size());
+    PolledGauge.remove(registry, id);
+    Assert.assertEquals(0, registry.state().size());
+  }
 
+  @Test
+  public void removeOtherType() throws Exception {
+    LongTaskTimer t = LongTaskTimer.get(registry, id);
+    Assert.assertEquals(3, registry.state().size());
+    PolledGauge.remove(registry, id);
+    Assert.assertEquals(3, registry.state().size());
+  }
 }

@@ -55,11 +55,11 @@ public final class GcLogger {
 
   // Max size of old generation memory pool
   private static final AtomicLong MAX_DATA_SIZE =
-    Spectator.globalRegistry().monitorNumber("jvm.gc.maxDataSize", new AtomicLong(0L));
+    Spectator.globalRegistry().gauge("jvm.gc.maxDataSize", new AtomicLong(0L));
 
   // Size of old generation memory pool after a full GC
   private static final AtomicLong LIVE_DATA_SIZE =
-    Spectator.globalRegistry().monitorNumber("jvm.gc.liveDataSize", new AtomicLong(0L));
+    Spectator.globalRegistry().gauge("jvm.gc.liveDataSize", new AtomicLong(0L));
 
   // Incremented for any positive increases in the size of the old generation memory pool
   // before GC to after GC
