@@ -66,7 +66,7 @@ that were heavily static.
 While spectator does have a static registry that can be used, the recommended
 way is to create a registry and inject it either manually or via a framework
 into the classes that need it. This also makes it much easier to
-[test in isolation](Testing).
+[test in isolation](testing).
 
 ## Migration
 
