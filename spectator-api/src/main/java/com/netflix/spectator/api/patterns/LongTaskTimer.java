@@ -51,11 +51,11 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
     ConcurrentMap<Id, Object> state = registry.state();
     Object obj = Utils.computeIfAbsent(state, id, i -> {
       LongTaskTimer timer = new LongTaskTimer(registry, id);
-      PolledGauge.using(registry)
+      PolledMeter.using(registry)
           .withId(id)
           .withTag(Statistic.activeTasks)
           .monitorValue(timer, LongTaskTimer::activeTasks);
-      PolledGauge.using(registry)
+      PolledMeter.using(registry)
           .withId(id)
           .withTag(Statistic.duration)
           .monitorValue(timer, t -> t.duration() / NANOS_PER_SECOND);

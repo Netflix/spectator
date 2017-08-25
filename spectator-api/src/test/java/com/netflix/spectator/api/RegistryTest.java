@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.api.patterns.PolledGauge;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -98,7 +98,7 @@ public class RegistryTest {
   }
 
   private void assertLongTaskTimer(Registry r, Id id, long timestamp, int activeTasks, double duration) {
-    PolledGauge.update(r);
+    PolledMeter.update(r);
 
     Gauge g = r.gauge(id.withTag(Statistic.activeTasks));
     Assert.assertEquals(timestamp, g.measure().iterator().next().timestamp());
@@ -133,7 +133,7 @@ public class RegistryTest {
   }
 
   private void assertGaugeValue(Registry r, Id id, double expected) {
-    PolledGauge.update(r);
+    PolledMeter.update(r);
     Assert.assertEquals(expected, r.gauge(id).value(), 1e-12);
   }
 

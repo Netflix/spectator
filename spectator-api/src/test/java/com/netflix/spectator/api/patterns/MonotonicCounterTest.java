@@ -36,13 +36,13 @@ public class MonotonicCounterTest {
   private final Id id = registry.createId("test");
 
   private void update() {
-    PolledGauge.update(registry);
+    PolledMeter.update(registry);
   }
 
   @Test
   public void usingAtomicLong() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
+    AtomicLong c = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -61,7 +61,7 @@ public class MonotonicCounterTest {
   @Test
   public void usingLongAdder() {
     LongAdder count = new LongAdder();
-    LongAdder c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
+    LongAdder c = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(count);
     Assert.assertSame(count, c);
 
     Counter counter = registry.counter(id);
@@ -80,7 +80,7 @@ public class MonotonicCounterTest {
   @Test
   public void nonMonotonicUpdates() {
     AtomicLong count = new AtomicLong();
-    AtomicLong c = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(count);
+    AtomicLong c = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(count);
 
     Counter counter = registry.counter(id);
     update();
@@ -105,7 +105,7 @@ public class MonotonicCounterTest {
   @Test
   public void expire() throws Exception {
     WeakReference<LongAdder> ref = new WeakReference<>(
-      PolledGauge.using(registry).withId(id).monitorMonotonicCounter(new LongAdder()));
+      PolledMeter.using(registry).withId(id).monitorMonotonicCounter(new LongAdder()));
     while (ref.get() != null) {
       System.gc();
     }
@@ -117,9 +117,9 @@ public class MonotonicCounterTest {
 
   @Test
   public void removeGauge() throws Exception {
-    LongAdder v = PolledGauge.using(registry).withId(id).monitorMonotonicCounter(new LongAdder());
+    LongAdder v = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(new LongAdder());
     Assert.assertEquals(1, registry.state().size());
-    PolledGauge.remove(registry, id);
+    PolledMeter.remove(registry, id);
     Assert.assertEquals(0, registry.state().size());
   }
 
@@ -127,7 +127,7 @@ public class MonotonicCounterTest {
   public void removeOtherType() throws Exception {
     LongTaskTimer t = LongTaskTimer.get(registry, id);
     Assert.assertEquals(3, registry.state().size());
-    PolledGauge.remove(registry, id);
+    PolledMeter.remove(registry, id);
     Assert.assertEquals(3, registry.state().size());
   }
 }
