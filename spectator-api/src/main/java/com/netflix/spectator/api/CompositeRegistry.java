@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.api.patterns.PolledGauge;
+import com.netflix.spectator.api.patterns.PolledMeter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,7 +127,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    PolledGauge.monitorMeter(this, meter);
+    PolledMeter.monitorMeter(this, meter);
   }
 
   @Override public ConcurrentMap<Id, Object> state() {

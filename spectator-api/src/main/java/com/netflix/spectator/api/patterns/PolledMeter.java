@@ -35,14 +35,14 @@ import java.util.function.ToDoubleFunction;
 import java.util.function.ToLongFunction;
 
 /**
- * Helper for configuring a gauge that will receive a value by regularly polling the
+ * Helper for configuring a meter that will receive a value by regularly polling the
  * source in the background.
  *
  * <p>Example usage:</p>
  *
  * <pre>
  *   Registry registry = ...
- *   AtomicLong connections = PolledGauge.using(registry)
+ *   AtomicLong connections = PolledMeter.using(registry)
  *     .withName("server.currentConnections")
  *     .monitor(new AtomicLong());
  *
@@ -56,36 +56,36 @@ import java.util.function.ToLongFunction;
  * <p>Polling frequency will depend on the underlying registry implementation, but users should
  * assume it will be frequently checked and that the provided function is cheap. Users should
  * keep in mind that polling will not capture all activity, just sample it at some frequency.
- * For example, if monitoring a queue, then a gauge will only tell you the last sampled size
+ * For example, if monitoring a queue, then a meter will only tell you the last sampled size
  * when the value is reported. If more details are needed, then use an alternative type
  * and ensure that all changes are reported when they occur.</p>
  *
  * <p>For example, consider tracking the number of currently established connections to a server.
- * Using a polled gauge will show the last sampled number when reported. An alternative would
+ * Using a polled meter will show the last sampled number when reported. An alternative would
  * be to report the number of connections to a {@link com.netflix.spectator.api.DistributionSummary}
  * every time a connection is added or removed. The distribution summary would provide more
  * accurate tracking such as max and average number of connections across an interval of time.
- * The polled gauge would not provide that level of detail.</p>
+ * The polled meter would not provide that level of detail.</p>
  *
  * <p>If multiple values are monitored with the same id, then the values will be aggregated and
- * the sum will be reported. For example, registering multiple gauges for active threads in
+ * the sum will be reported. For example, registering multiple meters for active threads in
  * a thread pool with the same id would produce a value that is the overall number
  * of active threads. For other behaviors, manage it on the user side and avoid multiple
  * registrations.</p>
  */
-public final class PolledGauge {
+public final class PolledMeter {
 
-  private PolledGauge() {
+  private PolledMeter() {
   }
 
   /**
-   * Return a builder for configuring a polled gauge reporting to the provided registry.
+   * Return a builder for configuring a polled meter reporting to the provided registry.
    *
    * @param registry
    *     Registry that will maintain the state and receive the sampled values for the
-   *     configured gauge.
+   *     configured meter.
    * @return
-   *     Builder for configuring a polled gauge.
+   *     Builder for configuring a polled meter.
    */
   public static IdBuilder<Builder> using(Registry registry) {
     return new IdBuilder<Builder>(registry) {
@@ -95,13 +95,13 @@ public final class PolledGauge {
     };
   }
 
-  /** Force the polling of all gauges associated with the registry. */
+  /** Force the polling of all meters associated with the registry. */
   public static void update(Registry registry) {
     Iterator<Map.Entry<Id, Object>> iter = registry.state().entrySet().iterator();
     while (iter.hasNext()) {
       Map.Entry<Id, Object> entry = iter.next();
-      if (entry.getValue() instanceof GaugeState) {
-        GaugeState tuple = (GaugeState) entry.getValue();
+      if (entry.getValue() instanceof AbstractMeterState) {
+        AbstractMeterState tuple = (AbstractMeterState) entry.getValue();
         tuple.doUpdate(registry);
         if (tuple.hasExpired()) {
           iter.remove();
@@ -111,20 +111,20 @@ public final class PolledGauge {
   }
 
   /**
-   * Explicitly disable polling for the gauge registered with {@code id}. This is optional
-   * and is mostly used if it is desirable for the gauge to go away immediately. The polling
+   * Explicitly disable polling for the meter registered with {@code id}. This is optional
+   * and is mostly used if it is desirable for the meter to go away immediately. The polling
    * will stop automatically when the referred object is garbage collected. See
    * {@link Builder#monitorValue(Object, ToDoubleFunction)} for more information.
    */
   public static void remove(Registry registry, Id id) {
     Object obj = registry.state().get(id);
-    if (obj instanceof GaugeState) {
+    if (obj instanceof AbstractMeterState) {
       registry.state().remove(id, obj);
     }
   }
 
   /**
-   * Builder for configuring a polled gauge value.
+   * Builder for configuring a polled meter value.
    */
   public static final class Builder extends TagsBuilder<Builder> {
 
@@ -142,7 +142,7 @@ public final class PolledGauge {
     /**
      * Set the executor to be used for polling the value. If not set, then the default
      * executor will be used which is limited to a single thread to minimize the worst
-     * case resource usage for collecting the gauge data. Use a custom executor if more
+     * case resource usage for collecting the meter data. Use a custom executor if more
      * resources are needed or if the polling operation is expensive.
      *
      * @return
@@ -177,7 +177,7 @@ public final class PolledGauge {
      * function will be called frequently and may be called concurrently.
      *
      * <p>A weak reference will be kept to {@code obj} so that monitoring the object will
-     * not prevent garbage collection. The gauge will go away when {@code obj} is collected.
+     * not prevent garbage collection. The meter will go away when {@code obj} is collected.
      * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
      * this builder.</p>
      *
@@ -198,7 +198,7 @@ public final class PolledGauge {
       ConcurrentMap<Id, Object> state = registry.state();
       Object c = Utils.computeIfAbsent(state, id, i -> tuple);
       if (!(c instanceof ValueState)) {
-        Utils.propagateTypeError(registry, id, PolledGauge.class, c.getClass());
+        Utils.propagateTypeError(registry, id, PolledMeter.class, c.getClass());
       } else {
         ValueState<T> t = (ValueState<T>) c;
         t.add(obj, f);
@@ -257,7 +257,7 @@ public final class PolledGauge {
      * frequently and may be called concurrently.</p>
      *
      * <p>A weak reference will be kept to {@code obj} so that monitoring the object will
-     * not prevent garbage collection. The gauge will go away when {@code obj} is collected.
+     * not prevent garbage collection. The meter will go away when {@code obj} is collected.
      * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
      * this builder.</p>
      *
@@ -278,7 +278,7 @@ public final class PolledGauge {
       ConcurrentMap<Id, Object> state = registry.state();
       Object c = Utils.computeIfAbsent(state, id, i -> tuple);
       if (!(c instanceof CounterState)) {
-        Utils.propagateTypeError(registry, id, PolledGauge.class, c.getClass());
+        Utils.propagateTypeError(registry, id, PolledMeter.class, c.getClass());
       } else {
         CounterState<T> t = (CounterState<T>) c;
         t.add(obj, f);
@@ -339,22 +339,22 @@ public final class PolledGauge {
     }
   }
 
-  /** Base class for gauge tuples used for bookkeeping. */
-  abstract static class GaugeState {
+  /** Base class for meter state used for bookkeeping. */
+  abstract static class AbstractMeterState {
     private boolean scheduled = false;
 
-    /** Return the id for the gauge. */
+    /** Return the id for the meter. */
     protected abstract Id id();
 
-    /** Return the true if this gauge has expired. */
+    /** Return the true if this meter has expired. */
     protected abstract boolean hasExpired();
 
-    /** Sample the gauge and send updates to the registry. */
+    /** Sample the meter and send updates to the registry. */
     protected abstract void update(Registry registry);
 
     /**
-     * Update the registry if this gauge is not expired, otherwise cleanup any state
-     * associated with this gauge.
+     * Update the registry if this meter is not expired, otherwise cleanup any state
+     * associated with this meter.
      */
     void doUpdate(Registry registry) {
       if (hasExpired()) {
@@ -368,7 +368,7 @@ public final class PolledGauge {
     void schedule(Registry registry, ScheduledExecutorService executor) {
       if (!scheduled) {
         long delay = registry.config().gaugePollingFrequency().toMillis();
-        WeakReference<GaugeState> tupleRef = new WeakReference<>(this);
+        WeakReference<AbstractMeterState> tupleRef = new WeakReference<>(this);
         if (executor == null) {
           GaugePoller.schedule(tupleRef, delay, t -> t.update(registry));
         } else {
@@ -380,7 +380,7 @@ public final class PolledGauge {
   }
 
   /** Keep track of the object reference, counter, and other associated bookkeeping info. */
-  static final class ValueState<T> extends GaugeState {
+  static final class ValueState<T> extends AbstractMeterState {
     private final Gauge gauge;
     private final ConcurrentLinkedQueue<ValueEntry<T>> pairs;
 
@@ -438,7 +438,7 @@ public final class PolledGauge {
   }
 
   /** Keep track of a meter and associated metadata. */
-  static final class MeterState extends GaugeState {
+  static final class MeterState extends AbstractMeterState {
     private final Id id;
     private final ConcurrentLinkedQueue<Meter> queue;
 
@@ -492,7 +492,7 @@ public final class PolledGauge {
   }
 
   /** Keep track of the object reference, counter, and other associated bookkeeping info. */
-  static final class CounterState<T> extends GaugeState {
+  static final class CounterState<T> extends AbstractMeterState {
     private final Counter counter;
     private final ConcurrentLinkedQueue<CounterEntry<T>> entries;
 

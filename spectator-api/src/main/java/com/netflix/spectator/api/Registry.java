@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.api.patterns.PolledGauge;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Config;
 import org.slf4j.LoggerFactory;
 
@@ -391,21 +391,21 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Number> T gauge(Id id, T number) {
-    return PolledGauge.using(this).withId(id).monitorValue(number);
+    return PolledMeter.using(this).withId(id).monitorValue(number);
   }
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link PolledGauge.Builder#monitorValue(Number)} for more information.
+   * it as a gauge. See {@link PolledMeter.Builder#monitorValue(Number)} for more information.
    *
    * @param name
    *     Name of the metric being registered.
@@ -415,11 +415,11 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
@@ -441,11 +441,11 @@ public interface Registry extends Iterable<Meter> {
    *     The number that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
@@ -466,16 +466,16 @@ public interface Registry extends Iterable<Meter> {
    *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
-    return PolledGauge.using(this).withId(id).monitorValue(obj, f);
+    return PolledMeter.using(this).withId(id).monitorValue(obj, f);
   }
 
   /**
@@ -491,11 +491,11 @@ public interface Registry extends Iterable<Meter> {
    *     The object that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
@@ -520,16 +520,16 @@ public interface Registry extends Iterable<Meter> {
    *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
-    return PolledGauge.using(this).withId(id).monitorSize(collection);
+    return PolledMeter.using(this).withId(id).monitorSize(collection);
   }
 
   /**
@@ -544,11 +544,11 @@ public interface Registry extends Iterable<Meter> {
    *     The collection that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
@@ -573,16 +573,16 @@ public interface Registry extends Iterable<Meter> {
    *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
-    return PolledGauge.using(this).withId(id).monitorSize(collection);
+    return PolledMeter.using(this).withId(id).monitorSize(collection);
   }
 
   /**
@@ -597,11 +597,11 @@ public interface Registry extends Iterable<Meter> {
    *     The map that was passed in so the registration can be done as part of an assignment
    *     statement.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
@@ -630,18 +630,18 @@ public interface Registry extends Iterable<Meter> {
    * @param method
    *     Name of the method to invoke on the object.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated
   default void methodValue(Id id, Object obj, String method) {
     final Method m = Utils.getGaugeMethod(this, id, obj, method);
     if (m != null) {
-      PolledGauge.using(this).withId(id).monitorValue(obj, Functions.invokeMethod(m));
+      PolledMeter.using(this).withId(id).monitorValue(obj, Functions.invokeMethod(m));
     }
   }
 
@@ -657,11 +657,11 @@ public interface Registry extends Iterable<Meter> {
    * @param method
    *     Name of the method to invoke on the object.
    * @deprecated
-   *     Use {@link PolledGauge} instead. This method has been deprecated to help
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
    *     reduce confusion between active gauges that are explicitly updated by the
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
-   *     by the user. Other patterns such as {@link PolledGauge}s will be handled
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
    *     separately. Scheduled to be removed in 2.0.
    */
   @Deprecated

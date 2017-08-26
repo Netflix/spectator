@@ -20,7 +20,7 @@ import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
-import com.netflix.spectator.api.patterns.PolledGauge;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,7 +134,7 @@ public class Scheduler {
     this.clock = registry.clock();
 
     registry.collectionSize(newId(registry, id, "queueSize"), queue);
-    activeCount = PolledGauge.using(registry)
+    activeCount = PolledMeter.using(registry)
         .withId(newId(registry, id, "activeThreads"))
         .monitorValue(new AtomicInteger());
     taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));

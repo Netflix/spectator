@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.api;
 
-import com.netflix.spectator.api.patterns.PolledGauge;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
@@ -150,7 +150,7 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public void register(Meter meter) {
-    PolledGauge.monitorMeter(this, meter);
+    PolledMeter.monitorMeter(this, meter);
   }
 
   @Override public ConcurrentMap<Id, Object> state() {
@@ -225,7 +225,7 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Iterator<Meter> iterator() {
     // Force update of gauges before traversing values
-    PolledGauge.update(this);
+    PolledMeter.update(this);
     return meters.values().iterator();
   }
 }
