@@ -53,13 +53,12 @@ public final class ThreadPoolMonitor {
   /**
    * The default ID tag name.
    */
-  // visible for testing
   static final String ID_TAG_NAME = "id";
 
   /**
    * The default ID value.
    */
-  private static final String DEFAULT_ID = "default";
+  static final String DEFAULT_ID = "default";
 
   /**
    * Task count meter name.
@@ -104,7 +103,7 @@ public final class ThreadPoolMonitor {
    *
    * @param registry the registry to use
    * @param threadPool the thread pool on which to attach monitoring
-   * @param threadPoolName a name with which to tag the metrics or {@code null} for the default name
+   * @param threadPoolName a name with which to tag the metrics (default name used if {@code null} or empty)
    */
   public static void attach(
       final Registry registry,
@@ -114,7 +113,14 @@ public final class ThreadPoolMonitor {
     Preconditions.checkNotNull(registry, "registry");
     Preconditions.checkNotNull(threadPool, "threadPool");
 
-    final Tag idTag = new BasicTag(ID_TAG_NAME, threadPoolName != null ? threadPoolName : DEFAULT_ID);
+    final String idValue;
+    if (threadPoolName == null || threadPoolName.isEmpty()) {
+      idValue = DEFAULT_ID;
+    } else {
+      idValue = threadPoolName;
+    }
+
+    final Tag idTag = new BasicTag(ID_TAG_NAME, idValue);
 
     PolledMeter.using(registry)
         .withName(TASK_COUNT)

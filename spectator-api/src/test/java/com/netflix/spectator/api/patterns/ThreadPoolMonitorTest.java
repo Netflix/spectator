@@ -35,7 +35,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnit4.class)
 public class ThreadPoolMonitorTest {
@@ -116,24 +118,43 @@ public class ThreadPoolMonitorTest {
     ThreadPoolMonitor.attach(registry, latchedExecutor, null);
   }
 
-  private Meter getMeter(String meterName) {
-    ThreadPoolMonitor.attach(registry, latchedExecutor, THREAD_POOL_NAME);
+  private Meter getMeter(String meterName, String threadPoolName) {
+    ThreadPoolMonitor.attach(registry, latchedExecutor, threadPoolName);
     PolledMeter.update(registry);
-    final Id id = registry.createId(meterName).withTag(ThreadPoolMonitor.ID_TAG_NAME, THREAD_POOL_NAME);
+    final Id id = registry.createId(meterName).withTag(ThreadPoolMonitor.ID_TAG_NAME,
+        (threadPoolName == null || threadPoolName.isEmpty()) ? ThreadPoolMonitor.DEFAULT_ID : threadPoolName);
     return registry.get(id);
+  }
+
+  private Meter getMeter(String meterName) {
+    return getMeter(meterName, THREAD_POOL_NAME);
   }
 
   @Test
   public void metricsAreTaggedWithProvidedThreadPoolName() {
-    final Meter meter = getMeter(ThreadPoolMonitor.MAX_THREADS);
+    checkIdTagValue(getMeter(ThreadPoolMonitor.MAX_THREADS), getClass().getSimpleName());
+  }
 
+  @Test
+  public void metricsAreTaggedWithDefaultThreadPoolNameIfNull() {
+    checkIdTagValue(getMeter(ThreadPoolMonitor.MAX_THREADS, null), ThreadPoolMonitor.DEFAULT_ID);
+  }
+
+  @Test
+  public void metricsAreTaggedWithDefaultThreadPoolNameIfEmpty() {
+    checkIdTagValue(getMeter(ThreadPoolMonitor.MAX_THREADS, ""), ThreadPoolMonitor.DEFAULT_ID);
+  }
+
+  private void checkIdTagValue(Meter meter, String expectedIdValue) {
     final Iterable<Measurement> measurements = meter.measure();
     final Iterator<Measurement> measurementIterator = measurements.iterator();
     assertTrue(measurementIterator.hasNext());
 
     final Iterator<Tag> tags = measurementIterator.next().id().tags().iterator();
     assertTrue(tags.hasNext());
-    assertEquals(getClass().getSimpleName(), tags.next().value());
+    Tag tag = tags.next();
+    assertEquals(ThreadPoolMonitor.ID_TAG_NAME, tag.key());
+    assertEquals(expectedIdValue, tag.value());
   }
 
   @Test
