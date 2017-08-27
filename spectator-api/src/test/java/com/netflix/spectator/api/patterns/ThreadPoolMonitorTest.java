@@ -1,3 +1,18 @@
+/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.DefaultRegistry;
@@ -13,9 +28,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Iterator;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -25,24 +43,67 @@ public class ThreadPoolMonitorTest {
   private static final String THREAD_POOL_NAME = ThreadPoolMonitorTest.class.getSimpleName();
 
   private Registry registry;
-  private ThreadPoolExecutor threadPoolExecutor;
+  private LatchedThreadPoolExecutor latchedExecutor;
+
+  private static class TestRunnable implements Runnable {
+    private final CountDownLatch synchronizer;
+    private final CountDownLatch terminator;
+
+    TestRunnable(final CountDownLatch synchronizer, final CountDownLatch terminator) {
+      this.synchronizer = synchronizer;
+      this.terminator = terminator;
+    }
+
+    @Override
+    public void run() {
+      try {
+        synchronizer.countDown();
+        terminator.await(6, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private static class LatchedThreadPoolExecutor extends ThreadPoolExecutor {
+
+    private CountDownLatch completed;
+
+    LatchedThreadPoolExecutor(final CountDownLatch completed) {
+      super(3, 10, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+      this.completed = completed;
+    }
+
+    CountDownLatch getCompletedLatch() {
+      return this.completed;
+    }
+
+    void setCompletedLatch(final CountDownLatch completedLatch) {
+      this.completed = completedLatch;
+    }
+
+    @Override
+    protected void afterExecute(Runnable r, Throwable t) {
+      completed.countDown();
+    }
+  }
 
   @Before
   public void setUp() throws Exception {
     registry = new DefaultRegistry();
-    threadPoolExecutor = new ThreadPoolExecutor(3, 10, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+    latchedExecutor = new LatchedThreadPoolExecutor(new CountDownLatch(1));
   }
 
   @After
   public void tearDown() throws Exception {
     registry = null;
-    threadPoolExecutor.shutdown();
-    threadPoolExecutor = null;
+    latchedExecutor.shutdown();
+    latchedExecutor = null;
   }
 
   @Test(expected = NullPointerException.class)
   public void monitorThrowsIfNullRegistry() throws Exception {
-    ThreadPoolMonitor.monitor(null, threadPoolExecutor, THREAD_POOL_NAME);
+    ThreadPoolMonitor.monitor(null, latchedExecutor, THREAD_POOL_NAME);
   }
 
   @Test(expected = NullPointerException.class)
@@ -52,25 +113,25 @@ public class ThreadPoolMonitorTest {
 
   @Test
   public void monitorAcceptsNullThreadPoolName() {
-    ThreadPoolMonitor.monitor(registry, threadPoolExecutor, null);
+    ThreadPoolMonitor.monitor(registry, latchedExecutor, null);
   }
 
   private Meter getMeter(String meterName) {
-    ThreadPoolMonitor.monitor(registry, threadPoolExecutor, THREAD_POOL_NAME);
+    ThreadPoolMonitor.monitor(registry, latchedExecutor, THREAD_POOL_NAME);
     PolledMeter.update(registry);
-    Id id = registry.createId(meterName).withTag(ThreadPoolMonitor.ID_TAG_NAME, THREAD_POOL_NAME);
+    final Id id = registry.createId(meterName).withTag(ThreadPoolMonitor.ID_TAG_NAME, THREAD_POOL_NAME);
     return registry.get(id);
   }
 
   @Test
   public void metricsAreTaggedWithProvidedThreadPoolName() {
-    Meter meter = getMeter(ThreadPoolMonitor.MAX_THREADS);
+    final Meter meter = getMeter(ThreadPoolMonitor.MAX_THREADS);
 
-    Iterable<Measurement> measurements = meter.measure();
-    Iterator<Measurement> measurementIterator = measurements.iterator();
+    final Iterable<Measurement> measurements = meter.measure();
+    final Iterator<Measurement> measurementIterator = measurements.iterator();
     assertTrue(measurementIterator.hasNext());
 
-    Iterator<Tag> tags = measurementIterator.next().id().tags().iterator();
+    final Iterator<Tag> tags = measurementIterator.next().id().tags().iterator();
     assertTrue(tags.hasNext());
     assertEquals(getClass().getSimpleName(), tags.next().value());
   }
@@ -112,11 +173,11 @@ public class ThreadPoolMonitorTest {
 
   @Test
   public void maxThreadsUpdatesWhenRegistryIsUpdated() {
-    Meter meter = getMeter(ThreadPoolMonitor.MAX_THREADS);
+    final Meter meter = getMeter(ThreadPoolMonitor.MAX_THREADS);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(10.0, measurements.next().value(), 0.0);
 
-    threadPoolExecutor.setMaximumPoolSize(42);
+    latchedExecutor.setMaximumPoolSize(42);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(42.0, measurements.next().value(), 0.0);
@@ -124,157 +185,158 @@ public class ThreadPoolMonitorTest {
 
   @Test
   public void corePoolSizeUpdatesWhenRegistryIsUpdated() {
-    Meter meter = getMeter(ThreadPoolMonitor.CORE_POOL_SIZE);
+    final Meter meter = getMeter(ThreadPoolMonitor.CORE_POOL_SIZE);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(3.0, measurements.next().value(), 0.0);
 
-    threadPoolExecutor.setCorePoolSize(42);
+    latchedExecutor.setCorePoolSize(42);
+
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(42.0, measurements.next().value(), 0.0);
   }
 
   @Test
-  public void taskCountUpdates() throws InterruptedException {
-    Meter meter = getMeter(ThreadPoolMonitor.TASK_COUNT);
+  public void taskCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+    final Meter meter = getMeter(ThreadPoolMonitor.TASK_COUNT);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    Cancellable command = new Cancellable();
-    threadPoolExecutor.execute(command);
+    final CountDownLatch synchronizer = new CountDownLatch(1);
+    final CountDownLatch terminator = new CountDownLatch(1);
+    final TestRunnable command = new TestRunnable(synchronizer, terminator);
 
-    Thread.sleep(60);
+    latchedExecutor.execute(command);
+
+    synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(1.0, measurements.next().value(), 0.0);
-
-    command.canceled = true;
+    terminator.countDown();
   }
 
   @Test
-  public void currentThreadsBusyCountUpdates() throws InterruptedException {
-    Meter meter = getMeter(ThreadPoolMonitor.CURRENT_THREADS_BUSY);
+  public void currentThreadsBusyCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+    final Meter meter = getMeter(ThreadPoolMonitor.CURRENT_THREADS_BUSY);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    Cancellable command = new Cancellable();
-    threadPoolExecutor.execute(command);
+    final CountDownLatch synchronizer = new CountDownLatch(1);
+    final CountDownLatch terminator = new CountDownLatch(1);
+    final TestRunnable command = new TestRunnable(synchronizer, terminator);
 
-    Thread.sleep(60);
+    latchedExecutor.execute(command);
+
+    synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(1.0, measurements.next().value(), 0.0);
 
-    command.canceled = true;
-    Thread.sleep(60);
+    terminator.countDown();
+    latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
   }
 
   @Test
-  public void completedTaskCountUpdates() throws InterruptedException {
-    Meter meter = getMeter(ThreadPoolMonitor.COMPLETED_TASK_COUNT);
+  public void completedTaskCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+    final Meter meter = getMeter(ThreadPoolMonitor.COMPLETED_TASK_COUNT);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    Cancellable command1 = new Cancellable();
-    Cancellable command2 = new Cancellable();
-    threadPoolExecutor.execute(command1);
-    threadPoolExecutor.execute(command2);
+    final CountDownLatch synchronizer = new CountDownLatch(2);
+    final CountDownLatch terminator1 = new CountDownLatch(1);
+    final CountDownLatch terminator2 = new CountDownLatch(1);
+    final TestRunnable command1 = new TestRunnable(synchronizer, terminator1);
+    final TestRunnable command2 = new TestRunnable(synchronizer, terminator2);
 
-    Thread.sleep(60);
+    latchedExecutor.execute(command1);
+    latchedExecutor.execute(command2);
+
+    synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    command1.canceled = true;
-    Thread.sleep(60);
+    terminator1.countDown();
+    latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(1.0, measurements.next().value(), 0.0);
 
-    command2.canceled = true;
-    Thread.sleep(60);
+    latchedExecutor.setCompletedLatch(new CountDownLatch(1));
+    terminator2.countDown();
+    latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(2.0, measurements.next().value(), 0.0);
   }
 
   @Test
-  public void poolSizeUpdates() throws InterruptedException {
-    Meter meter = getMeter(ThreadPoolMonitor.POOL_SIZE);
+  public void poolSizeUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+    final Meter meter = getMeter(ThreadPoolMonitor.POOL_SIZE);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    Cancellable command1 = new Cancellable();
-    Cancellable command2 = new Cancellable();
-    threadPoolExecutor.execute(command1);
-    threadPoolExecutor.execute(command2);
+    final CountDownLatch synchronizer = new CountDownLatch(2);
+    final CountDownLatch terminator1 = new CountDownLatch(1);
+    final CountDownLatch terminator2 = new CountDownLatch(1);
+    final TestRunnable command1 = new TestRunnable(synchronizer, terminator1);
+    final TestRunnable command2 = new TestRunnable(synchronizer, terminator2);
 
-    Thread.sleep(60);
+    latchedExecutor.execute(command1);
+    latchedExecutor.execute(command2);
+
+    synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(2.0, measurements.next().value(), 0.0);
 
-    command1.canceled = true;
-    command2.canceled = true;
-    threadPoolExecutor.shutdown();
-    Thread.sleep(60);
-    PolledMeter.update(registry);
-    measurements = meter.measure().iterator();
-    assertEquals(0.0, measurements.next().value(), 0.0);
-
+    terminator1.countDown();
+    terminator2.countDown();
   }
 
   @Test
-  public void queueSizeUpdates() throws InterruptedException {
-    threadPoolExecutor.setCorePoolSize(1);
-    threadPoolExecutor.setMaximumPoolSize(1);
-    Meter meter = getMeter(ThreadPoolMonitor.QUEUE_SIZE);
+  public void queueSizeUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+    latchedExecutor.setCorePoolSize(1);
+    latchedExecutor.setMaximumPoolSize(1);
+    final Meter meter = getMeter(ThreadPoolMonitor.QUEUE_SIZE);
     Iterator<Measurement> measurements = meter.measure().iterator();
     assertEquals(0.0, measurements.next().value(), 0.0);
 
-    Cancellable command1 = new Cancellable();
-    Cancellable command2 = new Cancellable();
-    Cancellable command3 = new Cancellable();
-    Cancellable command4 = new Cancellable();
-    Cancellable command5 = new Cancellable();
-    Cancellable command6 = new Cancellable();
-    Cancellable command7 = new Cancellable();
-    threadPoolExecutor.execute(command1);
-    threadPoolExecutor.execute(command2);
-    threadPoolExecutor.execute(command3);
-    threadPoolExecutor.execute(command4);
-    threadPoolExecutor.execute(command5);
-    threadPoolExecutor.execute(command6);
-    threadPoolExecutor.execute(command7);
+    final CountDownLatch synchronizer = new CountDownLatch(1);
+    final CountDownLatch terminator123 = new CountDownLatch(1);
+    final CountDownLatch terminator2 = new CountDownLatch(1);
+    final TestRunnable command1 = new TestRunnable(synchronizer, terminator123);
+    final TestRunnable command2 = new TestRunnable(synchronizer, terminator123);
+    final TestRunnable command3 = new TestRunnable(synchronizer, terminator123);
+    final TestRunnable command4 = new TestRunnable(synchronizer, terminator2);
+    final TestRunnable command5 = new TestRunnable(synchronizer, terminator2);
+    final TestRunnable command6 = new TestRunnable(synchronizer, terminator2);
+    final TestRunnable command7 = new TestRunnable(synchronizer, terminator2);
 
+    latchedExecutor.execute(command1);
+    latchedExecutor.execute(command2);
+    latchedExecutor.execute(command3);
+    latchedExecutor.execute(command4);
+    latchedExecutor.execute(command5);
+    latchedExecutor.execute(command6);
+    latchedExecutor.execute(command7);
+
+    synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(6.0, measurements.next().value(), 0.0);
 
-    command1.canceled = true;
-    command2.canceled = true;
-    command3.canceled = true;
-    Thread.sleep(60);
+    latchedExecutor.setCompletedLatch(new CountDownLatch(3));
+    terminator123.countDown();
+    latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
+
     PolledMeter.update(registry);
     measurements = meter.measure().iterator();
     assertEquals(3.0, measurements.next().value(), 0.0);
 
-  }
-
-  private static class Cancellable implements Runnable {
-    volatile boolean canceled = false;
-    @Override
-    public void run() {
-      while (!canceled) {
-        try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
-      }
-    }
+    terminator2.countDown();
   }
 }

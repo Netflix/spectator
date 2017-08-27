@@ -1,3 +1,18 @@
+/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.BasicTag;
@@ -49,37 +64,37 @@ public final class ThreadPoolMonitor {
   /**
    * Task count meter name.
    */
-  public static final String TASK_COUNT = "threadpool.taskCount";
+  static final String TASK_COUNT = "threadpool.taskCount";
 
   /**
    * Completed task count meter name.
    */
-  public static final String COMPLETED_TASK_COUNT = "threadpool.completedTaskCount";
+  static final String COMPLETED_TASK_COUNT = "threadpool.completedTaskCount";
 
   /**
    * Current threads busy meter name.
    */
-  public static final String CURRENT_THREADS_BUSY = "threadpool.currentThreadsBusy";
+  static final String CURRENT_THREADS_BUSY = "threadpool.currentThreadsBusy";
 
   /**
    * Max threads meter name.
    */
-  public static final String MAX_THREADS = "threadpool.maxThreads";
+  static final String MAX_THREADS = "threadpool.maxThreads";
 
   /**
    * Pool size meter name.
    */
-  public static final String POOL_SIZE = "threadpool.poolSize";
+  static final String POOL_SIZE = "threadpool.poolSize";
 
   /**
    * Core pool size meter name.
    */
-  public static final String CORE_POOL_SIZE = "threadpool.corePoolSize";
+  static final String CORE_POOL_SIZE = "threadpool.corePoolSize";
 
   /**
    * Queue size meter name.
    */
-  public static final String QUEUE_SIZE = "threadpool.queueSize";
+  static final String QUEUE_SIZE = "threadpool.queueSize";
 
   // prevent direct instantiation.
   private ThreadPoolMonitor() { }
