@@ -103,10 +103,10 @@ public final class ThreadPoolMonitor {
    * Register the provided thread pool, optionally tagged with a name.
    *
    * @param registry the registry to use
-   * @param threadPool the thread pool to monitor
+   * @param threadPool the thread pool on which to attach monitoring
    * @param threadPoolName a name with which to tag the metrics or {@code null} for the default name
    */
-  public static void monitor(
+  public static void attach(
       final Registry registry,
       final ThreadPoolExecutor threadPool,
       final String threadPoolName) {

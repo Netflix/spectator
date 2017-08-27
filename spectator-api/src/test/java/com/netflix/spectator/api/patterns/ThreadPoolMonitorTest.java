@@ -103,21 +103,21 @@ public class ThreadPoolMonitorTest {
 
   @Test(expected = NullPointerException.class)
   public void monitorThrowsIfNullRegistry() throws Exception {
-    ThreadPoolMonitor.monitor(null, latchedExecutor, THREAD_POOL_NAME);
+    ThreadPoolMonitor.attach(null, latchedExecutor, THREAD_POOL_NAME);
   }
 
   @Test(expected = NullPointerException.class)
   public void monitorThrowsIfNullThreadPool() throws Exception {
-    ThreadPoolMonitor.monitor(registry, null, THREAD_POOL_NAME);
+    ThreadPoolMonitor.attach(registry, null, THREAD_POOL_NAME);
   }
 
   @Test
   public void monitorAcceptsNullThreadPoolName() {
-    ThreadPoolMonitor.monitor(registry, latchedExecutor, null);
+    ThreadPoolMonitor.attach(registry, latchedExecutor, null);
   }
 
   private Meter getMeter(String meterName) {
-    ThreadPoolMonitor.monitor(registry, latchedExecutor, THREAD_POOL_NAME);
+    ThreadPoolMonitor.attach(registry, latchedExecutor, THREAD_POOL_NAME);
     PolledMeter.update(registry);
     final Id id = registry.createId(meterName).withTag(ThreadPoolMonitor.ID_TAG_NAME, THREAD_POOL_NAME);
     return registry.get(id);
