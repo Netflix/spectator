@@ -76,7 +76,7 @@ public class ThreadPoolMonitorTest {
     private final AtomicInteger active = new AtomicInteger();
     private final AtomicLong tasks = new AtomicLong();
     private final AtomicLong completedTasks = new AtomicLong();
-    private CountDownLatch completed;
+    private volatile CountDownLatch completed;
 
     LatchedThreadPoolExecutor(final CountDownLatch completed) {
       super(3, 10, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
@@ -367,16 +367,17 @@ public class ThreadPoolMonitorTest {
     final Gauge gauge = getGauge(ThreadPoolMonitor.QUEUE_SIZE);
     assertEquals(0.0, gauge.value(), 0.0);
 
-    final CountDownLatch synchronizer = new CountDownLatch(1);
+    final CountDownLatch synchronizer1 = new CountDownLatch(1);
+    final CountDownLatch synchronizer2 = new CountDownLatch(1);
     final CountDownLatch terminator123 = new CountDownLatch(1);
     final CountDownLatch terminator2 = new CountDownLatch(1);
-    final TestRunnable command1 = new TestRunnable(synchronizer, terminator123);
-    final TestRunnable command2 = new TestRunnable(synchronizer, terminator123);
-    final TestRunnable command3 = new TestRunnable(synchronizer, terminator123);
-    final TestRunnable command4 = new TestRunnable(synchronizer, terminator2);
-    final TestRunnable command5 = new TestRunnable(synchronizer, terminator2);
-    final TestRunnable command6 = new TestRunnable(synchronizer, terminator2);
-    final TestRunnable command7 = new TestRunnable(synchronizer, terminator2);
+    final TestRunnable command1 = new TestRunnable(synchronizer1, terminator123);
+    final TestRunnable command2 = new TestRunnable(synchronizer1, terminator123);
+    final TestRunnable command3 = new TestRunnable(synchronizer1, terminator123);
+    final TestRunnable command4 = new TestRunnable(synchronizer2, terminator2);
+    final TestRunnable command5 = new TestRunnable(synchronizer2, terminator2);
+    final TestRunnable command6 = new TestRunnable(synchronizer2, terminator2);
+    final TestRunnable command7 = new TestRunnable(synchronizer2, terminator2);
 
     latchedExecutor.execute(command1);
     latchedExecutor.execute(command2);
@@ -386,7 +387,7 @@ public class ThreadPoolMonitorTest {
     latchedExecutor.execute(command6);
     latchedExecutor.execute(command7);
 
-    synchronizer.await(6, TimeUnit.SECONDS);
+    synchronizer1.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     assertEquals(6.0, gauge.value(), 0.0);
 
@@ -394,6 +395,7 @@ public class ThreadPoolMonitorTest {
     terminator123.countDown();
     latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
 
+    synchronizer2.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
     assertEquals(3.0, gauge.value(), 0.0);
 
