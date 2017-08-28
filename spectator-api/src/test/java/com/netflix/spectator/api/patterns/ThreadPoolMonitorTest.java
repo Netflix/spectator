@@ -30,12 +30,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Iterator;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -224,7 +222,7 @@ public class ThreadPoolMonitorTest {
   }
 
   @Test
-  public void taskCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+  public void taskCountUpdates() throws InterruptedException {
     final Counter counter = getCounter(ThreadPoolMonitor.TASK_COUNT);
     assertEquals(0, counter.count());
 
@@ -241,7 +239,7 @@ public class ThreadPoolMonitorTest {
   }
 
   @Test
-  public void currentThreadsBusyCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+  public void currentThreadsBusyCountUpdates() throws InterruptedException {
     final Gauge gauge = getGauge(ThreadPoolMonitor.CURRENT_THREADS_BUSY);
     assertEquals(0.0, gauge.value(), 0.0);
 
@@ -262,7 +260,7 @@ public class ThreadPoolMonitorTest {
   }
 
   @Test
-  public void completedTaskCountUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+  public void completedTaskCountUpdates() throws InterruptedException {
     final Counter counter = getCounter(ThreadPoolMonitor.COMPLETED_TASK_COUNT);
     assertEquals(0, counter.count());
 
@@ -292,7 +290,7 @@ public class ThreadPoolMonitorTest {
   }
 
   @Test
-  public void poolSizeUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+  public void poolSizeUpdates() throws InterruptedException {
     final Gauge gauge = getGauge(ThreadPoolMonitor.POOL_SIZE);
     assertEquals(0.0, gauge.value(), 0.0);
 
@@ -314,7 +312,7 @@ public class ThreadPoolMonitorTest {
   }
 
   @Test
-  public void queueSizeUpdates() throws InterruptedException, BrokenBarrierException, TimeoutException {
+  public void queueSizeUpdates() throws InterruptedException {
     latchedExecutor.setCorePoolSize(1);
     latchedExecutor.setMaximumPoolSize(1);
     final Gauge gauge = getGauge(ThreadPoolMonitor.QUEUE_SIZE);
