@@ -30,10 +30,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Iterator;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -69,6 +72,10 @@ public class ThreadPoolMonitorTest {
 
   private static class LatchedThreadPoolExecutor extends ThreadPoolExecutor {
 
+    private final AtomicInteger queueSize = new AtomicInteger();
+    private final AtomicInteger active = new AtomicInteger();
+    private final AtomicLong tasks = new AtomicLong();
+    private final AtomicLong completedTasks = new AtomicLong();
     private CountDownLatch completed;
 
     LatchedThreadPoolExecutor(final CountDownLatch completed) {
@@ -85,8 +92,50 @@ public class ThreadPoolMonitorTest {
     }
 
     @Override
+    public void execute(Runnable task) {
+      queueSize.incrementAndGet();
+      super.execute(task);
+    }
+
+    @Override
+    protected void beforeExecute(Thread t, Runnable r) {
+      queueSize.decrementAndGet();
+      active.incrementAndGet();
+      tasks.incrementAndGet();
+      super.beforeExecute(t, r);
+    }
+
+    @Override
     protected void afterExecute(Runnable r, Throwable t) {
+      active.decrementAndGet();
+      completedTasks.incrementAndGet();
       completed.countDown();
+      super.afterExecute(r, t);
+    }
+
+    @Override
+    public int getActiveCount() {
+      return active.get();
+    }
+
+    @Override
+    public long getTaskCount() {
+      return tasks.get();
+    }
+
+    @Override
+    public long getCompletedTaskCount() {
+      return completedTasks.get();
+    }
+
+    @Override
+    public BlockingQueue<Runnable> getQueue() {
+      return new LinkedBlockingQueue<Runnable>() {
+        @Override
+        public int size() {
+          return queueSize.get();
+        }
+      };
     }
   }
 
