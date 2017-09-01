@@ -25,6 +25,7 @@ pages:
   - 'Log4j2 Appender': ext/log4j2.md
   - 'Log4j1 Appender': ext/log4j1.md
   - 'Placeholders': ext/placeholders.md
+  - 'Thread Pools': ext/thread-pools.md
 - Registries:
   - Metrics3: registry/metrics3.md
   - Servo: registry/servo.md
