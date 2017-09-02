@@ -18,10 +18,12 @@ pages:
   - 'Netflix Integration': intro/netflix.md
   - 'Servo Comparison': intro/servo-comparison.md
 - Extensions:
-  - 'Buffer Pools': ext/jvm-buffer-pools.md
-  - 'Garbage Collection': ext/jvm-gc.md
-  - 'GC Causes': ext/jvm-gc-causes.md
-  - 'Memory Pools': ext/jvm-memory-pools.md
+  - 'JVM Stats':
+    - 'Buffer Pools': ext/jvm-buffer-pools.md
+    - 'Garbage Collection': ext/jvm-gc.md
+    - 'GC Causes': ext/jvm-gc-causes.md
+    - 'Memory Pools': ext/jvm-memory-pools.md
+    - 'Thread Pools': ext/thread-pools.md
   - 'Log4j2 Appender': ext/log4j2.md
   - 'Log4j1 Appender': ext/log4j1.md
   - 'Placeholders': ext/placeholders.md
