@@ -1,11 +1,11 @@
 # Thread Pools
 
-Java's [ThreadPoolExecutor][ThreadPoolExecutorJavadoc] exposes several properties that are useful to monitor to assess
+Java's [ThreadPoolExecutor] exposes several properties that are useful to monitor to assess
 the health, performance, and configuration of the pool.
 
 ## Getting Started
 
-To report thread pool metrics, one can attach a [ThreadPoolMonitor][ThreadPoolMonitorJavadoc] in the following manner:
+To report thread pool metrics, one can attach a [ThreadPoolMonitor] in the following manner:
 
 ```java
 import com.netflix.spectator.api.patterns.ThreadPoolMonitor;
@@ -69,5 +69,5 @@ Gauge showing the current number of threads queued for execution.
 **Unit:** count<br/>
 **Data Source:** `ThreadPoolExecutor#getQueue().size()`
 
-[ThreadPoolExecutorJavadoc]: http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ThreadPoolExecutor.html
-[ThreadPoolMonitorJavadoc]: http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/patterns/ThreadPoolMonitor.html
+[ThreadPoolExecutor]: http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ThreadPoolExecutor.html
+[ThreadPoolMonitor]: http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/patterns/ThreadPoolMonitor.html
