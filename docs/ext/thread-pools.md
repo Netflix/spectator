@@ -9,7 +9,6 @@ To report thread pool metrics, one can attach a [ThreadPoolMonitor] in the follo
 
 ```java
 import com.netflix.spectator.api.patterns.ThreadPoolMonitor;
-import com.netflix.spectator.api.Spectator;
 
 ThreadPoolMonitor.attach(registry, myThreadPoolExecutor, "my-thread-pool");
 ```
