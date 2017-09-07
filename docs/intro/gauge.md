@@ -41,7 +41,7 @@ class HttpServer {
 ```
 
 Gauges are [passive](registry.md#passive), i.e., they are not directly updated
-when some activity occurs. The provide a way to register a function that allows
+when some activity occurs. They provide a way to register a function that allows
 the registry to retrieve the current value when it is needed.
 
 The reference to the object is passed in separately and the spectator registry
