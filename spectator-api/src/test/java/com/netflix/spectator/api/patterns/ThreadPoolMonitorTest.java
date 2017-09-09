@@ -264,10 +264,13 @@ public class ThreadPoolMonitorTest {
     final Gauge gauge = getGauge(ThreadPoolMonitor.CORE_POOL_SIZE);
     assertEquals(3.0, gauge.value(), 0.0);
 
-    latchedExecutor.setCorePoolSize(42);
+    // Must be <= 10 because that is the max pool size used in the test. Starting with
+    // jdk9 the it will validate and fail if trying to set the pool size larger than
+    // the max
+    latchedExecutor.setCorePoolSize(7);
 
     PolledMeter.update(registry);
-    assertEquals(42.0, gauge.value(), 0.0);
+    assertEquals(7.0, gauge.value(), 0.0);
   }
 
   @Test
