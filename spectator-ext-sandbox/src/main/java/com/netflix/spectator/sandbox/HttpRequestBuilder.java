@@ -254,12 +254,17 @@ public class HttpRequestBuilder {
 
   @SuppressWarnings("PMD.AssignmentInOperand")
   private byte[] readAll(InputStream in) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    byte[] buffer = new byte[4096];
-    int length;
-    while ((length = in.read(buffer)) > 0) {
-      baos.write(buffer, 0, length);
+    if (in == null) {
+      // For error status codes with a content-length of 0 we see this case
+      return new byte[0];
+    } else {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      byte[] buffer = new byte[4096];
+      int length;
+      while ((length = in.read(buffer)) > 0) {
+        baos.write(buffer, 0, length);
+      }
+      return baos.toByteArray();
     }
-    return baos.toByteArray();
   }
 }
