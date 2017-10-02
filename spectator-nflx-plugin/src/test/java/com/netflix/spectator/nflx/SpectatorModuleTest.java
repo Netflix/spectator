@@ -15,6 +15,12 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.servo.ServoRegistry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,6 +28,26 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SpectatorModuleTest {
+
+  @Test
+  public void servoRegistryIsBound() {
+    Injector injector = Guice.createInjector(new SpectatorModule());
+    Assert.assertTrue(injector.getInstance(Registry.class) instanceof ServoRegistry);
+  }
+
+  @Test
+  public void extendedRegistryIsBound() {
+    Injector injector = Guice.createInjector(new SpectatorModule());
+    Assert.assertNotNull(injector.getInstance(ExtendedRegistry.class));
+  }
+
+  @Test
+  public void injectedRegistryAddedToGlobal() {
+    Injector injector = Guice.createInjector(new SpectatorModule());
+    Registry registry = injector.getInstance(Registry.class);
+    registry.counter("test").increment();
+    Assert.assertEquals(Spectator.globalRegistry().counter("test").count(), 1);
+  }
 
   @Test
   public void equals() {

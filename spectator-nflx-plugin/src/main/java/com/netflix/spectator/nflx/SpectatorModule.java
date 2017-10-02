@@ -19,10 +19,9 @@ import com.netflix.spectator.servo.ServoRegistry;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-import javax.inject.Singleton;
+import javax.inject.Provider;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
@@ -64,18 +63,8 @@ public final class SpectatorModule extends AbstractModule {
   @Override protected void configure() {
     bind(Plugin.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
-  }
-
-  @Provides
-  @Singleton
-  ExtendedRegistry getExtendedRegistry() {
-    return Spectator.registry();
-  }
-
-  @Provides
-  @Singleton
-  Registry getRegistry() {
-    return new ServoRegistry();
+    bind(Registry.class).toProvider(RegistryProvider.class).asEagerSingleton();
+    bind(ExtendedRegistry.class).toInstance(Spectator.registry());
   }
 
   @Override public boolean equals(Object obj) {
@@ -98,6 +87,15 @@ public final class SpectatorModule extends AbstractModule {
     @PreDestroy
     void onShutdown() {
       Spectator.globalRegistry().remove(registry);
+    }
+  }
+
+  private static class RegistryProvider implements Provider<Registry> {
+
+    private ServoRegistry registry = new ServoRegistry();
+
+    @Override public Registry get() {
+      return registry;
     }
   }
 }
