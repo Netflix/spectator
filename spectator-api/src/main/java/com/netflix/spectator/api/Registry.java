@@ -309,6 +309,46 @@ public interface Registry extends Iterable<Meter> {
   }
 
   /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name) {
+    return gauge(createId(name));
+  }
+
+  /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name, Iterable<Tag> tags) {
+    return gauge(createId(name, tags));
+  }
+
+  /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name, String... tags) {
+    return gauge(createId(name, Utils.toIterable(tags)));
+  }
+
+  /**
    * Measures the time taken for long tasks.
    *
    * @param id
