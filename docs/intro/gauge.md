@@ -143,13 +143,13 @@ For sources like this the `monitorMonotonicValue` method can be used:
 LongAdder tasks = new LongAdder();
 PolledMeter.using(registry)
   .withName("pool.completedTasks")
-  .monitorMonotonicValue(tasks);
+  .monitorMonotonicCounter(tasks);
 
 // Or using a lambda
 ThreadPoolExecutor executor = ...
 PolledMeter.using(registry)
   .withName("pool.completedTasks")
-  .monitorMonotonicValue(executor, ThreadPoolExecutor::getCompletedTaskCount);
+  .monitorMonotonicCounter(executor, ThreadPoolExecutor::getCompletedTaskCount);
 ```
 
 For thread pools specifically, there are better options for getting standard metrics.
