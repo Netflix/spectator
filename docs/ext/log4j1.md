@@ -14,7 +14,7 @@ log messages reported.
 To use it simply add a dependency:
 
 ```
-com.netflix.spectator:spectator-ext-log4j1:0.57.1
+com.netflix.spectator:spectator-ext-log4j1:0.58.0
 ```
 
 Then in your log4j configuration specify the `com.netflix.spectator.log4j.SpectatorAppender`.
