@@ -44,7 +44,7 @@ import java.util.function.ToLongFunction;
  *   Registry registry = ...
  *   AtomicLong connections = PolledMeter.using(registry)
  *     .withName("server.currentConnections")
- *     .monitor(new AtomicLong());
+ *     .monitorValue(new AtomicLong());
  *
  *   // When a connection is added
  *   connections.incrementAndGet();
@@ -246,7 +246,7 @@ public final class PolledMeter {
      *   Registry registry = ...
      *   MonotonicCounter.using(registry)
      *     .withName("pool.completedTasks")
-     *     .monitor(executor, ThreadPoolExecutor::getCompletedTaskCount);
+     *     .monitorMonotonicCounter(executor, ThreadPoolExecutor::getCompletedTaskCount);
      * </pre>
      *
      * <p>The value is polled by executing {@code f(obj)} and a counter will be updated with
