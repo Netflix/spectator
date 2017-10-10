@@ -117,13 +117,8 @@ public interface Registry extends Iterable<Meter> {
    * Represents a value sampled from another source. For example, the size of queue. The caller
    * is responsible for sampling the value regularly and calling {@link Gauge#set(double)}.
    * Registry implementations are free to expire the gauge if it has not been updated in the
-   * last minute. If you do not want to worry about the sampling, then use one of the helpers
-   * linked below instead.
-   *
-   * @see #gauge(Id, Number)
-   * @see #gauge(Id, Object, ToDoubleFunction)
-   * @see #collectionSize(Id, Collection)
-   * @see #mapSize(Id, Map)
+   * last minute. If you do not want to worry about the sampling, then use {@link PolledMeter}
+   * instead.
    *
    * @param id
    *     Identifier created by a call to {@link #createId}
