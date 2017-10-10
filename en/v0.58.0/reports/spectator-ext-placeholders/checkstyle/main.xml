@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/AbstractDefaultPlaceholderMeter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/ConstantTagFactory.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderCounter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderDistributionSummary.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderFactory.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderGauge.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderId.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/DefaultPlaceholderTimer.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/MdcTagFactory.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/PlaceholderFactory.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/PlaceholderId.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-placeholders/src/main/java/com/netflix/spectator/placeholders/TagFactory.java">
+</file>
+</checkstyle>

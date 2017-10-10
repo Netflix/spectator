@@ -1,0 +1,556 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PolledMeter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.patterns</a> &gt; <span class="el_source">PolledMeter.java</span></div><h1>PolledMeter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Utils;
+
+import java.lang.ref.WeakReference;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToLongFunction;
+
+/**
+ * Helper for configuring a meter that will receive a value by regularly polling the
+ * source in the background.
+ *
+ * &lt;p&gt;Example usage:&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ *   Registry registry = ...
+ *   AtomicLong connections = PolledMeter.using(registry)
+ *     .withName(&quot;server.currentConnections&quot;)
+ *     .monitorValue(new AtomicLong());
+ *
+ *   // When a connection is added
+ *   connections.incrementAndGet();
+ *
+ *   // When a connection is removed
+ *   connections.decrementAndGet();
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;Polling frequency will depend on the underlying registry implementation, but users should
+ * assume it will be frequently checked and that the provided function is cheap. Users should
+ * keep in mind that polling will not capture all activity, just sample it at some frequency.
+ * For example, if monitoring a queue, then a meter will only tell you the last sampled size
+ * when the value is reported. If more details are needed, then use an alternative type
+ * and ensure that all changes are reported when they occur.&lt;/p&gt;
+ *
+ * &lt;p&gt;For example, consider tracking the number of currently established connections to a server.
+ * Using a polled meter will show the last sampled number when reported. An alternative would
+ * be to report the number of connections to a {@link com.netflix.spectator.api.DistributionSummary}
+ * every time a connection is added or removed. The distribution summary would provide more
+ * accurate tracking such as max and average number of connections across an interval of time.
+ * The polled meter would not provide that level of detail.&lt;/p&gt;
+ *
+ * &lt;p&gt;If multiple values are monitored with the same id, then the values will be aggregated and
+ * the sum will be reported. For example, registering multiple meters for active threads in
+ * a thread pool with the same id would produce a value that is the overall number
+ * of active threads. For other behaviors, manage it on the user side and avoid multiple
+ * registrations.&lt;/p&gt;
+ */
+public final class PolledMeter {
+
+<span class="nc" id="L78">  private PolledMeter() {</span>
+<span class="nc" id="L79">  }</span>
+
+  /**
+   * Return a builder for configuring a polled meter reporting to the provided registry.
+   *
+   * @param registry
+   *     Registry that will maintain the state and receive the sampled values for the
+   *     configured meter.
+   * @return
+   *     Builder for configuring a polled meter.
+   */
+  public static IdBuilder&lt;Builder&gt; using(Registry registry) {
+<span class="fc" id="L91">    return new IdBuilder&lt;Builder&gt;(registry) {</span>
+      @Override protected Builder createTypeBuilder(Id id) {
+<span class="fc" id="L93">        return new Builder(registry, id);</span>
+      }
+    };
+  }
+
+  /** Force the polling of all meters associated with the registry. */
+  public static void update(Registry registry) {
+<span class="fc" id="L100">    Iterator&lt;Map.Entry&lt;Id, Object&gt;&gt; iter = registry.state().entrySet().iterator();</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">    while (iter.hasNext()) {</span>
+<span class="fc" id="L102">      Map.Entry&lt;Id, Object&gt; entry = iter.next();</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">      if (entry.getValue() instanceof AbstractMeterState) {</span>
+<span class="fc" id="L104">        AbstractMeterState tuple = (AbstractMeterState) entry.getValue();</span>
+<span class="fc" id="L105">        tuple.doUpdate(registry);</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        if (tuple.hasExpired()) {</span>
+<span class="fc" id="L107">          iter.remove();</span>
+        }
+      }
+<span class="fc" id="L110">    }</span>
+<span class="fc" id="L111">  }</span>
+
+  /**
+   * Explicitly disable polling for the meter registered with {@code id}. This is optional
+   * and is mostly used if it is desirable for the meter to go away immediately. The polling
+   * will stop automatically when the referred object is garbage collected. See
+   * {@link Builder#monitorValue(Object, ToDoubleFunction)} for more information.
+   */
+  public static void remove(Registry registry, Id id) {
+<span class="fc" id="L120">    Object obj = registry.state().get(id);</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">    if (obj instanceof AbstractMeterState) {</span>
+<span class="fc" id="L122">      registry.state().remove(id, obj);</span>
+    }
+<span class="fc" id="L124">  }</span>
+
+  /**
+   * Builder for configuring a polled meter value.
+   */
+  public static final class Builder extends TagsBuilder&lt;Builder&gt; {
+
+    private final Registry registry;
+    private final Id baseId;
+    private ScheduledExecutorService executor;
+
+    /** Create a new instance. */
+    Builder(Registry registry, Id baseId) {
+<span class="fc" id="L137">      super();</span>
+<span class="fc" id="L138">      this.registry = registry;</span>
+<span class="fc" id="L139">      this.baseId = baseId;</span>
+<span class="fc" id="L140">    }</span>
+
+    /**
+     * Set the executor to be used for polling the value. If not set, then the default
+     * executor will be used which is limited to a single thread to minimize the worst
+     * case resource usage for collecting the meter data. Use a custom executor if more
+     * resources are needed or if the polling operation is expensive.
+     *
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder scheduleOn(ScheduledExecutorService executor) {
+<span class="nc" id="L152">      this.executor = executor;</span>
+<span class="nc" id="L153">      return this;</span>
+    }
+
+    /**
+     * Poll the value of the provided {@link Number}. The implementation provided must
+     * be thread safe. The most common usages of this are to monitor instances of
+     * {@link java.util.concurrent.atomic.AtomicInteger}
+     * or {@link java.util.concurrent.atomic.AtomicLong}.
+     *
+     * @param number
+     *     Thread-safe implementation of {@link Number} used to access the value.
+     * @return
+     *     The number that was passed in to allow the builder to be used inline as part
+     *     of an assignment.
+     */
+    public &lt;T extends Number&gt; T monitorValue(T number) {
+<span class="fc" id="L169">      return monitorValue(number, Number::doubleValue);</span>
+    }
+
+    /**
+     * Poll by executing {@code f(obj)} and reporting the returned value. The provided
+     * function must be thread safe and cheap to execute. Expensive operations, including
+     * any IO or network calls, should not be performed inline unless using a custom
+     * executor by calling {@link #scheduleOn(ScheduledExecutorService)}. Assume that the
+     * function will be called frequently and may be called concurrently.
+     *
+     * &lt;p&gt;A weak reference will be kept to {@code obj} so that monitoring the object will
+     * not prevent garbage collection. The meter will go away when {@code obj} is collected.
+     * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
+     * this builder.&lt;/p&gt;
+     *
+     * @param obj
+     *     Object used to compute a value.
+     * @param f
+     *     Function that is applied on the value for the number.
+     * @return
+     *     The object that was passed in so the registration can be done as part of an assignment
+     *     statement.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public &lt;T&gt; T monitorValue(T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L194">      final Id id = baseId.withTags(extraTags);</span>
+<span class="fc" id="L195">      final Gauge gauge = registry.gauge(id);</span>
+<span class="fc" id="L196">      final ValueState&lt;T&gt; tuple = new ValueState&lt;&gt;(gauge);</span>
+
+<span class="fc" id="L198">      ConcurrentMap&lt;Id, Object&gt; state = registry.state();</span>
+<span class="fc" id="L199">      Object c = Utils.computeIfAbsent(state, id, i -&gt; tuple);</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">      if (!(c instanceof ValueState)) {</span>
+<span class="nc" id="L201">        Utils.propagateTypeError(registry, id, PolledMeter.class, c.getClass());</span>
+      } else {
+<span class="fc" id="L203">        ValueState&lt;T&gt; t = (ValueState&lt;T&gt;) c;</span>
+<span class="fc" id="L204">        t.add(obj, f);</span>
+<span class="fc" id="L205">        t.schedule(registry, executor);</span>
+      }
+
+<span class="fc" id="L208">      return obj;</span>
+    }
+
+    /**
+     * Poll the value of the provided {@link Number} and update a counter with the delta
+     * since the last time the value was sampled. The implementation provided must
+     * be thread safe. The most common usages of this are to monitor instances of
+     * {@link java.util.concurrent.atomic.AtomicInteger},
+     * {@link java.util.concurrent.atomic.AtomicLong}, or
+     * {@link java.util.concurrent.atomic.LongAdder}. For more information see
+     * {@link #monitorMonotonicCounter(Object, ToLongFunction)}.
+     *
+     * @param number
+     *     Thread-safe implementation of {@link Number} used to access the value.
+     * @return
+     *     The number that was passed in to allow the builder to be used inline as part
+     *     of an assignment.
+     */
+    public &lt;T extends Number&gt; T monitorMonotonicCounter(T number) {
+<span class="fc" id="L227">      return monitorMonotonicCounter(number, Number::longValue);</span>
+    }
+
+    /**
+     * Map a monotonically increasing long or int value to a counter. Monotonic counters
+     * are frequently used as a simple way for exposing the amount of change. In order to be
+     * useful, they need to be polled frequently so the change can be measured regularly over
+     * time.
+     *
+     * &lt;p&gt;Example monotonic counters provided by the JDK:&lt;/p&gt;
+     *
+     * &lt;ul&gt;
+     *   &lt;li&gt;{@link java.util.concurrent.ThreadPoolExecutor#getCompletedTaskCount()}&lt;/li&gt;
+     *   &lt;li&gt;{@link java.lang.management.GarbageCollectorMXBean#getCollectionCount()}&lt;/li&gt;
+     * &lt;/ul&gt;
+     *
+     * &lt;p&gt;Example usage:&lt;/p&gt;
+     *
+     * &lt;pre&gt;
+     *   Registry registry = ...
+     *   MonotonicCounter.using(registry)
+     *     .withName(&quot;pool.completedTasks&quot;)
+     *     .monitorMonotonicCounter(executor, ThreadPoolExecutor::getCompletedTaskCount);
+     * &lt;/pre&gt;
+     *
+     * &lt;p&gt;The value is polled by executing {@code f(obj)} and a counter will be updated with
+     * the delta since the last time the value was sampled. The provided function must be
+     * thread safe and cheap to execute. Expensive operations, including any IO or network
+     * calls, should not be performed inline unless using a custom executor by calling
+     * {@link #scheduleOn(ScheduledExecutorService)}. Assume that the function will be called
+     * frequently and may be called concurrently.&lt;/p&gt;
+     *
+     * &lt;p&gt;A weak reference will be kept to {@code obj} so that monitoring the object will
+     * not prevent garbage collection. The meter will go away when {@code obj} is collected.
+     * To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used with
+     * this builder.&lt;/p&gt;
+     *
+     * @param obj
+     *     Object used to compute a value.
+     * @param f
+     *     Function that is applied on the value for the number.
+     * @return
+     *     The object that was passed in so the registration can be done as part of an assignment
+     *     statement.
+     */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public &lt;T&gt; T monitorMonotonicCounter(T obj, ToLongFunction&lt;T&gt; f) {
+<span class="fc" id="L274">      final Id id = baseId.withTags(extraTags);</span>
+<span class="fc" id="L275">      final Counter counter = registry.counter(id);</span>
+<span class="fc" id="L276">      final CounterState&lt;T&gt; tuple = new CounterState&lt;&gt;(counter);</span>
+
+<span class="fc" id="L278">      ConcurrentMap&lt;Id, Object&gt; state = registry.state();</span>
+<span class="fc" id="L279">      Object c = Utils.computeIfAbsent(state, id, i -&gt; tuple);</span>
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">      if (!(c instanceof CounterState)) {</span>
+<span class="nc" id="L281">        Utils.propagateTypeError(registry, id, PolledMeter.class, c.getClass());</span>
+      } else {
+<span class="fc" id="L283">        CounterState&lt;T&gt; t = (CounterState&lt;T&gt;) c;</span>
+<span class="fc" id="L284">        t.add(obj, f);</span>
+<span class="fc" id="L285">        t.schedule(registry, executor);</span>
+      }
+
+<span class="fc" id="L288">      return obj;</span>
+    }
+
+    /**
+     * Poll the value of the provided {@link Collection}. The implementation provided must
+     * be thread safe. Keep in mind that computing the size can be an expensive operation
+     * for some collection types.
+     *
+     * @param collection
+     *     Thread-safe implementation of {@link Collection}.
+     * @return
+     *     The collection that was passed in to allow the builder to be used inline as part
+     *     of an assignment.
+     */
+    public &lt;T extends Collection&lt;?&gt;&gt; T monitorSize(T collection) {
+<span class="fc" id="L303">      return monitorValue(collection, Collection::size);</span>
+    }
+
+    /**
+     * Poll the value of the provided {@link Map}. The implementation provided must
+     * be thread safe. Keep in mind that computing the size can be an expensive operation
+     * for some map types.
+     *
+     * @param map
+     *     Thread-safe implementation of {@link Map}.
+     * @return
+     *     The collection that was passed in to allow the builder to be used inline as part
+     *     of an assignment.
+     */
+    public &lt;T extends Map&lt;?, ?&gt;&gt; T monitorSize(T map) {
+<span class="fc" id="L318">      return monitorValue(map, Map::size);</span>
+    }
+  }
+
+  /**
+   * Provided for backwards compatibility to support the {@link Registry#register(Meter)}
+   * method. Use the builder created with {@link #using(Registry)} instead.
+   *
+   * @deprecated This method only exists to allow for backwards compatibility and should
+   * be considered an internal detail. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  public static void monitorMeter(Registry registry, Meter meter) {
+<span class="fc" id="L331">    ConcurrentMap&lt;Id, Object&gt; state = registry.state();</span>
+<span class="fc" id="L332">    Object c = Utils.computeIfAbsent(state, meter.id(), MeterState::new);</span>
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">    if (!(c instanceof MeterState)) {</span>
+<span class="nc" id="L334">      Utils.propagateTypeError(registry, meter.id(), MeterState.class, c.getClass());</span>
+    } else {
+<span class="fc" id="L336">      MeterState t = (MeterState) c;</span>
+<span class="fc" id="L337">      t.add(meter);</span>
+<span class="fc" id="L338">      t.schedule(registry, null);</span>
+    }
+<span class="fc" id="L340">  }</span>
+
+  /** Base class for meter state used for bookkeeping. */
+<span class="fc" id="L343">  abstract static class AbstractMeterState {</span>
+<span class="fc" id="L344">    private boolean scheduled = false;</span>
+
+    /** Return the id for the meter. */
+    protected abstract Id id();
+
+    /** Return the true if this meter has expired. */
+    protected abstract boolean hasExpired();
+
+    /** Sample the meter and send updates to the registry. */
+    protected abstract void update(Registry registry);
+
+    /**
+     * Update the registry if this meter is not expired, otherwise cleanup any state
+     * associated with this meter.
+     */
+    void doUpdate(Registry registry) {
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">      if (hasExpired()) {</span>
+<span class="nc" id="L361">        registry.state().remove(id());</span>
+      } else {
+<span class="fc" id="L363">        update(registry);</span>
+      }
+<span class="fc" id="L365">    }</span>
+
+    /** Schedule a task to regularly update the registry. */
+    void schedule(Registry registry, ScheduledExecutorService executor) {
+<span class="fc bfc" id="L369" title="All 2 branches covered.">      if (!scheduled) {</span>
+<span class="fc" id="L370">        long delay = registry.config().gaugePollingFrequency().toMillis();</span>
+<span class="fc" id="L371">        WeakReference&lt;AbstractMeterState&gt; tupleRef = new WeakReference&lt;&gt;(this);</span>
+<span class="pc bpc" id="L372" title="1 of 2 branches missed.">        if (executor == null) {</span>
+<span class="pc" id="L373">          GaugePoller.schedule(tupleRef, delay, t -&gt; t.update(registry));</span>
+        } else {
+<span class="nc" id="L375">          GaugePoller.schedule(executor, tupleRef, delay, t -&gt; t.update(registry));</span>
+        }
+<span class="fc" id="L377">        scheduled = true;</span>
+      }
+<span class="fc" id="L379">    }</span>
+  }
+
+  /** Keep track of the object reference, counter, and other associated bookkeeping info. */
+  static final class ValueState&lt;T&gt; extends AbstractMeterState {
+    private final Gauge gauge;
+    private final ConcurrentLinkedQueue&lt;ValueEntry&lt;T&gt;&gt; pairs;
+
+    /** Create new instance. */
+    ValueState(Gauge gauge) {
+<span class="fc" id="L389">      super();</span>
+<span class="fc" id="L390">      this.gauge = gauge;</span>
+<span class="fc" id="L391">      this.pairs = new ConcurrentLinkedQueue&lt;&gt;();</span>
+<span class="fc" id="L392">    }</span>
+
+    private void add(T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L395">      pairs.add(new ValueEntry&lt;&gt;(obj, f));</span>
+<span class="fc" id="L396">    }</span>
+
+    @Override protected Id id() {
+<span class="nc" id="L399">      return gauge.id();</span>
+    }
+
+    @Override protected boolean hasExpired() {
+<span class="fc" id="L403">      return pairs.isEmpty();</span>
+    }
+
+    @Override protected void update(Registry registry) {
+<span class="fc" id="L407">      double sum = Double.NaN;</span>
+<span class="fc" id="L408">      Iterator&lt;ValueEntry&lt;T&gt;&gt; iter = pairs.iterator();</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">      while (iter.hasNext()) {</span>
+<span class="fc" id="L410">        final ValueEntry&lt;T&gt; pair = iter.next();</span>
+<span class="fc" id="L411">        final T obj = pair.ref.get();</span>
+<span class="pc bpc" id="L412" title="1 of 2 branches missed.">        if (obj != null) {</span>
+<span class="fc" id="L413">          double v = pair.f.applyAsDouble(obj);</span>
+<span class="pc bpc" id="L414" title="1 of 2 branches missed.">          if (!Double.isNaN(v)) {</span>
+<span class="fc bfc" id="L415" title="All 2 branches covered.">            sum = Double.isNaN(sum) ? v : sum + v;</span>
+          }
+<span class="fc" id="L417">        } else {</span>
+<span class="nc" id="L418">          iter.remove();</span>
+        }
+<span class="fc" id="L420">      }</span>
+<span class="fc" id="L421">      gauge.set(sum);</span>
+<span class="fc" id="L422">    }</span>
+  }
+
+  /**
+   * Pair consisting of weak reference to an object and a function to sample a numeric
+   * value from the object.
+   */
+  static final class ValueEntry&lt;T&gt; {
+    private final WeakReference&lt;T&gt; ref;
+    private final ToDoubleFunction&lt;T&gt; f;
+
+    /** Create new instance. */
+<span class="fc" id="L434">    ValueEntry(T obj, ToDoubleFunction&lt;T&gt; f) {</span>
+<span class="fc" id="L435">      this.ref = new WeakReference&lt;T&gt;(obj);</span>
+<span class="fc" id="L436">      this.f = f;</span>
+<span class="fc" id="L437">    }</span>
+  }
+
+  /** Keep track of a meter and associated metadata. */
+  static final class MeterState extends AbstractMeterState {
+    private final Id id;
+    private final ConcurrentLinkedQueue&lt;Meter&gt; queue;
+
+    /** Create a new instance. */
+    MeterState(Id id) {
+<span class="fc" id="L447">      super();</span>
+<span class="fc" id="L448">      this.id = id;</span>
+<span class="fc" id="L449">      this.queue = new ConcurrentLinkedQueue&lt;&gt;();</span>
+<span class="fc" id="L450">    }</span>
+
+    /** Adds a meter to the set included in the aggregate. */
+    void add(Meter m) {
+<span class="fc" id="L454">      queue.add(m);</span>
+<span class="fc" id="L455">    }</span>
+
+    @Override protected Id id() {
+<span class="nc" id="L458">      return id;</span>
+    }
+
+    @Override protected boolean hasExpired() {
+<span class="fc" id="L462">      return queue.isEmpty();</span>
+    }
+
+    private Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L466">      Map&lt;Id, Measurement&gt; measurements = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L467">      Iterator&lt;Meter&gt; iter = queue.iterator();</span>
+<span class="fc bfc" id="L468" title="All 2 branches covered.">      while (iter.hasNext()) {</span>
+<span class="fc" id="L469">        Meter meter = iter.next();</span>
+<span class="pc bpc" id="L470" title="1 of 2 branches missed.">        if (meter.hasExpired()) {</span>
+<span class="nc" id="L471">          iter.remove();</span>
+        } else {
+<span class="fc bfc" id="L473" title="All 2 branches covered.">          for (Measurement m : meter.measure()) {</span>
+<span class="fc" id="L474">            Measurement prev = measurements.get(m.id());</span>
+<span class="fc bfc" id="L475" title="All 2 branches covered.">            if (prev == null) {</span>
+<span class="fc" id="L476">              measurements.put(m.id(), m);</span>
+            } else {
+<span class="fc" id="L478">              double v = prev.value() + m.value();</span>
+<span class="fc" id="L479">              measurements.put(prev.id(), new Measurement(prev.id(), prev.timestamp(), v));</span>
+            }
+<span class="fc" id="L481">          }</span>
+        }
+<span class="fc" id="L483">      }</span>
+<span class="fc" id="L484">      return measurements.values();</span>
+    }
+
+    @Override protected void update(Registry registry) {
+<span class="fc bfc" id="L488" title="All 2 branches covered.">      for (Measurement m : measure()) {</span>
+<span class="fc" id="L489">        registry.gauge(m.id()).set(m.value());</span>
+<span class="fc" id="L490">      }</span>
+<span class="fc" id="L491">    }</span>
+  }
+
+  /** Keep track of the object reference, counter, and other associated bookkeeping info. */
+  static final class CounterState&lt;T&gt; extends AbstractMeterState {
+    private final Counter counter;
+    private final ConcurrentLinkedQueue&lt;CounterEntry&lt;T&gt;&gt; entries;
+
+    /** Create new instance. */
+    CounterState(Counter counter) {
+<span class="fc" id="L501">      super();</span>
+<span class="fc" id="L502">      this.counter = counter;</span>
+<span class="fc" id="L503">      this.entries = new ConcurrentLinkedQueue&lt;&gt;();</span>
+<span class="fc" id="L504">    }</span>
+
+    private void add(T obj, ToLongFunction&lt;T&gt; f) {
+<span class="fc" id="L507">      entries.add(new CounterEntry&lt;&gt;(obj, f));</span>
+<span class="fc" id="L508">    }</span>
+
+    @Override protected Id id() {
+<span class="nc" id="L511">      return counter.id();</span>
+    }
+
+    @Override protected boolean hasExpired() {
+<span class="fc" id="L515">      return entries.isEmpty();</span>
+    }
+
+    @Override protected void update(Registry registry) {
+<span class="fc" id="L519">      Iterator&lt;CounterEntry&lt;T&gt;&gt; iter = entries.iterator();</span>
+<span class="fc bfc" id="L520" title="All 2 branches covered.">      while (iter.hasNext()) {</span>
+<span class="fc" id="L521">        CounterEntry&lt;T&gt; state = iter.next();</span>
+<span class="fc bfc" id="L522" title="All 2 branches covered.">        if (state.ref.get() == null) {</span>
+<span class="fc" id="L523">          iter.remove();</span>
+        } else {
+<span class="fc" id="L525">          state.update(counter);</span>
+        }
+<span class="fc" id="L527">      }</span>
+<span class="fc" id="L528">    }</span>
+  }
+
+  /** State for counter entry. */
+  static final class CounterEntry&lt;T&gt; {
+    private final WeakReference&lt;T&gt; ref;
+    private final ToLongFunction&lt;T&gt; f;
+    private long previous;
+
+    /** Create new instance. */
+<span class="fc" id="L538">    CounterEntry(T obj, ToLongFunction&lt;T&gt; f) {</span>
+<span class="fc" id="L539">      this.ref = new WeakReference&lt;T&gt;(obj);</span>
+<span class="fc" id="L540">      this.f = f;</span>
+<span class="fc" id="L541">      this.previous = f.applyAsLong(obj);</span>
+<span class="fc" id="L542">    }</span>
+
+    private void update(Counter counter) {
+<span class="fc" id="L545">      T obj = ref.get();</span>
+<span class="pc bpc" id="L546" title="1 of 2 branches missed.">      if (obj != null) {</span>
+<span class="fc" id="L547">        long current = f.applyAsLong(obj);</span>
+<span class="fc bfc" id="L548" title="All 2 branches covered.">        if (current &gt; previous) {</span>
+<span class="fc" id="L549">          counter.increment(current - previous);</span>
+        }
+<span class="fc" id="L551">        previous = current;</span>
+      }
+<span class="fc" id="L553">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

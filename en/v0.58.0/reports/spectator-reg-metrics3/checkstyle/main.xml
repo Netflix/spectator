@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/DoubleGauge.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsCounter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsDistributionSummary.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsGauge.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsGaugeAggr.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsRegistry.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/MetricsTimer.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-reg-metrics3/src/main/java/com/netflix/spectator/metrics3/NameUtils.java">
+</file>
+</checkstyle>

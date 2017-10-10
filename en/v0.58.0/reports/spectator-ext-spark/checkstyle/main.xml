@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/DataType.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/NameFunction.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SidecarCounter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SidecarDistributionSummary.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SidecarGauge.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SidecarRegistry.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SidecarTimer.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SparkNameFunction.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SparkSink.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SparkValueFunction.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/SpectatorReporter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-ext-spark/src/main/java/com/netflix/spectator/spark/ValueFunction.java">
+</file>
+</checkstyle>

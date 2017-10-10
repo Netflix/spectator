@@ -1,0 +1,824 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Registry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Registry.java</span></div><h1>Registry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.api.patterns.PolledMeter;
+import com.netflix.spectator.impl.Config;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.ToDoubleFunction;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
+/**
+ * Registry to manage a set of meters.
+ */
+public interface Registry extends Iterable&lt;Meter&gt; {
+
+  /**
+   * The clock used by the registry for timing events.
+   */
+  Clock clock();
+
+  /**
+   * Configuration settings used for this registry.
+   */
+  default RegistryConfig config() {
+<span class="fc" id="L45">    return Config.defaultConfig();</span>
+  }
+
+  /**
+   * Creates an identifier for a meter. All ids passed into other calls should be created by the
+   * registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   */
+  Id createId(String name);
+
+  /**
+   * Creates an identifier for a meter. All ids passed into other calls should be created by the
+   * registry.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   */
+  Id createId(String name, Iterable&lt;Tag&gt; tags);
+
+  /**
+   * Register a passive gauge. In most cases users should not use this method directly. Use
+   * one of the helper methods for working with gauges.
+   *
+   * @see #gauge(Id, Number)
+   * @see #gauge(Id, Object, ToDoubleFunction)
+   * @see #collectionSize(Id, Collection)
+   * @see #mapSize(Id, Map)
+   */
+  void register(Meter meter);
+
+  /**
+   * Returns a map that can be used to associate state with the registry. Users instrumenting
+   * their application will most likely never need to use this method.
+   *
+   * The primary use case is for building custom meter types that need some additional state
+   * beyond the core types supported by the registry. This map can be used to store the state
+   * so that the lifecycle of the data is connected to the registry. For an example, see some
+   * of the built in patterns such as {@link com.netflix.spectator.api.patterns.LongTaskTimer}.
+   */
+  ConcurrentMap&lt;Id, Object&gt; state();
+
+  /**
+   * Measures the rate of some activity. A counter is for continuously incrementing sources like
+   * the number of requests that are coming into a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Counter counter(Id id);
+
+  /**
+   * Measures the rate and variation in amount for some activity. For example, it could be used to
+   * get insight into the variation in response sizes for requests to a server.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  DistributionSummary distributionSummary(Id id);
+
+  /**
+   * Measures the rate and time taken for short running tasks.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Timer timer(Id id);
+
+  /**
+   * Represents a value sampled from another source. For example, the size of queue. The caller
+   * is responsible for sampling the value regularly and calling {@link Gauge#set(double)}.
+   * Registry implementations are free to expire the gauge if it has not been updated in the
+   * last minute. If you do not want to worry about the sampling, then use {@link PolledMeter}
+   * instead.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Gauge gauge(Id id);
+
+  /**
+   * Returns the meter associated with a given id.
+   *
+   * @param id
+   *     Identifier for the meter.
+   * @return
+   *     Instance of the meter or null if there is no match.
+   */
+  Meter get(Id id);
+
+  /** Iterator for traversing the set of meters in the registry. */
+  Iterator&lt;Meter&gt; iterator();
+
+  /////////////////////////////////////////////////////////////////
+  // Additional helper methods below
+
+  /**
+   * Returns the first underlying registry that is an instance of {@code c}.
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  default &lt;T extends Registry&gt; T underlying(Class&lt;T&gt; c) {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">    if (c.isAssignableFrom(getClass())) {</span>
+<span class="nc" id="L150">      return (T) this;</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">    } else if (this instanceof CompositeRegistry) {</span>
+<span class="nc" id="L152">      return ((CompositeRegistry) this).find(c);</span>
+    } else {
+<span class="nc" id="L154">      return null;</span>
+    }
+  }
+
+  /**
+   * Creates an identifier for a meter.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Identifier for a meter.
+   */
+  default Id createId(String name, String... tags) {
+<span class="fc" id="L169">    return createId(name, Utils.toIterable(tags));</span>
+  }
+
+  /**
+   * Creates an identifier for a meter.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Identifier for a meter.
+   */
+  default Id createId(String name, Map&lt;String, String&gt; tags) {
+<span class="fc" id="L183">    return createId(name).withTags(tags);</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name) {
+<span class="fc" id="L195">    return counter(createId(name));</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L209">    return counter(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the rate of some activity.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Counter instance with the corresponding id.
+   */
+  default Counter counter(String name, String... tags) {
+<span class="fc" id="L223">    return counter(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name) {
+<span class="fc" id="L235">    return distributionSummary(createId(name));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L249">    return distributionSummary(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the sample distribution of events.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Summary instance with the corresponding id.
+   */
+  default DistributionSummary distributionSummary(String name, String... tags) {
+<span class="fc" id="L263">    return distributionSummary(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name) {
+<span class="fc" id="L275">    return timer(createId(name));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L289">    return timer(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the time taken for short tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   */
+  default Timer timer(String name, String... tags) {
+<span class="fc" id="L303">    return timer(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name) {
+<span class="nc" id="L315">    return gauge(createId(name));</span>
+  }
+
+  /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name, Iterable&lt;Tag&gt; tags) {
+<span class="nc" id="L329">    return gauge(createId(name, tags));</span>
+  }
+
+  /**
+   * Represents a value sampled from another source.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge gauge(String name, String... tags) {
+<span class="nc" id="L343">    return gauge(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Timer instance with the corresponding id.
+   * @deprecated
+   *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
+   *     instead. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default LongTaskTimer longTaskTimer(Id id) {
+    // Note: this method is only included in the registry for historical reasons to
+    // maintain compatibility. Future patterns should just use the registry not be
+    // created by the registry.
+<span class="fc" id="L362">    return com.netflix.spectator.api.patterns.LongTaskTimer.get(this, id);</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Timer instance with the corresponding id.
+   * @deprecated
+   *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
+   *     instead. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default LongTaskTimer longTaskTimer(String name) {
+<span class="nc" id="L378">    return longTaskTimer(createId(name));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   * @deprecated
+   *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
+   *     instead. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default LongTaskTimer longTaskTimer(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L396">    return longTaskTimer(createId(name, tags));</span>
+  }
+
+  /**
+   * Measures the time taken for long tasks.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Timer instance with the corresponding id.
+   * @deprecated
+   *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
+   *     instead. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default LongTaskTimer longTaskTimer(String name, String... tags) {
+<span class="fc" id="L414">    return longTaskTimer(createId(name, Utils.toIterable(tags)));</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
+   * it as a gauge. See {@link #gauge(Id, Number)} for more information.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Number&gt; T gauge(Id id, T number) {
+<span class="fc" id="L438">    return PolledMeter.using(this).withId(id).monitorValue(number);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
+   * it as a gauge. See {@link PolledMeter.Builder#monitorValue(Number)} for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Number&gt; T gauge(String name, T number) {
+<span class="fc" id="L462">    return gauge(createId(name), number);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
+   * it as a gauge. See {@link #gauge(Id, Number)} for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param tags
+   *     Sequence of dimensions for breaking down the name.
+   * @param number
+   *     Thread-safe implementation of {@link Number} used to access the value.
+   * @return
+   *     The number that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Number&gt; T gauge(String name, Iterable&lt;Tag&gt; tags, T number) {
+<span class="fc" id="L488">    return gauge(createId(name, tags), number);</span>
+  }
+
+  /**
+   * See {@link #gauge(Id, Object, ToDoubleFunction)} for more information.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The object that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T&gt; T gauge(Id id, T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L513">    return PolledMeter.using(this).withId(id).monitorValue(obj, f);</span>
+  }
+
+  /**
+   * See {@link #gauge(Id, Object, ToDoubleFunction)} for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param f
+   *     Function that is applied on the value for the number.
+   * @return
+   *     The object that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T&gt; T gauge(String name, T obj, ToDoubleFunction&lt;T&gt; f) {
+<span class="fc" id="L538">    return gauge(createId(name), obj, f);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the collection and report its size as a gauge.
+   * The registration will keep a weak reference to the collection so it will not prevent
+   * garbage collection. The collection implementation used should be thread safe. Note that
+   * calling {@link java.util.Collection#size()} can be expensive for some collection
+   * implementations and should be considered before registering.
+   *
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Collection} used to access the value.
+   * @return
+   *     The collection that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(Id id, T collection) {
+<span class="fc" id="L567">    return PolledMeter.using(this).withId(id).monitorSize(collection);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the collection and report its size as a gauge.
+   * See {@link #collectionSize(Id, Collection)} for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Collection} used to access the value.
+   * @return
+   *     The collection that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Collection&lt;?&gt;&gt; T collectionSize(String name, T collection) {
+<span class="fc" id="L591">    return collectionSize(createId(name), collection);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the map and report its size as a gauge.
+   * The registration will keep a weak reference to the map so it will not prevent
+   * garbage collection. The collection implementation used should be thread safe. Note that
+   * calling {@link java.util.Map#size()} can be expensive for some map
+   * implementations and should be considered before registering.
+   *
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Map} used to access the value.
+   * @return
+   *     The map that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(Id id, T collection) {
+<span class="fc" id="L620">    return PolledMeter.using(this).withId(id).monitorSize(collection);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the collection and report its size as a gauge.
+   * See {@link #mapSize(Id, Map)} for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param collection
+   *     Thread-safe implementation of {@link Map} used to access the value.
+   * @return
+   *     The map that was passed in so the registration can be done as part of an assignment
+   *     statement.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default &lt;T extends Map&lt;?, ?&gt;&gt; T mapSize(String name, T collection) {
+<span class="fc" id="L644">    return mapSize(createId(name), collection);</span>
+  }
+
+  /**
+   * Tells the registry to regularly poll the object by by using reflection to invoke the named
+   * method and report the returned value as a gauge. The registration will keep a weak reference
+   * to the object so it will not prevent garbage collection. The registered method should be
+   * thread safe and cheap to invoke. &lt;b&gt;Never perform any potentially long running or expensive
+   * activity such as IO inline&lt;/b&gt;.
+   *
+   * To get better compile time type safety, {@link #gauge(Id, Object, ToDoubleFunction)}
+   * should be preferred. Use this technique only if there access or other restrictions prevent
+   * using a proper function reference. However, keep in mind that makes your code more brittle
+   * and prone to failure in the future.
+   *
+   * For more information see {@link #gauge(Id, Object, ToDoubleFunction)}.
+   *
+   * @param id
+   *     Identifier for the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param method
+   *     Name of the method to invoke on the object.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default void methodValue(Id id, Object obj, String method) {
+<span class="fc" id="L677">    final Method m = Utils.getGaugeMethod(this, id, obj, method);</span>
+<span class="fc bfc" id="L678" title="All 2 branches covered.">    if (m != null) {</span>
+<span class="fc" id="L679">      PolledMeter.using(this).withId(id).monitorValue(obj, Functions.invokeMethod(m));</span>
+    }
+<span class="fc" id="L681">  }</span>
+
+  /**
+   * Tells the registry to regularly poll the object by by using reflection to invoke the named
+   * method and report the returned value as a gauge. See {@link #methodValue(Id, Object, String)}
+   * for more information.
+   *
+   * @param name
+   *     Name of the metric being registered.
+   * @param obj
+   *     Object used to compute a value.
+   * @param method
+   *     Name of the method to invoke on the object.
+   * @deprecated
+   *     Use {@link PolledMeter} instead. This method has been deprecated to help
+   *     reduce confusion between active gauges that are explicitly updated by the
+   *     user and passive gauges that are polled in the background. Going forward
+   *     the registry methods will only be used for the core types directly updated
+   *     by the user. Other patterns such as {@link PolledMeter}s will be handled
+   *     separately. Scheduled to be removed in 2.0.
+   */
+  @Deprecated
+  default void methodValue(String name, Object obj, String method) {
+<span class="fc" id="L704">    methodValue(createId(name), obj, method);</span>
+<span class="fc" id="L705">  }</span>
+
+  /** Returns a stream of all registered meters. */
+  default Stream&lt;Meter&gt; stream() {
+<span class="fc" id="L709">    return StreamSupport.stream(spliterator(), false);</span>
+  }
+
+  /**
+   * Returns a stream of all registered counters. This operation is mainly used for testing as
+   * a convenient way to get an aggregated value. For example, to generate a summary of all
+   * counters with name &quot;foo&quot;:
+   *
+   * &lt;pre&gt;
+   * LongSummaryStatistics summary = r.counters()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingLong(Counter::count));
+   * &lt;/pre&gt;
+   */
+  default Stream&lt;Counter&gt; counters() {
+<span class="fc" id="L724">    return stream().filter(m -&gt; m instanceof Counter).map(m -&gt; (Counter) m);</span>
+  }
+
+  /**
+   * Returns a stream of all registered distribution summaries. This operation is mainly used for
+   * testing as a convenient way to get an aggregated value. For example, to generate a summary of
+   * the counts and total amounts for all distribution summaries with name &quot;foo&quot;:
+   *
+   * &lt;pre&gt;
+   * LongSummaryStatistics countSummary = r.distributionSummaries()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingLong(DistributionSummary::count));
+   *
+   * LongSummaryStatistics totalSummary = r.distributionSummaries()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingLong(DistributionSummary::totalAmount));
+   *
+   * double avgAmount = (double) totalSummary.getSum() / countSummary.getSum();
+   * &lt;/pre&gt;
+   */
+  default Stream&lt;DistributionSummary&gt; distributionSummaries() {
+<span class="fc" id="L745">    return stream().filter(m -&gt; m instanceof DistributionSummary).map(m -&gt; (DistributionSummary) m);</span>
+  }
+
+  /**
+   * Returns a stream of all registered timers. This operation is mainly used for testing as a
+   * convenient way to get an aggregated value. For example, to generate a summary of
+   * the counts and total amounts for all timers with name &quot;foo&quot;:
+   *
+   * &lt;pre&gt;
+   * LongSummaryStatistics countSummary = r.timers()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingLong(Timer::count));
+   *
+   * LongSummaryStatistics totalSummary = r.timers()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingLong(Timer::totalTime));
+   *
+   * double avgTime = (double) totalSummary.getSum() / countSummary.getSum();
+   * &lt;/pre&gt;
+   */
+  default Stream&lt;Timer&gt; timers() {
+<span class="fc" id="L766">    return stream().filter(m -&gt; m instanceof Timer).map(m -&gt; (Timer) m);</span>
+  }
+
+  /**
+   * Returns a stream of all registered gauges. This operation is mainly used for testing as a
+   * convenient way to get an aggregated value. For example, to generate a summary of
+   * the values for all gauges with name &quot;foo&quot;:
+   *
+   * &lt;pre&gt;
+   * DoubleSummaryStatistics valueSummary = r.gauges()
+   *   .filter(Functions.nameEquals(&quot;foo&quot;))
+   *   .collect(Collectors.summarizingDouble(Gauge::value));
+   *
+   * double sum = (double) valueSummary.getSum();
+   * &lt;/pre&gt;
+   */
+  default Stream&lt;Gauge&gt; gauges() {
+<span class="fc" id="L783">    return stream().filter(m -&gt; m instanceof Gauge).map(m -&gt; (Gauge) m);</span>
+  }
+
+  /**
+   * Log a warning and if enabled propagate the exception {@code t}. As a general rule
+   * instrumentation code should degrade gracefully and avoid impacting the core application. If
+   * the user makes a mistake and causes something to break, then it should not impact the
+   * application unless that mistake triggers a problem outside of the instrumentation code.
+   * However, in test code it is often better to throw so that mistakes are caught and corrected.
+   *
+   * This method is used to handle exceptions internal to the instrumentation code. Propagation
+   * is controlled by the {@link RegistryConfig#propagateWarnings()} setting. If the setting
+   * is true, then the exception will be propagated. Otherwise the exception will only get logged
+   * as a warning.
+   *
+   * @param msg
+   *     Message written out to the log.
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  default void propagate(String msg, Throwable t) {
+<span class="fc" id="L804">    LoggerFactory.getLogger(getClass()).warn(msg, t);</span>
+<span class="fc bfc" id="L805" title="All 2 branches covered.">    if (config().propagateWarnings()) {</span>
+<span class="fc bfc" id="L806" title="All 2 branches covered.">      if (t instanceof RuntimeException) {</span>
+<span class="fc" id="L807">        throw (RuntimeException) t;</span>
+      } else {
+<span class="fc" id="L809">        throw new RuntimeException(t);</span>
+      }
+    }
+<span class="fc" id="L812">  }</span>
+  /**
+   * Log a warning using the message from the exception and if enabled propagate the
+   * exception {@code t}. For more information see {@link #propagate(String, Throwable)}.
+   *
+   * @param t
+   *     Exception to log and optionally propagate.
+   */
+  default void propagate(Throwable t) {
+<span class="fc" id="L821">    propagate(t.getMessage(), t);</span>
+<span class="fc" id="L822">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

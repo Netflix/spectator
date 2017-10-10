@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/MetricsController.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/filter/PrototypeMeasurementFilter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/filter/PrototypeMeasurementFilterSpecification.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/filter/TagMeasurementFilter.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/model/ApplicationRegistry.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/model/DataPoint.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/model/MetricValues.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-web-spring/src/main/java/com/netflix/spectator/controllers/model/TaggedDataPoints.java">
+</file>
+</checkstyle>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConstantTagFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-placeholders</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.placeholders</a> &gt; <span class="el_source">ConstantTagFactory.java</span></div><h1>ConstantTagFactory.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.Preconditions;
+
+/**
+ * TagFactory implementation that always produces the same tag.  Useful for
+ * providing a default value for a tag.
+ */
+public final class ConstantTagFactory implements TagFactory {
+  private final Tag tag;
+
+  /**
+   * Construct a new instance that will always return a Tag with the specified value.
+   *
+   * @param key
+   *        the non-null key for the tag
+   * @param value
+   *        the non-null value for the tag
+   */
+  public ConstantTagFactory(String key, String value) {
+<span class="fc" id="L38">    this(new BasicTag(key, value));</span>
+<span class="fc" id="L39">  }</span>
+
+  /**
+   * Construct a new instance that will always return the specified tag.
+   *
+   * @param tag
+   *        the non-null Tag instance to return from createTag
+   */
+<span class="fc" id="L47">  public ConstantTagFactory(Tag tag) {</span>
+<span class="fc" id="L48">    this.tag = Preconditions.checkNotNull(tag, &quot;tag&quot;);</span>
+<span class="fc" id="L49">  }</span>
+
+  @Override
+  public String name() {
+<span class="fc" id="L53">    return tag.key();</span>
+  }
+
+  @Override
+  public Tag createTag() {
+<span class="fc" id="L58">    return tag;</span>
+  }
+
+  @Override
+  public boolean equals(Object o) {
+<span class="fc bfc" id="L63" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L64" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L65">    ConstantTagFactory other = (ConstantTagFactory) o;</span>
+<span class="fc" id="L66">    return tag.equals(other.tag);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="fc" id="L71">    return tag.hashCode();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

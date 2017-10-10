@@ -1,0 +1,1194 @@
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+      
+        <link rel="canonical" href="http://netflix.github.io/spectator/ext/jvm-gc-causes/">
+      
+      
+      
+        <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      
+      <meta name="generator" content="mkdocs-0.16.3, mkdocs-material-1.10.0">
+    
+    
+      
+        <title>GC Causes - Spectator Docs</title>
+      
+    
+    
+      <script src="../../assets/javascripts/modernizr-e826f8942a.js"></script>
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/application-b6a6d08807.css">
+      
+    
+    
+      
+        
+        
+        
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+      <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    
+  </head>
+  
+  
+  
+  
+    <body>
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="drawer">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search">
+    <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <a href="http://netflix.github.io/spectator" title="Spectator Docs" class="md-header-nav__button md-logo">
+          
+            <i class="md-icon md-icon--home"></i>
+          
+        </a>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <span class="md-flex__ellipsis md-header-nav__title">
+          
+            
+              
+                <span class="md-header-nav__parent">
+                  Extensions
+                </span>
+              
+                <span class="md-header-nav__parent">
+                  JVM Stats
+                </span>
+              
+            
+            GC Causes
+          
+        </span>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          <label class="md-icon md-icon--search md-header-nav__button" for="search"></label>
+          
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="search"></label>
+  <div class="md-search__inner">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" required placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query">
+      <label class="md-icon md-search__icon" for="search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset">&#xE5CD;</button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result" data-md-lang-search="" data-md-lang-tokenizer="[\s\-]+">
+          <div class="md-search-result__meta" data-md-lang-result-none="No matching documents" data-md-lang-result-one="1 matching document" data-md-lang-result-other="# matching documents">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/Netflix/spectator" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="drawer">
+    <div class="md-nav__button md-logo">
+      
+        <i class="md-icon md-icon--home"></i>
+      
+    </div>
+    Spectator Docs
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/Netflix/spectator" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="Home" class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+    
+    <label class="md-nav__link" for="nav-2">
+      Getting Started
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-2">
+        Getting Started
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/registry/" title="Registry" class="md-nav__link">
+      Registry
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2">
+    
+    <label class="md-nav__link" for="nav-2-2">
+      Meter Types
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-2-2">
+        Meter Types
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/counter/" title="Counters" class="md-nav__link">
+      Counters
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/timer/" title="Timers" class="md-nav__link">
+      Timers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/gauge/" title="Gauges" class="md-nav__link">
+      Gauges
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/dist-summary/" title="Distribution Summaries" class="md-nav__link">
+      Distribution Summaries
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/clock/" title="Clock" class="md-nav__link">
+      Clock
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/conventions/" title="Naming Conventions" class="md-nav__link">
+      Naming Conventions
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/testing/" title="Testing" class="md-nav__link">
+      Testing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/netflix/" title="Netflix Integration" class="md-nav__link">
+      Netflix Integration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../intro/servo-comparison/" title="Servo Comparison" class="md-nav__link">
+      Servo Comparison
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3" checked>
+    
+    <label class="md-nav__link" for="nav-3">
+      Extensions
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        Extensions
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3-1" type="checkbox" id="nav-3-1" checked>
+    
+    <label class="md-nav__link" for="nav-3-1">
+      JVM Stats
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-3-1">
+        JVM Stats
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../jvm-buffer-pools/" title="Buffer Pools" class="md-nav__link">
+      Buffer Pools
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../jvm-gc/" title="Garbage Collection" class="md-nav__link">
+      Garbage Collection
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        GC Causes
+      </label>
+    
+    <a href="./" title="GC Causes" class="md-nav__link md-nav__link--active">
+      GC Causes
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#systemgc__" title="System.gc__" class="md-nav__link">
+    System.gc__
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fullgcalot" title="FullGCAlot" class="md-nav__link">
+    FullGCAlot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scavengealot" title="ScavengeAlot" class="md-nav__link">
+    ScavengeAlot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_profiler" title="Allocation_Profiler" class="md-nav__link">
+    Allocation_Profiler
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jvmtienv_forcegarbagecollection" title="JvmtiEnv_ForceGarbageCollection" class="md-nav__link">
+    JvmtiEnv_ForceGarbageCollection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gclocker_initiated_gc" title="GCLocker_Initiated_GC" class="md-nav__link">
+    GCLocker_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heap_inspection_initiated_gc" title="Heap_Inspection_Initiated_GC" class="md-nav__link">
+    Heap_Inspection_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heap_dump_initiated_gc" title="Heap_Dump_Initiated_GC" class="md-nav__link">
+    Heap_Dump_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whitebox_initiated_young_gc" title="WhiteBox_Initiated_Young_GC" class="md-nav__link">
+    WhiteBox_Initiated_Young_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no_gc" title="No_GC" class="md-nav__link">
+    No_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_failure" title="Allocation_Failure" class="md-nav__link">
+    Allocation_Failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tenured_generation_full" title="Tenured_Generation_Full" class="md-nav__link">
+    Tenured_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#permanent_generation_full" title="Permanent_Generation_Full" class="md-nav__link">
+    Permanent_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata_gc_threshold" title="Metadata_GC_Threshold" class="md-nav__link">
+    Metadata_GC_Threshold
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_generation_full" title="CMS_Generation_Full" class="md-nav__link">
+    CMS_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_initial_mark" title="CMS_Initial_Mark" class="md-nav__link">
+    CMS_Initial_Mark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_final_remark" title="CMS_Final_Remark" class="md-nav__link">
+    CMS_Final_Remark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_concurrent_mark" title="CMS_Concurrent_Mark" class="md-nav__link">
+    CMS_Concurrent_Mark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#old_generation_expanded_on_last_scavenge" title="Old_Generation_Expanded_On_Last_Scavenge" class="md-nav__link">
+    Old_Generation_Expanded_On_Last_Scavenge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#old_generation_too_full_to_scavenge" title="Old_Generation_Too_Full_To_Scavenge" class="md-nav__link">
+    Old_Generation_Too_Full_To_Scavenge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ergonomics" title="Ergonomics" class="md-nav__link">
+    Ergonomics
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1_evacuation_pause" title="G1_Evacuation_Pause" class="md-nav__link">
+    G1_Evacuation_Pause
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1_humongous_allocation" title="G1_Humongous_Allocation" class="md-nav__link">
+    G1_Humongous_Allocation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#last_ditch_collection" title="Last_ditch_collection" class="md-nav__link">
+    Last_ditch_collection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#illegal_value_-last_gc_cause-_illegal_value" title="ILLEGAL_VALUE_-last_gc_cause-_ILLEGAL_VALUE" class="md-nav__link">
+    ILLEGAL_VALUE_-last_gc_cause-_ILLEGAL_VALUE
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unknown_gccause" title="unknown_GCCause" class="md-nav__link">
+    unknown_GCCause
+  </a>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../jvm-memory-pools/" title="Memory Pools" class="md-nav__link">
+      Memory Pools
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../thread-pools/" title="Thread Pools" class="md-nav__link">
+      Thread Pools
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../log4j2/" title="Log4j2 Appender" class="md-nav__link">
+      Log4j2 Appender
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../log4j1/" title="Log4j1 Appender" class="md-nav__link">
+      Log4j1 Appender
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../placeholders/" title="Placeholders" class="md-nav__link">
+      Placeholders
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
+    
+    <label class="md-nav__link" for="nav-4">
+      Registries
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        Registries
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../registry/metrics3/" title="Metrics3" class="md-nav__link">
+      Metrics3
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../registry/servo/" title="Servo" class="md-nav__link">
+      Servo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../reports/" title="Build Reports" class="md-nav__link">
+      Build Reports
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#systemgc__" title="System.gc__" class="md-nav__link">
+    System.gc__
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fullgcalot" title="FullGCAlot" class="md-nav__link">
+    FullGCAlot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scavengealot" title="ScavengeAlot" class="md-nav__link">
+    ScavengeAlot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_profiler" title="Allocation_Profiler" class="md-nav__link">
+    Allocation_Profiler
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#jvmtienv_forcegarbagecollection" title="JvmtiEnv_ForceGarbageCollection" class="md-nav__link">
+    JvmtiEnv_ForceGarbageCollection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gclocker_initiated_gc" title="GCLocker_Initiated_GC" class="md-nav__link">
+    GCLocker_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heap_inspection_initiated_gc" title="Heap_Inspection_Initiated_GC" class="md-nav__link">
+    Heap_Inspection_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#heap_dump_initiated_gc" title="Heap_Dump_Initiated_GC" class="md-nav__link">
+    Heap_Dump_Initiated_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whitebox_initiated_young_gc" title="WhiteBox_Initiated_Young_GC" class="md-nav__link">
+    WhiteBox_Initiated_Young_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no_gc" title="No_GC" class="md-nav__link">
+    No_GC
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#allocation_failure" title="Allocation_Failure" class="md-nav__link">
+    Allocation_Failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tenured_generation_full" title="Tenured_Generation_Full" class="md-nav__link">
+    Tenured_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#permanent_generation_full" title="Permanent_Generation_Full" class="md-nav__link">
+    Permanent_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata_gc_threshold" title="Metadata_GC_Threshold" class="md-nav__link">
+    Metadata_GC_Threshold
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_generation_full" title="CMS_Generation_Full" class="md-nav__link">
+    CMS_Generation_Full
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_initial_mark" title="CMS_Initial_Mark" class="md-nav__link">
+    CMS_Initial_Mark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_final_remark" title="CMS_Final_Remark" class="md-nav__link">
+    CMS_Final_Remark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cms_concurrent_mark" title="CMS_Concurrent_Mark" class="md-nav__link">
+    CMS_Concurrent_Mark
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#old_generation_expanded_on_last_scavenge" title="Old_Generation_Expanded_On_Last_Scavenge" class="md-nav__link">
+    Old_Generation_Expanded_On_Last_Scavenge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#old_generation_too_full_to_scavenge" title="Old_Generation_Too_Full_To_Scavenge" class="md-nav__link">
+    Old_Generation_Too_Full_To_Scavenge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ergonomics" title="Ergonomics" class="md-nav__link">
+    Ergonomics
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1_evacuation_pause" title="G1_Evacuation_Pause" class="md-nav__link">
+    G1_Evacuation_Pause
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#g1_humongous_allocation" title="G1_Humongous_Allocation" class="md-nav__link">
+    G1_Humongous_Allocation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#last_ditch_collection" title="Last_ditch_collection" class="md-nav__link">
+    Last_ditch_collection
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#illegal_value_-last_gc_cause-_illegal_value" title="ILLEGAL_VALUE_-last_gc_cause-_ILLEGAL_VALUE" class="md-nav__link">
+    ILLEGAL_VALUE_-last_gc_cause-_ILLEGAL_VALUE
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unknown_gccause" title="unknown_GCCause" class="md-nav__link">
+    unknown_GCCause
+  </a>
+  
+</li>
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/Netflix/spectator/edit/master/docs/ext/jvm-gc-causes.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                
+                
+                <h1 id="gc-causes">GC Causes<a class="headerlink" href="#gc-causes" title="Permanent link">&para;</a></h1>
+<p>The various GC causes aren't well documented. The list provided here comes from the
+<a href="http://hg.openjdk.java.net/jdk8u/hs-dev/hotspot/file/tip/src/share/vm/gc_interface/gcCause.cpp">gcCause.cpp</a>
+file in the jdk and we include some information on what these mean for the application.</p>
+<h3 id="systemgc__">System.gc__<a class="headerlink" href="#systemgc__" title="Permanent link">&para;</a></h3>
+<p>Something called <a href="http://docs.oracle.com/javase/7/docs/api/java/lang/System.html#gc()">System.gc()</a>.
+If you are seeing this once an hour it is likely related to the RMI GC interval. For more
+details see:</p>
+<ul>
+<li><a href="http://www-01.ibm.com/support/docview.wss?uid=swg21173431">Unexplained System.gc() calls due to Remote Method Invocation (RMI) or explict garbage collections</a></li>
+<li><a href="http://docs.oracle.com/javase/6/docs/technotes/guides/rmi/sunrmiproperties.html">sun.rmi.dgc.client.gcInterval</a></li>
+</ul>
+<h3 id="fullgcalot">FullGCAlot<a class="headerlink" href="#fullgcalot" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. In debug builds of the jdk there is an option,
+<code>-XX:+FullGCALot</code>, that will trigger a full GC at a regular interval for testing purposes.</p>
+<h3 id="scavengealot">ScavengeAlot<a class="headerlink" href="#scavengealot" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. In debug builds of the jdk there is an option,
+<code>-XX:+ScavengeALot</code>, that will trigger a minor GC at a regular interval for testing purposes.</p>
+<h3 id="allocation_profiler">Allocation_Profiler<a class="headerlink" href="#allocation_profiler" title="Permanent link">&para;</a></h3>
+<p>Prior to java 8 you would see this if running with the <code>-Xaprof</code> setting. It would be triggered
+just before the jvm exits. The <code>-Xaprof</code> option was removed in java 8.</p>
+<h3 id="jvmtienv_forcegarbagecollection">JvmtiEnv_ForceGarbageCollection<a class="headerlink" href="#jvmtienv_forcegarbagecollection" title="Permanent link">&para;</a></h3>
+<p>Something called the JVM tool interface function
+<a href="https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#ForceGarbageCollection">ForceGarbageCollection</a>.
+Look at the <code>-agentlib</code> param to java to see what agents are configured.</p>
+<h3 id="gclocker_initiated_gc">GCLocker_Initiated_GC<a class="headerlink" href="#gclocker_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>The GC locker prevents GC from occurring when JNI code is in a
+<a href="http://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/functions.html#GetPrimitiveArrayCritical_ReleasePrimitiveArrayCritical">critical region</a>.
+If GC is needed while a thread is in a critical region, then it will allow them to complete,
+i.e. call the corresponding release function. Other threads will not be permitted to enter a
+critical region. Once all threads are out of critical regions a GC event will be triggered. </p>
+<h3 id="heap_inspection_initiated_gc">Heap_Inspection_Initiated_GC<a class="headerlink" href="#heap_inspection_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>GC was initiated by an inspection operation on the heap. For example you can trigger this
+with <a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jmap.html">jmap</a>:</p>
+<p><code>$ jmap -histo:live &lt;pid&gt;</code></p>
+<h3 id="heap_dump_initiated_gc">Heap_Dump_Initiated_GC<a class="headerlink" href="#heap_dump_initiated_gc" title="Permanent link">&para;</a></h3>
+<p>GC was initiated before dumping the heap. For example you can trigger this with
+<a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jmap.html">jmap</a>:</p>
+<p><code>$ jmap -dump:live,format=b,file=heap.out &lt;pid&gt;</code></p>
+<p>Another common example would be clicking the Heap Dump button on the Monitor tab in
+<a href="http://docs.oracle.com/javase/7/docs/technotes/tools/share/jvisualvm.html">jvisualvm</a>.</p>
+<h3 id="whitebox_initiated_young_gc">WhiteBox_Initiated_Young_GC<a class="headerlink" href="#whitebox_initiated_young_gc" title="Permanent link">&para;</a></h3>
+<p>Most likely you'll never see this value. Used for testing hotspot, it indicates something
+called <code>sun.hotspot.WhiteBox.youngGC()</code>. </p>
+<h3 id="no_gc">No_GC<a class="headerlink" href="#no_gc" title="Permanent link">&para;</a></h3>
+<p>Used for CMS to indicate concurrent phases.</p>
+<h3 id="allocation_failure">Allocation_Failure<a class="headerlink" href="#allocation_failure" title="Permanent link">&para;</a></h3>
+<p>Usually this means that there is an allocation request that is bigger than the available space
+in young generation and will typically be associated with a minor GC. For G1 this will likely
+be a major GC and it is more common to see <a href="#g1_evacuation_pause">G1_Evacuation_Pause</a> for
+routine minor collections.</p>
+<p>On linux the jvm will trigger a GC if the kernel indicates there isn't much memory left via
+<a href="http://lwn.net/Articles/267013/">mem_notify</a>.</p>
+<h3 id="tenured_generation_full">Tenured_Generation_Full<a class="headerlink" href="#tenured_generation_full" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="permanent_generation_full">Permanent_Generation_Full<a class="headerlink" href="#permanent_generation_full" title="Permanent link">&para;</a></h3>
+<p>Triggered as a result of an allocation failure in
+<a href="https://blogs.oracle.com/poonam/entry/about_g1_garbage_collector_permanent">PermGen</a>. Pre java 8.</p>
+<h3 id="metadata_gc_threshold">Metadata_GC_Threshold<a class="headerlink" href="#metadata_gc_threshold" title="Permanent link">&para;</a></h3>
+<p>Triggered as a result of an allocation failure in
+<a href="https://blogs.oracle.com/poonam/entry/about_g1_garbage_collector_permanent">Metaspace</a>.
+Metaspace replaced PermGen was added in java 8.</p>
+<h3 id="cms_generation_full">CMS_Generation_Full<a class="headerlink" href="#cms_generation_full" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="cms_initial_mark">CMS_Initial_Mark<a class="headerlink" href="#cms_initial_mark" title="Permanent link">&para;</a></h3>
+<p>Initial mark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="cms_final_remark">CMS_Final_Remark<a class="headerlink" href="#cms_final_remark" title="Permanent link">&para;</a></h3>
+<p>Remark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="cms_concurrent_mark">CMS_Concurrent_Mark<a class="headerlink" href="#cms_concurrent_mark" title="Permanent link">&para;</a></h3>
+<p>Concurrent mark phase of CMS, for more details see
+<a href="https://blogs.oracle.com/jonthecollector/entry/hey_joe_phases_of_cms">Phases of CMS</a>.
+Unfortunately it doesn't appear to be reported via the mbeans and we just get <a href="#no_gc">No_GC</a>.</p>
+<h3 id="old_generation_expanded_on_last_scavenge">Old_Generation_Expanded_On_Last_Scavenge<a class="headerlink" href="#old_generation_expanded_on_last_scavenge" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="old_generation_too_full_to_scavenge">Old_Generation_Too_Full_To_Scavenge<a class="headerlink" href="#old_generation_too_full_to_scavenge" title="Permanent link">&para;</a></h3>
+<p>Not used?</p>
+<h3 id="ergonomics">Ergonomics<a class="headerlink" href="#ergonomics" title="Permanent link">&para;</a></h3>
+<p>This indicates you are using the adaptive size policy, <code>-XX:+UseAdaptiveSizePolicy</code> and is
+on by default for recent versions, with the parallel collector (<code>-XX:+UseParallelGC</code>). For
+more details see <a href="https://blogs.oracle.com/jonthecollector/entry/the_unspoken_the_why_of">The Why of GC Ergonomics</a>.</p>
+<h3 id="g1_evacuation_pause">G1_Evacuation_Pause<a class="headerlink" href="#g1_evacuation_pause" title="Permanent link">&para;</a></h3>
+<p>An evacuation pause is the most common young gen cause for G1 and indicates that it is copying
+live objects from one set of regions, young and sometimes young + old, to another set of
+regions. For more details see <a href="https://blogs.oracle.com/poonam/entry/understanding_g1_gc_logs">Understanding G1 GC Logs</a>.</p>
+<h3 id="g1_humongous_allocation">G1_Humongous_Allocation<a class="headerlink" href="#g1_humongous_allocation" title="Permanent link">&para;</a></h3>
+<p>A humongous allocation is one where the size is greater than 50% of the G1 region size. Before
+a humongous allocation the jvm checks if it should do a routine
+<a href="#g1_evacuation_pause">evacuation pause</a> without regard to the actual allocation size, but if
+triggered due to this check the cause will be listed as humongous allocation. This cause is
+also used for any collections used to free up enough space for the allocation. </p>
+<h3 id="last_ditch_collection">Last_ditch_collection<a class="headerlink" href="#last_ditch_collection" title="Permanent link">&para;</a></h3>
+<p>For perm gen (java 7 or earlier) and metaspace (java 8+) a last ditch collection will be
+triggered if an allocation fails and the memory pool cannot be expanded.</p>
+<h3 id="illegal_value_-last_gc_cause-_illegal_value">ILLEGAL_VALUE_-<em>last_gc_cause</em>-_ILLEGAL_VALUE<a class="headerlink" href="#illegal_value_-last_gc_cause-_illegal_value" title="Permanent link">&para;</a></h3>
+<p>Included for completeness, but you should never see this value.</p>
+<h3 id="unknown_gccause">unknown_GCCause<a class="headerlink" href="#unknown_gccause" title="Permanent link">&para;</a></h3>
+<p>Included for completeness, but you should never see this value.</p>
+                
+                  
+                
+              
+              
+                
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href="../jvm-gc/" title="Garbage Collection" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Garbage Collection
+              </span>
+            </div>
+          </a>
+        
+        
+          <a href="../jvm-memory-pools/" title="Memory Pools" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Memory Pools
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        powered by
+        <a href="http://www.mkdocs.org" title="MkDocs">MkDocs</a>
+        and
+        <a href="http://squidfunk.github.io/mkdocs-material/" title="Material for MkDocs">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/application-f3ab9e5ff8.js"></script>
+      
+      
+      <script>app.initialize({url:{base:"../.."}})</script>
+      
+    
+    
+      
+      <script>!function(e,t,a,n,o,c,i){e.GoogleAnalyticsObject=o,e[o]=e[o]||function(){(e[o].q=e[o].q||[]).push(arguments)},e[o].l=1*new Date,c=t.createElement(a),i=t.getElementsByTagName(a)[0],c.async=1,c.src=n,i.parentNode.insertBefore(c,i)}(window,document,"script","https://www.google-analytics.com/analytics.js","ga"),ga("create","UA-82153845-2","auto"),ga("set","anonymizeIp",!0),ga("send","pageview");var links=document.getElementsByTagName("a");Array.prototype.map.call(links,function(e){e.host!=document.location.host&&e.addEventListener("click",function(){var t=e.getAttribute("data-md-action")||"follow";ga("send","event","outbound",t,e.href)})});var query=document.forms.search.query;query.addEventListener("blur",function(){if(this.value){var e=document.location.pathname;ga("send","pageview",e+"?q="+this.value)}})</script>
+      
+    
+  </body>
+</html>

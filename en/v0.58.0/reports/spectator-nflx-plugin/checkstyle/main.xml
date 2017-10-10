@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/Plugin.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/SpectatorModule.java">
+</file>
+<file name="/Users/mazimmer/src/zimmermatt/spectator/spectator-nflx-plugin/src/main/java/com/netflix/spectator/nflx/TestModule.java">
+</file>
+</checkstyle>

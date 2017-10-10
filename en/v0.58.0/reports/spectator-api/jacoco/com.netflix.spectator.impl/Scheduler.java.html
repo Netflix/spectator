@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Scheduler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">Scheduler.java</span></div><h1>Scheduler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.patterns.PolledMeter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * &lt;p&gt;&lt;b&gt;This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.&lt;/b&gt;&lt;/p&gt;
+ *
+ * &lt;p&gt;Simple scheduler for recurring tasks based on a fixed size thread pool. This
+ * class is mostly intended for running short lived tasks at a regular interval.&lt;/p&gt;
+ *
+ * &lt;p&gt;&lt;b&gt;Usage&lt;/b&gt;&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * Scheduler scheduler = new Scheduler(registry, &quot;spectator-polling&quot;, 2);
+ *
+ * Scheduler.Options options = new Scheduler.Options()
+ *   .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, Duration.ofSeconds(10));
+ * scheduler.schedule(options, () -&gt; doWork());
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;&lt;b&gt;Metrics&lt;/b&gt;&lt;/p&gt;
+ *
+ * The following metrics can be used to monitor the behavior of the scheduler:
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.queueSize&lt;/code&gt;: gauge reporting the number of
+ *       items in the queue. Note, that for repeating tasks the items will almost
+ *       always be in queue except during execution.&lt;/li&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.poolSize&lt;/code&gt;: gauge reporting the number of
+ *       threads available in the pool.&lt;/li&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.activeThreads&lt;/code&gt;: gauge reporting the number of
+ *       threads that are currently executing a task.&lt;/li&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.taskExecutionTime&lt;/code&gt;: timer reporting the
+ *       execution time of an individual task.&lt;/li&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.taskExecutionDelay&lt;/code&gt;: timer reporting the
+ *       delay between the desired execution time of a task and when it was actually
+ *       executed. A high execution delay means that the scheduler cannot keep up
+ *       with the amount of work. This might indicate more threads are needed.&lt;/li&gt;
+ *   &lt;li&gt;&lt;code&gt;spectator.scheduler.skipped&lt;/code&gt;: counter reporting the number of
+ *       executions that were skipped because the task did not complete before the
+ *       next scheduled execution time.&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * All metrics with have an {@code id} dimension to distinguish a particular scheduler
+ * instance.
+ */
+public class Scheduler {
+
+  /**
+   * Create a thread factory using thread names based on the id. All threads will
+   * be configured as daemon threads.
+   */
+  private static ThreadFactory newThreadFactory(final String id) {
+<span class="fc" id="L87">    return new ThreadFactory() {</span>
+<span class="fc" id="L88">      private final AtomicInteger next = new AtomicInteger();</span>
+
+      @Override public Thread newThread(Runnable r) {
+<span class="fc" id="L91">        final String name = &quot;spectator-&quot; + id + &quot;-&quot; + next.getAndIncrement();</span>
+<span class="fc" id="L92">        final Thread t = new Thread(r, name);</span>
+<span class="fc" id="L93">        t.setDaemon(true);</span>
+<span class="fc" id="L94">        return t;</span>
+      }
+    };
+  }
+
+  private static Id newId(Registry registry, String id, String name) {
+<span class="fc" id="L100">    return registry.createId(&quot;spectator.scheduler.&quot; + name, &quot;id&quot;, id);</span>
+  }
+
+<span class="fc" id="L103">  private static final Logger LOGGER = LoggerFactory.getLogger(Scheduler.class);</span>
+
+<span class="fc" id="L105">  private final DelayQueue&lt;DelayedTask&gt; queue = new DelayQueue&lt;&gt;();</span>
+
+  private final Clock clock;
+
+  private final AtomicInteger activeCount;
+  private final Timer taskExecutionTime;
+  private final Timer taskExecutionDelay;
+  private final Counter skipped;
+
+  private final ThreadFactory factory;
+  private final Thread[] threads;
+
+<span class="fc" id="L117">  private volatile boolean started = false;</span>
+
+  /**
+   * Create a new instance.
+   *
+   * @param registry
+   *     Registry to use for collecting metrics. The clock from the registry will also be
+   *     used as the clock source for accessing the time.
+   * @param id
+   *     Id for this instance of the scheduler. Used to distinguish between instances of
+   *     the scheduler for metrics and thread names. Threads will be named as
+   *     {@code spectator-$id-$i}.
+   * @param poolSize
+   *     Number of threads to have in the pool. The threads will not be started until the
+   *     first task is scheduled.
+   */
+<span class="fc" id="L133">  public Scheduler(Registry registry, String id, int poolSize) {</span>
+<span class="fc" id="L134">    this.clock = registry.clock();</span>
+
+<span class="fc" id="L136">    registry.collectionSize(newId(registry, id, &quot;queueSize&quot;), queue);</span>
+<span class="fc" id="L137">    activeCount = PolledMeter.using(registry)</span>
+<span class="fc" id="L138">        .withId(newId(registry, id, &quot;activeThreads&quot;))</span>
+<span class="fc" id="L139">        .monitorValue(new AtomicInteger());</span>
+<span class="fc" id="L140">    taskExecutionTime = registry.timer(newId(registry, id, &quot;taskExecutionTime&quot;));</span>
+<span class="fc" id="L141">    taskExecutionDelay = registry.timer(newId(registry, id, &quot;taskExecutionDelay&quot;));</span>
+<span class="fc" id="L142">    skipped = registry.counter(newId(registry, id, &quot;skipped&quot;));</span>
+
+<span class="fc" id="L144">    this.factory = newThreadFactory(id);</span>
+<span class="fc" id="L145">    this.threads = new Thread[poolSize];</span>
+<span class="fc" id="L146">  }</span>
+
+  /**
+   * Schedule a repetitive task.
+   *
+   * @param options
+   *     Options for controlling the execution of the task. See {@link Options}
+   *     for more information.
+   * @param task
+   *     Task to execute.
+   * @return
+   *     Future that can be used for cancelling the current and future executions of
+   *     the task. There is no value associated with the task so the future is just for
+   *     checking if it is still running to stopping it from running in the future.
+   */
+  public ScheduledFuture&lt;?&gt; schedule(Options options, Runnable task) {
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">    if (!started) {</span>
+<span class="fc" id="L163">      startThreads();</span>
+    }
+<span class="fc" id="L165">    DelayedTask t = new DelayedTask(clock, options, task);</span>
+<span class="fc" id="L166">    queue.put(t);</span>
+<span class="fc" id="L167">    return t;</span>
+  }
+
+  /**
+   * Shutdown and cleanup resources associated with the scheduler. All threads will be
+   * interrupted, but this method does not block for them to all finish execution.
+   */
+  public synchronized void shutdown() {
+<span class="fc bfc" id="L175" title="All 2 branches covered.">    for (int i = 0; i &lt; threads.length; ++i) {</span>
+<span class="pc bpc" id="L176" title="2 of 4 branches missed.">      if (threads[i] != null &amp;&amp; threads[i].isAlive()) {</span>
+<span class="fc" id="L177">        threads[i].interrupt();</span>
+<span class="fc" id="L178">        threads[i] = null;</span>
+      }
+    }
+<span class="fc" id="L181">  }</span>
+
+  private synchronized void startThreads() {
+<span class="fc" id="L184">    started = true;</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">    for (int i = 0; i &lt; threads.length; ++i) {</span>
+<span class="pc bpc" id="L186" title="1 of 6 branches missed.">      if (threads[i] == null || !threads[i].isAlive() || threads[i].isInterrupted()) {</span>
+<span class="fc" id="L187">        threads[i] = factory.newThread(new Worker());</span>
+<span class="fc" id="L188">        threads[i].start();</span>
+<span class="fc" id="L189">        LOGGER.debug(&quot;started thread {}&quot;, threads[i].getName());</span>
+      }
+    }
+<span class="fc" id="L192">  }</span>
+
+  /** Repetition schedulingPolicy for scheduled tasks. */
+<span class="pc" id="L195">  public enum Policy {</span>
+    /** Run a task once. */
+<span class="fc" id="L197">    RUN_ONCE,</span>
+
+    /** Run a task repeatedly using a fixed delay between executions. */
+<span class="fc" id="L200">    FIXED_DELAY,</span>
+
+    /**
+     * Run a task repeatedly attempting to maintain a consistent rate of execution.
+     * If the execution time is less than the desired frequencyMillis, then the start times
+     * will be at a consistent interval. If the execution time exceeds the frequencyMillis,
+     * then some executions will be skipped.
+     *
+     * The primary use case for this mode is when we want to maintain a consistent
+     * frequencyMillis, but want to avoid queuing up many tasks if the system cannot keep
+     * up. Fixed delay is often inappropriate because for the normal case it will
+     * drift by the execution time of the task.
+     */
+<span class="fc" id="L213">    FIXED_RATE_SKIP_IF_LONG</span>
+  }
+
+  /** Options to control how a task will get executed. */
+<span class="fc" id="L217">  public static class Options {</span>
+<span class="fc" id="L218">    private Policy schedulingPolicy = Policy.RUN_ONCE;</span>
+<span class="fc" id="L219">    private long initialDelay = 0L;</span>
+<span class="fc" id="L220">    private long frequencyMillis = 0L;</span>
+<span class="fc" id="L221">    private boolean stopOnFailure = false;</span>
+
+    /**
+     * How long to wait after a task has been scheduled to the first execution. If
+     * not set, then it will be scheduled immediately.
+     */
+    public Options withInitialDelay(Duration delay) {
+<span class="nc" id="L228">      initialDelay = delay.toMillis();</span>
+<span class="nc" id="L229">      return this;</span>
+    }
+
+    /**
+     * Configure the task to execute repeatedly.
+     *
+     * @param policy
+     *     Repetition schedulingPolicy to use for the task. See {@link Policy} for the
+     *     supported options.
+     * @param frequency
+     *     How frequently to repeat the execution. The interpretation of this
+     *     parameter will depend on the {@link Policy}.
+     */
+    public Options withFrequency(Policy policy, Duration frequency) {
+<span class="fc" id="L243">      this.schedulingPolicy = policy;</span>
+<span class="fc" id="L244">      this.frequencyMillis = frequency.toMillis();</span>
+<span class="fc" id="L245">      return this;</span>
+    }
+
+    /**
+     * Should a repeated task stop executing if an exception propagates out of
+     * the task? Defaults to false.
+     */
+    public Options withStopOnFailure(boolean flag) {
+<span class="fc" id="L253">      this.stopOnFailure = flag;</span>
+<span class="fc" id="L254">      return this;</span>
+    }
+  }
+
+  /**
+   * Wraps the user supplied task with metadata for subsequent executions.
+   */
+  static class DelayedTask implements ScheduledFuture&lt;Void&gt; {
+    private final Clock clock;
+    private final Options options;
+    private final Runnable task;
+
+    private final long initialExecutionTime;
+    private long nextExecutionTime;
+
+<span class="fc" id="L269">    private volatile Thread thread = null;</span>
+<span class="fc" id="L270">    private volatile boolean cancelled = false;</span>
+
+    /**
+     * Create a new instance.
+     *
+     * @param clock
+     *     Clock for computing the next execution time for the task.
+     * @param options
+     *     Options for how to repeat the execution.
+     * @param task
+     *     User specified task to execute.
+     */
+<span class="fc" id="L282">    DelayedTask(Clock clock, Options options, Runnable task) {</span>
+<span class="fc" id="L283">      this.clock = clock;</span>
+<span class="fc" id="L284">      this.options = options;</span>
+<span class="fc" id="L285">      this.task = task;</span>
+<span class="fc" id="L286">      this.initialExecutionTime = clock.wallTime() + options.initialDelay;</span>
+<span class="fc" id="L287">      this.nextExecutionTime = initialExecutionTime;</span>
+<span class="fc" id="L288">    }</span>
+
+    /** Returns the next scheduled execution time. */
+    long getNextExecutionTime() {
+<span class="fc" id="L292">      return nextExecutionTime;</span>
+    }
+
+    /**
+     * Update the next execution time based on the options for this task.
+     *
+     * @param skipped
+     *     Counter that will be incremented each time an expected execution is
+     *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
+     */
+    void updateNextExecutionTime(Counter skipped) {
+<span class="pc bpc" id="L303" title="1 of 3 branches missed.">      switch (options.schedulingPolicy) {</span>
+        case FIXED_DELAY:
+<span class="fc" id="L305">          nextExecutionTime = clock.wallTime() + options.frequencyMillis;</span>
+<span class="fc" id="L306">          break;</span>
+        case FIXED_RATE_SKIP_IF_LONG:
+<span class="fc" id="L308">          final long now = clock.wallTime();</span>
+<span class="fc" id="L309">          nextExecutionTime += options.frequencyMillis;</span>
+<span class="fc bfc" id="L310" title="All 2 branches covered.">          while (nextExecutionTime &lt; now) {</span>
+<span class="fc" id="L311">            nextExecutionTime += options.frequencyMillis;</span>
+<span class="fc" id="L312">            skipped.increment();</span>
+          }
+          break;
+        default:
+          break;
+      }
+<span class="fc" id="L318">    }</span>
+
+    /**
+     * Execute the task and if reschedule another execution.
+     *
+     * @param queue
+     *     Queue for the pool. This task will be added to the queue to schedule
+     *     future executions.
+     * @param skipped
+     *     Counter that will be incremented each time an expected execution is
+     *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
+     */
+    void runAndReschedule(DelayQueue&lt;DelayedTask&gt; queue, Counter skipped) {
+<span class="fc" id="L331">      thread = Thread.currentThread();</span>
+<span class="pc bpc" id="L332" title="1 of 2 branches missed.">      boolean scheduleAgain = options.schedulingPolicy != Policy.RUN_ONCE;</span>
+      try {
+<span class="pc bpc" id="L334" title="1 of 2 branches missed.">        if (!isDone()) {</span>
+<span class="fc" id="L335">          task.run();</span>
+        }
+<span class="fc" id="L337">      } catch (Exception e) {</span>
+<span class="fc" id="L338">        LOGGER.warn(&quot;task execution failed&quot;, e);</span>
+<span class="fc bfc" id="L339" title="All 2 branches covered.">        scheduleAgain = !options.stopOnFailure;</span>
+      } finally {
+<span class="pc" id="L341">        thread = null;</span>
+<span class="pc bpc" id="L342" title="6 of 12 branches missed.">        if (scheduleAgain &amp;&amp; !isDone()) {</span>
+<span class="pc" id="L343">          updateNextExecutionTime(skipped);</span>
+<span class="pc" id="L344">          queue.put(this);</span>
+        } else {
+<span class="pc" id="L346">          cancelled = true;</span>
+        }
+<span class="fc" id="L348">      }</span>
+<span class="fc" id="L349">    }</span>
+
+    @Override public long getDelay(TimeUnit unit) {
+<span class="fc" id="L352">      final long delayMillis = Math.max(nextExecutionTime - clock.wallTime(), 0L);</span>
+<span class="fc" id="L353">      return unit.convert(delayMillis, TimeUnit.MILLISECONDS);</span>
+    }
+
+    @Override public int compareTo(Delayed other) {
+<span class="nc" id="L357">      final long d1 = getDelay(TimeUnit.MILLISECONDS);</span>
+<span class="nc" id="L358">      final long d2 = other.getDelay(TimeUnit.MILLISECONDS);</span>
+<span class="nc" id="L359">      return Long.compare(d1, d2);</span>
+    }
+
+    @Override public boolean cancel(boolean mayInterruptIfRunning) {
+<span class="fc" id="L363">      cancelled = true;</span>
+<span class="fc" id="L364">      Thread t = thread;</span>
+<span class="pc bpc" id="L365" title="2 of 4 branches missed.">      if (mayInterruptIfRunning &amp;&amp; t != null) {</span>
+<span class="fc" id="L366">        t.interrupt();</span>
+      }
+<span class="fc" id="L368">      return true;</span>
+    }
+
+    @Override public boolean isCancelled() {
+<span class="nc" id="L372">      return cancelled;</span>
+    }
+
+    @Override public boolean isDone() {
+<span class="fc" id="L376">      return cancelled;</span>
+    }
+
+    @Override public Void get() throws InterruptedException, ExecutionException {
+<span class="nc" id="L380">      throw new UnsupportedOperationException();</span>
+    }
+
+    @Override public Void get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
+<span class="nc" id="L385">      throw new UnsupportedOperationException();</span>
+    }
+  }
+
+  /**
+   * Actual task running in the threads. It will block on trying to get a task to
+   * execute from the queue until a task is ready.
+   */
+<span class="fc" id="L393">  private final class Worker implements Runnable {</span>
+    @Override public void run() {
+      try {
+        // Note: do not use Thread.interrupted() because it will clear the interrupt
+        // status of the thread.
+<span class="fc bfc" id="L398" title="All 2 branches covered.">        while (!Thread.currentThread().isInterrupted()) {</span>
+          try {
+<span class="fc" id="L400">            DelayedTask task = queue.take();</span>
+<span class="fc" id="L401">            activeCount.incrementAndGet();</span>
+
+<span class="fc" id="L403">            final long delay = clock.wallTime() - task.getNextExecutionTime();</span>
+<span class="fc" id="L404">            taskExecutionDelay.record(delay, TimeUnit.MILLISECONDS);</span>
+
+<span class="fc" id="L406">            taskExecutionTime.record(() -&gt; task.runAndReschedule(queue, skipped));</span>
+<span class="fc" id="L407">          } catch (InterruptedException e) {</span>
+<span class="fc" id="L408">            LOGGER.debug(&quot;task interrupted&quot;, e);</span>
+            break;
+          } finally {
+<span class="pc" id="L411">            activeCount.decrementAndGet();</span>
+<span class="fc" id="L412">          }</span>
+        }
+      } finally {
+<span class="pc" id="L415">        startThreads();</span>
+<span class="fc" id="L416">      }</span>
+<span class="fc" id="L417">    }</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

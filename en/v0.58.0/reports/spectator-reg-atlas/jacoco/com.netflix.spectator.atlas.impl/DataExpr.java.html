@@ -1,0 +1,575 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataExpr.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas.impl</a> &gt; <span class="el_source">DataExpr.java</span></div><h1>DataExpr.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas.impl;
+
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+/**
+ * Data expressions for defining how to aggregate values. For more information see:
+ *
+ * https://github.com/Netflix/atlas/wiki/Reference-data
+ *
+ * &lt;b&gt;Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.&lt;/b&gt;
+ */
+public interface DataExpr {
+
+  /** Query for selecting the input measurements that should be aggregated. */
+  Query query();
+
+  /**
+   * Get an aggregator that can be incrementally fed values. See {@link #eval(Iterable)} if
+   * you already have the completed list of values.
+   *
+   * @param tags
+   *     The set of tags for the final aggregate.
+   * @return
+   *     Aggregator for this data expression.
+   */
+  Aggregator aggregator(Map&lt;String, String&gt; tags);
+
+  /**
+   * Get an aggregator using the default set of tags for the final result. The tags will
+   * be extracted based on the exact matches for the underlying query.
+   */
+  default Aggregator aggregator() {
+<span class="fc" id="L59">    return aggregator(query().exactTags());</span>
+  }
+
+  /**
+   * Evaluate the data expression over the input.
+   *
+   * @param input
+   *     Set of data values. The data will get filtered based on the query, that does
+   *     not need to be done in advance.
+   * @return
+   *     Aggregated data values.
+   */
+  default Iterable&lt;TagsValuePair&gt; eval(Iterable&lt;TagsValuePair&gt; input) {
+<span class="fc" id="L72">    Aggregator aggr = aggregator();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    for (TagsValuePair p : input) {</span>
+<span class="fc" id="L74">      aggr.update(p);</span>
+<span class="fc" id="L75">    }</span>
+<span class="fc" id="L76">    return aggr.result();</span>
+  }
+
+  /** Helper for incrementally computing an aggregate of a set of tag values. */
+  interface Aggregator {
+    /** Update the aggregate with the provided value. */
+    void update(TagsValuePair p);
+
+    /** Returns the aggregated data values. */
+    Iterable&lt;TagsValuePair&gt; result();
+  }
+
+  /**
+   * Includes all datapoints that match the query expression. See also:
+   * https://github.com/Netflix/atlas/wiki/data-all
+   */
+  final class All implements DataExpr {
+
+    private final Query query;
+
+    /** Create a new instance. */
+<span class="fc" id="L97">    All(Query query) {</span>
+<span class="fc" id="L98">      this.query = query;</span>
+<span class="fc" id="L99">    }</span>
+
+    @Override public Query query() {
+<span class="nc" id="L102">      return query;</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; ignored) {
+<span class="fc" id="L106">      return new Aggregator() {</span>
+<span class="fc" id="L107">        private List&lt;TagsValuePair&gt; pairs = new ArrayList&lt;&gt;();</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc" id="L110">          Map&lt;String, String&gt; tags = p.tags();</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">          if (query.matches(tags)) {</span>
+<span class="fc" id="L112">            pairs.add(new TagsValuePair(tags, p.value()));</span>
+          }
+<span class="fc" id="L114">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc" id="L117">          return pairs;</span>
+        }
+      };
+    }
+
+    @Override public Aggregator aggregator() {
+<span class="fc" id="L123">      return aggregator(null);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L127">      return query.toString() + &quot;,:all&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L131" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L132" title="All 4 branches covered.">      if (obj == null || !(obj instanceof All)) return false;</span>
+<span class="fc" id="L133">      All other = (All) obj;</span>
+<span class="fc" id="L134">      return query.equals(other.query);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L138">      int result = query.hashCode();</span>
+<span class="fc" id="L139">      result = 31 * result + &quot;:all&quot;.hashCode();</span>
+<span class="fc" id="L140">      return result;</span>
+    }
+  }
+
+  /** Base type for simple aggregate functions. */
+  interface AggregateFunction extends DataExpr {
+  }
+
+  /**
+   * Aggregates all datapoints that match the query to a single datapoint that is the
+   * sum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-sum
+   */
+  final class Sum implements AggregateFunction {
+
+    private final Query query;
+
+    /** Create a new instance. */
+<span class="fc" id="L157">    Sum(Query query) {</span>
+<span class="fc" id="L158">      this.query = query;</span>
+<span class="fc" id="L159">    }</span>
+
+    @Override public Query query() {
+<span class="fc" id="L162">      return query;</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L166">      return new Aggregator() {</span>
+<span class="fc" id="L167">        private double aggr = 0.0;</span>
+<span class="fc" id="L168">        private int count = 0;</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc bfc" id="L171" title="All 2 branches covered.">          if (query.matches(p.tags())) {</span>
+<span class="fc" id="L172">            aggr += p.value();</span>
+<span class="fc" id="L173">            ++count;</span>
+          }
+<span class="fc" id="L175">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">          return (count &gt; 0)</span>
+<span class="fc" id="L179">              ? Collections.singletonList(new TagsValuePair(tags, aggr))</span>
+<span class="fc" id="L180">              : Collections.emptyList();</span>
+        }
+      };
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L186">      return query.toString() + &quot;,:sum&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L190" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L191" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Sum)) return false;</span>
+<span class="fc" id="L192">      Sum other = (Sum) obj;</span>
+<span class="fc" id="L193">      return query.equals(other.query);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L197">      int result = query.hashCode();</span>
+<span class="fc" id="L198">      result = 31 * result + &quot;:sum&quot;.hashCode();</span>
+<span class="fc" id="L199">      return result;</span>
+    }
+  }
+
+  /**
+   * Aggregates all datapoints that match the query to a single datapoint that is the
+   * minimum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-min
+   */
+  final class Min implements AggregateFunction {
+
+    private final Query query;
+
+    /** Create a new instance. */
+<span class="fc" id="L212">    Min(Query query) {</span>
+<span class="fc" id="L213">      this.query = query;</span>
+<span class="fc" id="L214">    }</span>
+
+    @Override public Query query() {
+<span class="fc" id="L217">      return query;</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L221">      return new Aggregator() {</span>
+<span class="fc" id="L222">        private double aggr = Double.MAX_VALUE;</span>
+<span class="fc" id="L223">        private int count = 0;</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc bfc" id="L226" title="All 4 branches covered.">          if (query.matches(p.tags()) &amp;&amp; p.value() &lt; aggr) {</span>
+<span class="fc" id="L227">            aggr = p.value();</span>
+<span class="fc" id="L228">            ++count;</span>
+          }
+<span class="fc" id="L230">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc bfc" id="L233" title="All 2 branches covered.">          return (count &gt; 0)</span>
+<span class="fc" id="L234">              ? Collections.singletonList(new TagsValuePair(tags, aggr))</span>
+<span class="fc" id="L235">              : Collections.emptyList();</span>
+        }
+      };
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L241">      return query.toString() + &quot;,:min&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L245" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L246" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Min)) return false;</span>
+<span class="fc" id="L247">      Min other = (Min) obj;</span>
+<span class="fc" id="L248">      return query.equals(other.query);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L252">      int result = query.hashCode();</span>
+<span class="fc" id="L253">      result = 31 * result + &quot;:min&quot;.hashCode();</span>
+<span class="fc" id="L254">      return result;</span>
+    }
+  }
+
+  /**
+   * Aggregates all datapoints that match the query to a single datapoint that is the
+   * maximum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-max
+   */
+  final class Max implements AggregateFunction {
+
+    private final Query query;
+
+    /** Create a new instance. */
+<span class="fc" id="L267">    Max(Query query) {</span>
+<span class="fc" id="L268">      this.query = query;</span>
+<span class="fc" id="L269">    }</span>
+
+    @Override public Query query() {
+<span class="fc" id="L272">      return query;</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L276">      return new Aggregator() {</span>
+<span class="fc" id="L277">        private double aggr = -Double.MAX_VALUE;</span>
+<span class="fc" id="L278">        private int count = 0;</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc bfc" id="L281" title="All 4 branches covered.">          if (query.matches(p.tags()) &amp;&amp; p.value() &gt; aggr) {</span>
+<span class="fc" id="L282">            aggr = p.value();</span>
+<span class="fc" id="L283">            ++count;</span>
+          }
+<span class="fc" id="L285">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc bfc" id="L288" title="All 2 branches covered.">          return (count &gt; 0)</span>
+<span class="fc" id="L289">              ? Collections.singletonList(new TagsValuePair(tags, aggr))</span>
+<span class="fc" id="L290">              : Collections.emptyList();</span>
+        }
+      };
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L296">      return query.toString() + &quot;,:max&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L300" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L301" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Max)) return false;</span>
+<span class="fc" id="L302">      Max other = (Max) obj;</span>
+<span class="fc" id="L303">      return query.equals(other.query);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L307">      int result = query.hashCode();</span>
+<span class="fc" id="L308">      result = 31 * result + &quot;:max&quot;.hashCode();</span>
+<span class="fc" id="L309">      return result;</span>
+    }
+  }
+
+  /**
+   * Aggregates all datapoints that match the query to a single datapoint that is the
+   * number of input values. See also: https://github.com/Netflix/atlas/wiki/data-count
+   */
+  final class Count implements AggregateFunction {
+
+    private final Query query;
+
+    /** Create a new instance. */
+<span class="fc" id="L322">    Count(Query query) {</span>
+<span class="fc" id="L323">      this.query = query;</span>
+<span class="fc" id="L324">    }</span>
+
+    @Override public Query query() {
+<span class="fc" id="L327">      return query;</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L331">      return new Aggregator() {</span>
+<span class="fc" id="L332">        private int aggr = 0;</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc bfc" id="L335" title="All 2 branches covered.">          if (query.matches(p.tags())) {</span>
+<span class="fc" id="L336">            ++aggr;</span>
+          }
+<span class="fc" id="L338">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc bfc" id="L341" title="All 2 branches covered.">          return (aggr &gt; 0)</span>
+<span class="fc" id="L342">              ? Collections.singletonList(new TagsValuePair(tags, aggr))</span>
+<span class="fc" id="L343">              : Collections.emptyList();</span>
+        }
+      };
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L349">      return query.toString() + &quot;,:count&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L353" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L354" title="All 4 branches covered.">      if (obj == null || !(obj instanceof Count)) return false;</span>
+<span class="fc" id="L355">      Count other = (Count) obj;</span>
+<span class="fc" id="L356">      return query.equals(other.query);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L360">      int result = query.hashCode();</span>
+<span class="fc" id="L361">      result = 31 * result + &quot;:count&quot;.hashCode();</span>
+<span class="fc" id="L362">      return result;</span>
+    }
+  }
+
+  /**
+   * Compute a set of time series matching the query and grouped by the specified keys.
+   * See also: https://github.com/Netflix/atlas/wiki/data-by
+   */
+  final class GroupBy implements DataExpr {
+
+    private final AggregateFunction af;
+    private final List&lt;String&gt; keys;
+
+    /** Create a new instance. */
+<span class="fc" id="L376">    GroupBy(AggregateFunction af, List&lt;String&gt; keys) {</span>
+<span class="pc bpc" id="L377" title="1 of 2 branches missed.">      Preconditions.checkArg(!keys.isEmpty(), &quot;key list for group by cannot be empty&quot;);</span>
+<span class="fc" id="L378">      this.af = af;</span>
+<span class="fc" id="L379">      this.keys = keys;</span>
+<span class="fc" id="L380">    }</span>
+
+    private Map&lt;String, String&gt; keyTags(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L383">      Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">      for (String k : keys) {</span>
+<span class="fc" id="L385">        String v = tags.get(k);</span>
+<span class="fc bfc" id="L386" title="All 2 branches covered.">        if (v == null) {</span>
+<span class="fc" id="L387">          return null;</span>
+        }
+<span class="fc" id="L389">        result.put(k, v);</span>
+<span class="fc" id="L390">      }</span>
+<span class="fc" id="L391">      return result;</span>
+    }
+
+    @Override public Query query() {
+<span class="fc" id="L395">      return af.query();</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; queryTags) {
+<span class="fc" id="L399">      return new Aggregator() {</span>
+<span class="fc" id="L400">        private Map&lt;Map&lt;String, String&gt;, Aggregator&gt; aggrs = new HashMap&lt;&gt;();</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc" id="L403">          Map&lt;String, String&gt; tags = p.tags();</span>
+<span class="fc bfc" id="L404" title="All 2 branches covered.">          if (af.query().matches(tags)) {</span>
+<span class="fc" id="L405">            Map&lt;String, String&gt; k = keyTags(tags);</span>
+<span class="fc bfc" id="L406" title="All 2 branches covered.">            if (k != null) {</span>
+<span class="fc" id="L407">              k.putAll(queryTags);</span>
+<span class="fc" id="L408">              aggrs.computeIfAbsent(k, af::aggregator).update(p);</span>
+            }
+          }
+<span class="fc" id="L411">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc" id="L414">          return aggrs.values().stream()</span>
+<span class="fc" id="L415">              .flatMap(a -&gt; StreamSupport.stream(a.result().spliterator(), false))</span>
+<span class="fc" id="L416">              .collect(Collectors.toList());</span>
+        }
+      };
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L422">      final String keyList = keys.stream().collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L423">      return af.toString() + &quot;,(,&quot; + keyList + &quot;,),:by&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L427" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L428" title="All 4 branches covered.">      if (obj == null || !(obj instanceof GroupBy)) return false;</span>
+<span class="fc" id="L429">      GroupBy other = (GroupBy) obj;</span>
+<span class="fc bfc" id="L430" title="All 4 branches covered.">      return af.equals(other.af) &amp;&amp; keys.equals(other.keys);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L434">      int result = af.hashCode();</span>
+<span class="fc" id="L435">      result = 31 * result + keys.hashCode();</span>
+<span class="fc" id="L436">      result = 31 * result + &quot;:by&quot;.hashCode();</span>
+<span class="fc" id="L437">      return result;</span>
+    }
+  }
+
+  /**
+   * Rollup inputs by dropping the specified keys. This is typically used with
+   * a rollup config to reduce the amount of data going out. If a whitelist
+   * of keys is needed, then see {@link KeepRollup}.
+   */
+  final class DropRollup implements DataExpr {
+
+    private final AggregateFunction af;
+    private final List&lt;String&gt; keys;
+
+    /** Create a new instance. */
+<span class="fc" id="L452">    DropRollup(AggregateFunction af, List&lt;String&gt; keys) {</span>
+<span class="pc bpc" id="L453" title="1 of 2 branches missed.">      Preconditions.checkArg(!keys.contains(&quot;name&quot;), &quot;name is required and cannot be dropped&quot;);</span>
+<span class="fc" id="L454">      this.af = af;</span>
+<span class="fc" id="L455">      this.keys = keys;</span>
+<span class="fc" id="L456">    }</span>
+
+    @Override public Query query() {
+<span class="nc" id="L459">      return af.query();</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; ignored) {
+<span class="fc" id="L463">      return new Aggregator() {</span>
+<span class="fc" id="L464">        private Map&lt;Map&lt;String, String&gt;, Aggregator&gt; aggrs = new HashMap&lt;&gt;();</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc" id="L467">          Map&lt;String, String&gt; tags = new HashMap&lt;&gt;(p.tags());</span>
+<span class="fc bfc" id="L468" title="All 2 branches covered.">          if (af.query().matches(tags)) {</span>
+<span class="fc bfc" id="L469" title="All 2 branches covered.">            for (String k : keys) {</span>
+<span class="fc" id="L470">              tags.remove(k);</span>
+<span class="fc" id="L471">            }</span>
+<span class="fc" id="L472">            aggrs.computeIfAbsent(tags, af::aggregator).update(p);</span>
+          }
+<span class="fc" id="L474">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc" id="L477">          return aggrs.values().stream()</span>
+<span class="fc" id="L478">              .flatMap(a -&gt; StreamSupport.stream(a.result().spliterator(), false))</span>
+<span class="fc" id="L479">              .collect(Collectors.toList());</span>
+        }
+      };
+    }
+
+    @Override public Aggregator aggregator() {
+<span class="fc" id="L485">      return aggregator(null);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L489">      final String keyList = keys.stream().collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L490">      return af.toString() + &quot;,(,&quot; + keyList + &quot;,),:rollup-drop&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L494" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L495" title="All 4 branches covered.">      if (obj == null || !(obj instanceof DropRollup)) return false;</span>
+<span class="fc" id="L496">      DropRollup other = (DropRollup) obj;</span>
+<span class="fc bfc" id="L497" title="All 4 branches covered.">      return af.equals(other.af) &amp;&amp; keys.equals(other.keys);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L501">      int result = af.hashCode();</span>
+<span class="fc" id="L502">      result = 31 * result + keys.hashCode();</span>
+<span class="fc" id="L503">      result = 31 * result + &quot;:by&quot;.hashCode();</span>
+<span class="fc" id="L504">      return result;</span>
+    }
+  }
+
+  /**
+   * Rollup inputs by only keeping the specified keys. This is typically used with
+   * a rollup config to reduce the amount of data going out. If a blacklist of
+   * keys is needed, then see {@link DropRollup}.
+   */
+  final class KeepRollup implements DataExpr {
+
+    private final AggregateFunction af;
+    private final Set&lt;String&gt; keys;
+
+    /** Create a new instance. */
+<span class="fc" id="L519">    KeepRollup(AggregateFunction af, List&lt;String&gt; keys) {</span>
+<span class="fc" id="L520">      this.af = af;</span>
+<span class="fc" id="L521">      this.keys = new HashSet&lt;&gt;(keys);</span>
+<span class="fc" id="L522">      this.keys.add(&quot;name&quot;);</span>
+<span class="fc" id="L523">    }</span>
+
+    @Override public Query query() {
+<span class="nc" id="L526">      return af.query();</span>
+    }
+
+    @Override public Aggregator aggregator(Map&lt;String, String&gt; ignored) {
+<span class="fc" id="L530">      return new Aggregator() {</span>
+<span class="fc" id="L531">        private Map&lt;Map&lt;String, String&gt;, Aggregator&gt; aggrs = new HashMap&lt;&gt;();</span>
+
+        @Override public void update(TagsValuePair p) {
+<span class="fc" id="L534">          Map&lt;String, String&gt; tags = p.tags();</span>
+<span class="fc bfc" id="L535" title="All 2 branches covered.">          if (af.query().matches(tags)) {</span>
+<span class="fc" id="L536">            Map&lt;String, String&gt; newTags = tags.entrySet().stream()</span>
+<span class="fc" id="L537">                .filter(e -&gt; keys.contains(e.getKey()))</span>
+<span class="fc" id="L538">                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));</span>
+<span class="fc" id="L539">            aggrs.computeIfAbsent(newTags, af::aggregator).update(p);</span>
+          }
+<span class="fc" id="L541">        }</span>
+
+        @Override public Iterable&lt;TagsValuePair&gt; result() {
+<span class="fc" id="L544">          return aggrs.values().stream()</span>
+<span class="fc" id="L545">              .flatMap(a -&gt; StreamSupport.stream(a.result().spliterator(), false))</span>
+<span class="fc" id="L546">              .collect(Collectors.toList());</span>
+        }
+      };
+    }
+
+    @Override public Aggregator aggregator() {
+<span class="fc" id="L552">      return aggregator(null);</span>
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L556">      final String keyList = keys.stream().collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L557">      return af.toString() + &quot;,(,&quot; + keyList + &quot;,),:rollup-keep&quot;;</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="fc bfc" id="L561" title="All 2 branches covered.">      if (this == obj) return true;</span>
+<span class="fc bfc" id="L562" title="All 4 branches covered.">      if (obj == null || !(obj instanceof KeepRollup)) return false;</span>
+<span class="fc" id="L563">      KeepRollup other = (KeepRollup) obj;</span>
+<span class="fc bfc" id="L564" title="All 4 branches covered.">      return af.equals(other.af) &amp;&amp; keys.equals(other.keys);</span>
+    }
+
+    @Override public int hashCode() {
+<span class="fc" id="L568">      int result = af.hashCode();</span>
+<span class="fc" id="L569">      result = 31 * result + keys.hashCode();</span>
+<span class="fc" id="L570">      result = 31 * result + &quot;:by&quot;.hashCode();</span>
+<span class="fc" id="L571">      return result;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
