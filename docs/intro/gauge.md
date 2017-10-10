@@ -136,7 +136,7 @@ counter that represents the number of events since the system was initialized. A
 example of that in the JDK is [ThreadPoolExecutor.getCompletedTaskCount()] which
 returns the number of completed tasks on the thread pool.
 
-For sources like this the `monitorMonotonicValue` method can be used:
+For sources like this the `monitorMonotonicCounter` method can be used:
 
 ```java
 // For an implementation of Number
