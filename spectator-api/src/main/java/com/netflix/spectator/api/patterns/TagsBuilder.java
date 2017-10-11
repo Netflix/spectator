@@ -41,25 +41,25 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
   protected final List<Tag> extraTags = new ArrayList<>();
 
   /** Add an additional tag value. */
-  T withTag(String k, String v) {
+  public T withTag(String k, String v) {
     extraTags.add(new BasicTag(k, v));
     return (T) this;
   }
 
   /** Add an additional tag value. */
-  T withTag(String k, Boolean v) {
+  public T withTag(String k, Boolean v) {
     extraTags.add(new BasicTag(k, Boolean.toString(v)));
     return (T) this;
   }
 
   /** Add an additional tag value. */
-  T withTag(Tag t) {
+  public T withTag(Tag t) {
     extraTags.add(t);
     return (T) this;
   }
 
   /** Add additional tag values. */
-  T withTags(String... tags) {
+  public T withTags(String... tags) {
     for (int i = 0; i < tags.length; i += 2) {
       extraTags.add(new BasicTag(tags[0], tags[1]));
     }
@@ -67,13 +67,13 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
   }
 
   /** Add additional tag values. */
-  T withTags(Tag... tags) {
+  public T withTags(Tag... tags) {
     Collections.addAll(extraTags, tags);
     return (T) this;
   }
 
   /** Add additional tag values. */
-  T withTags(Iterable<Tag> tags) {
+  public T withTags(Iterable<Tag> tags) {
     for (Tag t : tags) {
       extraTags.add(t);
     }
@@ -81,7 +81,7 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
   }
 
   /** Add additional tag values. */
-  T withTags(Map<String, String> tags) {
+  public T withTags(Map<String, String> tags) {
     for (Map.Entry<String, String> entry : tags.entrySet()) {
       extraTags.add(new BasicTag(entry.getKey(), entry.getValue()));
     }
