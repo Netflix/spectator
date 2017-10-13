@@ -311,9 +311,10 @@ final class ArrayTagSet implements Iterable<Tag> {
           dst[j] = src[i].key();
           dst[j + 1] = src[i].value();
         } else {
+          j += 2; // Not deduping, skip over previous entry
           k = src[i].key();
-          dst[++j] = k;
-          dst[++j] = src[i].value();
+          dst[j] = k;
+          dst[j + 1] = src[i].value();
         }
       }
       return j + 2;

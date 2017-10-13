@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,5 +190,49 @@ public class DefaultIdTest {
   public void withTagBooleanObjNull() {
     Boolean value = null;
     new DefaultId("test").withTag("bool", value);
+  }
+
+  @Test
+  public void issue483() {
+    // Before calling hashCode on this id caused NPE
+    Id id1 = new DefaultId("test")
+        .withTag("api_name", "foo")
+        .withTags(Statistic.percentile, new BasicTag("percentile", "1"));
+
+    // Forces deduping to improve coverage
+    Id id2 = new DefaultId("test")
+        .withTag("api_name", "foo")
+        .withTags(
+            Statistic.percentile, new BasicTag("percentile", "2"),
+            Statistic.percentile, new BasicTag("percentile", "1"));
+
+    Assert.assertEquals(id1.hashCode(), id2.hashCode());
+    Assert.assertEquals(id1, id2);
+  }
+
+  @Test
+  public void issue483_2() {
+    // Another sanity check using the full key set
+    Id id1 = new DefaultId("test")
+        .withTag("api_name", "foo")
+        .withTag("api_partner", "3")
+        .withTag("api_status", "failed")
+        .withTag("api_http_code", "400")
+        .withTag("api_error_code", "BadRequest")
+        .withTags(Statistic.percentile, new BasicTag("percentile", "1"));
+
+    // Forces deduping to improve coverage
+    Id id2 = new DefaultId("test")
+        .withTag("api_name", "foo")
+        .withTag("api_partner", "3")
+        .withTag("api_status", "failed")
+        .withTag("api_http_code", "400")
+        .withTag("api_error_code", "BadRequest")
+        .withTags(
+            Statistic.percentile, new BasicTag("percentile", "2"),
+            Statistic.percentile, new BasicTag("percentile", "1"));
+
+    Assert.assertEquals(id1.hashCode(), id2.hashCode());
+    Assert.assertEquals(id1, id2);
   }
 }
