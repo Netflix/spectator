@@ -14,7 +14,7 @@ buildscript {
 plugins {
   id 'nebula.netflixoss' version '4.0.0'
   id 'me.champeau.gradle.jmh' version '0.3.0'
-  id "com.github.spotbugs" version "1.2" apply false
+  id "com.github.spotbugs" version "1.5" apply false
 }
 
 // Establish version and status
@@ -108,8 +108,6 @@ subprojects {
   }
   
   spotbugs {
-    // Spotbugs plugin still pulls in findbugs so this version does not work...
-    //toolVersion "3.1.0-RC2"
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
