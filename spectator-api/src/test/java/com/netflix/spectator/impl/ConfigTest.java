@@ -32,6 +32,7 @@ import java.time.zone.ZoneRulesException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 @RunWith(JUnit4.class)
@@ -376,6 +377,14 @@ public class ConfigTest {
   }
 
   @Test
+  public void proxyDurationIn() {
+    Map<String, String> props = new HashMap<>();
+    TestConfig cfg = Config.usingMap(TestConfig.class, props);
+    props.put("valueDuration", "PT5M");
+    Assert.assertEquals(5, cfg.durationIn(TimeUnit.MINUTES));
+  }
+
+  @Test
   public void proxyPeriod() {
     Map<String, String> props = new HashMap<>();
     TestConfig cfg = Config.usingMap(TestConfig.class, props);
@@ -460,5 +469,11 @@ public class ConfigTest {
     Instant valueInstant();
     ZonedDateTime valueZonedDateTime();
     ZoneId valueZoneId();
+
+    // Test invoking of default method that takes arguments
+    default long durationIn(TimeUnit unit) {
+      final long nanos = valueDuration().toNanos();
+      return unit.convert(nanos, TimeUnit.NANOSECONDS);
+    }
   }
 }

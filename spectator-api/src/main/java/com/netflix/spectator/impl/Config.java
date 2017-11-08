@@ -124,7 +124,7 @@ public final class Config {
           .bindTo(proxy)
           .invokeWithArguments(args);
     } else {
-      MethodType rt = MethodType.methodType(method.getReturnType());
+      MethodType rt = MethodType.methodType(method.getReturnType(), method.getParameterTypes());
       return MethodHandles.lookup()
           .findSpecial(declaringClass, method.getName(), rt, declaringClass)
           .bindTo(proxy)
