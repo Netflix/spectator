@@ -13,7 +13,7 @@ buildscript {
 
 plugins {
   id 'nebula.netflixoss' version '4.0.2'
-  id 'me.champeau.gradle.jmh' version '0.3.0'
+  id 'me.champeau.gradle.jmh' version '0.4.4'
   id "com.github.spotbugs" version "1.6.0" apply false
 }
 
@@ -76,12 +76,13 @@ subprojects {
   }
 
   jmh {
+    jmhVersion = '1.19'
     warmupIterations = 10
     iterations = 10
     fork = 1
     threads = 1
     profilers = ['stack']
-    include '.*Ids.*'
+    include = ['.*Ids.*']
   }
 
   jacoco {
