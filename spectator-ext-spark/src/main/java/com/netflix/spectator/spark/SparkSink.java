@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
+import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
 import com.typesafe.config.Config;
@@ -71,6 +72,13 @@ public class SparkSink implements Sink {
     pollPeriod = getPeriod(properties);
     pollUnit = getUnit(properties);
     url = URI.create(properties.getProperty("url", DEFAULT_URL)).toURL();
+
+    // If there is a need to collect application metrics from jobs running on Spark, then
+    // this should be enabled. The apps can report to the global registry and it will get
+    // picked up by the Spark integration.
+    if (shouldAddToGlobal(properties)) {
+      Spectator.globalRegistry().add(sidecarRegistry);
+    }
   }
 
   private Config loadConfig() {
@@ -106,6 +114,11 @@ public class SparkSink implements Sink {
   private TimeUnit getUnit(Properties properties) {
     final String v = properties.getProperty("unit");
     return (v == null) ? TimeUnit.SECONDS : TimeUnit.valueOf(v.toUpperCase(Locale.US));
+  }
+
+  private boolean shouldAddToGlobal(Properties properties) {
+    final String v = properties.getProperty("addToGlobalRegistry");
+    return (v == null) || Boolean.valueOf(v);
   }
 
   @Override public void start() {
