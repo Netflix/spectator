@@ -1,6 +1,6 @@
 
 dependencies {
-  testCompile files("$projectDir/src/test/lib/compatibility-0.57.1.jar")
+  testCompile files("$projectDir/src/test/lib/compatibility-0.58.2.jar")
 }
 
 javadoc {
