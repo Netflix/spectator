@@ -19,6 +19,9 @@ import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,6 +53,9 @@ public class HttpRequestBuilder {
 
   private long initialRetryDelay = 1000L;
   private int numAttempts = 1;
+
+  private HostnameVerifier hostVerifier = null;
+  private SSLSocketFactory sslFactory = null;
 
   /** Create a new instance for the specified URI. */
   public HttpRequestBuilder(String clientName, URI uri) {
@@ -155,6 +161,32 @@ public class HttpRequestBuilder {
     return this;
   }
 
+  private void requireHttps(String msg) {
+    Preconditions.checkState("https".equals(uri.getScheme()), msg);
+  }
+
+  /** Sets the policy used to verify hostnames when using HTTPS. */
+  public HttpRequestBuilder withHostnameVerifier(HostnameVerifier verifier) {
+    requireHttps("hostname verification cannot be used with http, switch to https");
+    this.hostVerifier = verifier;
+    return this;
+  }
+
+  /**
+   * Specify that all hosts are allowed. Using this option effectively disables hostname
+   * verification. Use with caution.
+   */
+  public HttpRequestBuilder allowAllHosts() {
+    return withHostnameVerifier((host, session) -> true);
+  }
+
+  /** Sets the socket factory to use with HTTPS. */
+  public HttpRequestBuilder withSSLSocketFactory(SSLSocketFactory factory) {
+    requireHttps("ssl cannot be used with http, use https");
+    this.sslFactory = factory;
+    return this;
+  }
+
   /** Send the request and log/update metrics for the results. */
   @SuppressWarnings("PMD.ExceptionAsFlowControl")
   public HttpResponse send() throws IOException {
@@ -200,6 +232,18 @@ public class HttpRequestBuilder {
     return response;
   }
 
+  private void configureHTTPS(HttpURLConnection http) {
+    if (http instanceof HttpsURLConnection) {
+      HttpsURLConnection https = (HttpsURLConnection) http;
+      if (hostVerifier != null) {
+        https.setHostnameVerifier(hostVerifier);
+      }
+      if (sslFactory != null) {
+        https.setSSLSocketFactory(sslFactory);
+      }
+    }
+  }
+
   /** Send the request and log/update metrics for the results. */
   protected HttpResponse sendImpl() throws IOException {
     HttpURLConnection con = (HttpURLConnection) uri.toURL().openConnection();
@@ -209,6 +253,7 @@ public class HttpRequestBuilder {
     for (Map.Entry<String, String> h : reqHeaders.entrySet()) {
       con.setRequestProperty(h.getKey(), h.getValue());
     }
+    configureHTTPS(con);
 
     boolean canRetry = true;
     try {

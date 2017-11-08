@@ -107,11 +107,28 @@ public class HttpRequestBuilderTest {
     retryStatus(UNAVAILABLE, 3);
   }
 
+  @Test(expected = IllegalStateException.class)
+  public void hostnameVerificationWithHTTP() throws IOException {
+    new TestRequestBuilder(() -> OK).allowAllHosts();
+  }
+
+  @Test
+  public void hostnameVerificationWithHTTPS() throws IOException {
+    HttpResponse res = new TestRequestBuilder(() -> OK, URI.create("https://foo.com/path"))
+        .allowAllHosts()
+        .send();
+    Assert.assertEquals(200, res.status());
+  }
+
   private static class TestRequestBuilder extends HttpRequestBuilder {
     private HttpResponseSupplier supplier;
 
     TestRequestBuilder(HttpResponseSupplier supplier) {
-      super("test", URI.create("/path"));
+      this(supplier, URI.create("/path"));
+    }
+
+    TestRequestBuilder(HttpResponseSupplier supplier, URI uri) {
+      super("test", uri);
       this.supplier = supplier;
     }
 
