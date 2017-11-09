@@ -1,7 +1,7 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.15.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:5.0.0'
 
     // This is a workaround for getting the shadow plugin to work correctly
@@ -12,8 +12,8 @@ buildscript {
 }
 
 plugins {
-  id 'nebula.netflixoss' version '4.0.0'
-  id 'me.champeau.gradle.jmh' version '0.3.0'
+  id 'nebula.netflixoss' version '4.0.2'
+  id 'me.champeau.gradle.jmh' version '0.4.4'
   id "com.github.spotbugs" version "1.6.0" apply false
 }
 
@@ -76,12 +76,13 @@ subprojects {
   }
 
   jmh {
+    jmhVersion = '1.19'
     warmupIterations = 10
     iterations = 10
     fork = 1
     threads = 1
     profilers = ['stack']
-    include '.*Ids.*'
+    include = ['.*Ids.*']
   }
 
   jacoco {
