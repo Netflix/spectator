@@ -18,6 +18,7 @@ package com.netflix.spectator.sandbox;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -127,6 +128,8 @@ public class HttpLogEntry {
   }
 
   private static void log(Logger logger, Marker marker, HttpLogEntry entry) {
+    Preconditions.checkNotNull(entry.method, "method");
+
     Id dimensions = REGISTRY.createId("tags")
         .withTag("mode", marker.getName())
         .withTag("status", entry.getStatusTag())
