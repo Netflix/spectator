@@ -62,7 +62,8 @@ public class HttpRequestBuilder {
     this.uri = uri;
     this.entry = new HttpLogEntry()
         .withRequestUri(uri)
-        .withClientName(clientName);
+        .withClientName(clientName)
+        .withMethod(method);
   }
 
   /** Set the request method (GET, PUT, POST, DELETE). */
