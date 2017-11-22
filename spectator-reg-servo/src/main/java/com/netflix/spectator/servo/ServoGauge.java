@@ -26,6 +26,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.impl.AtomicDouble;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -59,7 +60,8 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
   }
 
   @Override public Iterable<Measurement> measure() {
-    return null;
+    long now = clock.wallTime();
+    return Collections.singleton(new Measurement(id(), now, value.get()));
   }
 
   @Override public void set(double v) {

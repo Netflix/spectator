@@ -18,7 +18,7 @@ package com.netflix.spectator.servo;
 import com.netflix.servo.monitor.Monitor;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.ManualClock;
-import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Measurement;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -100,6 +101,20 @@ public class ServoGaugeTest {
 
     Map<String, String> tags = r.getMonitors().get(0).getConfig().getTags().asMap();
     Assert.assertEquals("GAUGE", tags.get("type"));
+  }
+
+  @Test
+  public void measure() {
+    final ServoRegistry r = new ServoRegistry(clock);
+    Gauge g = r.gauge(r.createId("foo"));
+    g.set(1.0);
+
+    Iterator<Measurement> ms = g.measure().iterator();
+    Assert.assertTrue(ms.hasNext());
+    Measurement m = ms.next();
+    Assert.assertFalse(ms.hasNext());
+    Assert.assertEquals("foo", m.id().name());
+    Assert.assertEquals(1.0, 1.0, 1e-12);
   }
 
   @Test
