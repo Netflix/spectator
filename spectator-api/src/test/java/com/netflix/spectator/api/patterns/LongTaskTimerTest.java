@@ -109,4 +109,12 @@ public class LongTaskTimerTest {
     t.stop(task2);
     assertLongTaskTimer(t, 1L, 0, 0.0);
   }
+
+  // https://github.com/Netflix/spectator/issues/503
+  @Test
+  public void usingNoopRegistry() {
+    System.setProperty("spectator.api.propagateWarnings", "true");
+    Registry noop = new NoopRegistry();
+    LongTaskTimer.get(noop, noop.createId("task"));
+  }
 }

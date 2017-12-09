@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -267,12 +267,11 @@ public final class Utils {
   }
 
   /**
-   * Propagate a type error exception.
-   * Used in situations where an existing id has already been registered but with a different
-   * class.
+   * Propagate a type error exception. Used in situations where an existing id has already
+   * been registered but with a different class.
    */
-  public static void propagateTypeError(Registry registry, Id id,
-                                        Class<?> desiredClass, Class<?> actualClass) {
+  public static void propagateTypeError(
+      Registry registry, Id id, Class<?> desiredClass, Class<?> actualClass) {
     final String dType = desiredClass.getName();
     final String aType = actualClass.getName();
     final String msg = String.format("cannot access '%s' as a %s, it already exists as a %s",
