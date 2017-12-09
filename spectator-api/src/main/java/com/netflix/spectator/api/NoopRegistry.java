@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2017 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,5 +72,13 @@ public final class NoopRegistry implements Registry {
 
   @Override public Iterator<Meter> iterator() {
     return Collections.<Meter>emptyList().iterator();
+  }
+
+  @Override public void propagate(String msg, Throwable t) {
+    // Since everything will have the same id when using this registry, it can result
+    // in type errors when checking against the state, see #503.
+  }
+
+  @Override public void propagate(Throwable t) {
   }
 }
