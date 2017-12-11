@@ -41,10 +41,9 @@ public class SparkNameFunctionTest {
   //EXECUTOR
   @Test
   public void executorMetric() {
-    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.executor.filesystem.file.largeRead_ops";
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.executor.filesystem.file.largeRead_ops";
     final Id expected = registry.createId("spark.executor.filesystem.file.largeRead_ops")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
         .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
@@ -52,10 +51,9 @@ public class SparkNameFunctionTest {
 
   @Test
   public void executorJvmMetric() {
-    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.jvm.heap.committed";
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.jvm.heap.committed";
     final Id expected = registry.createId("spark.jvm.heap.committed")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
         .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
@@ -63,10 +61,9 @@ public class SparkNameFunctionTest {
 
   @Test
   public void executorCodeGenerator() {
-    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.CodeGenerator.compilationTime";
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.CodeGenerator.compilationTime";
     final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
         .withTag("executorId", "2")
         .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
