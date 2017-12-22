@@ -40,7 +40,7 @@ public class SparkNameFunctionTest {
 
   //EXECUTOR
   @Test
-  public void executorMetric() {
+  public void executorMetric_executor() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.executor.filesystem.file.largeRead_ops";
     final Id expected = registry.createId("spark.executor.filesystem.file.largeRead_ops")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
@@ -51,7 +51,29 @@ public class SparkNameFunctionTest {
   }
 
   @Test
-  public void executorMetric20() {
+  public void executorMetric_jvm() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.jvm.heap.committed";
+    final Id expected = registry.createId("spark.jvm.heap.committed")
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
+            .withTag("executorId", "2")
+            .withTag("role", "executor");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void executorMetric_CodeGenerator() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.CodeGenerator.compilationTime";
+    final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
+            .withTag("executorId", "2")
+            .withTag("role", "executor");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void executorMetric20_executor() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.executor.filesystem.file.largeRead_ops";
     final Id expected = registry.createId("spark.executor.filesystem.file.largeRead_ops")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
@@ -61,50 +83,38 @@ public class SparkNameFunctionTest {
   }
 
   @Test
-  public void executorJvmMetric() {
-    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.jvm.heap.committed";
-    final Id expected = registry.createId("spark.jvm.heap.committed")
-        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
-        .withTag("executorId", "2")
-        .withTag("role", "executor");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void executorJvmMetric20() {
+  public void executorMetric20_jvm() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.jvm.heap.committed";
     final Id expected = registry.createId("spark.jvm.heap.committed")
-        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("executorId", "2")
-        .withTag("role", "executor");
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("executorId", "2")
+            .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
   }
 
   @Test
-  public void executorCodeGenerator() {
-    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.97278898-4bd4-49c2-9889-aa5f969a7816-S1/2.CodeGenerator.compilationTime";
-    final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
-        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("agentId","97278898-4bd4-49c2-9889-aa5f969a7816-S1")
-        .withTag("executorId", "2")
-        .withTag("role", "executor");
-    assertEquals(expected, f.apply(name));
-  }
-
-  @Test
-  public void executorCodeGenerator20() {
+  public void executorMetric20_CodeGenerator() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.CodeGenerator.compilationTime";
     final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
-        .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
-        .withTag("executorId", "2")
-        .withTag("role", "executor");
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("executorId", "2")
+            .withTag("role", "executor");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void executorMetric21_HiveExternalCatalog() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.2.HiveExternalCatalog.fileCacheHits";
+    final Id expected = registry.createId("spark.HiveExternalCatalog.fileCacheHits")
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("executorId", "2")
+            .withTag("role", "executor");
     assertEquals(expected, f.apply(name));
   }
 
   // DRIVER
   @Test
-  public void driverMetric() {
+  public void driverMetric_BlockManager() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.BlockManager.disk.diskSpaceUsed_MB";
     final Id expected = registry.createId("spark.BlockManager.disk.diskSpaceUsed")  // Trailing _MB removed
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
@@ -113,7 +123,17 @@ public class SparkNameFunctionTest {
   }
 
   @Test
-  public void driverMetricNoUnits() {
+  public void driverMetric_CodeGenerator() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.CodeGenerator.compilationTime";
+    final Id expected = registry.createId("spark.CodeGenerator.compilationTime")
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("role", "driver");
+    assertEquals(expected, f.apply(name));
+  }
+
+
+  @Test
+  public void driverMetric_DAGScheduler() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.DAGScheduler.messageProcessingTime";
     final Id expected = registry.createId("spark.DAGScheduler.messageProcessingTime")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
@@ -122,11 +142,20 @@ public class SparkNameFunctionTest {
   }
 
   @Test
-  public void driverJvmMetric() {
+  public void driverMetric_jvm() {
     final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.jvm.heap.committed";
     final Id expected = registry.createId("spark.jvm.heap.committed")
         .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
         .withTag("role", "driver");
+    assertEquals(expected, f.apply(name));
+  }
+
+  @Test
+  public void driverMetric21_HiveExternalCatalog() {
+    final String name = "97278898-4bd4-49c2-9889-aa5f969a7816-0013.driver.HiveExternalCatalog.fileCacheHits";
+    final Id expected = registry.createId("spark.HiveExternalCatalog.fileCacheHits")
+            .withTag("appId", "97278898-4bd4-49c2-9889-aa5f969a7816-0013")
+            .withTag("role", "driver");
     assertEquals(expected, f.apply(name));
   }
 
