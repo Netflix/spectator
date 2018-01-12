@@ -1,5 +1,5 @@
-/**
- * Copyright 2014-2016 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.io.IOError;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
@@ -86,6 +87,50 @@ public class SchedulerTest {
     task.updateNextExecutionTime(skipped);
     Assert.assertEquals(65437L, task.getNextExecutionTime());
     Assert.assertEquals(3L, skipped.count());
+  }
+
+  private long numberOfThreads(String id) {
+    return Thread.getAllStackTraces()
+        .keySet()
+        .stream()
+        .filter(t -> t.getName().startsWith("spectator-" + id))
+        .count();
+  }
+
+  @Test
+  public void shutdownStopsThreads() throws Exception {
+    Scheduler s = new Scheduler(new DefaultRegistry(), "shutdown", 1);
+
+    // Schedule something to force it to start the threads
+    Scheduler.Options opts = new Scheduler.Options()
+        .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, Duration.ofMillis(10))
+        .withStopOnFailure(false);
+    ScheduledFuture<?> f = s.schedule(opts, () -> {});
+    Assert.assertEquals(1L, numberOfThreads("shutdown"));
+
+    // Shutdown and wait a bit, this gives the thread a chance to restart
+    s.shutdown();
+    Thread.sleep(300);
+    Assert.assertEquals(0L, numberOfThreads("shutdown"));
+  }
+
+  @Test
+  public void stopOnFailureFalseThrowable() throws Exception {
+    Scheduler s = new Scheduler(new DefaultRegistry(), "test", 1);
+
+    Scheduler.Options opts = new Scheduler.Options()
+        .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, Duration.ofMillis(10))
+        .withStopOnFailure(false);
+
+    final CountDownLatch latch = new CountDownLatch(5);
+    ScheduledFuture<?> f = s.schedule(opts, () -> {
+      latch.countDown();
+      throw new IOError(new RuntimeException("stop"));
+    });
+
+    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assert.assertFalse(f.isDone());
+    s.shutdown();
   }
 
   @Test
