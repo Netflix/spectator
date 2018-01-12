@@ -33,6 +33,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
@@ -96,8 +97,10 @@ public class Scheduler {
     };
   }
 
-  private static Id newId(Registry registry, String id, String name) {
-    return registry.createId("spectator.scheduler." + name, "id", id);
+  private static Id newId(Registry registry, String id, String name, String... additionalTags) {
+    return registry.createId("spectator.scheduler." + name, "id", id)
+            .withTag("id", id)
+            .withTags(additionalTags);
   }
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Scheduler.class);
@@ -109,6 +112,8 @@ public class Scheduler {
   private final AtomicInteger activeCount;
   private final Timer taskExecutionTime;
   private final Timer taskExecutionDelay;
+  private final AtomicLong lastSuccessfulExecutionTimestamp;
+  private final AtomicLong lastFailedExecutionTimestamp;
   private final Counter skipped;
 
   private final ThreadFactory factory;
@@ -139,6 +144,12 @@ public class Scheduler {
         .monitorValue(new AtomicInteger());
     taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
     taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
+    lastSuccessfulExecutionTimestamp = PolledMeter.using(registry)
+            .withId(newId(registry, id, "lastExecutionTimestamp", "result", "success"))
+            .monitorValue(new AtomicLong());
+    lastFailedExecutionTimestamp = PolledMeter.using(registry)
+            .withId(newId(registry, id, "lastExecutionTimestamp", "result", "failed"))
+            .monitorValue(new AtomicLong());
     skipped = registry.counter(newId(registry, id, "skipped"));
 
     this.factory = newThreadFactory(id);
@@ -326,17 +337,28 @@ public class Scheduler {
      * @param skipped
      *     Counter that will be incremented each time an expected execution is
      *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
+     * @param lastSuccessfulExecutionTimestamp
+     *     AtomicLong that will be updated to the current wall clock time of a successful run. This is useful for
+     *     monitoring.
+     * @param lastFailedExecutionTimestamp
+     *     AtomicLong that will be updated to the current wallclock time of a failed run. This is useful for
+     *     monitoring.
      */
-    void runAndReschedule(DelayQueue<DelayedTask> queue, Counter skipped) {
+    void runAndReschedule(DelayQueue<DelayedTask> queue,
+                          Counter skipped,
+                          AtomicLong lastSuccessfulExecutionTimestamp,
+                          AtomicLong lastFailedExecutionTimestamp) {
       thread = Thread.currentThread();
       boolean scheduleAgain = options.schedulingPolicy != Policy.RUN_ONCE;
       try {
         if (!isDone()) {
           task.run();
+          lastSuccessfulExecutionTimestamp.set(clock.wallTime());
         }
       } catch (Exception e) {
         LOGGER.warn("task execution failed", e);
         scheduleAgain = !options.stopOnFailure;
+        lastFailedExecutionTimestamp.set(clock.wallTime());
       } finally {
         thread = null;
         if (scheduleAgain && !isDone()) {
@@ -403,7 +425,10 @@ public class Scheduler {
             final long delay = clock.wallTime() - task.getNextExecutionTime();
             taskExecutionDelay.record(delay, TimeUnit.MILLISECONDS);
 
-            taskExecutionTime.record(() -> task.runAndReschedule(queue, skipped));
+            taskExecutionTime.record(() -> task.runAndReschedule(queue,
+                                                                 skipped,
+                                                                 lastSuccessfulExecutionTimestamp,
+                                                                 lastFailedExecutionTimestamp));
           } catch (InterruptedException e) {
             LOGGER.debug("task interrupted", e);
             break;
