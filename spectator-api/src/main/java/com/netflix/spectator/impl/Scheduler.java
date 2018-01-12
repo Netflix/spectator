@@ -338,7 +338,7 @@ public class Scheduler {
      *     Counter that will be incremented each time an expected execution is
      *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
      * @param lastSuccessfulExecutionTimestamp
-     *     AtomicLong that will be updated to the current wall clock time of a successful run. This is useful for
+     *     AtomicLong that will be updated to the current wallclock time of a successful run. This is useful for
      *     monitoring.
      * @param lastFailedExecutionTimestamp
      *     AtomicLong that will be updated to the current wallclock time of a failed run. This is useful for
