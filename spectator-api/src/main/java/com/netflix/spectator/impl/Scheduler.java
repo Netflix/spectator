@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li><code>spectator.scheduler.skipped</code>: counter reporting the number of
  *       executions that were skipped because the task did not complete before the
  *       next scheduled execution time.</li>
+ *   <li><code>spectator.scheduler.uncaughtExceptions</code>: counter reporting the
+ *       number of times an exception is propagated out from a task.</li>
  * </ul>
  *
  * All metrics with have an {@code id} dimension to distinguish a particular scheduler
@@ -106,15 +108,13 @@ public class Scheduler {
 
   private final Clock clock;
 
-  private final AtomicInteger activeCount;
-  private final Timer taskExecutionTime;
-  private final Timer taskExecutionDelay;
-  private final Counter skipped;
+  private final Stats stats;
 
   private final ThreadFactory factory;
   private final Thread[] threads;
 
   private volatile boolean started = false;
+  private volatile boolean shutdown = false;
 
   /**
    * Create a new instance.
@@ -133,13 +133,10 @@ public class Scheduler {
   public Scheduler(Registry registry, String id, int poolSize) {
     this.clock = registry.clock();
 
-    registry.collectionSize(newId(registry, id, "queueSize"), queue);
-    activeCount = PolledMeter.using(registry)
-        .withId(newId(registry, id, "activeThreads"))
-        .monitorValue(new AtomicInteger());
-    taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
-    taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
-    skipped = registry.counter(newId(registry, id, "skipped"));
+    PolledMeter.using(registry)
+        .withId(newId(registry, id, "queueSize"))
+        .monitorSize(queue);
+    stats = new Stats(registry, id);
 
     this.factory = newThreadFactory(id);
     this.threads = new Thread[poolSize];
@@ -172,6 +169,7 @@ public class Scheduler {
    * interrupted, but this method does not block for them to all finish execution.
    */
   public synchronized void shutdown() {
+    shutdown = true;
     for (int i = 0; i < threads.length; ++i) {
       if (threads[i] != null && threads[i].isAlive()) {
         threads[i].interrupt();
@@ -181,12 +179,14 @@ public class Scheduler {
   }
 
   private synchronized void startThreads() {
-    started = true;
-    for (int i = 0; i < threads.length; ++i) {
-      if (threads[i] == null || !threads[i].isAlive() || threads[i].isInterrupted()) {
-        threads[i] = factory.newThread(new Worker());
-        threads[i].start();
-        LOGGER.debug("started thread {}", threads[i].getName());
+    if (!shutdown) {
+      started = true;
+      for (int i = 0; i < threads.length; ++i) {
+        if (threads[i] == null || !threads[i].isAlive() || threads[i].isInterrupted()) {
+          threads[i] = factory.newThread(new Worker());
+          threads[i].start();
+          LOGGER.debug("started thread {}", threads[i].getName());
+        }
       }
     }
   }
@@ -252,6 +252,71 @@ public class Scheduler {
     public Options withStopOnFailure(boolean flag) {
       this.stopOnFailure = flag;
       return this;
+    }
+  }
+
+  /**
+   * Collection of stats that are updated as part of executing the tasks.
+   */
+  static class Stats {
+
+    private final Registry registry;
+    private final AtomicInteger activeCount;
+    private final Timer taskExecutionTime;
+    private final Timer taskExecutionDelay;
+    private final Counter skipped;
+    private final Id uncaughtExceptionsId;
+
+    /** Create a new instance. */
+    Stats(Registry registry, String id) {
+      this.registry = registry;
+      activeCount = PolledMeter.using(registry)
+          .withId(newId(registry, id, "activeThreads"))
+          .monitorValue(new AtomicInteger());
+      taskExecutionTime = registry.timer(newId(registry, id, "taskExecutionTime"));
+      taskExecutionDelay = registry.timer(newId(registry, id, "taskExecutionDelay"));
+      skipped = registry.counter(newId(registry, id, "skipped"));
+      uncaughtExceptionsId = newId(registry, id, "uncaughtExceptions");
+    }
+
+    /** Increment the number of active tasks. */
+    void incrementActiveTaskCount() {
+      activeCount.incrementAndGet();
+    }
+
+    /** Decrement the number of active tasks. */
+    void decrementActiveTaskCount() {
+      activeCount.decrementAndGet();
+    }
+
+    /** Timer for measuring the execution time of the task. */
+    Timer taskExecutionTime() {
+      return taskExecutionTime;
+    }
+
+    /**
+     * Timer for measuring the delay for the task. This should be close to zero, but if
+     * the system is overloaded or having trouble, then there might be a large delay.
+     */
+    Timer taskExecutionDelay() {
+      return taskExecutionDelay;
+    }
+
+    /**
+     * Counter that will be incremented each time an expected execution is
+     * skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
+     */
+    Counter skipped() {
+      return skipped;
+    }
+
+    /**
+     * Increment the uncaught exception counter tagged with simple class name of the
+     * exception.
+     */
+    void incrementUncaught(Throwable t) {
+      final String cls = t.getClass().getSimpleName();
+      registry.counter(uncaughtExceptionsId.withTag("exception", cls)).increment();
     }
   }
 
@@ -323,24 +388,28 @@ public class Scheduler {
      * @param queue
      *     Queue for the pool. This task will be added to the queue to schedule
      *     future executions.
-     * @param skipped
-     *     Counter that will be incremented each time an expected execution is
-     *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
+     * @param stats
+     *     Handle to stats that should be updated based on the execution of the
+     *     task.
      */
-    void runAndReschedule(DelayQueue<DelayedTask> queue, Counter skipped) {
+    @SuppressWarnings("PMD.AvoidCatchingThrowable")
+    void runAndReschedule(DelayQueue<DelayedTask> queue, Stats stats) {
       thread = Thread.currentThread();
       boolean scheduleAgain = options.schedulingPolicy != Policy.RUN_ONCE;
       try {
         if (!isDone()) {
           task.run();
         }
-      } catch (Exception e) {
-        LOGGER.warn("task execution failed", e);
+      } catch (Throwable t) {
+        // This catches Throwable because we cannot control the task and thus cannot
+        // ensure it is well behaved with respect to exceptions.
+        LOGGER.warn("task execution failed", t);
+        stats.incrementUncaught(t);
         scheduleAgain = !options.stopOnFailure;
       } finally {
         thread = null;
         if (scheduleAgain && !isDone()) {
-          updateNextExecutionTime(skipped);
+          updateNextExecutionTime(stats.skipped());
           queue.put(this);
         } else {
           cancelled = true;
@@ -398,17 +467,17 @@ public class Scheduler {
         while (!Thread.currentThread().isInterrupted()) {
           try {
             DelayedTask task = queue.take();
-            activeCount.incrementAndGet();
+            stats.incrementActiveTaskCount();
 
             final long delay = clock.wallTime() - task.getNextExecutionTime();
-            taskExecutionDelay.record(delay, TimeUnit.MILLISECONDS);
+            stats.taskExecutionDelay().record(delay, TimeUnit.MILLISECONDS);
 
-            taskExecutionTime.record(() -> task.runAndReschedule(queue, skipped));
+            stats.taskExecutionTime().record(() -> task.runAndReschedule(queue, stats));
           } catch (InterruptedException e) {
             LOGGER.debug("task interrupted", e);
             break;
           } finally {
-            activeCount.decrementAndGet();
+            stats.decrementActiveTaskCount();
           }
         }
       } finally {
