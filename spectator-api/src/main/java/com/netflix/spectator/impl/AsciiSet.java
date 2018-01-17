@@ -17,6 +17,7 @@ package com.netflix.spectator.impl;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 
@@ -31,17 +32,26 @@ import java.util.Arrays;
  */
 public final class AsciiSet {
 
+  private static boolean isJava8() {
+    String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
+    return version.startsWith("1.8");
+  }
+
   private static final MethodHandle STRING_CONSTRUCTOR;
   static {
-    MethodHandle handle;
-    try {
-      Constructor<String> ctor = String.class.getDeclaredConstructor(char[].class, boolean.class);
-      ctor.setAccessible(true);
-      handle = MethodHandles.lookup().unreflectConstructor(ctor);
-    } catch (Exception e) {
-      handle = null;
+    if (isJava8()) {
+      MethodHandle handle;
+      try {
+        Constructor<String> ctor = String.class.getDeclaredConstructor(char[].class, boolean.class);
+        ctor.setAccessible(true);
+        handle = MethodHandles.lookup().unreflectConstructor(ctor);
+      } catch (Exception e) {
+        handle = null;
+      }
+      STRING_CONSTRUCTOR = handle;
+    } else {
+      STRING_CONSTRUCTOR = null;
     }
-    STRING_CONSTRUCTOR = handle;
   }
 
   /**
