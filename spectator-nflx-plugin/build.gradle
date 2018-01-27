@@ -10,3 +10,11 @@ dependencies {
   compile "com.netflix.archaius:archaius-core"
   testCompile "com.netflix.governator:governator"
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.nflx"
+    )
+  }
+}

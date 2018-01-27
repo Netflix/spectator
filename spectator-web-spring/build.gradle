@@ -21,3 +21,11 @@ dependencies {
   compile 'org.springframework:spring-web:4.1.9.RELEASE'
   compile 'com.fasterxml.jackson.core:jackson-databind'
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.spring"
+    )
+  }
+}

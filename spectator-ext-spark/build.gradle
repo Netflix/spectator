@@ -12,6 +12,14 @@ dependencies {
   compile 'org.apache.spark:spark-core_2.10:1.6.1'
 }
 
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.spark"
+    )
+  }
+}
+
 shadowJar {
   classifier = 'shadow'
 

@@ -6,3 +6,11 @@ dependencies {
   compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile'
   jmh project(':spectator-api')
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.atlas"
+    )
+  }
+}

@@ -3,3 +3,11 @@ dependencies {
   compileApi "org.apache.logging.log4j:log4j-api"
   compileApi "org.apache.logging.log4j:log4j-core"
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.log4j2"
+    )
+  }
+}

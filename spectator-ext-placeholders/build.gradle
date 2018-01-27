@@ -6,3 +6,11 @@ dependencies {
   testCompile "org.slf4j:slf4j-log4j12"
   testCompile "log4j:log4j"
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.placeholders"
+    )
+  }
+}
