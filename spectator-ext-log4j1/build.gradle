@@ -2,3 +2,11 @@ dependencies {
   compileApi project(':spectator-api')
   compileApi "log4j:log4j:1.2.17"
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.log4j1"
+    )
+  }
+}

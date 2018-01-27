@@ -4,3 +4,11 @@ dependencies {
   compile project(':spectator-reg-servo')
   compile 'org.openjdk.jol:jol-core:0.8'
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.perf"
+    )
+  }
+}

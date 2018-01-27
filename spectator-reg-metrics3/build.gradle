@@ -3,3 +3,11 @@ dependencies {
   compileApi 'io.dropwizard.metrics:metrics-core:3.1.2'
   jmh project(':spectator-api')
 }
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.metrics3"
+    )
+  }
+}

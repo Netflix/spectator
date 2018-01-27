@@ -8,3 +8,10 @@ javadoc {
   title "Spectator"
 }
 
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.api"
+    )
+  }
+}
