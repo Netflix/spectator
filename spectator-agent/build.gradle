@@ -14,7 +14,10 @@ dependencies {
 
 jar {
   manifest {
-    attributes 'Premain-Class': 'spectator-agent.spectator.agent.Agent'
+    attributes(
+      'Premain-Class': 'spectator-agent.spectator.agent.Agent',
+      'Automatic-Module-Name': 'com.netflix.spectator.agent'
+    )
   }
 }
 
