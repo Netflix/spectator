@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TagFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-placeholders</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.placeholders</a> &gt; <span class="el_source">TagFactory.java</span></div><h1>TagFactory.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
+
+import java.util.function.Supplier;
+
+/**
+ * A factory for producing tag values.
+ */
+public interface TagFactory {
+
+  /**
+   * Helper method for creating a tag factory that uses a lambda to supply
+   * the value.
+   *
+   * @param name
+   *     Key to use for the returned tag value.
+   * @param value
+   *     Supplier used to retrieve the value for the tag. If the return
+   *     value is null, then a null tag is returned an the dimension will
+   *     be suppressed.
+   * @return
+   *     Factory for producing tags using the value supplier.
+   */
+  static TagFactory from(String name, Supplier&lt;String&gt; value) {
+<span class="fc" id="L42">    return new TagFactory() {</span>
+      @Override public String name() {
+<span class="fc" id="L44">        return name;</span>
+      }
+
+      @Override public Tag createTag() {
+<span class="fc" id="L48">        final String v = value.get();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        return (v == null) ? null : new BasicTag(name, v);</span>
+      }
+    };
+  }
+
+  /**
+   * Returns the name of the factory, which is used as the key for any Tag
+   * produced by the createTag method.
+   */
+  String name();
+
+  /**
+   * Produces a tag based on the runtime context available to the factory.
+   *
+   * @return
+   *      the appropriate tag given the available context data, possibly null
+   */
+  Tag createTag();
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AtlasRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">AtlasRegistry.java</span></div><h1>AtlasRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.atlas.impl.EvalPayload;
+import com.netflix.spectator.atlas.impl.Evaluator;
+import com.netflix.spectator.atlas.impl.MeasurementSerializer;
+import com.netflix.spectator.atlas.impl.PublishPayload;
+import com.netflix.spectator.atlas.impl.Subscription;
+import com.netflix.spectator.atlas.impl.Subscriptions;
+import com.netflix.spectator.atlas.impl.TagsValuePair;
+import com.netflix.spectator.impl.AsciiSet;
+import com.netflix.spectator.impl.Scheduler;
+import com.netflix.spectator.sandbox.HttpClient;
+import com.netflix.spectator.sandbox.HttpResponse;
+
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+/**
+ * Registry for reporting metrics to Atlas.
+ */
+public final class AtlasRegistry extends AbstractRegistry {
+
+  private static final String CLOCK_SKEW_TIMER = &quot;spectator.atlas.clockSkew&quot;;
+
+  private final Clock clock;
+
+  private final boolean enabled;
+  private final Duration step;
+  private final long stepMillis;
+  private final long meterTTL;
+  private final URI uri;
+
+  private final boolean lwcEnabled;
+  private final Duration configRefreshFrequency;
+  private final long configTTL;
+  private final URI configUri;
+  private final URI evalUri;
+
+  private final int connectTimeout;
+  private final int readTimeout;
+  private final int batchSize;
+  private final int numThreads;
+  private final Map&lt;String, String&gt; commonTags;
+
+  private final AsciiSet charset;
+  private final Map&lt;String, AsciiSet&gt; overrides;
+
+  private final ObjectMapper jsonMapper;
+  private final ObjectMapper smileMapper;
+
+  private Scheduler scheduler;
+
+<span class="fc" id="L91">  private final Map&lt;Subscription, Long&gt; subscriptions = new ConcurrentHashMap&lt;&gt;();</span>
+
+  /** Create a new instance. */
+  public AtlasRegistry(Clock clock, AtlasConfig config) {
+<span class="fc" id="L95">    super(new StepClock(clock, config.step().toMillis()), config);</span>
+<span class="fc" id="L96">    this.clock = clock;</span>
+
+<span class="fc" id="L98">    this.enabled = config.enabled();</span>
+<span class="fc" id="L99">    this.step = config.step();</span>
+<span class="fc" id="L100">    this.stepMillis = step.toMillis();</span>
+<span class="fc" id="L101">    this.meterTTL = config.meterTTL().toMillis();</span>
+<span class="fc" id="L102">    this.uri = URI.create(config.uri());</span>
+
+<span class="fc" id="L104">    this.lwcEnabled = config.lwcEnabled();</span>
+<span class="fc" id="L105">    this.configRefreshFrequency = config.configRefreshFrequency();</span>
+<span class="fc" id="L106">    this.configTTL = config.configTTL().toMillis();</span>
+<span class="fc" id="L107">    this.configUri = URI.create(config.configUri());</span>
+<span class="fc" id="L108">    this.evalUri = URI.create(config.evalUri());</span>
+
+<span class="fc" id="L110">    this.connectTimeout = (int) config.connectTimeout().toMillis();</span>
+<span class="fc" id="L111">    this.readTimeout = (int) config.readTimeout().toMillis();</span>
+<span class="fc" id="L112">    this.batchSize = config.batchSize();</span>
+<span class="fc" id="L113">    this.numThreads = config.numThreads();</span>
+<span class="fc" id="L114">    this.commonTags = new TreeMap&lt;&gt;(config.commonTags());</span>
+
+<span class="fc" id="L116">    this.charset = AsciiSet.fromPattern(config.validTagCharacters());</span>
+<span class="fc" id="L117">    this.overrides = config.validTagValueCharacters()</span>
+<span class="fc" id="L118">        .keySet().stream()</span>
+<span class="pc" id="L119">        .collect(Collectors.toMap(k -&gt; k, AsciiSet::fromPattern));</span>
+<span class="fc" id="L120">    SimpleModule module = new SimpleModule()</span>
+<span class="fc" id="L121">        .addSerializer(Measurement.class, new MeasurementSerializer(charset, overrides));</span>
+<span class="fc" id="L122">    this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);</span>
+<span class="fc" id="L123">    this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);</span>
+<span class="fc" id="L124">  }</span>
+
+  /**
+   * Start the scheduler to collect metrics data.
+   */
+  public void start() {
+<span class="nc bnc" id="L130" title="All 2 branches missed.">    if (scheduler == null) {</span>
+      // Setup main collection for publishing to Atlas
+<span class="nc bnc" id="L132" title="All 4 branches missed.">      if (enabled || lwcEnabled) {</span>
+<span class="nc" id="L133">        Scheduler.Options options = new Scheduler.Options()</span>
+<span class="nc" id="L134">            .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)</span>
+<span class="nc" id="L135">            .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))</span>
+<span class="nc" id="L136">            .withStopOnFailure(false);</span>
+<span class="nc" id="L137">        scheduler = new Scheduler(this, &quot;spectator-reg-atlas&quot;, numThreads);</span>
+<span class="nc" id="L138">        scheduler.schedule(options, this::collectData);</span>
+<span class="nc" id="L139">        logger.info(&quot;started collecting metrics every {} reporting to {}&quot;, step, uri);</span>
+<span class="nc" id="L140">        logger.info(&quot;common tags: {}&quot;, commonTags);</span>
+<span class="nc" id="L141">      } else {</span>
+<span class="nc" id="L142">        logger.info(&quot;publishing is not enabled&quot;);</span>
+      }
+
+      // Setup collection for subscriptions
+<span class="nc bnc" id="L146" title="All 2 branches missed.">      if (lwcEnabled) {</span>
+<span class="nc" id="L147">        Scheduler.Options options = new Scheduler.Options()</span>
+<span class="nc" id="L148">            .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)</span>
+<span class="nc" id="L149">            .withStopOnFailure(false);</span>
+<span class="nc" id="L150">        scheduler.schedule(options, this::fetchSubscriptions);</span>
+<span class="nc" id="L151">      } else {</span>
+<span class="nc" id="L152">        logger.info(&quot;subscriptions are not enabled&quot;);</span>
+      }
+    } else {
+<span class="nc" id="L155">      logger.warn(&quot;registry already started, ignoring duplicate request&quot;);</span>
+    }
+<span class="nc" id="L157">  }</span>
+
+  /**
+   * Avoid collecting right on boundaries to minimize transitions on step longs
+   * during a collection. Randomly distribute across the middle of the step interval.
+   */
+  long getInitialDelay(long stepSize) {
+<span class="fc" id="L164">    long now = clock.wallTime();</span>
+<span class="fc" id="L165">    long stepBoundary = now / stepSize * stepSize;</span>
+
+    // Buffer by 10% of the step interval on either side
+<span class="fc" id="L168">    long offset = stepSize / 10;</span>
+
+    // Check if the current delay is within the acceptable range
+<span class="fc" id="L171">    long delay = now - stepBoundary;</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">    if (delay &lt; offset) {</span>
+<span class="fc" id="L173">      return delay + offset;</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">    } else if (delay &gt; stepSize - offset) {</span>
+<span class="fc" id="L175">      return stepSize - offset;</span>
+    } else {
+<span class="fc" id="L177">      return delay;</span>
+    }
+  }
+
+  /**
+   * Stop the scheduler reporting Atlas data.
+   */
+  public void stop() {
+<span class="nc bnc" id="L185" title="All 2 branches missed.">    if (scheduler != null) {</span>
+<span class="nc" id="L186">      scheduler.shutdown();</span>
+<span class="nc" id="L187">      scheduler = null;</span>
+<span class="nc" id="L188">      logger.info(&quot;stopped collecting metrics every {}ms reporting to {}&quot;, step, uri);</span>
+    } else {
+<span class="nc" id="L190">      logger.warn(&quot;registry stopped, but was never started&quot;);</span>
+    }
+<span class="nc" id="L192">  }</span>
+
+  private void collectData() {
+    // Send data for any subscriptions
+<span class="nc bnc" id="L196" title="All 2 branches missed.">    if (lwcEnabled) {</span>
+      try {
+<span class="nc" id="L198">        handleSubscriptions();</span>
+<span class="nc" id="L199">      } catch (Exception e) {</span>
+<span class="nc" id="L200">        logger.warn(&quot;failed to handle subscriptions&quot;, e);</span>
+<span class="nc" id="L201">      }</span>
+    }
+
+    // Publish to Atlas
+<span class="nc bnc" id="L205" title="All 2 branches missed.">    if (enabled) {</span>
+      try {
+<span class="nc bnc" id="L207" title="All 2 branches missed.">        for (List&lt;Measurement&gt; batch : getBatches()) {</span>
+<span class="nc" id="L208">          PublishPayload p = new PublishPayload(commonTags, batch);</span>
+<span class="nc" id="L209">          HttpResponse res = HttpClient.DEFAULT.newRequest(&quot;spectator-reg-atlas&quot;, uri)</span>
+<span class="nc" id="L210">              .withMethod(&quot;POST&quot;)</span>
+<span class="nc" id="L211">              .withConnectTimeout(connectTimeout)</span>
+<span class="nc" id="L212">              .withReadTimeout(readTimeout)</span>
+<span class="nc" id="L213">              .withContent(&quot;application/x-jackson-smile&quot;, smileMapper.writeValueAsBytes(p))</span>
+<span class="nc" id="L214">              .send();</span>
+<span class="nc" id="L215">          Instant date = res.dateHeader(&quot;Date&quot;);</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">          recordClockSkew((date == null) ? 0L : date.toEpochMilli());</span>
+<span class="nc" id="L217">        }</span>
+<span class="nc" id="L218">      } catch (Exception e) {</span>
+<span class="nc" id="L219">        logger.warn(&quot;failed to send metrics&quot;, e);</span>
+<span class="nc" id="L220">      }</span>
+    }
+<span class="nc" id="L222">  }</span>
+
+  private void handleSubscriptions() {
+<span class="nc" id="L225">    List&lt;Subscription&gt; subs = new ArrayList&lt;&gt;(subscriptions.keySet());</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">    if (!subs.isEmpty()) {</span>
+<span class="nc" id="L227">      List&lt;TagsValuePair&gt; ms = getMeasurements().stream()</span>
+<span class="nc" id="L228">          .map(this::newTagsValuePair)</span>
+<span class="nc" id="L229">          .collect(Collectors.toList());</span>
+<span class="nc" id="L230">      Evaluator evaluator = new Evaluator().addGroupSubscriptions(&quot;local&quot;, subs);</span>
+<span class="nc" id="L231">      EvalPayload payload = evaluator.eval(&quot;local&quot;, clock().wallTime(), ms);</span>
+      try {
+<span class="nc" id="L233">        String json = jsonMapper.writeValueAsString(payload);</span>
+<span class="nc" id="L234">        HttpClient.DEFAULT.newRequest(&quot;spectator-lwc-eval&quot;, evalUri)</span>
+<span class="nc" id="L235">            .withMethod(&quot;POST&quot;)</span>
+<span class="nc" id="L236">            .withConnectTimeout(connectTimeout)</span>
+<span class="nc" id="L237">            .withReadTimeout(readTimeout)</span>
+<span class="nc" id="L238">            .withJsonContent(json)</span>
+<span class="nc" id="L239">            .send()</span>
+<span class="nc" id="L240">            .decompress();</span>
+<span class="nc" id="L241">      } catch (Exception e) {</span>
+<span class="nc" id="L242">        logger.warn(&quot;failed to send metrics for subscriptions&quot;, e);</span>
+<span class="nc" id="L243">      }</span>
+    }
+<span class="nc" id="L245">  }</span>
+
+  private void fetchSubscriptions() {
+    try {
+<span class="nc" id="L249">      HttpResponse res = HttpClient.DEFAULT.newRequest(&quot;spectator-lwc-subs&quot;, configUri)</span>
+<span class="nc" id="L250">          .withMethod(&quot;GET&quot;)</span>
+<span class="nc" id="L251">          .withConnectTimeout(connectTimeout)</span>
+<span class="nc" id="L252">          .withReadTimeout(readTimeout)</span>
+<span class="nc" id="L253">          .send()</span>
+<span class="nc" id="L254">          .decompress();</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">      if (res.status() != 200) {</span>
+<span class="nc" id="L256">        logger.warn(&quot;failed to update subscriptions, received status {}&quot;, res.status());</span>
+      } else {
+<span class="nc" id="L258">        Subscriptions subs = jsonMapper.readValue(res.entity(), Subscriptions.class);</span>
+<span class="nc" id="L259">        long now = clock.wallTime();</span>
+<span class="nc" id="L260">        subs.update(subscriptions, now, now + configTTL);</span>
+      }
+<span class="nc" id="L262">    } catch (Exception e) {</span>
+<span class="nc" id="L263">      logger.warn(&quot;failed to send metrics&quot;, e);</span>
+<span class="nc" id="L264">    }</span>
+<span class="nc" id="L265">  }</span>
+
+  /**
+   * Record the difference between the date response time and the local time on the server.
+   * This is used to get a rough idea of the amount of skew in the environment. Ideally it
+   * should be fairly small. The date header will only have seconds so we expect to regularly
+   * have differences of up to 1 second. Note, that it is a rough estimate and could be
+   * elevated because of unrelated problems like GC or network delays.
+   */
+  private void recordClockSkew(long responseTimestamp) {
+<span class="nc bnc" id="L275" title="All 2 branches missed.">    if (responseTimestamp == 0L) {</span>
+<span class="nc" id="L276">      logger.debug(&quot;no date timestamp on response, cannot record skew&quot;);</span>
+    } else {
+<span class="nc" id="L278">      final long delta = clock.wallTime() - responseTimestamp;</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">      if (delta &gt;= 0L) {</span>
+        // Local clock is running fast compared to the server. Note this should also be the
+        // common case for if the clocks are in sync as there will be some delay for the server
+        // response to reach this node.
+<span class="nc" id="L283">        timer(CLOCK_SKEW_TIMER, &quot;id&quot;, &quot;fast&quot;).record(delta, TimeUnit.MILLISECONDS);</span>
+      } else {
+        // Local clock is running slow compared to the server. This means the response timestamp
+        // appears to be after the current time on this node. The timer will ignore negative
+        // values so we negate and record it with a different id.
+<span class="nc" id="L288">        timer(CLOCK_SKEW_TIMER, &quot;id&quot;, &quot;slow&quot;).record(-delta, TimeUnit.MILLISECONDS);</span>
+      }
+<span class="nc" id="L290">      logger.debug(&quot;clock skew between client and server: {}ms&quot;, delta);</span>
+    }
+<span class="nc" id="L292">  }</span>
+
+  private Map&lt;String, String&gt; toMap(Id id) {
+<span class="nc" id="L295">    Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L297" title="All 2 branches missed.">    for (Tag t : id.tags()) {</span>
+<span class="nc" id="L298">      String k = charset.replaceNonMembers(t.key(), '_');</span>
+<span class="nc" id="L299">      String v = overrides.getOrDefault(k, charset).replaceNonMembers(t.value(), '_');</span>
+<span class="nc" id="L300">      tags.put(k, v);</span>
+<span class="nc" id="L301">    }</span>
+
+<span class="nc" id="L303">    String name = overrides.getOrDefault(&quot;name&quot;, charset).replaceNonMembers(id.name(), '_');</span>
+<span class="nc" id="L304">    tags.put(&quot;name&quot;, name);</span>
+
+<span class="nc" id="L306">    return tags;</span>
+  }
+
+  private TagsValuePair newTagsValuePair(Measurement m) {
+<span class="nc" id="L310">    Map&lt;String, String&gt; tags = toMap(m.id());</span>
+<span class="nc" id="L311">    tags.putAll(commonTags);</span>
+<span class="nc" id="L312">    return new TagsValuePair(tags, m.value());</span>
+  }
+
+  /** Get a list of all measurements from the registry. */
+  List&lt;Measurement&gt; getMeasurements() {
+<span class="fc" id="L317">    return stream()</span>
+<span class="fc bfc" id="L318" title="All 2 branches covered.">        .filter(m -&gt; !m.hasExpired())</span>
+<span class="fc" id="L319">        .flatMap(m -&gt; StreamSupport.stream(m.measure().spliterator(), false))</span>
+<span class="fc" id="L320">        .collect(Collectors.toList());</span>
+  }
+
+  /** Get a list of all measurements and break them into batches. */
+  List&lt;List&lt;Measurement&gt;&gt; getBatches() {
+<span class="fc" id="L325">    List&lt;List&lt;Measurement&gt;&gt; batches = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L326">    List&lt;Measurement&gt; ms = getMeasurements();</span>
+<span class="fc bfc" id="L327" title="All 2 branches covered.">    for (int i = 0; i &lt; ms.size(); i += batchSize) {</span>
+<span class="fc" id="L328">      List&lt;Measurement&gt; batch = ms.subList(i, Math.min(ms.size(), i + batchSize));</span>
+<span class="fc" id="L329">      batches.add(batch);</span>
+    }
+<span class="fc" id="L331">    return batches;</span>
+  }
+
+  @Override protected Counter newCounter(Id id) {
+<span class="fc" id="L335">    return new AtlasCounter(id, clock, meterTTL, stepMillis);</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="fc" id="L339">    return new AtlasDistributionSummary(id, clock, meterTTL, stepMillis);</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="fc" id="L343">    return new AtlasTimer(id, clock, meterTTL, stepMillis);</span>
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+    // Be sure to get StepClock so the measurements will have step aligned
+    // timestamps.
+<span class="fc" id="L349">    return new AtlasGauge(id, clock(), meterTTL);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

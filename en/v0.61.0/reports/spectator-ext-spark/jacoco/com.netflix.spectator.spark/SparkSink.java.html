@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SparkSink.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-spark</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.spark</a> &gt; <span class="el_source">SparkSink.java</span></div><h1>SparkSink.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.spark;
+
+import com.codahale.metrics.MetricRegistry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.gc.GcLogger;
+import com.netflix.spectator.jvm.Jmx;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.apache.spark.metrics.sink.Sink;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+
+/**
+ * Sink for exporting spark metrics to a prana sidecar.
+ */
+public class SparkSink implements Sink {
+
+<span class="nc" id="L41">  private static final Logger LOGGER = LoggerFactory.getLogger(SparkSink.class);</span>
+
+  private static final String DEFAULT_URL = &quot;http://localhost:8078/metrics&quot;;
+
+  private final SpectatorReporter reporter;
+  private final SidecarRegistry sidecarRegistry;
+
+  private final long pollPeriod;
+  private final TimeUnit pollUnit;
+
+  private final URL url;
+
+  private GcLogger gcLogger;
+
+  /**
+   * Create a new instance. Spark looks for a constructor with all three parameters, so the
+   * {@code SecurityManager} needs to be in the signature even though it isn't used.
+   */
+  @SuppressWarnings(&quot;PMD.UnusedFormalParameter&quot;)
+  public SparkSink(
+      Properties properties,
+      MetricRegistry registry,
+<span class="nc" id="L63">      org.apache.spark.SecurityManager manager) throws MalformedURLException {</span>
+<span class="nc" id="L64">    final Config config = loadConfig();</span>
+<span class="nc" id="L65">    sidecarRegistry = new SidecarRegistry();</span>
+<span class="nc" id="L66">    reporter = SpectatorReporter.forRegistry(registry)</span>
+<span class="nc" id="L67">        .withSpectatorRegistry(sidecarRegistry)</span>
+<span class="nc" id="L68">        .withNameFunction(SparkNameFunction.fromConfig(config, sidecarRegistry))</span>
+<span class="nc" id="L69">        .withValueFunction(SparkValueFunction.fromConfig(config))</span>
+<span class="nc" id="L70">        .withGaugeCounters(Pattern.compile(config.getString(&quot;spectator.spark.gauge-counters&quot;)))</span>
+<span class="nc" id="L71">        .build();</span>
+<span class="nc" id="L72">    pollPeriod = getPeriod(properties);</span>
+<span class="nc" id="L73">    pollUnit = getUnit(properties);</span>
+<span class="nc" id="L74">    url = URI.create(properties.getProperty(&quot;url&quot;, DEFAULT_URL)).toURL();</span>
+
+    // If there is a need to collect application metrics from jobs running on Spark, then
+    // this should be enabled. The apps can report to the global registry and it will get
+    // picked up by the Spark integration.
+<span class="nc bnc" id="L79" title="All 2 branches missed.">    if (shouldAddToGlobal(properties)) {</span>
+<span class="nc" id="L80">      Spectator.globalRegistry().add(sidecarRegistry);</span>
+    }
+<span class="nc" id="L82">  }</span>
+
+  private Config loadConfig() {
+<span class="nc" id="L85">    return ConfigFactory.load(pickClassLoader());</span>
+  }
+
+  @SuppressWarnings(&quot;PMD.UseProperClassLoader&quot;)
+  private ClassLoader pickClassLoader() {
+<span class="nc" id="L90">    final ClassLoader cl = Thread.currentThread().getContextClassLoader();</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">    if (cl == null) {</span>
+<span class="nc" id="L92">      return getClass().getClassLoader();</span>
+    } else {
+<span class="nc" id="L94">      return cl;</span>
+    }
+  }
+
+  private void startJvmCollection() {
+    try {
+<span class="nc" id="L100">      Jmx.registerStandardMXBeans(sidecarRegistry);</span>
+<span class="nc" id="L101">      gcLogger = new GcLogger();</span>
+<span class="nc" id="L102">      gcLogger.start(null);</span>
+<span class="nc" id="L103">    } catch (Exception e) {</span>
+<span class="nc" id="L104">      LOGGER.error(&quot;failed to start collection of jvm stats&quot;, e);</span>
+<span class="nc" id="L105">      throw e;</span>
+<span class="nc" id="L106">    }</span>
+<span class="nc" id="L107">  }</span>
+
+  private long getPeriod(Properties properties) {
+<span class="nc" id="L110">    final String v = properties.getProperty(&quot;period&quot;);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">    return (v == null) ? 10L : Long.parseLong(v);</span>
+  }
+
+  private TimeUnit getUnit(Properties properties) {
+<span class="nc" id="L115">    final String v = properties.getProperty(&quot;unit&quot;);</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">    return (v == null) ? TimeUnit.SECONDS : TimeUnit.valueOf(v.toUpperCase(Locale.US));</span>
+  }
+
+  private boolean shouldAddToGlobal(Properties properties) {
+<span class="nc" id="L120">    final String v = properties.getProperty(&quot;addToGlobalRegistry&quot;);</span>
+<span class="nc bnc" id="L121" title="All 4 branches missed.">    return (v == null) || Boolean.valueOf(v);</span>
+  }
+
+  @Override public void start() {
+<span class="nc" id="L125">    LOGGER.info(&quot;starting poller&quot;);</span>
+<span class="nc" id="L126">    reporter.start(pollPeriod, pollUnit);</span>
+<span class="nc" id="L127">    startJvmCollection();</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">    if (sidecarRegistry != null) {</span>
+<span class="nc" id="L129">      sidecarRegistry.start(url, pollPeriod, pollUnit);</span>
+    }
+<span class="nc" id="L131">  }</span>
+
+  @Override public void stop() {
+<span class="nc" id="L134">    LOGGER.info(&quot;stopping poller&quot;);</span>
+<span class="nc" id="L135">    reporter.stop();</span>
+<span class="nc" id="L136">    gcLogger.stop();</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">    if (sidecarRegistry != null) {</span>
+<span class="nc" id="L138">      sidecarRegistry.stop();</span>
+    }
+<span class="nc" id="L140">  }</span>
+
+  @Override public void report() {
+<span class="nc" id="L143">    LOGGER.info(&quot;reporting values&quot;);</span>
+<span class="nc" id="L144">    reporter.report();</span>
+<span class="nc" id="L145">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

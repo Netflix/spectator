@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServoGauge.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-servo</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.servo</a> &gt; <span class="el_source">ServoGauge.java</span></div><h1>ServoGauge.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.servo;
+
+import com.netflix.servo.annotations.DataSourceType;
+import com.netflix.servo.monitor.AbstractMonitor;
+import com.netflix.servo.monitor.Monitor;
+import com.netflix.servo.monitor.MonitorConfig;
+import com.netflix.servo.monitor.NumericMonitor;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AtomicDouble;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Reports a constant value passed into the constructor.
+ */
+final class ServoGauge&lt;T extends Number&gt; extends AbstractMonitor&lt;Double&gt;
+    implements Gauge, ServoMeter, NumericMonitor&lt;Double&gt; {
+
+  private final Clock clock;
+  private final AtomicDouble value;
+  private final AtomicLong lastUpdated;
+
+  /**
+   * Create a new monitor that returns {@code value}.
+   */
+  ServoGauge(Clock clock, MonitorConfig config) {
+<span class="fc" id="L47">    super(config.withAdditionalTag(DataSourceType.GAUGE));</span>
+<span class="fc" id="L48">    this.clock = clock;</span>
+<span class="fc" id="L49">    this.value = new AtomicDouble(Double.NaN);</span>
+<span class="fc" id="L50">    this.lastUpdated = new AtomicLong(0L);</span>
+<span class="fc" id="L51">  }</span>
+
+  @Override public Id id() {
+<span class="fc" id="L54">    return new ServoId(config);</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="fc" id="L58">    long now = clock.wallTime();</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">    return now - lastUpdated.get() &gt; ServoRegistry.EXPIRATION_TIME_MILLIS;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L63">    long now = clock.wallTime();</span>
+<span class="fc" id="L64">    return Collections.singleton(new Measurement(id(), now, value.get()));</span>
+  }
+
+  @Override public void set(double v) {
+<span class="fc" id="L68">    value.set(v);</span>
+<span class="fc" id="L69">    lastUpdated.set(clock.wallTime());</span>
+<span class="fc" id="L70">  }</span>
+
+  @Override public double value() {
+<span class="fc bfc" id="L73" title="All 2 branches covered.">    return hasExpired() ? Double.NaN : value.get();</span>
+  }
+
+  @Override public Double getValue(int pollerIndex) {
+<span class="fc" id="L77">    return value();</span>
+  }
+
+  @Override public void addMonitors(List&lt;Monitor&lt;?&gt;&gt; monitors) {
+<span class="fc" id="L81">    monitors.add(this);</span>
+<span class="fc" id="L82">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-log4j1/src/main/java/com/netflix/spectator/log4j/LevelTag.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-log4j1/src/main/java/com/netflix/spectator/log4j/SpectatorAppender.java">
+</file>
+</checkstyle>
