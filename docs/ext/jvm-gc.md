@@ -17,7 +17,11 @@ otherwise keep reading this section.
 ### Requirements
 
 This library relies on the notification emitter added in 7u4, but there are known issues prior
-to 7u40. For G1 it is recommended to be on the latest version available.
+to 7u40. There is also a regression impacting java 9 and higher, see [#502] and [JDK-8196325]
+for more information. For G1 it is recommended to be on the latest version available.
+
+[#502]: https://github.com/Netflix/spectator/issues/502
+[JDK-8196325]: https://bugs.openjdk.java.net/browse/JDK-8196325
 
 ### Dependencies
 
