@@ -26,7 +26,7 @@ for more information. For G1 it is recommended to be on the latest version avail
 ### Dependencies
 
 ```
-com.netflix.spectator:spectator-ext-gc:0.59.0
+com.netflix.spectator:spectator-ext-gc:0.61.0
 ```
 
 ### Start Reporting
