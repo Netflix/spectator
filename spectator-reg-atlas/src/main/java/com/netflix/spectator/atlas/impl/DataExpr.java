@@ -46,17 +46,21 @@ public interface DataExpr {
    *
    * @param tags
    *     The set of tags for the final aggregate.
+   * @param shouldCheckQuery
+   *     If true, then values will be checked against the query before applying to the
+   *     aggregate. Otherwise, it is assumed that the user has already verified that the
+   *     datapoint matches before passing it in.
    * @return
    *     Aggregator for this data expression.
    */
-  Aggregator aggregator(Map<String, String> tags);
+  Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery);
 
   /**
    * Get an aggregator using the default set of tags for the final result. The tags will
    * be extracted based on the exact matches for the underlying query.
    */
   default Aggregator aggregator() {
-    return aggregator(query().exactTags());
+    return aggregator(query().exactTags(), true);
   }
 
   /**
@@ -102,13 +106,13 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> ignored) {
+    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
         private List<TagsValuePair> pairs = new ArrayList<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
-          if (query.matches(tags)) {
+          if (!shouldCheckQuery || query.matches(tags)) {
             pairs.add(new TagsValuePair(tags, p.value()));
           }
         }
@@ -120,7 +124,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator() {
-      return aggregator(null);
+      return aggregator(null, true);
     }
 
     @Override public String toString() {
@@ -162,13 +166,13 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> tags) {
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private double aggr = 0.0;
         private int count = 0;
 
         @Override public void update(TagsValuePair p) {
-          if (query.matches(p.tags())) {
+          if (!shouldCheckQuery || query.matches(p.tags())) {
             aggr += p.value();
             ++count;
           }
@@ -217,13 +221,13 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> tags) {
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private double aggr = Double.MAX_VALUE;
         private int count = 0;
 
         @Override public void update(TagsValuePair p) {
-          if (query.matches(p.tags()) && p.value() < aggr) {
+          if ((!shouldCheckQuery || query.matches(p.tags())) && p.value() < aggr) {
             aggr = p.value();
             ++count;
           }
@@ -272,13 +276,13 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> tags) {
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private double aggr = -Double.MAX_VALUE;
         private int count = 0;
 
         @Override public void update(TagsValuePair p) {
-          if (query.matches(p.tags()) && p.value() > aggr) {
+          if ((!shouldCheckQuery || query.matches(p.tags())) && p.value() > aggr) {
             aggr = p.value();
             ++count;
           }
@@ -327,12 +331,12 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> tags) {
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private int aggr = 0;
 
         @Override public void update(TagsValuePair p) {
-          if (query.matches(p.tags())) {
+          if (!shouldCheckQuery || query.matches(p.tags())) {
             ++aggr;
           }
         }
@@ -395,17 +399,17 @@ public interface DataExpr {
       return af.query();
     }
 
-    @Override public Aggregator aggregator(Map<String, String> queryTags) {
+    @Override public Aggregator aggregator(Map<String, String> queryTags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
-          if (af.query().matches(tags)) {
+          if (!shouldCheckQuery || af.query().matches(tags)) {
             Map<String, String> k = keyTags(tags);
             if (k != null) {
               k.putAll(queryTags);
-              aggrs.computeIfAbsent(k, af::aggregator).update(p);
+              aggrs.computeIfAbsent(k, ks -> af.aggregator(ks, false)).update(p);
             }
           }
         }
@@ -459,17 +463,17 @@ public interface DataExpr {
       return af.query();
     }
 
-    @Override public Aggregator aggregator(Map<String, String> ignored) {
+    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
         private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = new HashMap<>(p.tags());
-          if (af.query().matches(tags)) {
+          if (!shouldCheckQuery || af.query().matches(tags)) {
             for (String k : keys) {
               tags.remove(k);
             }
-            aggrs.computeIfAbsent(tags, af::aggregator).update(p);
+            aggrs.computeIfAbsent(tags, ks -> af.aggregator(ks, false)).update(p);
           }
         }
 
@@ -482,7 +486,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator() {
-      return aggregator(null);
+      return aggregator(null, true);
     }
 
     @Override public String toString() {
@@ -526,17 +530,17 @@ public interface DataExpr {
       return af.query();
     }
 
-    @Override public Aggregator aggregator(Map<String, String> ignored) {
+    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
         private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
-          if (af.query().matches(tags)) {
+          if (!shouldCheckQuery || af.query().matches(tags)) {
             Map<String, String> newTags = tags.entrySet().stream()
                 .filter(e -> keys.contains(e.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            aggrs.computeIfAbsent(newTags, af::aggregator).update(p);
+            aggrs.computeIfAbsent(newTags, ks -> af.aggregator(ks, false)).update(p);
           }
         }
 
@@ -549,7 +553,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator() {
-      return aggregator(null);
+      return aggregator(null, true);
     }
 
     @Override public String toString() {
