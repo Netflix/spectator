@@ -65,6 +65,14 @@ public class DataExprTest {
     return new TagsValuePair(tags, m.value());
   }
 
+  private Iterable<TagsValuePair> evalNoCheck(DataExpr expr, Iterable<TagsValuePair> input) {
+    DataExpr.Aggregator aggr = expr.aggregator(expr.query().exactTags(), false);
+    for (TagsValuePair p : input) {
+      aggr.update(p);
+    }
+    return aggr.result();
+  }
+
   @Test
   public void sumEmpty() {
     DataExpr expr = parse(":true,:sum");
@@ -89,7 +97,7 @@ public class DataExprTest {
     Assert.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
   }
 
-  private void aggrData(String aggr, double expected) {
+  private void aggrData(String aggr, double expected, boolean shouldCheckQuery) {
     DataExpr expr = parse("name,foo,:eq," + aggr);
     List<TagsValuePair> ms = data("foo", 1.0, 2.0, 3.0, 1.0);
     ms.addAll(data("bar", 42.0));
@@ -97,7 +105,7 @@ public class DataExprTest {
     Map<String, String> expectedTags = new HashMap<>();
     expectedTags.put("name", "foo");
 
-    Iterable<TagsValuePair> vs = expr.eval(ms);
+    Iterable<TagsValuePair> vs = shouldCheckQuery ? expr.eval(ms) : evalNoCheck(expr, ms);
     int count = 0;
     for (TagsValuePair v : vs) {
       ++count;
@@ -107,9 +115,18 @@ public class DataExprTest {
     Assert.assertEquals(1, count);
   }
 
+  private void aggrData(String aggr, double expected) {
+    aggrData(aggr, expected, true);
+  }
+
   @Test
   public void sumData() {
     aggrData(":sum", 7.0);
+  }
+
+  @Test
+  public void sumDataNoCheck() {
+    aggrData(":sum", 49.0, false);
   }
 
   @Test
@@ -118,8 +135,18 @@ public class DataExprTest {
   }
 
   @Test
+  public void minDataNoCheck() {
+    aggrData(":min", 1.0, false);
+  }
+
+  @Test
   public void maxData() {
     aggrData(":max", 3.0);
+  }
+
+  @Test
+  public void maxDataNoCheck() {
+    aggrData(":max", 42.0, false);
   }
 
   @Test
@@ -128,30 +155,56 @@ public class DataExprTest {
   }
 
   @Test
+  public void countDataNoCheck() {
+    aggrData(":count", 5.0, false);
+  }
+
+  @Test
   public void groupByNameData() {
     aggrData(":sum,(,name,),:by", 7.0);
   }
 
+  @Test
+  public void groupByNameDataNoCheck() {
+    // Note, this test shows a problem if the query is not checked properly when
+    // using shouldCheckQuery = false. There are two names in the group by, but
+    // only one shows up because name is restricted in the query and that overrides
+    // the value from the group by. If the query had been checked, then the mismatched
+    // names would not be possible.
+    aggrData(":sum,(,name,),:by", 49.0, false);
+  }
+
   private void groupingData(String aggr) {
+    groupingData(aggr, true);
+  }
+
+  private void groupingData(String aggr, boolean shouldCheckQuery) {
     DataExpr expr = parse("name,foo,:eq,:sum," + aggr);
     List<TagsValuePair> ms = data("foo", 1.0, 2.0, 3.0, 1.0);
     ms.addAll(data("bar", 42.0));
 
-    Iterable<TagsValuePair> vs = expr.eval(ms);
+    Iterable<TagsValuePair> vs = shouldCheckQuery ? expr.eval(ms) : evalNoCheck(expr, ms);
     int count = 0;
     for (TagsValuePair v : vs) {
       ++count;
       Assert.assertEquals(2, v.tags().size());
-      Assert.assertEquals("foo", v.tags().get("name"));
+      if (shouldCheckQuery) {
+        Assert.assertEquals("foo", v.tags().get("name"));
+      }
       double tv = Double.parseDouble(v.tags().get("v"));
       Assert.assertEquals((tv < 2.0) ? 2.0 : tv, v.value(), 1e-12);
     }
-    Assert.assertEquals(3, count);
+    Assert.assertEquals(shouldCheckQuery ? 3 : 4, count);
   }
 
   @Test
   public void groupByValueData() {
     groupingData("(,v,),:by");
+  }
+
+  @Test
+  public void groupByValueDataNoCheck() {
+    groupingData("(,v,),:by", false);
   }
 
   @Test
@@ -170,6 +223,11 @@ public class DataExprTest {
   }
 
   @Test
+  public void rollupKeepDataNoCheck() {
+    groupingData("(,v,name,),:rollup-keep", false);
+  }
+
+  @Test
   public void rollupKeepUnknownData() {
     groupingData("(,a,v,name,),:rollup-keep");
   }
@@ -180,6 +238,11 @@ public class DataExprTest {
   }
 
   @Test
+  public void rollupDropDataNoCheck() {
+    groupingData("(,i,),:rollup-drop", false);
+  }
+
+  @Test
   public void allData() {
     DataExpr expr = parse("name,foo,:eq,:all");
     List<TagsValuePair> ms = data("foo", 1.0, 2.0, 3.0, 1.0);
@@ -187,6 +250,16 @@ public class DataExprTest {
 
     Iterable<TagsValuePair> vs = expr.eval(ms);
     Assert.assertEquals(4, StreamSupport.stream(vs.spliterator(), false).count());
+  }
+
+  @Test
+  public void allDataNoCheck() {
+    DataExpr expr = parse("name,foo,:eq,:all");
+    List<TagsValuePair> ms = data("foo", 1.0, 2.0, 3.0, 1.0);
+    ms.addAll(data("bar", 42.0));
+
+    Iterable<TagsValuePair> vs = evalNoCheck(expr, ms);
+    Assert.assertEquals(5, StreamSupport.stream(vs.spliterator(), false).count());
   }
 
   @Test
