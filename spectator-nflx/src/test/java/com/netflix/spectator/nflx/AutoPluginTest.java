@@ -15,14 +15,14 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.netflix.config.ConfigurationManager;
+import com.netflix.archaius.api.Config;
+import com.netflix.archaius.config.MapConfig;
 import com.netflix.governator.guice.LifecycleInjector;
 import com.netflix.governator.lifecycle.LifecycleManager;
-import org.apache.commons.configuration.AbstractConfiguration;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -31,12 +31,6 @@ import java.lang.management.ManagementFactory;
 
 @RunWith(JUnit4.class)
 public class AutoPluginTest {
-
-  @Before
-  public void init() {
-    AbstractConfiguration cfg = ConfigurationManager.getConfigInstance();
-    cfg.setProperty("spectator.nflx.enabled", "false");
-  }
 
   private static boolean isJava8() {
     String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
@@ -53,6 +47,15 @@ public class AutoPluginTest {
     // at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:496)
     Injector injector = LifecycleInjector.builder()
         .usingBasePackages("com.netflix")
+        .withAdditionalModules(new AbstractModule() {
+          @Override
+          protected void configure() {
+            Config config = MapConfig.builder()
+                .put("spectator.nflx.enabled", "false")
+                .build();
+            bind(Config.class).toInstance(config);
+          }
+        })
         .build()
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);

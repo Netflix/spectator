@@ -16,7 +16,6 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.Inject;
-import com.google.inject.Provides;
 import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.archaius.api.Config;
 import com.netflix.archaius.config.EmptyConfig;
@@ -70,7 +69,7 @@ public final class SpectatorModule extends AbstractModule {
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorModule.class);
 
   @Override protected void configure() {
-    bind(Plugin.class).asEagerSingleton();
+    bind(Plugin.class).toProvider(PluginProvider.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
     OptionalBinder.newOptionalBinder(binder(), ExtendedRegistry.class)
         .setDefault()
@@ -89,9 +88,17 @@ public final class SpectatorModule extends AbstractModule {
     return getClass().hashCode();
   }
 
-  @Provides
-  private Plugin providePlugin(Registry registry, OptionalInjections opts) {
-    return new Plugin(registry, opts.config());
+  private static class PluginProvider implements Provider<Plugin> {
+    private final Plugin plugin;
+
+    @Inject
+    PluginProvider(Registry registry, OptionalInjections opts) {
+      plugin = new Plugin(registry, opts.config());
+    }
+
+    @Override public Plugin get() {
+      return plugin;
+    }
   }
 
   private static class OptionalInjections {
