@@ -38,7 +38,7 @@ slf4j where [logging configuration] is up to the end-user, not the library owner
 [logging configuration]: https://www.slf4j.org/faq.html#configure_logging
 
 When creating a Guice module for your library, you may want to avoid binding errors if the end-user
-has not provided a binding for the spectator registry. This can be done by using optional bindings
+has not provided a binding for the Spectator registry. This can be done by using optional bindings
 inside of the module, for example:
 
 ```java
