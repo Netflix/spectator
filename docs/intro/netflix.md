@@ -31,6 +31,28 @@ public class Foo {
 
 See the [testing docs](testing.md) for more information about creating a binding to use with tests.
 
+As a library owner, it is important not to install the SpectatorModule in your code as a
+convenience for your users, because it prevents them from using the TestModule in their code.
+You can use the following optional injection pattern to warn users that they are missing the
+SpectatorModule and provide a DefaultRegistry, which will allow the application to start without
+binding errors.
+
+```java
+private static class OptionalInjections
+{
+    @Inject(optional = true)
+    private Registry registry;
+
+    Registry registry() {
+        if (registry == null) {
+            LOG.warn("No spectator registry has been bound, so using default. You may want to install the SpectatorModule for your application.");
+            registry = new DefaultRegistry();
+        }
+        return registry;
+    }
+}
+```
+
 ## Applications
 
 Application should include a dependency on the `atlas-client` plugin:
