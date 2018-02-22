@@ -46,8 +46,10 @@ public class SpectatorModuleTest {
   public void injectedRegistryAddedToGlobal() {
     Injector injector = Guice.createInjector(new SpectatorModule());
     Registry registry = injector.getInstance(Registry.class);
+    long before = Spectator.globalRegistry().counter("test").count();
     registry.counter("test").increment();
-    Assert.assertEquals(Spectator.globalRegistry().counter("test").count(), 1);
+    long after = Spectator.globalRegistry().counter("test").count();
+    Assert.assertEquals(before + 1, after);
   }
 
   @Test
