@@ -15,17 +15,22 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.google.inject.Inject;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.OptionalBinder;
+import com.netflix.archaius.api.Config;
+import com.netflix.archaius.config.EmptyConfig;
 import com.netflix.spectator.servo.ServoRegistry;
 
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import javax.inject.Provider;
 
 import com.google.inject.AbstractModule;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
@@ -61,6 +66,9 @@ import com.netflix.spectator.api.Spectator;
  * </pre>
  */
 public final class SpectatorModule extends AbstractModule {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorModule.class);
+
   @Override protected void configure() {
     bind(Plugin.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
@@ -79,6 +87,24 @@ public final class SpectatorModule extends AbstractModule {
 
   @Override public int hashCode() {
     return getClass().hashCode();
+  }
+
+  @Provides
+  private Plugin providePlugin(Registry registry, OptionalInjections opts) {
+    return new Plugin(registry, opts.config());
+  }
+
+  private static class OptionalInjections {
+    @Inject(optional = true)
+    private Config config;
+
+    Config config() {
+      if (config == null) {
+        LOGGER.warn("no archaius2 binding found, using empty configuration");
+        config = EmptyConfig.INSTANCE;
+      }
+      return config;
+    }
   }
 
   private static class StaticManager {
