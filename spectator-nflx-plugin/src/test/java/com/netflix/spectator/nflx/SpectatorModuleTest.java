@@ -18,6 +18,7 @@ package com.netflix.spectator.nflx;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
@@ -46,10 +47,8 @@ public class SpectatorModuleTest {
   public void injectedRegistryAddedToGlobal() {
     Injector injector = Guice.createInjector(new SpectatorModule());
     Registry registry = injector.getInstance(Registry.class);
-    long before = Spectator.globalRegistry().counter("test").count();
-    registry.counter("test").increment();
-    long after = Spectator.globalRegistry().counter("test").count();
-    Assert.assertEquals(before + 1, after);
+    Spectator.globalRegistry().counter("test").increment();
+    Assert.assertEquals(1, registry.counter("test").count());
   }
 
   @Test
