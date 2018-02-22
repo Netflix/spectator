@@ -31,6 +31,56 @@ public class Foo {
 
 See the [testing docs](testing.md) for more information about creating a binding to use with tests.
 
+Libraries should not install `SpectatorModule`. The bindings to use for the registry should be
+determined by the [application](#application) that is using the library. Think of it as being like
+slf4j where [logging configuration] is up to the end-user, not the library owner.
+
+[logging configuration]: https://www.slf4j.org/faq.html#configure_logging
+
+When creating a Guice module for your library, you may want to avoid binding errors if the end-user
+has not provided a binding for the Spectator registry. This can be done by using optional injections
+inside of the module, for example:
+
+```java
+// Sample library class
+public class MyLib {
+  Registry registry;
+
+  @Inject
+  public MyLib(Registry registry) {
+    this.registry = registry;
+  }
+}
+
+// Guice module to configure the library and setup the bindings
+public class MyLibModule extends AbstractModule {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(MyLibModule.class);
+
+  @Override
+  protected void configure() {
+  }
+
+  @Provides
+  private MyLib provideMyLib(OptionalInjections opts) {
+    return new MyLib(opts.registry());
+  }
+
+  private static class OptionalInjections {
+    @Inject(optional = true)
+    private Registry registry;
+
+    Registry registry() {
+      if (registry == null) {
+        LOGGER.warn("no spectator registry has been bound, so using noop implementation");
+        registry = new NoopRegistry();
+      }
+      return registry;
+    }
+  }
+}
+```
+
 ## Applications
 
 Application should include a dependency on the `atlas-client` plugin:
