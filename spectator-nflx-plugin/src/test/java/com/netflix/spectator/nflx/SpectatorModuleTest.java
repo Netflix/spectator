@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.Guice;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
@@ -57,5 +58,17 @@ public class SpectatorModuleTest {
   @Test
   public void hashCodeTest() {
     Assert.assertEquals(new SpectatorModule().hashCode(), new SpectatorModule().hashCode());
+  }
+
+  @Test
+  public void optionalInjectWorksWithOptionalBinder() {
+    Injector injector = Guice.createInjector(new SpectatorModule());
+    OptionalInject obj = injector.getInstance(OptionalInject.class);
+    Assert.assertNotNull(obj.registry);
+  }
+
+  private static class OptionalInject {
+    @Inject(optional = true)
+    Registry registry;
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
@@ -31,7 +32,11 @@ import com.netflix.spectator.api.Registry;
 public final class TestModule extends AbstractModule {
   @Override protected void configure() {
     final Registry registry = new DefaultRegistry();
-    bind(ExtendedRegistry.class).toInstance(new ExtendedRegistry(registry));
-    bind(Registry.class).toInstance(registry);
+    OptionalBinder.newOptionalBinder(binder(), ExtendedRegistry.class)
+        .setBinding()
+        .toInstance(new ExtendedRegistry(registry));
+    OptionalBinder.newOptionalBinder(binder(), Registry.class)
+        .setBinding()
+        .toInstance(registry);
   }
 }

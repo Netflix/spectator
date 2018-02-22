@@ -19,6 +19,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.junit.Assert;
@@ -65,5 +66,17 @@ public class TestModuleTest {
   public void notGlobal() {
     Registry r = injector.getInstance(Registry.class);
     Assert.assertNotSame(Spectator.globalRegistry(), r);
+  }
+
+  @Test
+  public void usableIfSpectatorModuleIsInstalled() {
+    Registry r = Guice
+        .createInjector(new SpectatorModule(), new TestModule())
+        .getInstance(Registry.class);
+    Assert.assertTrue(r instanceof DefaultRegistry); // SpectatorModule installs ServoRegistry
+
+    // Sanity checking global behavior, SpectatorModule will add it to the global
+    // registry which is not normally done for TestModule because it is all static.
+    Assert.assertSame(Spectator.globalRegistry().underlying(DefaultRegistry.class), r);
   }
 }
