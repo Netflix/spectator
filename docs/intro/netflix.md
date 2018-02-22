@@ -31,25 +31,53 @@ public class Foo {
 
 See the [testing docs](testing.md) for more information about creating a binding to use with tests.
 
-As a library owner, it is important not to install the SpectatorModule in your code as a
-convenience for your users, because it prevents them from using the TestModule in their code.
-You can use the following optional injection pattern to warn users that they are missing the
-SpectatorModule and provide a DefaultRegistry, which will allow the application to start without
-binding errors.
+Libraries should not install `SpectatorModule`. The bindings to use for the registry should be
+determined by the [application](#application) that is using the library. Think of it as being like
+slf4j where [logging configuration] is up to the end-user, not the library owner.
+
+[logging configuration]: https://www.slf4j.org/faq.html#configure_logging
+
+When creating a Guice module for your library, you may want to avoid binding errors if the end-user
+has not provided a binding for the spectator registry. This can be done by using optional bindings
+inside of the module, for example:
 
 ```java
-private static class OptionalInjections
-{
+// Sample library class
+public class MyLib {
+  Registry registry;
+
+  @Inject
+  public MyLib(Registry registry) {
+    this.registry = registry;
+  }
+}
+
+// Guice module to configure the library and setup the bindings
+public class MyLibModule extends AbstractModule {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(MyLibModule.class);
+
+  @Override
+  protected void configure() {
+  }
+
+  @Provides
+  private MyLib provideMyLib(OptionalInjections opts) {
+    return new MyLib(opts.registry());
+  }
+
+  private static class OptionalInjections {
     @Inject(optional = true)
     private Registry registry;
 
     Registry registry() {
-        if (registry == null) {
-            LOG.warn("No spectator registry has been bound, so using default. You may want to install the SpectatorModule for your application.");
-            registry = new DefaultRegistry();
-        }
-        return registry;
+      if (registry == null) {
+        LOGGER.warn("no spectator registry has been bound, so using noop implementation");
+        registry = new NoopRegistry();
+      }
+      return registry;
     }
+  }
 }
 ```
 
