@@ -8,7 +8,7 @@ dependencies {
   compile 'commons-configuration:commons-configuration'
   compile "com.google.inject:guice"
   compile "com.google.inject.extensions:guice-multibindings"
-  compile "com.netflix.archaius:archaius-core"
+  compile "com.netflix.archaius:archaius2-core"
   testCompile "com.netflix.governator:governator"
 }
 

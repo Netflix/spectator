@@ -4,8 +4,7 @@ dependencies {
   compile 'com.netflix.governator:governator-api'
   compile 'com.google.inject:guice'
   testCompile 'com.google.inject:guice'
-  testCompile 'com.netflix.archaius:archaius-core'
-  testCompile 'commons-configuration:commons-configuration'
+  testCompile 'com.netflix.archaius:archaius2-core'
 }
 
 jar {
