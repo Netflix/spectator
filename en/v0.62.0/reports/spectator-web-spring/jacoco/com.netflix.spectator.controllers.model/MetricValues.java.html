@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricValues.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers.model</a> &gt; <span class="el_source">MetricValues.java</span></div><h1>MetricValues.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.netflix.spectator.controllers.model;
+
+import com.netflix.spectator.api.Measurement;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * A metric and all its tagged values
+ *
+ * This is only public for testing purposes so implements equals but not hash.
+ */
+public class MetricValues {
+  /**
+   * Returns a string denoting the type of Meter.
+   * These are strings we've added; Spectator doesnt have this.
+   */
+  public String getKind() {
+<span class="nc" id="L36">      return kind;</span>
+  }
+
+  /**
+   * Returns the current data point values for this metric.
+   */
+  public Iterable&lt;TaggedDataPoints&gt; getValues() {
+<span class="nc" id="L43">      return dataPoints;</span>
+  }
+
+  /**
+   * Adds another measurement datapoint.
+   */
+  public void addMeasurement(Measurement measurement) {
+<span class="fc" id="L50">    dataPoints.add(new TaggedDataPoints(measurement));</span>
+<span class="fc" id="L51">  }</span>
+
+  /**
+   * Constructor from a single measurement datapoint.
+   */
+<span class="fc" id="L56">  public MetricValues(String kind, Measurement measurement) {</span>
+<span class="fc" id="L57">    this.kind = kind;</span>
+<span class="fc" id="L58">    dataPoints = new ArrayList&lt;TaggedDataPoints&gt;();</span>
+<span class="fc" id="L59">    dataPoints.add(new TaggedDataPoints(measurement));</span>
+<span class="fc" id="L60">  }</span>
+
+  /**
+   * Constructor from a list of datapoints (for testing).
+   */
+<span class="fc" id="L65">  public MetricValues(String kind, List&lt;TaggedDataPoints&gt; dataPoints) {</span>
+<span class="fc" id="L66">    this.kind = kind;</span>
+<span class="fc" id="L67">    this.dataPoints = new ArrayList&lt;TaggedDataPoints&gt;(dataPoints);</span>
+<span class="fc" id="L68">  }</span>
+
+  @Override
+  public boolean equals(Object obj) {
+<span class="pc bpc" id="L72" title="2 of 4 branches missed.">    if (obj == null || !(obj instanceof MetricValues)) return false;</span>
+<span class="fc" id="L73">    MetricValues other = (MetricValues) obj;</span>
+
+    // Ignore the kind because spectator internally transforms it
+    // into internal types that we cannot test against.
+<span class="fc" id="L77">    return dataPoints.equals(other.dataPoints);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L82">    return Objects.hash(kind, dataPoints);</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="nc" id="L87">    return String.format(&quot;%s: %s&quot;, kind, dataPoints);</span>
+  }
+
+  private String kind;
+  private List&lt;TaggedDataPoints&gt; dataPoints;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

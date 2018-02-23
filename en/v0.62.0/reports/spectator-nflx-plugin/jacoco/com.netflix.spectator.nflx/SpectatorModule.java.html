@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SpectatorModule.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-nflx-plugin</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.nflx</a> &gt; <span class="el_source">SpectatorModule.java</span></div><h1>SpectatorModule.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.nflx;
+
+import com.google.inject.Inject;
+import com.google.inject.Scopes;
+import com.google.inject.multibindings.OptionalBinder;
+import com.netflix.archaius.api.Config;
+import com.netflix.archaius.config.EmptyConfig;
+import com.netflix.spectator.servo.ServoRegistry;
+
+import javax.annotation.PreDestroy;
+import javax.inject.Provider;
+
+import com.google.inject.AbstractModule;
+import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Guice module to configure the appropriate bindings for running an application. Note that this
+ * will configure it to use the global registry bindings for reporting. This also means that test
+ * cases will not be completely isolated. For unit tests see
+ * {@link com.netflix.spectator.nflx.TestModule}. Typical usage:
+ *
+ * &lt;p&gt;&lt;b&gt;User code&lt;/b&gt;&lt;/p&gt;
+ * &lt;pre&gt;
+ * public class Foo {
+ *   private final Counter counter;
+ *
+ *  {@literal @}Inject
+ *   public Foo(ExtendedRegistry registry) {
+ *     counter = registry.counter(&quot;foo.doSomething&quot;);
+ *   }
+ *
+ *   public void doSomething() {
+ *     counter.increment();
+ *   }
+ * }
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;&lt;b&gt;Governator&lt;/b&gt;&lt;/p&gt;
+ * &lt;p&gt;One of the classes requires an {@link javax.annotation.PostConstruct} block to initialize
+ * so governator should be used to manage the lifecycle as guice doesn't support it directly.&lt;/p&gt;
+ * &lt;pre&gt;
+ * Injector injector = LifecycleInjector.builder()
+ *   .withModules(new SpectatorModule())
+ *   .build()
+ *   .createInjector();
+ * injector.getInstance(LifecycleManager.class).start();
+ * &lt;/pre&gt;
+ */
+<span class="fc" id="L68">public final class SpectatorModule extends AbstractModule {</span>
+
+<span class="fc" id="L70">  private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorModule.class);</span>
+
+  @Override protected void configure() {
+<span class="fc" id="L73">    bind(Plugin.class).toProvider(PluginProvider.class).asEagerSingleton();</span>
+<span class="fc" id="L74">    bind(StaticManager.class).asEagerSingleton();</span>
+<span class="fc" id="L75">    OptionalBinder.newOptionalBinder(binder(), ExtendedRegistry.class)</span>
+<span class="fc" id="L76">        .setDefault()</span>
+<span class="fc" id="L77">        .toInstance(Spectator.registry());</span>
+<span class="fc" id="L78">    OptionalBinder.newOptionalBinder(binder(), Registry.class)</span>
+<span class="fc" id="L79">        .setDefault()</span>
+<span class="fc" id="L80">        .toProvider(RegistryProvider.class)</span>
+<span class="fc" id="L81">        .in(Scopes.SINGLETON);</span>
+<span class="fc" id="L82">  }</span>
+
+  @Override public boolean equals(Object obj) {
+<span class="pc bpc" id="L85" title="2 of 4 branches missed.">    return obj != null &amp;&amp; getClass().equals(obj.getClass());</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc" id="L89">    return getClass().hashCode();</span>
+  }
+
+  private static class PluginProvider implements Provider&lt;Plugin&gt; {
+    private final Plugin plugin;
+
+    @Inject
+<span class="fc" id="L96">    PluginProvider(Registry registry, OptionalInjections opts) {</span>
+<span class="fc" id="L97">      plugin = new Plugin(registry, opts.config());</span>
+<span class="fc" id="L98">    }</span>
+
+    @Override public Plugin get() {
+<span class="fc" id="L101">      return plugin;</span>
+    }
+  }
+
+<span class="fc" id="L105">  private static class OptionalInjections {</span>
+    @Inject(optional = true)
+    private Config config;
+
+    Config config() {
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">      if (config == null) {</span>
+<span class="fc" id="L111">        LOGGER.warn(&quot;no archaius2 binding found, using empty configuration&quot;);</span>
+<span class="fc" id="L112">        config = EmptyConfig.INSTANCE;</span>
+      }
+<span class="fc" id="L114">      return config;</span>
+    }
+  }
+
+  private static class StaticManager {
+    private final Registry registry;
+
+    @Inject
+<span class="fc" id="L122">    StaticManager(Registry registry) {</span>
+<span class="fc" id="L123">      this.registry = registry;</span>
+<span class="fc" id="L124">      Spectator.globalRegistry().add(registry);</span>
+<span class="fc" id="L125">    }</span>
+
+    @PreDestroy
+    void onShutdown() {
+<span class="nc" id="L129">      Spectator.globalRegistry().remove(registry);</span>
+<span class="nc" id="L130">    }</span>
+  }
+
+<span class="fc" id="L133">  private static class RegistryProvider implements Provider&lt;Registry&gt; {</span>
+
+<span class="fc" id="L135">    private ServoRegistry registry = new ServoRegistry();</span>
+
+    @Override public Registry get() {
+<span class="fc" id="L138">      return registry;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

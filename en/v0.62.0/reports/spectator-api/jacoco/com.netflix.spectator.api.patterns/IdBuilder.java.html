@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IdBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.patterns</a> &gt; <span class="el_source">IdBuilder.java</span></div><h1>IdBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+
+/**
+ * Base type for builders that are required to construct an {@link Id} object. This class
+ * assists with the creation of a base id and then returns another builder type that can
+ * be used for further refinement. By following this pattern the builder will force the
+ * user to satisfy the minimal constraints of the id before a final option to construct
+ * or complete the operation is provided.
+ *
+ * &lt;p&gt;Sample usage:&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ *   return new IdBuilder&lt;Builder&gt;(registry) {
+ *     {@literal @}Override protected Builder createTypeBuilder(Id id) {
+ *       return new Builder(registry, id);
+ *     }
+ *   };
+ * &lt;/pre&gt;
+ *
+ * &lt;p&gt;The type returned by {@link #createTypeBuilder(Id)} can extend {@link TagsBuilder}
+ * to easily support additional tags being added after the base id requirements are
+ * satisfied.&lt;/p&gt;
+ */
+public abstract class IdBuilder&lt;T&gt; {
+
+  /** Registry used for created ids. */
+  protected final Registry registry;
+
+  /** Create a new instance. */
+<span class="fc" id="L48">  IdBuilder(Registry registry) {</span>
+<span class="fc" id="L49">    this.registry = registry;</span>
+<span class="fc" id="L50">  }</span>
+
+  /** Sub-classes should override this method to create the more specific builder type. */
+  protected abstract T createTypeBuilder(Id id);
+
+  /**
+   * Create a new identifier with the provide name.
+   *
+   * @param name
+   *     Name used in the identifier.
+   * @return
+   *     Builder object to allow for method chaining.
+   */
+  public T withName(String name) {
+<span class="fc" id="L64">    return createTypeBuilder(registry.createId(name));</span>
+  }
+
+  /**
+   * Set the base identifier for the type being constructed.
+   *
+   * @param id
+   *     Identifier for the type being constructed.
+   * @return
+   *     Builder object to allow for method chaining.
+   */
+  public T withId(Id id) {
+<span class="fc" id="L76">    return createTypeBuilder(id);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

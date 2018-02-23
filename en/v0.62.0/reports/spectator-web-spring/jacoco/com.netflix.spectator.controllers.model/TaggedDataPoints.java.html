@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TaggedDataPoints.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers.model</a> &gt; <span class="el_source">TaggedDataPoints.java</span></div><h1>TaggedDataPoints.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.controllers.model;
+
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * A collection of DataPoint instances for a common set of Tags.
+ *
+ * This is only public for testing purposes so implements equals but not hash.
+ */
+public class TaggedDataPoints {
+  private static class JacksonableTag implements Tag {
+    private String key;
+    private String value;
+
+<span class="fc" id="L36">    JacksonableTag(Tag tag) {</span>
+<span class="fc" id="L37">      key = tag.key();</span>
+<span class="fc" id="L38">      value = tag.value();</span>
+<span class="fc" id="L39">    }</span>
+
+    public String key() {
+<span class="fc" id="L42">      return key;</span>
+    }
+    public String value() {
+<span class="fc" id="L45">      return value;</span>
+    }
+    public String getKey() {
+<span class="nc" id="L48">      return key;</span>
+    }
+    public String getValue() {
+<span class="nc" id="L51">      return value;</span>
+    }
+
+    @Override public int hashCode() {
+<span class="nc" id="L55">      return Objects.hash(key, value);</span>
+    }
+
+    @Override public boolean equals(Object obj) {
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">      if (obj == this) return true;</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">      if (!(obj instanceof Tag)) return false;</span>
+
+<span class="fc" id="L62">      Tag tag = (Tag) obj;</span>
+<span class="pc bpc" id="L63" title="2 of 4 branches missed.">      return key.equals(tag.key()) &amp;&amp; value.equals(tag.value());</span>
+    }
+
+    @Override public String toString() {
+<span class="nc" id="L67">      return key + &quot;=&quot; + value;</span>
+    }
+
+    static List&lt;Tag&gt; convertTags(Iterable&lt;Tag&gt; iterable) {
+<span class="fc" id="L71">      ArrayList&lt;Tag&gt; result = new ArrayList&lt;Tag&gt;();</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">      for (Tag tag : iterable) {</span>
+<span class="fc" id="L73">        result.add(new JacksonableTag(tag));</span>
+<span class="fc" id="L74">      }</span>
+<span class="fc" id="L75">      return result;</span>
+    }
+  };
+
+  /**
+   * The tag bindings for the values.
+   */
+  public Iterable&lt;Tag&gt; getTags() {
+<span class="nc" id="L83">    return tags;</span>
+  }
+
+  /**
+   * The current values.
+   */
+  public Iterable&lt;DataPoint&gt; getValues() {
+<span class="nc" id="L90">    return dataPoints;</span>
+  }
+
+  /**
+   * Constructor from a single measurement data point.
+   */
+<span class="fc" id="L96">  public TaggedDataPoints(Measurement measurement) {</span>
+<span class="fc" id="L97">    tags = JacksonableTag.convertTags(measurement.id().tags());</span>
+<span class="fc" id="L98">    dataPoints = Arrays.asList(DataPoint.make(measurement));</span>
+<span class="fc" id="L99">  }</span>
+
+  /**
+   * Constructor from a list of data points (for testing).
+   */
+<span class="fc" id="L104">  public TaggedDataPoints(Iterable&lt;Tag&gt; tags, List&lt;DataPoint&gt; dataPoints) {</span>
+<span class="fc" id="L105">    this.tags = JacksonableTag.convertTags(tags);</span>
+<span class="fc" id="L106">    this.dataPoints = dataPoints;</span>
+<span class="fc" id="L107">  }</span>
+
+  @Override
+  public String toString() {
+<span class="nc" id="L111">    return String.format(&quot;{TAGS={%s} DATA={%s}&quot;, tags, dataPoints);</span>
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+<span class="pc bpc" id="L116" title="2 of 4 branches missed.">    if (obj == null || !(obj instanceof TaggedDataPoints)) return false;</span>
+<span class="fc" id="L117">    TaggedDataPoints other = (TaggedDataPoints) obj;</span>
+<span class="pc bpc" id="L118" title="2 of 4 branches missed.">    return tags.equals(other.tags) &amp;&amp; dataPoints.equals(other.dataPoints);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="nc" id="L123">    return Objects.hash(tags, dataPoints);</span>
+  }
+
+  private List&lt;Tag&gt; tags;
+  private List&lt;DataPoint&gt; dataPoints;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

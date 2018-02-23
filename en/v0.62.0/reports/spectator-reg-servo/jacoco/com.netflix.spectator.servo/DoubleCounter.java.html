@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DoubleCounter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-servo</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.servo</a> &gt; <span class="el_source">DoubleCounter.java</span></div><h1>DoubleCounter.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.servo;
+
+import com.netflix.servo.annotations.DataSourceType;
+import com.netflix.servo.monitor.AbstractMonitor;
+import com.netflix.servo.monitor.MonitorConfig;
+import com.netflix.servo.monitor.NumericMonitor;
+import com.netflix.servo.util.Clock;
+import com.netflix.servo.util.ClockWithOffset;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * A simple counter implementation backed by a StepLong. The value returned is a rate for the
+ * previous interval as defined by the step.
+ */
+class DoubleCounter extends AbstractMonitor&lt;Number&gt; implements NumericMonitor&lt;Number&gt; {
+
+  private final StepLong count;
+
+  /**
+   * Creates a new instance of the counter.
+   */
+  DoubleCounter(MonitorConfig config) {
+<span class="nc" id="L39">    this(config, ClockWithOffset.INSTANCE);</span>
+<span class="nc" id="L40">  }</span>
+
+  /**
+   * Creates a new instance of the counter.
+   */
+  DoubleCounter(MonitorConfig config, Clock clock) {
+    // This class will reset the value so it is not a monotonically increasing value as
+    // expected for type=COUNTER. This class looks like a counter to the user and a gauge to
+    // the publishing pipeline receiving the value.
+<span class="fc" id="L49">    super(config.withAdditionalTag(DataSourceType.NORMALIZED));</span>
+<span class="fc" id="L50">    count = new StepLong(0L, clock);</span>
+<span class="fc" id="L51">  }</span>
+
+  private void add(AtomicLong num, double amount) {
+    long v;
+    double d;
+    long next;
+    do {
+<span class="fc" id="L58">      v = num.get();</span>
+<span class="fc" id="L59">      d = Double.longBitsToDouble(v);</span>
+<span class="fc" id="L60">      next = Double.doubleToLongBits(d + amount);</span>
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">    } while (!num.compareAndSet(v, next));</span>
+<span class="fc" id="L62">  }</span>
+
+  /**
+   * Increment the value by the specified amount.
+   */
+  void increment(double amount) {
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">    if (amount &gt;= 0.0) {</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">      for (int i = 0; i &lt; ServoPollers.NUM_POLLERS; ++i) {</span>
+<span class="fc" id="L70">        add(count.getCurrent(i), amount);</span>
+      }
+    }
+<span class="fc" id="L73">  }</span>
+
+  @Override public Number getValue(int pollerIndex) {
+<span class="fc" id="L76">    final Long dp = count.poll(pollerIndex);</span>
+<span class="fc" id="L77">    final double stepSeconds = ServoPollers.POLLING_INTERVALS[pollerIndex] / 1000.0;</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">    return (dp == null) ? Double.NaN : Double.longBitsToDouble(dp.longValue()) / stepSeconds;</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L82">    return &quot;DoubleCounter(config=&quot; + config + &quot;,count=&quot; + getValue() + &quot;)&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>
