@@ -16,6 +16,7 @@
 package com.netflix.spectator.nflx;
 
 import com.google.inject.Inject;
+import com.google.inject.Scopes;
 import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.archaius.api.Config;
 import com.netflix.archaius.config.EmptyConfig;
@@ -77,7 +78,7 @@ public final class SpectatorModule extends AbstractModule {
     OptionalBinder.newOptionalBinder(binder(), Registry.class)
         .setDefault()
         .toProvider(RegistryProvider.class)
-        .asEagerSingleton();
+        .in(Scopes.SINGLETON);
   }
 
   @Override public boolean equals(Object obj) {
