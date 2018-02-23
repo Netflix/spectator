@@ -18,7 +18,6 @@ package com.netflix.spectator.nflx;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
