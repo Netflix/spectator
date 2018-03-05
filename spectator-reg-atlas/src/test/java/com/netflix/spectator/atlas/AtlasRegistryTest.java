@@ -26,7 +26,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 
 @RunWith(JUnit4.class)
@@ -67,7 +66,19 @@ public class AtlasRegistryTest {
 
   @Test
   public void measurementsWithGauge() {
-    AtomicLong v = registry.gauge("test", new AtomicLong(0L));
+    registry.gauge("test").set(4.0);
+    Assert.assertEquals(1, registry.getMeasurements().size());
+  }
+
+  @Test
+  public void measurementsWithDoubleCounter() {
+    registry.doubleCounter(registry.createId("test")).add(4.0);
+    Assert.assertEquals(1, registry.getMeasurements().size());
+  }
+
+  @Test
+  public void measurementsWithMaxGauge() {
+    registry.maxGauge(registry.createId("test")).set(4.0);
     Assert.assertEquals(1, registry.getMeasurements().size());
   }
 

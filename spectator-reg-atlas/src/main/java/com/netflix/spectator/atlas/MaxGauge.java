@@ -13,31 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.atlas;
 
-import java.util.Collections;
+import com.netflix.spectator.api.Gauge;
 
-/** Gauge implementation for the no-op registry. */
-enum NoopGauge implements Gauge {
-  /** Singleton instance. */
-  INSTANCE;
-
-  @Override public Id id() {
-    return NoopId.INSTANCE;
-  }
-
-  @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
-  }
-
-  @Override public boolean hasExpired() {
-    return true;
-  }
-
-  @Override public void set(double v) {
-  }
-
-  @Override public double value() {
-    return Double.NaN;
-  }
+/**
+ * <p><b>Experimental:</b> This type may be removed in a future release.</p>
+ *
+ * Gauge that reports the maximum value submitted during an interval to Atlas. Main use-case
+ * right now is for allowing the max stat used internally to AtlasDistributionSummary and
+ * AtlasTimer to be transferred to a remote AtlasRegistry.
+ */
+public interface MaxGauge extends Gauge {
 }

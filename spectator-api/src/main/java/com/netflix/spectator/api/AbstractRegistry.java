@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
@@ -158,64 +159,56 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Counter counter(Id id) {
-    try {
-      Preconditions.checkNotNull(id, "id");
-      Meter m = Utils.computeIfAbsent(meters, id, i ->
-          compute(createCounter(i), NoopCounter.INSTANCE));
-      if (!(m instanceof Counter)) {
-        logTypeError(id, Counter.class, m.getClass());
-        m = NoopCounter.INSTANCE;
-      }
-      return (Counter) m;
-    } catch (Exception e) {
-      propagate(e);
-      return NoopCounter.INSTANCE;
-    }
+    return getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::createCounter);
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
-    try {
-      Preconditions.checkNotNull(id, "id");
-      Meter m = Utils.computeIfAbsent(meters, id, i ->
-          compute(createDistributionSummary(i), NoopDistributionSummary.INSTANCE));
-      if (!(m instanceof DistributionSummary)) {
-        logTypeError(id, DistributionSummary.class, m.getClass());
-        m = NoopDistributionSummary.INSTANCE;
-      }
-      return (DistributionSummary) m;
-    } catch (Exception e) {
-      propagate(e);
-      return NoopDistributionSummary.INSTANCE;
-    }
+    return getOrCreate(
+        id,
+        DistributionSummary.class,
+        NoopDistributionSummary.INSTANCE,
+        this::createDistributionSummary);
   }
 
   @Override public final Timer timer(Id id) {
-    try {
-      Preconditions.checkNotNull(id, "id");
-      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(createTimer(i), NoopTimer.INSTANCE));
-      if (!(m instanceof Timer)) {
-        logTypeError(id, Timer.class, m.getClass());
-        m = NoopTimer.INSTANCE;
-      }
-      return (Timer) m;
-    } catch (Exception e) {
-      propagate(e);
-      return NoopTimer.INSTANCE;
-    }
+    return getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::createTimer);
   }
 
   @Override public final Gauge gauge(Id id) {
+    return getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::createGauge);
+  }
+
+  /**
+   * Helper used to get or create an instance of a core meter type. This is mostly used
+   * internally to this implementation, but may be useful in rare cases for creating
+   * customizations based on a core type in a sub-class.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @param cls
+   *     Type of the meter.
+   * @param dflt
+   *     Default value used if there is a failure during the lookup and it is not configured
+   *     to propagate.
+   * @param factory
+   *     Function for creating a new instance of the meter type if one is not already available
+   *     in the registry.
+   * @return
+   *     Instance of the meter.
+   */
+  @SuppressWarnings("unchecked")
+  protected <T extends Meter> T getOrCreate(Id id, Class<T> cls, T dflt, Function<Id, T> factory) {
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(createGauge(i), NoopGauge.INSTANCE));
-      if (!(m instanceof Gauge)) {
-        logTypeError(id, Gauge.class, m.getClass());
-        m = NoopGauge.INSTANCE;
+      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(factory.apply(i), dflt));
+      if (!cls.isAssignableFrom(m.getClass())) {
+        logTypeError(id, cls, m.getClass());
+        m = dflt;
       }
-      return (Gauge) m;
+      return (T) m;
     } catch (Exception e) {
       propagate(e);
-      return NoopGauge.INSTANCE;
+      return dflt;
     }
   }
 
