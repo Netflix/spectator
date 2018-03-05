@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -347,5 +347,44 @@ public final class AtlasRegistry extends AbstractRegistry {
     // Be sure to get StepClock so the measurements will have step aligned
     // timestamps.
     return new AtlasGauge(id, clock(), meterTTL);
+  }
+
+  //
+  // Extended types to support forwarding from a stateless service.
+  // https://github.com/Netflix/spectator/issues/432
+  //
+
+  private DoubleCounter newDoubleCounter(Id id) {
+    return new AtlasDoubleCounter(id, clock, meterTTL, stepMillis);
+  }
+
+  /**
+   * <p><b>Experimental:</b> This type may be removed in a future release.</p>
+   *
+   * Measures the rate of some activity based on floating point deltas. For most use-cases
+   * {@link #counter(Id)} should be used instead. See {@link DoubleCounter} for more information.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  public DoubleCounter doubleCounter(Id id) {
+    return getOrCreate(id, DoubleCounter.class, NoopDoubleCounter.INSTANCE, this::newDoubleCounter);
+  }
+
+  private MaxGauge newMaxGauge(Id id) {
+    return new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
+  }
+
+  /**
+   * <p><b>Experimental:</b> This type may be removed in a future release.</p>
+   *
+   * Measures the maximum value recorded during an interval. See {@link MaxGauge} for more
+   * information.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  public MaxGauge maxGauge(Id id) {
+    return getOrCreate(id, MaxGauge.class, NoopMaxGauge.INSTANCE, this::newMaxGauge);
   }
 }

@@ -27,19 +27,18 @@ import org.junit.runners.JUnit4;
 
 
 @RunWith(JUnit4.class)
-public class AtlasCounterTest {
+public class AtlasMaxGaugeTest {
 
   private ManualClock clock = new ManualClock();
   private Registry registry = new DefaultRegistry();
   private long step = 10000L;
-  private AtlasCounter counter = new AtlasCounter(registry.createId("test"), clock, step, step);
+  private AtlasMaxGauge gauge = new AtlasMaxGauge(registry.createId("test"), clock, step, step);
 
   private void checkValue(long expected) {
     int count = 0;
-    for (Measurement m : counter.measure()) {
-      Assert.assertEquals(counter.id().withTags(Statistic.count, DsType.rate), m.id());
-      Assert.assertEquals(expected / 10.0, m.value(), 1e-12);
-      Assert.assertEquals(expected, counter.count());
+    for (Measurement m : gauge.measure()) {
+      Assert.assertEquals(gauge.id().withTags(Statistic.max, DsType.gauge), m.id());
+      Assert.assertEquals(expected, m.value(), 1e-12);
       ++count;
     }
     Assert.assertEquals(1, count);
@@ -51,17 +50,8 @@ public class AtlasCounterTest {
   }
 
   @Test
-  public void increment() {
-    counter.increment();
-    checkValue(0);
-
-    clock.setWallTime(step + 1);
-    checkValue(1);
-  }
-
-  @Test
-  public void incrementAmount() {
-    counter.increment(42);
+  public void set() {
+    gauge.set(42);
     checkValue(0);
 
     clock.setWallTime(step + 1);
@@ -69,8 +59,19 @@ public class AtlasCounterTest {
   }
 
   @Test
+  public void multipleSets() {
+    gauge.set(42);
+    gauge.set(44);
+    gauge.set(43);
+    checkValue(0);
+
+    clock.setWallTime(step + 1);
+    checkValue(44);
+  }
+
+  @Test
   public void rollForward() {
-    counter.increment(42);
+    gauge.set(42);
     clock.setWallTime(step + 1);
     checkValue(42);
     clock.setWallTime(step + step + 1);
@@ -81,15 +82,15 @@ public class AtlasCounterTest {
   public void expiration() {
     long start = clock.wallTime();
     clock.setWallTime(start + step * 2);
-    Assert.assertTrue(counter.hasExpired());
+    Assert.assertTrue(gauge.hasExpired());
 
-    counter.increment();
-    Assert.assertFalse(counter.hasExpired());
+    gauge.set(1);
+    Assert.assertFalse(gauge.hasExpired());
 
     clock.setWallTime(start + step * 3 + 1);
-    Assert.assertTrue(counter.hasExpired());
+    Assert.assertTrue(gauge.hasExpired());
 
-    counter.increment(42L);
-    Assert.assertFalse(counter.hasExpired());
+    gauge.set(1);
+    Assert.assertFalse(gauge.hasExpired());
   }
 }
