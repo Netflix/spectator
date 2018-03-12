@@ -28,13 +28,15 @@ import java.util.concurrent.atomic.AtomicLong;
 /** Counter implementation for the servo registry. */
 class ServoCounter implements Counter, ServoMeter {
 
+  private final Id id;
   private final Clock clock;
   private final com.netflix.servo.monitor.StepCounter impl;
   private final AtomicLong count;
   private final AtomicLong lastUpdated;
 
   /** Create a new instance. */
-  ServoCounter(Clock clock, com.netflix.servo.monitor.StepCounter impl) {
+  ServoCounter(Id id, Clock clock, com.netflix.servo.monitor.StepCounter impl) {
+    this.id = id;
     this.clock = clock;
     this.impl = impl;
     this.count = new AtomicLong(0L);
@@ -46,7 +48,7 @@ class ServoCounter implements Counter, ServoMeter {
   }
 
   @Override public Id id() {
-    return new ServoId(impl.getConfig());
+    return id;
   }
 
   @Override public boolean hasExpired() {

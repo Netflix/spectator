@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,4 +27,35 @@ public class SpectatorTest {
     Assert.assertNotNull(Spectator.registry());
   }
 
+  @Test
+  public void globalIterator() {
+    Registry dflt = new DefaultRegistry();
+    CompositeRegistry global = Spectator.globalRegistry();
+    global.removeAll();
+    global.add(dflt);
+
+    boolean found = false;
+    Counter counter = dflt.counter("testCounter");
+    for (Meter m : global) {
+      found = m.id().equals(counter.id());
+    }
+    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+  }
+
+  @Test
+  public void globalIteratorWithDifferences() {
+    Registry r1 = new DefaultRegistry();
+    Registry r2 = new DefaultRegistry();
+    CompositeRegistry global = Spectator.globalRegistry();
+    global.removeAll();
+    global.add(r1);
+    global.add(r2);
+
+    boolean found = false;
+    Counter counter = r2.counter("testCounter");
+    for (Meter m : global) {
+      found |= m.id().equals(counter.id());
+    }
+    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+  }
 }

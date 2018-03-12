@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
     implements Gauge, ServoMeter, NumericMonitor<Double> {
 
+  private final Id id;
   private final Clock clock;
   private final AtomicDouble value;
   private final AtomicLong lastUpdated;
@@ -43,15 +44,16 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
   /**
    * Create a new monitor that returns {@code value}.
    */
-  ServoGauge(Clock clock, MonitorConfig config) {
+  ServoGauge(Id id, Clock clock, MonitorConfig config) {
     super(config.withAdditionalTag(DataSourceType.GAUGE));
+    this.id = id;
     this.clock = clock;
     this.value = new AtomicDouble(Double.NaN);
     this.lastUpdated = new AtomicLong(0L);
   }
 
   @Override public Id id() {
-    return new ServoId(config);
+    return id;
   }
 
   @Override public boolean hasExpired() {
