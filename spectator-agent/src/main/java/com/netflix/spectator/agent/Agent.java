@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ public final class Agent {
     // Enable JMX query collection
     if (config.getBoolean("collection.jmx")) {
       for (Config cfg : config.getConfigList("jmx.mappings")) {
-        registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));
+        Jmx.registerMappingsFromConfig(registry, cfg);
       }
     }
 

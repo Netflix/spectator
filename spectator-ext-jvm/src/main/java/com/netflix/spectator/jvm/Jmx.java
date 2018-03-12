@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Registry;
+import com.typesafe.config.Config;
 
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
@@ -42,5 +43,18 @@ public final class Jmx {
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       registry.register(new BufferPoolMeter(registry, mbean));
     }
+  }
+
+  /**
+   * Add meters based on configured JMX queries. See the {@link JmxConfig} class for more
+   * details.
+   *
+   * @param registry
+   *     Registry to use for reporting the data.
+   * @param cfg
+   *     Config object with the mappings.
+   */
+  public static void registerMappingsFromConfig(Registry registry, Config cfg) {
+    registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));
   }
 }
