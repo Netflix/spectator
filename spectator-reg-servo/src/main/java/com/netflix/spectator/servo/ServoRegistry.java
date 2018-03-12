@@ -100,7 +100,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   @Override protected Counter newCounter(Id id) {
     MonitorConfig cfg = toMonitorConfig(id, Statistic.count);
     StepCounter counter = new StepCounter(cfg, new ServoClock(clock()));
-    return new ServoCounter(clock(), counter);
+    return new ServoCounter(id, clock(), counter);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
@@ -112,7 +112,7 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
   }
 
   @Override protected Gauge newGauge(Id id) {
-    return new ServoGauge(clock(), toMonitorConfig(id, Statistic.gauge));
+    return new ServoGauge(id, clock(), toMonitorConfig(id, Statistic.gauge));
   }
 
   @Override public Integer getValue() {

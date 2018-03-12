@@ -17,10 +17,18 @@ package com.netflix.spectator.servo;
 
 import com.netflix.servo.DefaultMonitorRegistry;
 import com.netflix.servo.MonitorRegistry;
+import com.netflix.spectator.api.CompositeRegistry;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.function.Function;
 
 @RunWith(JUnit4.class)
 public class ServoRegistryTest {
@@ -46,6 +54,53 @@ public class ServoRegistryTest {
     Assert.assertTrue(mr.getRegisteredMonitors().contains(r1));
     Assert.assertTrue(mr.getRegisteredMonitors().contains(r2));
     Assert.assertTrue(mr.getRegisteredMonitors().contains(r3));
+  }
+
+  @Test
+  public void iteratorDoesNotContainNullMeters() {
+    Registry dflt = new ServoRegistry();
+
+    boolean found = false;
+    Counter counter = dflt.counter("servo.testCounter");
+    for (Meter m : dflt) {
+      found = m.id().equals(counter.id());
+    }
+    Assert.assertTrue("id could not be found in iterator", found);
+  }
+
+  // Reproduces: https://github.com/Netflix/spectator/issues/530
+  public void globalIterator(Function<Registry, Meter> createMeter) {
+    Registry dflt = new ServoRegistry();
+    CompositeRegistry global = Spectator.globalRegistry();
+    global.removeAll();
+    global.add(dflt);
+
+    boolean found = false;
+    Id expected = createMeter.apply(dflt).id();
+    for (Meter m : global) {
+      found |= m.id().equals(expected);
+    }
+    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+  }
+
+  @Test
+  public void globalIteratorCounter() {
+    globalIterator(r -> r.counter("servo.testCounter"));
+  }
+
+  @Test
+  public void globalIteratorGauge() {
+    globalIterator(r -> r.gauge("servo.testGauge"));
+  }
+
+  @Test
+  public void globalIteratorTimer() {
+    globalIterator(r -> r.timer("servo.testTimer"));
+  }
+
+  @Test
+  public void globalIteratorDistSummary() {
+    globalIterator(r -> r.distributionSummary("servo.testDistSummary"));
   }
 
 }
