@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.Deflater;
 
 /**
  * Helper for executing simple HTTP client requests using {@link HttpURLConnection}
@@ -137,10 +138,21 @@ public class HttpRequestBuilder {
     return this;
   }
 
-  /** Compress the request body. The content must have already been set on the builder. */
+  /**
+   * Compress the request body using the default compression level.
+   * The content must have already been set on the builder.
+   */
   public HttpRequestBuilder compress() throws IOException {
+    return compress(Deflater.DEFAULT_COMPRESSION);
+  }
+
+  /**
+   * Compress the request body using the specified compression level.
+   * The content must have already been set on the builder.
+   */
+  public HttpRequestBuilder compress(int level) throws IOException {
     addHeader("Content-Encoding", "gzip");
-    entity = HttpUtils.gzip(entity);
+    entity = HttpUtils.gzip(entity, level);
     return this;
   }
 
