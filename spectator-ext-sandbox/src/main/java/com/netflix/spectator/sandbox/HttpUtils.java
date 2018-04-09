@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -67,10 +68,30 @@ final class HttpUtils {
     return (host == null) ? DEFAULT : clientNameForHost(host);
   }
 
-  /** Compress a byte array using GZIP. */
+  static class GzipLevelOutputStream extends GZIPOutputStream {
+    GzipLevelOutputStream(OutputStream outputStream) throws IOException {
+      super(outputStream);
+    }
+
+    void setLevel(int level) {
+      def.setLevel(level);
+    }
+  }
+
+  /**
+   * Compress a byte array using GZIP's default compression level.
+   */
   static byte[] gzip(byte[] data) throws IOException {
+    return gzip(data, Deflater.DEFAULT_COMPRESSION);
+  }
+
+  /**
+   * Compress a byte array using GZIP with the given compression level.
+   */
+  static byte[] gzip(byte[] data, int level) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream(data.length);
-    try (OutputStream out = new GZIPOutputStream(baos)) {
+    try (GzipLevelOutputStream out = new GzipLevelOutputStream(baos)) {
+      out.setLevel(level);
       out.write(data);
     }
     return baos.toByteArray();
