@@ -23,6 +23,7 @@ import org.junit.runners.JUnit4;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.zip.Deflater;
 
 @RunWith(JUnit4.class)
 public class HttpUtilsTest {
@@ -50,6 +51,13 @@ public class HttpUtilsTest {
   public void gzip() throws IOException {
     byte[] data = "foo bar baz".getBytes(StandardCharsets.UTF_8);
     String result = new String(HttpUtils.gunzip(HttpUtils.gzip(data)), StandardCharsets.UTF_8);
+    Assert.assertEquals("foo bar baz", result);
+  }
+
+  @Test
+  public void gzipWithLevel() throws IOException {
+    byte[] data = "foo bar baz".getBytes(StandardCharsets.UTF_8);
+    String result = new String(HttpUtils.gunzip(HttpUtils.gzip(data, Deflater.BEST_SPEED)), StandardCharsets.UTF_8);
     Assert.assertEquals("foo bar baz", result);
   }
 }
