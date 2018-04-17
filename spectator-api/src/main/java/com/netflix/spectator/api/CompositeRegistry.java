@@ -108,10 +108,10 @@ public final class CompositeRegistry implements Registry {
   }
 
   private void updateMeters() {
-    counters.forEach((id, c) -> c.setUnderlying(newCounter(id)));
-    distSummaries.forEach((id, d) -> d.setUnderlying(newDistributionSummary(id)));
-    timers.forEach((id, t) -> t.setUnderlying(newTimer(id)));
-    gauges.forEach((id, g) -> g.setUnderlying(newGauge(id)));
+    counters.forEach((id, c) -> c.set(newCounter(id)));
+    distSummaries.forEach((id, d) -> d.set(newDistributionSummary(id)));
+    timers.forEach((id, t) -> t.set(newTimer(id)));
+    gauges.forEach((id, g) -> g.set(newGauge(id)));
   }
 
   @Override public Clock clock() {
@@ -159,7 +159,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Counter counter(Id id) {
-    return Utils.computeIfAbsent(counters, id, i -> new SwapCounter(newCounter(i)));
+    return Utils.computeIfAbsent(counters, id, i -> new SwapCounter(this, i, newCounter(i)));
   }
 
   private DistributionSummary newDistributionSummary(Id id) {
@@ -187,7 +187,8 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
-    return Utils.computeIfAbsent(distSummaries, id, i -> new SwapDistributionSummary(newDistributionSummary(i)));
+    return Utils.computeIfAbsent(distSummaries, id,
+        i -> new SwapDistributionSummary(this, i, newDistributionSummary(i)));
   }
 
   private Timer newTimer(Id id) {
@@ -215,7 +216,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Timer timer(Id id) {
-    return Utils.computeIfAbsent(timers, id, i -> new SwapTimer(newTimer(i)));
+    return Utils.computeIfAbsent(timers, id, i -> new SwapTimer(this, i, newTimer(i)));
   }
 
   private Gauge newGauge(Id id) {
@@ -243,7 +244,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge gauge(Id id) {
-    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(newGauge(i)));
+    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(this, i, newGauge(i)));
   }
 
   @Override public Meter get(Id id) {

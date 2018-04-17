@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,47 +15,65 @@
  */
 package com.netflix.spectator.api;
 
-import java.util.function.Supplier;
+import com.netflix.spectator.impl.SwapMeter;
 
 /** Wraps another counter allowing the underlying type to be swapped. */
-final class SwapCounter implements Counter, Supplier<Counter> {
+final class SwapCounter implements Counter, SwapMeter<Counter> {
 
+  private final Registry registry;
+  private final Id id;
   private volatile Counter underlying;
 
   /** Create a new instance. */
-  SwapCounter(Counter underlying) {
+  SwapCounter(Registry registry, Id id, Counter underlying) {
+    this.registry = registry;
+    this.id = id;
     this.underlying = underlying;
   }
 
-  void setUnderlying(Counter c) {
-    underlying = c;
-  }
-
   @Override public Id id() {
-    return underlying.id();
+    return id;
   }
 
   @Override public Iterable<Measurement> measure() {
-    return underlying.measure();
+    return get().measure();
   }
 
   @Override public boolean hasExpired() {
-    return underlying.hasExpired();
+    Counter c = underlying;
+    return c == null || c.hasExpired();
   }
 
   @Override public void increment() {
-    underlying.increment();
+    get().increment();
   }
 
   @Override public void increment(long amount) {
-    underlying.increment(amount);
+    get().increment(amount);
   }
 
   @Override public long count() {
-    return underlying.count();
+    return get().count();
+  }
+
+  @Override public void set(Counter c) {
+    underlying = c;
   }
 
   @Override public Counter get() {
-    return underlying;
+    Counter c = underlying;
+    if (c == null) {
+      c = unwrap(registry.counter(id));
+      underlying = c;
+    }
+    return c;
+  }
+
+  private Counter unwrap(Counter c) {
+    Counter tmp = c;
+    while (tmp instanceof SwapCounter) {
+      tmp = ((SwapCounter) tmp).get();
+    }
+    return tmp;
   }
 }

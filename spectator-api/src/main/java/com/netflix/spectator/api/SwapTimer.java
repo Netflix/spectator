@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,57 +15,76 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.SwapMeter;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
-final class SwapTimer implements Timer, Supplier<Timer> {
+final class SwapTimer implements Timer, SwapMeter<Timer> {
 
+  private final Registry registry;
+  private final Id id;
   private volatile Timer underlying;
 
   /** Create a new instance. */
-  SwapTimer(Timer underlying) {
+  SwapTimer(Registry registry, Id id, Timer underlying) {
+    this.registry = registry;
+    this.id = id;
     this.underlying = underlying;
   }
 
-  void setUnderlying(Timer t) {
-    underlying = t;
-  }
-
   @Override public Id id() {
-    return underlying.id();
+    return id;
   }
 
   @Override public Iterable<Measurement> measure() {
-    return underlying.measure();
+    return get().measure();
   }
 
   @Override public boolean hasExpired() {
-    return underlying.hasExpired();
+    Timer t = underlying;
+    return t == null || t.hasExpired();
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    underlying.record(amount, unit);
+    get().record(amount, unit);
   }
 
   @Override public <T> T record(Callable<T> f) throws Exception {
-    return underlying.record(f);
+    return get().record(f);
   }
 
   @Override public void record(Runnable f) {
-    underlying.record(f);
+    get().record(f);
   }
 
   @Override public long count() {
-    return underlying.count();
+    return get().count();
   }
 
   @Override public long totalTime() {
-    return underlying.totalTime();
+    return get().totalTime();
+  }
+
+  @Override public void set(Timer t) {
+    underlying = t;
   }
 
   @Override public Timer get() {
-    return underlying;
+    Timer t = underlying;
+    if (t == null) {
+      t = unwrap(registry.timer(id));
+      underlying = t;
+    }
+    return t;
+  }
+
+  private Timer unwrap(Timer t) {
+    Timer tmp = t;
+    while (tmp instanceof SwapTimer) {
+      tmp = ((SwapTimer) tmp).get();
+    }
+    return tmp;
   }
 }
