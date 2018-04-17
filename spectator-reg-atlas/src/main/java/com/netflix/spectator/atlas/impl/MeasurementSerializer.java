@@ -72,12 +72,14 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
     gen.writeStringField("name", fixValue("name", value.id().name()));
     boolean explicitDsType = false;
     for (Tag t : value.id().tags()) {
-      if ("atlas.dstype".equals(t.key())) {
-        explicitDsType = true;
+      if (!"name".equals(t.key())) {
+        if ("atlas.dstype".equals(t.key())) {
+          explicitDsType = true;
+        }
+        final String k = fixKey(t.key());
+        final String v = fixValue(k, t.value());
+        gen.writeStringField(k, v);
       }
-      final String k = fixKey(t.key());
-      final String v = fixValue(k, t.value());
-      gen.writeStringField(k, v);
     }
 
     // If the dstype has not been explicitly set, then the value must be coming in

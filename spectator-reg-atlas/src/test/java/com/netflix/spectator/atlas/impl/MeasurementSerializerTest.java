@@ -75,6 +75,16 @@ public class MeasurementSerializerTest {
   }
 
   @Test
+  public void userTagName() throws Exception {
+    Id id = registry.createId("foo", "name", "bar");
+    Measurement m = new Measurement(id, 42L, 3.0);
+    String json = mapper.writeValueAsString(m);
+    String tags = "{\"name\":\"foo\",\"atlas.dstype\":\"gauge\"}";
+    String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
+    Assert.assertEquals(expected, json);
+  }
+
+  @Test
   public void invalidKey() throws Exception {
     Id id = registry.createId("foo", "b$$", "baz");
     Measurement m = new Measurement(id, 42L, 3.0);
