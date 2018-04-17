@@ -191,7 +191,8 @@ public final class AtlasRegistry extends AbstractRegistry {
     }
   }
 
-  private void collectData() {
+  /** Collect data and send to Atlas. */
+  void collectData() {
     // Send data for any subscriptions
     if (lwcEnabled) {
       try {
@@ -219,6 +220,9 @@ public final class AtlasRegistry extends AbstractRegistry {
         logger.warn("failed to send metrics", e);
       }
     }
+
+    // Clean up any expired meters
+    removeExpiredMeters();
   }
 
   private void handleSubscriptions() {
@@ -355,7 +359,8 @@ public final class AtlasRegistry extends AbstractRegistry {
   //
 
   private DoubleCounter newDoubleCounter(Id id) {
-    return new AtlasDoubleCounter(id, clock, meterTTL, stepMillis);
+    DoubleCounter c = new AtlasDoubleCounter(id, clock, meterTTL, stepMillis);
+    return new SwapDoubleCounter(this, id, c);
   }
 
   /**
@@ -372,7 +377,8 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private MaxGauge newMaxGauge(Id id) {
-    return new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
+    MaxGauge g = new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
+    return new SwapMaxGauge(this, id, g);
   }
 
   /**

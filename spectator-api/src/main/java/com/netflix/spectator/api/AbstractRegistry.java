@@ -18,10 +18,12 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.impl.SwapMeter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -77,7 +79,7 @@ public abstract class AbstractRegistry implements Registry {
   protected abstract Counter newCounter(Id id);
 
   private Counter createCounter(Id id) {
-    return new SwapCounter(newCounter(id));
+    return new SwapCounter(this, id, newCounter(id));
   }
 
   /**
@@ -91,7 +93,7 @@ public abstract class AbstractRegistry implements Registry {
   protected abstract DistributionSummary newDistributionSummary(Id id);
 
   private DistributionSummary createDistributionSummary(Id id) {
-    return new SwapDistributionSummary(newDistributionSummary(id));
+    return new SwapDistributionSummary(this, id, newDistributionSummary(id));
   }
 
   /**
@@ -105,7 +107,7 @@ public abstract class AbstractRegistry implements Registry {
   protected abstract Timer newTimer(Id id);
 
   private Timer createTimer(Id id) {
-    return new SwapTimer(newTimer(id));
+    return new SwapTimer(this, id, newTimer(id));
   }
 
   /**
@@ -119,7 +121,7 @@ public abstract class AbstractRegistry implements Registry {
   protected abstract Gauge newGauge(Id id);
 
   private Gauge createGauge(Id id) {
-    return new SwapGauge(newGauge(id));
+    return new SwapGauge(this, id, newGauge(id));
   }
 
   @Override public final Clock clock() {
@@ -220,5 +222,26 @@ public abstract class AbstractRegistry implements Registry {
     // Force update of gauges before traversing values
     PolledMeter.update(this);
     return meters.values().iterator();
+  }
+
+  /**
+   * Can be called by sub-classes to remove expired meters from the internal map. It will
+   * look for meters that implement {@link SwapMeter} and set the implementation to null.
+   * If user code still holds a reference to the meter, then it should retrieve a new instance
+   * from the registry on the next access.
+   */
+  protected void removeExpiredMeters() {
+    Iterator<Map.Entry<Id, Meter>> it = meters.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Id, Meter> entry = it.next();
+      Meter m = entry.getValue();
+      if (m instanceof SwapMeter<?>) {
+        SwapMeter<?> swappable = (SwapMeter<?>) m;
+        if (swappable.get().hasExpired()) {
+          swappable.set(null);
+          it.remove();
+        }
+      }
+    }
   }
 }

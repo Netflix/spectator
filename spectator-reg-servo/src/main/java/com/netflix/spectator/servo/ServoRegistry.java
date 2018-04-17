@@ -21,6 +21,7 @@ import com.netflix.spectator.api.*;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.SwapMeter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /** Registry that maps spectator types to servo. */
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
@@ -135,13 +135,14 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
         sm.addMonitors(monitors);
       }
     }
+    removeExpiredMeters();
     return monitors;
   }
 
   @SuppressWarnings("unchecked")
   private ServoMeter getServoMeter(Meter meter) {
-    if (meter instanceof Supplier<?>) {
-      return getServoMeter(((Supplier<Meter>) meter).get());
+    if (meter instanceof SwapMeter<?>) {
+      return getServoMeter(((SwapMeter<?>) meter).get());
     } else if (meter instanceof ServoMeter) {
       return (ServoMeter) meter;
     } else {

@@ -23,7 +23,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +38,7 @@ public class AtlasRegistryTest {
 
   private AtlasConfig newConfig() {
     ConcurrentHashMap<String, String> props = new ConcurrentHashMap<>();
+    props.put("atlas.enabled", "false");
     props.put("atlas.step", "PT10S");
     props.put("atlas.batchSize", "3");
     return props::get;
@@ -144,4 +147,22 @@ public class AtlasRegistryTest {
     Assert.assertEquals(0, registry.getBatches().size());
   }
 
+  @Test
+  public void keepsNonExpired() {
+    for (int i = 0; i < 9; ++i) {
+      registry.counter("" + i).increment();
+    }
+    registry.collectData();
+    Assert.assertEquals(3, registry.getBatches().size());
+  }
+
+  @Test
+  public void removesExpired() {
+    for (int i = 0; i < 9; ++i) {
+      registry.counter("" + i).increment();
+    }
+    clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
+    registry.collectData();
+    Assert.assertEquals(0, registry.getBatches().size());
+  }
 }

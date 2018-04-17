@@ -13,19 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.impl.SwapMeter;
 
-/** Wraps another gauge allowing the underlying type to be swapped. */
-final class SwapGauge implements Gauge, SwapMeter<Gauge> {
+/**
+ * <p><b>Experimental:</b> This type may be removed in a future release.</p>
+ *
+ * Wraps another gauge allowing the underlying type to be swapped.
+ */
+final class SwapMaxGauge implements MaxGauge, SwapMeter<MaxGauge> {
 
-  private final Registry registry;
+  private final AtlasRegistry registry;
   private final Id id;
-  private volatile Gauge underlying;
+  private volatile MaxGauge underlying;
 
   /** Create a new instance. */
-  SwapGauge(Registry registry, Id id, Gauge underlying) {
+  SwapMaxGauge(AtlasRegistry registry, Id id, MaxGauge underlying) {
     this.registry = registry;
     this.id = id;
     this.underlying = underlying;
@@ -40,7 +46,7 @@ final class SwapGauge implements Gauge, SwapMeter<Gauge> {
   }
 
   @Override public boolean hasExpired() {
-    Gauge g = underlying;
+    MaxGauge g = underlying;
     return g == null || g.hasExpired();
   }
 
@@ -52,23 +58,23 @@ final class SwapGauge implements Gauge, SwapMeter<Gauge> {
     return get().value();
   }
 
-  @Override public void set(Gauge g) {
+  @Override public void set(MaxGauge g) {
     underlying = g;
   }
 
-  @Override public Gauge get() {
-    Gauge g = underlying;
+  @Override public MaxGauge get() {
+    MaxGauge g = underlying;
     if (g == null) {
-      g = unwrap(registry.gauge(id));
+      g = unwrap(registry.maxGauge(id));
       underlying = g;
     }
     return g;
   }
 
-  private Gauge unwrap(Gauge g) {
-    Gauge tmp = g;
-    while (tmp instanceof SwapGauge) {
-      tmp = ((SwapGauge) tmp).get();
+  private MaxGauge unwrap(MaxGauge g) {
+    MaxGauge tmp = g;
+    while (tmp instanceof SwapMaxGauge) {
+      tmp = ((SwapMaxGauge) tmp).get();
     }
     return tmp;
   }

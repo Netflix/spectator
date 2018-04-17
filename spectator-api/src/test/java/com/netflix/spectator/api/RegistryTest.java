@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -380,5 +380,26 @@ public class RegistryTest {
     RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
     Registry r = new DefaultRegistry(Clock.SYSTEM, config);
     r.propagate("foo", new RuntimeException("test"));
+  }
+
+  @Test
+  public void keepNonExpired() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+
+    registry.counter("test").increment();
+    registry.removeExpiredMeters();
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void removeExpired() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+
+    registry.counter("test").increment();
+    clock.setWallTime(1);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.counters().count());
   }
 }

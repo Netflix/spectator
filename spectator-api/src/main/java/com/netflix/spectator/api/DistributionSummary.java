@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,15 @@ public interface DistributionSummary extends Meter {
    */
   void record(long amount);
 
-  /** The number of times that record has been called since this timer was created. */
+  /**
+   * The number of times that record has been called since this timer was last reset.
+   * How often a timer is reset depends on the underlying registry implementation.
+   */
   long count();
 
-  /** The total amount of all recorded events since this summary was created. */
+  /**
+   * The total amount of all recorded events since this summary was last reset.
+   * How often a timer is reset depends on the underlying registry implementation.
+   */
   long totalAmount();
 }

@@ -20,6 +20,7 @@ import com.netflix.servo.MonitorRegistry;
 import com.netflix.spectator.api.CompositeRegistry;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
@@ -101,6 +102,25 @@ public class ServoRegistryTest {
   @Test
   public void globalIteratorDistSummary() {
     globalIterator(r -> r.distributionSummary("servo.testDistSummary"));
+  }
+
+  @Test
+  public void keepNonExpired() {
+    ManualClock clock = new ManualClock();
+    ServoRegistry registry = new ServoRegistry(clock);
+    registry.counter("test").increment();
+    Assert.assertEquals(1, registry.getMonitors().size());
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void removesExpired() {
+    ManualClock clock = new ManualClock();
+    ServoRegistry registry = new ServoRegistry(clock);
+    registry.counter("test").increment();
+    clock.setWallTime(60000 * 30);
+    Assert.assertEquals(0, registry.getMonitors().size());
+    Assert.assertEquals(0, registry.counters().count());
   }
 
 }
