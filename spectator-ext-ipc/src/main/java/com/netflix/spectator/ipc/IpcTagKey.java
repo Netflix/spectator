@@ -106,33 +106,33 @@ public enum IpcTagKey {
   /**
    * Region where the server is located.
    */
-  targetRegion("ipc.target.region"),
+  serverRegion("ipc.server.region"),
 
   /**
    * Availability zone where the server is located.
    */
-  targetZone("ipc.target.zone"),
+  serverZone("ipc.server.zone"),
 
   /**
    * Application name for the server.
    */
-  targetApp("ipc.target.app"),
+  serverApp("ipc.server.app"),
 
   /**
    * Cluster name for the server.
    */
-  targetCluster("ipc.target.cluster"),
+  serverCluster("ipc.server.cluster"),
 
   /**
    * Server group name for the server.
    */
-  targetAsg("ipc.target.asg"),
+  serverAsg("ipc.server.asg"),
 
   /**
    * Instance id for the server. <b>Do not use this unless you know it will not
    * cause a metrics explosion. If there is any doubt, then do not enable it.</b>
    */
-  targetNode("ipc.target.node"),
+  serverNode("ipc.server.node"),
 
   /**
    * HTTP status code.
