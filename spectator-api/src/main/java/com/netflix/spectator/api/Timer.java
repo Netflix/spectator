@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api;
 
+import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -39,6 +40,16 @@ public interface Timer extends Meter {
    *     Time unit for the amount being recorded.
    */
   void record(long amount, TimeUnit unit);
+
+  /**
+   * Updates the statistics kept by the counter with the specified amount.
+   *
+   * @param amount
+   *     Duration of a single event being measured by this timer.
+   */
+  default void record(Duration amount) {
+    record(amount.toNanos(), TimeUnit.NANOSECONDS);
+  }
 
   /**
    * Executes the callable `f` and records the time taken.

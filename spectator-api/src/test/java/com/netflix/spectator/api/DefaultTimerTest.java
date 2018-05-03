@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
@@ -39,6 +40,14 @@ public class DefaultTimerTest {
   public void testRecord() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     t.record(42, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(t.count(), 1L);
+    Assert.assertEquals(t.totalTime(), 42000000L);
+  }
+
+  @Test
+  public void testRecordDuration() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    t.record(Duration.ofMillis(42));
     Assert.assertEquals(t.count(), 1L);
     Assert.assertEquals(t.totalTime(), 42000000L);
   }
