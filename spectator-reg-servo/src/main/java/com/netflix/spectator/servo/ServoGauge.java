@@ -49,7 +49,7 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
     this.id = id;
     this.clock = clock;
     this.value = new AtomicDouble(Double.NaN);
-    this.lastUpdated = new AtomicLong(0L);
+    this.lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public Id id() {

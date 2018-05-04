@@ -66,7 +66,7 @@ class ServoTimer extends AbstractTimer implements ServoMeter {
     // Constructor that takes a clock param is not public
     servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max), null));
 
-    lastUpdated = new AtomicLong(0L);
+    lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {

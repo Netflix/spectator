@@ -59,7 +59,7 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
         r.toMonitorConfig(id.withTag(Statistic.totalOfSquares), null));
     servoMax = new MaxGauge(r.toMonitorConfig(id.withTag(Statistic.max), null));
 
-    lastUpdated = new AtomicLong(0L);
+    lastUpdated = new AtomicLong(clock.wallTime());
   }
 
   @Override public void addMonitors(List<Monitor<?>> monitors) {
