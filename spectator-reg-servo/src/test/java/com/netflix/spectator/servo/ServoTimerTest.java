@@ -215,10 +215,10 @@ public class ServoTimerTest {
     final long initTime = TimeUnit.MINUTES.toMillis(30);
     final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);
 
-    // Expired on init, wait for activity to mark as active
+    // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Timer t = newTimer("foo");
-    Assert.assertTrue(t.hasExpired());
+    Assert.assertFalse(t.hasExpired());
     t.record(1, TimeUnit.SECONDS);
     Assert.assertFalse(t.hasExpired());
 

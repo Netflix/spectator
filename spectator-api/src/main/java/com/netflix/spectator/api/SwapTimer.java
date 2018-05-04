@@ -17,11 +17,10 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
-final class SwapTimer implements Timer, SwapMeter<Timer> {
+final class SwapTimer extends AbstractTimer implements SwapMeter<Timer> {
 
   private final Registry registry;
   private final Id id;
@@ -29,6 +28,7 @@ final class SwapTimer implements Timer, SwapMeter<Timer> {
 
   /** Create a new instance. */
   SwapTimer(Registry registry, Id id, Timer underlying) {
+    super(registry.clock());
     this.registry = registry;
     this.id = id;
     this.underlying = underlying;
@@ -49,14 +49,6 @@ final class SwapTimer implements Timer, SwapMeter<Timer> {
 
   @Override public void record(long amount, TimeUnit unit) {
     get().record(amount, unit);
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    return get().record(f);
-  }
-
-  @Override public void record(Runnable f) {
-    get().record(f);
   }
 
   @Override public long count() {

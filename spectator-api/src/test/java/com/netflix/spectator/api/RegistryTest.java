@@ -402,4 +402,98 @@ public class RegistryTest {
     registry.removeExpiredMeters();
     Assert.assertEquals(0, registry.counters().count());
   }
+
+  @Test
+  public void resurrectExpiredUsingComposite() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    CompositeRegistry cr = Spectator.globalRegistry();
+    cr.removeAll();
+    cr.add(registry);
+
+    cr.counter("test").increment();
+    clock.setWallTime(60000 * 30);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.counters().count());
+
+    cr.counter("test").increment();
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void resurrectUsingCachedRef() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Counter c = registry.counter("test");
+
+    c.increment();
+    clock.setWallTime(60000 * 30);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.counters().count());
+
+    c.increment();
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void resurrectUsingCachedRefInit() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Counter c = registry.counter("test");
+
+    clock.setWallTime(60000 * 30);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.counters().count());
+
+    c.increment();
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void resurrectUsingCachedRefInitTimer() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Timer t = registry.timer("test");
+
+    clock.setWallTime(60000 * 30);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.timers().count());
+
+    t.record(42, TimeUnit.NANOSECONDS);
+    Assert.assertEquals(1, registry.timers().count());
+  }
+
+  @Test
+  public void resurrectExpiredUsingCompositeCachedRef() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    CompositeRegistry cr = Spectator.globalRegistry();
+    cr.removeAll();
+    cr.add(registry);
+    Counter c = cr.counter("test");
+
+    c.increment();
+    clock.setWallTime(60000 * 30);
+    registry.removeExpiredMeters();
+    Assert.assertEquals(0, registry.counters().count());
+
+    c.increment();
+    Assert.assertEquals(1, registry.counters().count());
+  }
+
+  @Test
+  public void resurrectUsingLambda() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Timer t = registry.timer("test");
+
+    t.record(() -> {
+      // Force expiration in the body of the lambda
+      clock.setWallTime(60000 * 30);
+      registry.removeExpiredMeters();
+      Assert.assertEquals(0, registry.timers().count());
+    });
+
+    Assert.assertEquals(1, registry.timers().count());
+  }
 }

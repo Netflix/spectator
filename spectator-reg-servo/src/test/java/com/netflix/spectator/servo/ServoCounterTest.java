@@ -58,10 +58,10 @@ public class ServoCounterTest {
     final long initTime = TimeUnit.MINUTES.toMillis(30);
     final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);
 
-    // Expired on init, wait for activity to mark as active
+    // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Counter c = newCounter("foo");
-    Assert.assertTrue(c.hasExpired());
+    Assert.assertFalse(c.hasExpired());
     c.increment(42);
     Assert.assertFalse(c.hasExpired());
 
