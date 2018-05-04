@@ -39,7 +39,7 @@ abstract class AtlasMeter implements Meter {
     this.id = id;
     this.clock = clock;
     this.ttl = ttl;
-    lastUpdated = 0L;
+    lastUpdated = clock.wallTime();
   }
 
   /**

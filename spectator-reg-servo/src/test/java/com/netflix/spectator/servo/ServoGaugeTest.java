@@ -70,10 +70,10 @@ public class ServoGaugeTest {
     final long initTime = TimeUnit.MINUTES.toMillis(30);
     final long fifteenMinutes = TimeUnit.MINUTES.toMillis(15);
 
-    // Expired on init, wait for activity to mark as active
+    // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Gauge g = newGauge("foo");
-    Assert.assertTrue(g.hasExpired());
+    Assert.assertFalse(g.hasExpired());
     g.set(42.0);
     Assert.assertFalse(g.hasExpired());
     Assert.assertEquals(g.value(), 42.0, 1e-12);

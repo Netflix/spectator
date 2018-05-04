@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 public class ExpiringRegistry extends AbstractRegistry {
 
@@ -59,7 +60,34 @@ public class ExpiringRegistry extends AbstractRegistry {
   }
 
   @Override protected Timer newTimer(Id id) {
-    return null;
+    return new AbstractTimer(clock()) {
+      private final long creationTime = clock().wallTime();
+      private long count = 0;
+
+      @Override public void record(long amount, TimeUnit unit) {
+        ++count;
+      }
+
+      @Override public long count() {
+        return count;
+      }
+
+      @Override public long totalTime() {
+        return 0;
+      }
+
+      @Override public Id id() {
+        return id;
+      }
+
+      @Override public Iterable<Measurement> measure() {
+        return Collections.emptyList();
+      }
+
+      @Override public boolean hasExpired() {
+        return clock().wallTime() > creationTime;
+      }
+    };
   }
 
   @Override protected Gauge newGauge(Id id) {
