@@ -27,17 +27,13 @@ public class ExpiringRegistry extends AbstractRegistry {
   @Override protected Counter newCounter(Id id) {
     return new Counter() {
       private final long creationTime = clock().wallTime();
-      private long count = 0;
+      private double count = 0;
 
-      @Override public void increment() {
-        ++count;
-      }
-
-      @Override public void increment(long amount) {
+      @Override public void add(double amount) {
         count += amount;
       }
 
-      @Override public long count() {
+      @Override public double actualCount() {
         return count;
       }
 

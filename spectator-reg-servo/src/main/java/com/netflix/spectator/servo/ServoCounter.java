@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
 import java.util.List;
@@ -30,16 +31,16 @@ class ServoCounter implements Counter, ServoMeter {
 
   private final Id id;
   private final Clock clock;
-  private final com.netflix.servo.monitor.StepCounter impl;
-  private final AtomicLong count;
+  private final DoubleCounter impl;
+  private final AtomicDouble count;
   private final AtomicLong lastUpdated;
 
   /** Create a new instance. */
-  ServoCounter(Id id, Clock clock, com.netflix.servo.monitor.StepCounter impl) {
+  ServoCounter(Id id, Clock clock, DoubleCounter impl) {
     this.id = id;
     this.clock = clock;
     this.impl = impl;
-    this.count = new AtomicLong(0L);
+    this.count = new AtomicDouble(0.0);
     this.lastUpdated = new AtomicLong(clock.wallTime());
   }
 
@@ -62,19 +63,15 @@ class ServoCounter implements Counter, ServoMeter {
     return Collections.singleton(new Measurement(id(), now, v));
   }
 
-  @Override public void increment() {
-    impl.increment();
-    count.incrementAndGet();
-    lastUpdated.set(clock.wallTime());
+  @Override public void add(double amount) {
+    if (Double.isFinite(amount) && amount > 0.0) {
+      impl.increment(amount);
+      count.addAndGet(amount);
+      lastUpdated.set(clock.wallTime());
+    }
   }
 
-  @Override public void increment(long amount) {
-    impl.increment(amount);
-    count.addAndGet(amount);
-    lastUpdated.set(clock.wallTime());
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     return count.get();
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,15 +50,11 @@ class MetricsCounter implements Counter {
     return Collections.singleton(new Measurement(id, now, v));
   }
 
-  @Override public void increment() {
-    impl.mark();
+  @Override public void add(double amount) {
+    impl.mark((long) amount);
   }
 
-  @Override public void increment(long amount) {
-    impl.mark(amount);
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     return impl.getCount();
   }
 }

@@ -27,33 +27,8 @@ public class AtlasSwapMeterTest {
   private final ManualClock clock = new ManualClock();
   private final AtlasRegistry registry = new AtlasRegistry(clock, System::getProperty);
 
-  private final Id counterId = registry.createId("counter");
-  private final DoubleCounter counter = registry.doubleCounter(counterId);
-
   private final Id gaugeId = registry.createId("gauge");
   private final MaxGauge gauge = registry.maxGauge(gaugeId);
-
-  @Test
-  public void counterNullHasExpired() {
-    SwapDoubleCounter sc = new SwapDoubleCounter(registry, counterId, null);
-    Assert.assertTrue(sc.hasExpired());
-  }
-
-  @Test
-  public void counterNullLookup() {
-    SwapDoubleCounter sc = new SwapDoubleCounter(registry, counterId, null);
-    sc.increment();
-    Assert.assertEquals(counter.count(), sc.get().count());
-  }
-
-  @Test
-  public void counterSetToNull() {
-    SwapDoubleCounter sc = new SwapDoubleCounter(registry, counterId, counter);
-    Assert.assertFalse(sc.hasExpired());
-    sc.set(null);
-    Assert.assertTrue(sc.hasExpired());
-    Assert.assertEquals(counter.count(), sc.get().count());
-  }
 
   @Test
   public void gaugeNullHasExpired() {

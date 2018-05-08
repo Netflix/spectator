@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,22 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.AtomicDouble;
+
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicLong;
 
 /** Counter implementation for the default registry. */
 final class DefaultCounter implements Counter {
 
   private final Clock clock;
   private final Id id;
-  private final AtomicLong count;
+  private final AtomicDouble count;
 
   /** Create a new instance. */
   DefaultCounter(Clock clock, Id id) {
     this.clock = clock;
     this.id = id;
-    this.count = new AtomicLong(0L);
+    this.count = new AtomicDouble(0.0);
   }
 
   @Override public Id id() {
@@ -42,19 +43,17 @@ final class DefaultCounter implements Counter {
 
   @Override public Iterable<Measurement> measure() {
     long now = clock.wallTime();
-    long v = count.get();
+    double v = count.get();
     return Collections.singleton(new Measurement(id, now, v));
   }
 
-  @Override public void increment() {
-    count.incrementAndGet();
+  @Override public void add(double amount) {
+    if (Double.isFinite(amount) && amount > 0.0) {
+      count.addAndGet(amount);
+    }
   }
 
-  @Override public void increment(long amount) {
-    count.addAndGet(amount);
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     return count.get();
   }
 }

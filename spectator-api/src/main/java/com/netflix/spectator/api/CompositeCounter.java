@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,20 +26,14 @@ final class CompositeCounter extends CompositeMeter<Counter> implements Counter 
     super(id, counters);
   }
 
-  @Override public void increment() {
+  @Override public void add(double amount) {
     for (Counter c : meters) {
-      c.increment();
+      c.add(amount);
     }
   }
 
-  @Override public void increment(long amount) {
-    for (Counter c : meters) {
-      c.increment(amount);
-    }
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     Iterator<Counter> it = meters.iterator();
-    return it.hasNext() ? it.next().count() : 0L;
+    return it.hasNext() ? it.next().actualCount() : 0.0;
   }
 }

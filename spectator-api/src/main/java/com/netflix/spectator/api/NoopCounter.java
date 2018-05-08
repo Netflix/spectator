@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,17 +30,14 @@ enum NoopCounter implements Counter {
     return true;
   }
 
-  @Override public void increment() {
-  }
-
-  @Override public void increment(long amount) {
+  @Override public void add(double amount) {
   }
 
   @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
   }
 
-  @Override public long count() {
-    return 0L;
+  @Override public double actualCount() {
+    return 0.0;
   }
 }
