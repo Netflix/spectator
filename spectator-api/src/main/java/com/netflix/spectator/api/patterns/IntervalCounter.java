@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,25 +75,16 @@ public final class IntervalCounter implements Counter {
         .monitorValue(new AtomicLong(0L), Functions.age(clock));
   }
 
-  @Override
-  public void increment() {
-    counter.increment();
+  @Override public void add(double amount) {
+    counter.add(amount);
     lastUpdated.set(clock.wallTime());
   }
 
-  @Override
-  public void increment(long amount) {
-    counter.increment(amount);
-    lastUpdated.set(clock.wallTime());
+  @Override public double actualCount() {
+    return counter.actualCount();
   }
 
-  @Override
-  public long count() {
-    return counter.count();
-  }
-
-  @Override
-  public Id id() {
+  @Override public Id id() {
     return id;
   }
 
@@ -105,13 +96,11 @@ public final class IntervalCounter implements Counter {
     return  (now - lastUpdated.get()) / MILLIS_PER_SECOND;
   }
 
-  @Override
-  public Iterable<Measurement> measure() {
+  @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
   }
 
-  @Override
-  public boolean hasExpired() {
+  @Override public boolean hasExpired() {
     return false;
   }
 }

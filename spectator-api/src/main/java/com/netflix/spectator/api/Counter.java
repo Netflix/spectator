@@ -20,7 +20,9 @@ package com.netflix.spectator.api;
  */
 public interface Counter extends Meter {
   /** Update the counter by one. */
-  void increment();
+  default void increment() {
+    add(1.0);
+  }
 
   /**
    * Update the counter by {@code amount}.
@@ -28,11 +30,24 @@ public interface Counter extends Meter {
    * @param amount
    *     Amount to add to the counter.
    */
-  void increment(long amount);
+  default void increment(long amount) {
+    add(amount);
+  }
+
+  /** Update the counter by the specified amount. */
+  void add(double amount);
 
   /**
    * The cumulative count since this counter was last reset. How often a counter
    * is reset depends on the underlying registry implementation.
    */
-  long count();
+  default long count() {
+    return (long) actualCount();
+  }
+
+  /**
+   * The cumulative count as a floating point value since this counter was last reset. How
+   * often a counter is reset depends on the underlying registry implementation.
+   */
+  double actualCount();
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,18 +34,11 @@ class DefaultPlaceholderCounter extends AbstractDefaultPlaceholderMeter<Counter>
     super(id, registry::counter);
   }
 
-  @Override
-  public void increment() {
-    resolveToCurrentMeter().increment();
+  @Override public void add(double amount) {
+    resolveToCurrentMeter().add(amount);
   }
 
-  @Override
-  public void increment(long amount) {
-    resolveToCurrentMeter().increment(amount);
-  }
-
-  @Override
-  public long count() {
+  @Override public double actualCount() {
     return resolveToCurrentMeter().count();
   }
 }

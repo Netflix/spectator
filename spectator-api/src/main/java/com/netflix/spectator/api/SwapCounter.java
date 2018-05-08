@@ -44,16 +44,12 @@ final class SwapCounter implements Counter, SwapMeter<Counter> {
     return c == null || c.hasExpired();
   }
 
-  @Override public void increment() {
-    get().increment();
+  @Override public void add(double amount) {
+    get().add(amount);
   }
 
-  @Override public void increment(long amount) {
-    get().increment(amount);
-  }
-
-  @Override public long count() {
-    return get().count();
+  @Override public double actualCount() {
+    return get().actualCount();
   }
 
   @Override public void set(Counter c) {

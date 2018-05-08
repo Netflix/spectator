@@ -74,12 +74,6 @@ public class AtlasRegistryTest {
   }
 
   @Test
-  public void measurementsWithDoubleCounter() {
-    registry.doubleCounter(registry.createId("test")).add(4.0);
-    Assert.assertEquals(1, registry.getMeasurements().size());
-  }
-
-  @Test
   public void measurementsWithMaxGauge() {
     registry.maxGauge(registry.createId("test")).set(4.0);
     Assert.assertEquals(1, registry.getMeasurements().size());

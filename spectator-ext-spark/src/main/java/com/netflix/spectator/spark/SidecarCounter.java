@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Counter that tracks the delta since the last measurement was taken.
@@ -30,28 +30,26 @@ class SidecarCounter implements Counter {
 
   private final Clock clock;
   private final Id id;
-  private final AtomicLong value;
+  private final AtomicDouble value;
 
   /** Create a new instance. */
   SidecarCounter(Clock clock, Id id) {
     this.clock = clock;
     this.id = id.withTag(DataType.COUNTER);
-    this.value = new AtomicLong(0L);
+    this.value = new AtomicDouble(0.0);
   }
 
   @Override public Id id() {
     return id;
   }
 
-  @Override public void increment() {
-    value.incrementAndGet();
+  @Override public void add(double amount) {
+    if (Double.isFinite(amount) && amount > 0.0) {
+      value.addAndGet(amount);
+    }
   }
 
-  @Override public void increment(long amount) {
-    value.addAndGet(amount);
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     return value.get();
   }
 

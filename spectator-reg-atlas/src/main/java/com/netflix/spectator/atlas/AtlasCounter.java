@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
-import com.netflix.spectator.impl.StepLong;
+import com.netflix.spectator.impl.StepDouble;
 
 import java.util.Collections;
 
@@ -31,13 +31,13 @@ import java.util.Collections;
  */
 class AtlasCounter extends AtlasMeter implements Counter {
 
-  private final StepLong value;
+  private final StepDouble value;
   private final Id stat;
 
   /** Create a new instance. */
   AtlasCounter(Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
-    this.value = new StepLong(0L, clock, step);
+    this.value = new StepDouble(0L, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
     this.stat = id.withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
@@ -49,17 +49,14 @@ class AtlasCounter extends AtlasMeter implements Counter {
     return Collections.singletonList(m);
   }
 
-  @Override public void increment() {
-    value.getCurrent().incrementAndGet();
-    updateLastModTime();
+  @Override public void add(double amount) {
+    if (Double.isFinite(amount) && amount > 0.0) {
+      value.getCurrent().addAndGet(amount);
+      updateLastModTime();
+    }
   }
 
-  @Override public void increment(long amount) {
-    value.getCurrent().addAndGet(amount);
-    updateLastModTime();
-  }
-
-  @Override public long count() {
+  @Override public double actualCount() {
     return value.poll();
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,35 @@ public class DefaultCounterTest {
     Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
     c.increment(42);
     Assert.assertEquals(c.count(), 42L);
+  }
+
+  @Test
+  public void testAddAmount() {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    c.add(42.0);
+    Assert.assertEquals(c.actualCount(), 42.0, 1e-12);
+  }
+
+  @Test
+  public void testAddNegativeAmount() {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    c.add(-42.0);
+    Assert.assertEquals(c.actualCount(), 0.0, 1e-12);
+  }
+
+  @Test
+  public void testAddNaN() {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    c.add(1.0);
+    c.add(Double.NaN);
+    Assert.assertEquals(c.actualCount(), 1.0, 1e-12);
+  }
+
+  @Test
+  public void testAddInfinity() {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    c.add(Double.POSITIVE_INFINITY);
+    Assert.assertEquals(c.actualCount(), 0.0, 1e-12);
   }
 
   @Test

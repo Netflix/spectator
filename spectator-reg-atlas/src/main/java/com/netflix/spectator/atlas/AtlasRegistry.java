@@ -358,24 +358,6 @@ public final class AtlasRegistry extends AbstractRegistry {
   // https://github.com/Netflix/spectator/issues/432
   //
 
-  private DoubleCounter newDoubleCounter(Id id) {
-    DoubleCounter c = new AtlasDoubleCounter(id, clock, meterTTL, stepMillis);
-    return new SwapDoubleCounter(this, id, c);
-  }
-
-  /**
-   * <p><b>Experimental:</b> This type may be removed in a future release.</p>
-   *
-   * Measures the rate of some activity based on floating point deltas. For most use-cases
-   * {@link #counter(Id)} should be used instead. See {@link DoubleCounter} for more information.
-   *
-   * @param id
-   *     Identifier created by a call to {@link #createId}
-   */
-  public DoubleCounter doubleCounter(Id id) {
-    return getOrCreate(id, DoubleCounter.class, NoopDoubleCounter.INSTANCE, this::newDoubleCounter);
-  }
-
   private MaxGauge newMaxGauge(Id id) {
     MaxGauge g = new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
     return new SwapMaxGauge(this, id, g);

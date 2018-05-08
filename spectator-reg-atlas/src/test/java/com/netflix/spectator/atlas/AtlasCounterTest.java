@@ -34,12 +34,12 @@ public class AtlasCounterTest {
   private long step = 10000L;
   private AtlasCounter counter = new AtlasCounter(registry.createId("test"), clock, step, step);
 
-  private void checkValue(long expected) {
+  private void checkValue(double expected) {
     int count = 0;
     for (Measurement m : counter.measure()) {
       Assert.assertEquals(counter.id().withTags(Statistic.count, DsType.rate), m.id());
       Assert.assertEquals(expected / 10.0, m.value(), 1e-12);
-      Assert.assertEquals(expected, counter.count());
+      Assert.assertEquals(expected, counter.actualCount(), 1e-12);
       ++count;
     }
     Assert.assertEquals(1, count);
@@ -66,6 +66,35 @@ public class AtlasCounterTest {
 
     clock.setWallTime(step + 1);
     checkValue(42);
+  }
+
+  @Test
+  public void addAmount() {
+    counter.add(42.1);
+    clock.setWallTime(step + 1);
+    checkValue(42.1);
+  }
+
+  @Test
+  public void addNegativeAmount() {
+    counter.add(-42.0);
+    clock.setWallTime(step + 1);
+    checkValue(0.0);
+  }
+
+  @Test
+  public void addNaN() {
+    counter.add(1.0);
+    counter.add(Double.NaN);
+    clock.setWallTime(step + 1);
+    checkValue(1.0);
+  }
+
+  @Test
+  public void addInfinity() {
+    counter.add(Double.POSITIVE_INFINITY);
+    clock.setWallTime(step + 1);
+    checkValue(0.0);
   }
 
   @Test
