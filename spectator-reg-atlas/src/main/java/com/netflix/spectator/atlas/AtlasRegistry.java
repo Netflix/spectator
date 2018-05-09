@@ -353,26 +353,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     return new AtlasGauge(id, clock(), meterTTL);
   }
 
-  //
-  // Extended types to support forwarding from a stateless service.
-  // https://github.com/Netflix/spectator/issues/432
-  //
-
-  private MaxGauge newMaxGauge(Id id) {
-    MaxGauge g = new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
-    return new SwapMaxGauge(this, id, g);
-  }
-
-  /**
-   * <p><b>Experimental:</b> This type may be removed in a future release.</p>
-   *
-   * Measures the maximum value recorded during an interval. See {@link MaxGauge} for more
-   * information.
-   *
-   * @param id
-   *     Identifier created by a call to {@link #createId}
-   */
-  public MaxGauge maxGauge(Id id) {
-    return getOrCreate(id, MaxGauge.class, NoopMaxGauge.INSTANCE, this::newMaxGauge);
+  @Override protected Gauge newMaxGauge(Id id) {
+    return new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
   }
 }

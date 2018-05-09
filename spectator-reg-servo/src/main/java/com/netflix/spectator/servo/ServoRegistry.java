@@ -115,6 +115,10 @@ public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<
     return new ServoGauge(id, clock(), toMonitorConfig(id, Statistic.gauge));
   }
 
+  @Override protected Gauge newMaxGauge(Id id) {
+    return new ServoMaxGauge(id, clock(), toMonitorConfig(id, Statistic.max));
+  }
+
   @Override public Integer getValue() {
     return 0;
   }

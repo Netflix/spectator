@@ -16,22 +16,20 @@
 package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
-import com.netflix.spectator.impl.AtomicDouble;
 import com.netflix.spectator.impl.StepDouble;
 
 import java.util.Collections;
 
 /**
- * <p><b>Experimental:</b> This type may be removed in a future release.</p>
- *
  * Gauge that reports the maximum value submitted during an interval to Atlas. Main use-case
  * right now is for allowing the max stat used internally to AtlasDistributionSummary and
  * AtlasTimer to be transferred to a remote AtlasRegistry.
  */
-class AtlasMaxGauge extends AtlasMeter implements MaxGauge {
+class AtlasMaxGauge extends AtlasMeter implements Gauge {
 
   private final StepDouble value;
   private final Id stat;
@@ -51,11 +49,7 @@ class AtlasMaxGauge extends AtlasMeter implements MaxGauge {
   }
 
   @Override public void set(double v) {
-    AtomicDouble current = value.getCurrent();
-    double max = current.get();
-    while (v > max && !current.compareAndSet(max, v)) {
-      max = current.get();
-    }
+    value.getCurrent().max(v);
     updateLastModTime();
   }
 

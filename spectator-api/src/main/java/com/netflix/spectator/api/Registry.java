@@ -126,6 +126,17 @@ public interface Registry extends Iterable<Meter> {
   Gauge gauge(Id id);
 
   /**
+   * Measures the maximum value recorded since the last reset. For example, to measure the
+   * maximum number of concurrent requests to a service. In many cases it is better to use
+   * a {@link #distributionSummary(Id)} which provides a max along with other stats for most
+   * registry implementations.
+   *
+   * @param id
+   *     Identifier created by a call to {@link #createId}
+   */
+  Gauge maxGauge(Id id);
+
+  /**
    * Returns the meter associated with a given id.
    *
    * @param id
@@ -341,6 +352,46 @@ public interface Registry extends Iterable<Meter> {
    */
   default Gauge gauge(String name, String... tags) {
     return gauge(createId(name, Utils.toIterable(tags)));
+  }
+
+  /**
+   * Measures the maximum value recorded since the last reset.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge maxGauge(String name) {
+    return maxGauge(createId(name));
+  }
+
+  /**
+   * Measures the maximum value recorded since the last reset.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge maxGauge(String name, Iterable<Tag> tags) {
+    return maxGauge(createId(name, tags));
+  }
+
+  /**
+   * Measures the maximum value recorded since the last reset.
+   *
+   * @param name
+   *     Description of the measurement that is being collected.
+   * @param tags
+   *     Other dimensions that can be used to classify the measurement.
+   * @return
+   *     Gauge instance with the corresponding id.
+   */
+  default Gauge maxGauge(String name, String... tags) {
+    return maxGauge(createId(name, Utils.toIterable(tags)));
   }
 
   /**

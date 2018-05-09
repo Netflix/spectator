@@ -13,16 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.metrics3;
 
-import com.netflix.spectator.api.Gauge;
+/** Metrics3 max gauge type. */
+class DoubleMaxGauge extends DoubleGauge {
 
-/**
- * <p><b>Experimental:</b> This type may be removed in a future release.</p>
- *
- * Gauge that reports the maximum value submitted during an interval to Atlas. Main use-case
- * right now is for allowing the max stat used internally to AtlasDistributionSummary and
- * AtlasTimer to be transferred to a remote AtlasRegistry.
- */
-public interface MaxGauge extends Gauge {
+  /** Update the value. */
+  @Override void set(double v) {
+    value.max(v);
+  }
 }

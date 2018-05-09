@@ -362,6 +362,20 @@ public class RegistryTest {
   }
 
   @Test
+  public void maxGauge() {
+    Registry r = newRegistry(true, 10000);
+    r.maxGauge("foo").set(1.0);
+    r.maxGauge("foo").set(3.0);
+    r.maxGauge("foo").set(2.0);
+
+    final DoubleSummaryStatistics valueSummary = r.gauges()
+        .filter(Functions.nameEquals("foo"))
+        .collect(Collectors.summarizingDouble(Gauge::value));
+    Assert.assertEquals(1, valueSummary.getCount());
+    Assert.assertEquals(3.0, valueSummary.getSum(), 1e-12);
+  }
+
+  @Test
   public void propagateWarningsDefault() {
     RegistryConfig config = k -> null;
     Registry r = new DefaultRegistry(Clock.SYSTEM, config);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,16 @@ public class MetricsRegistry extends AbstractRegistry {
     final String name = toMetricName(id);
     DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -> {
       DoubleGauge g = new DoubleGauge();
+      impl.register(name, g);
+      return g;
+    });
+    return new MetricsGauge(clock(), id, gauge);
+  }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+    final String name = toMetricName(id);
+    DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -> {
+      DoubleMaxGauge g = new DoubleMaxGauge();
       impl.register(name, g);
       return g;
     });

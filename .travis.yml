@@ -5,7 +5,7 @@ matrix:
     env: GRADLE_PUBLISH=true
   - jdk: oraclejdk9
     env: GRADLE_PUBLISH=false
-sudo: required
+sudo: false
 dist: trusty
 addons:
   apt:
