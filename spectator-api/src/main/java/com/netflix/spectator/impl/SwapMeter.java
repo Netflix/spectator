@@ -15,7 +15,10 @@
  */
 package com.netflix.spectator.impl;
 
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
 
 /**
  * Base type for meters that allow the underlying implementation to be replaced with
@@ -25,14 +28,66 @@ import com.netflix.spectator.api.Meter;
  * <p><b>This class is an internal implementation detail only intended for use within
  * spectator. It is subject to change without notice.</b></p>
  */
-public interface SwapMeter<T extends Meter> extends Meter {
+public abstract class SwapMeter<T extends Meter> implements Meter {
+
+  /** Registry used to lookup values after expiration. */
+  protected final Registry registry;
+
+  /** Id to use when performing a lookup after expiration. */
+  protected final Id id;
+
+  /** Current meter to delegate operations. */
+  private volatile T underlying;
+
+  /** Create a new instance. */
+  public SwapMeter(Registry registry, Id id, T underlying) {
+    this.registry = registry;
+    this.id = id;
+    this.underlying = unwrap(underlying);
+  }
+
+  /**
+   * Lookup the meter from the registry.
+   */
+  public abstract T lookup();
+
+  @Override public Id id() {
+    return id;
+  }
+
+  @Override public Iterable<Measurement> measure() {
+    return get().measure();
+  }
+
+  @Override public boolean hasExpired() {
+    return underlying.hasExpired();
+  }
 
   /**
    * Set the underlying instance of the meter to use. This can be set to {@code null}
    * to indicate that the meter has expired and is no longer in the registry.
    */
-  void set(T meter);
+  public void set(T meter) {
+    underlying = unwrap(meter);
+  }
 
   /** Return the underlying instance of the meter. */
-  T get();
+  public T get() {
+    if (underlying.hasExpired()) {
+      underlying = unwrap(lookup());
+    }
+    return underlying;
+  }
+
+  /**
+   * If the values are nested, then unwrap any that have the same registry instance.
+   */
+  @SuppressWarnings("unchecked")
+  private T unwrap(T meter) {
+    T tmp = meter;
+    while (tmp instanceof SwapMeter<?> && registry == ((SwapMeter<?>) tmp).registry) {
+      tmp = ((SwapMeter<T>) tmp).underlying;
+    }
+    return tmp;
+  }
 }

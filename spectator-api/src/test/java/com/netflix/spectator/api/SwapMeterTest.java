@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
 public class SwapMeterTest {
+  private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry();
 
   private final Id counterId = registry.createId("counter");
@@ -39,90 +40,58 @@ public class SwapMeterTest {
   private final DistributionSummary distSummary = registry.distributionSummary(distSummaryId);
 
   @Test
-  public void counterNullHasExpired() {
-    SwapCounter sc = new SwapCounter(registry, counterId, null);
-    Assert.assertTrue(sc.hasExpired());
+  public void wrappedCounters() {
+    Counter c = new DefaultCounter(clock, counterId);
+    SwapCounter sc1 = new SwapCounter(registry, counterId, c);
+    SwapCounter sc2 = new SwapCounter(registry, counterId, sc1);
+    Assert.assertFalse(sc2.hasExpired());
+    sc2.increment();
+    Assert.assertEquals(1, c.count());
+    Assert.assertEquals(1, sc1.count());
+    Assert.assertEquals(1, sc2.count());
   }
 
   @Test
-  public void counterNullLookup() {
-    SwapCounter sc = new SwapCounter(registry, counterId, null);
-    sc.increment();
-    Assert.assertEquals(counter.count(), sc.get().count());
+  public void wrapExpiredCounter() {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Counter c = registry.counter(counterId);
+    clock.setWallTime(60000 * 30);
+    SwapCounter s1 = new SwapCounter(registry, counterId, c);
+    s1.increment();
+    Assert.assertEquals(1, c.count());
+    Assert.assertEquals(1, s1.count());
   }
 
   @Test
-  public void counterSetToNull() {
-    SwapCounter sc = new SwapCounter(registry, counterId, counter);
-    Assert.assertFalse(sc.hasExpired());
-    sc.set(null);
-    Assert.assertTrue(sc.hasExpired());
-    Assert.assertEquals(counter.count(), sc.get().count());
+  public void wrapExpiredTimer() {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Timer t = registry.timer(timerId);
+    clock.setWallTime(60000 * 30);
+    SwapTimer s1 = new SwapTimer(registry, timerId, t);
+    s1.record(42, TimeUnit.NANOSECONDS);
+    Assert.assertEquals(1, t.count());
+    Assert.assertEquals(1, s1.count());
   }
 
   @Test
-  public void gaugeNullHasExpired() {
-    SwapGauge sg = new SwapGauge(registry, gaugeId, null);
-    Assert.assertTrue(sg.hasExpired());
+  public void wrapExpiredGauge() {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Gauge c = registry.gauge(gaugeId);
+    clock.setWallTime(60000 * 30);
+    SwapGauge s1 = new SwapGauge(registry, gaugeId, c);
+    s1.set(1.0);
+    Assert.assertEquals(1.0, c.value(), 1e-12);
+    Assert.assertEquals(1.0, s1.value(), 1e-12);
   }
 
   @Test
-  public void gaugeNullLookup() {
-    SwapGauge sg = new SwapGauge(registry, gaugeId, null);
-    sg.set(42.0);
-    Assert.assertEquals(gauge.value(), sg.get().value(), 1e-12);
-  }
-
-  @Test
-  public void gaugeSetToNull() {
-    SwapGauge sg = new SwapGauge(registry, gaugeId, gauge);
-    Assert.assertFalse(sg.hasExpired());
-    sg.set(null);
-    Assert.assertTrue(sg.hasExpired());
-    Assert.assertEquals(gauge.value(), sg.get().value(), 1e-12);
-  }
-
-  @Test
-  public void timerNullHasExpired() {
-    SwapTimer st = new SwapTimer(registry, timerId, null);
-    Assert.assertTrue(st.hasExpired());
-  }
-
-  @Test
-  public void timerNullLookup() {
-    SwapTimer st = new SwapTimer(registry, timerId, null);
-    st.record(42, TimeUnit.NANOSECONDS);
-    Assert.assertEquals(timer.totalTime(), st.get().totalTime());
-  }
-
-  @Test
-  public void timerSetToNull() {
-    SwapTimer st = new SwapTimer(registry, timerId, timer);
-    Assert.assertFalse(st.hasExpired());
-    st.set(null);
-    Assert.assertTrue(st.hasExpired());
-    Assert.assertEquals(timer.totalTime(), st.get().totalTime());
-  }
-
-  @Test
-  public void distSummaryNullHasExpired() {
-    SwapDistributionSummary st = new SwapDistributionSummary(registry, distSummaryId, null);
-    Assert.assertTrue(st.hasExpired());
-  }
-
-  @Test
-  public void distSummaryNullLookup() {
-    SwapDistributionSummary st = new SwapDistributionSummary(registry, distSummaryId, null);
-    st.record(42);
-    Assert.assertEquals(distSummary.totalAmount(), st.get().totalAmount());
-  }
-
-  @Test
-  public void distSummarySetToNull() {
-    SwapDistributionSummary st = new SwapDistributionSummary(registry, distSummaryId, distSummary);
-    Assert.assertFalse(st.hasExpired());
-    st.set(null);
-    Assert.assertTrue(st.hasExpired());
-    Assert.assertEquals(distSummary.totalAmount(), st.get().totalAmount());
+  public void wrapExpiredDistSummary() {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    DistributionSummary c = registry.distributionSummary(distSummaryId);
+    clock.setWallTime(60000 * 30);
+    SwapDistributionSummary s1 = new SwapDistributionSummary(registry, distSummaryId, c);
+    s1.record(1);
+    Assert.assertEquals(1, c.count());
+    Assert.assertEquals(1, s1.count());
   }
 }

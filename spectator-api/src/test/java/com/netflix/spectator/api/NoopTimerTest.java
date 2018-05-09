@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ public class NoopTimerTest {
   @Test
   public void testId() {
     Assert.assertEquals(NoopTimer.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertTrue(NoopTimer.INSTANCE.hasExpired());
+    Assert.assertFalse(NoopTimer.INSTANCE.hasExpired());
   }
 
   @Test

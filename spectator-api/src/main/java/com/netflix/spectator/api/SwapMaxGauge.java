@@ -17,23 +17,23 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
-/** Wraps another counter allowing the underlying type to be swapped. */
-final class SwapCounter extends SwapMeter<Counter> implements Counter {
+/** Wraps another gauge allowing the underlying type to be swapped. */
+final class SwapMaxGauge extends SwapMeter<Gauge> implements Gauge {
 
   /** Create a new instance. */
-  SwapCounter(Registry registry, Id id, Counter underlying) {
+  SwapMaxGauge(Registry registry, Id id, Gauge underlying) {
     super(registry, id, underlying);
   }
 
-  @Override public Counter lookup() {
-    return registry.counter(id);
+  @Override public Gauge lookup() {
+    return registry.maxGauge(id);
   }
 
-  @Override public void add(double amount) {
-    get().add(amount);
+  @Override public void set(double value) {
+    get().set(value);
   }
 
-  @Override public double actualCount() {
-    return get().actualCount();
+  @Override public double value() {
+    return get().value();
   }
 }

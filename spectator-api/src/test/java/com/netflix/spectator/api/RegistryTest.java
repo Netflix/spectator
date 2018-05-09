@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.api.patterns.PolledMeter;
+import com.netflix.spectator.impl.SwapMeter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,14 +67,21 @@ public class RegistryTest {
     Assert.assertEquals(id1, id2);
   }
 
+  private Object unwrap(Object obj) {
+    if (obj instanceof SwapMeter<?>) {
+      return ((SwapMeter<?>) obj).get();
+    }
+    return obj;
+  }
+
   @Test
   public void testCounterHelpers() {
     Registry r = newRegistry(true, 10000);
     Counter c1 = r.counter("foo", "bar", "baz", "k", "v");
     Counter c2 = r.counter("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Counter c3 = r.counter("foo");
-    Assert.assertSame(c1, c2);
-    Assert.assertNotSame(c1, c3);
+    Assert.assertSame(unwrap(c1), unwrap(c2));
+    Assert.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   @Test
@@ -83,8 +91,8 @@ public class RegistryTest {
     DistributionSummary c2 = r.distributionSummary("foo",
         ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     DistributionSummary c3 = r.distributionSummary("foo");
-    Assert.assertSame(c1, c2);
-    Assert.assertNotSame(c1, c3);
+    Assert.assertSame(unwrap(c1), unwrap(c2));
+    Assert.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   @Test
@@ -93,8 +101,8 @@ public class RegistryTest {
     Timer c1 = r.timer("foo", "bar", "baz", "k", "v");
     Timer c2 = r.timer("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Timer c3 = r.timer("foo");
-    Assert.assertSame(c1, c2);
-    Assert.assertNotSame(c1, c3);
+    Assert.assertSame(unwrap(c1), unwrap(c2));
+    Assert.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   private void assertLongTaskTimer(Registry r, Id id, long timestamp, int activeTasks, double duration) {
@@ -509,5 +517,19 @@ public class RegistryTest {
     });
 
     Assert.assertEquals(1, registry.timers().count());
+  }
+
+  @Test
+  public void expireAndResurrectLoop() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Counter c = registry.counter("test");
+    for (int i = 0; i < 1000; ++i) {
+      clock.setWallTime(60000 * 30 * i);
+      registry.removeExpiredMeters();
+      c.increment();
+      Assert.assertEquals(1, c.count());
+      Assert.assertEquals(1, registry.counter("test").count());
+    }
   }
 }
