@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -245,6 +245,34 @@ public final class CompositeRegistry implements Registry {
 
   @Override public Gauge gauge(Id id) {
     return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(this, i, newGauge(i)));
+  }
+
+  private Gauge newMaxGauge(Id id) {
+    rlock.lock();
+    try {
+      Gauge t;
+      switch (registries.size()) {
+        case 0:
+          t = NoopGauge.INSTANCE;
+          break;
+        case 1:
+          t = registries.get(0).maxGauge(id);
+          break;
+        default:
+          List<Gauge> gs = registries.stream()
+              .map(r -> r.maxGauge(id))
+              .collect(Collectors.toList());
+          t = new CompositeGauge(id, gs);
+          break;
+      }
+      return t;
+    } finally {
+      rlock.unlock();
+    }
+  }
+
+  @Override public Gauge maxGauge(Id id) {
+    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(this, i, newMaxGauge(i)));
   }
 
   @Override public Meter get(Id id) {

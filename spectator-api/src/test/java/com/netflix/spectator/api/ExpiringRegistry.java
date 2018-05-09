@@ -90,6 +90,10 @@ public class ExpiringRegistry extends AbstractRegistry {
     return null;
   }
 
+  @Override protected Gauge newMaxGauge(Id id) {
+    return null;
+  }
+
   @Override public void removeExpiredMeters() {
     super.removeExpiredMeters();
   }

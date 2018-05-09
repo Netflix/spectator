@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,4 +77,45 @@ public class AtomicDoubleTest {
     Assert.assertEquals(55.0, v.get(), 1e-12);
   }
 
+  @Test
+  public void maxGt() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.max(2.0);
+    Assert.assertEquals(2.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void maxLt() {
+    AtomicDouble v = new AtomicDouble(2.0);
+    v.max(0.0);
+    Assert.assertEquals(2.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void maxNegative() {
+    AtomicDouble v = new AtomicDouble(-42.0);
+    v.max(-41.0);
+    Assert.assertEquals(-41.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void maxNaN() {
+    AtomicDouble v = new AtomicDouble(Double.NaN);
+    v.max(0.0);
+    Assert.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void maxValueNaN() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.max(Double.NaN);
+    Assert.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void maxValueInfinity() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.max(Double.POSITIVE_INFINITY);
+    Assert.assertEquals(0.0, v.get(), 1e-12);
+  }
 }

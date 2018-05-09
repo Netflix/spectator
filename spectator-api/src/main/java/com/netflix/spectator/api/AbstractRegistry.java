@@ -124,6 +124,20 @@ public abstract class AbstractRegistry implements Registry {
     return new SwapGauge(this, id, newGauge(id));
   }
 
+  /**
+   * Create a new max gauge instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New gauge instance.
+   */
+  protected abstract Gauge newMaxGauge(Id id);
+
+  private Gauge createMaxGauge(Id id) {
+    return new SwapGauge(this, id, newMaxGauge(id));
+  }
+
   @Override public final Clock clock() {
     return clock;
   }
@@ -178,6 +192,10 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Gauge gauge(Id id) {
     return getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::createGauge);
+  }
+
+  @Override public final Gauge maxGauge(Id id) {
+    return getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::createMaxGauge);
   }
 
   /**

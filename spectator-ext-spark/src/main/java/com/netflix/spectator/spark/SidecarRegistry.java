@@ -236,4 +236,10 @@ public class SidecarRegistry extends AbstractRegistry {
   @Override protected Gauge newGauge(Id id) {
     return new SidecarGauge(clock(), id);
   }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+    // Legacy sidecar does not provide a way to properly support max gauges. This is just
+    // mapped to a gauge, so the last reported value will get used
+    return new SidecarGauge(clock(), id);
+  }
 }

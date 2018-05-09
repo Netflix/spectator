@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,6 +92,20 @@ public class AtomicDouble extends Number {
   /** Set the current value to {@code amount}. */
   public void set(double amount) {
     value.set(Double.doubleToLongBits(amount));
+  }
+
+  private boolean isGreaterThan(double v1, double v2) {
+    return v1 > v2 || Double.isNaN(v2);
+  }
+
+  /** Set the current value to the maximum of the current value or the provided value. */
+  public void max(double v) {
+    if (Double.isFinite(v)) {
+      double max = get();
+      while (isGreaterThan(v, max) && !compareAndSet(max, v)) {
+        max = value.get();
+      }
+    }
   }
 
   @Override public int intValue() {

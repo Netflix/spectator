@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import com.netflix.spectator.impl.AtomicDouble;
 /** Metrics3 gauge type based on an {@link AtomicDouble}. */
 class DoubleGauge implements Gauge<Double> {
 
-  private AtomicDouble value = new AtomicDouble(Double.NaN);
+  /** Current value for the gauge. */
+  protected AtomicDouble value = new AtomicDouble(Double.NaN);
 
   /** Update the value. */
   void set(double v) {

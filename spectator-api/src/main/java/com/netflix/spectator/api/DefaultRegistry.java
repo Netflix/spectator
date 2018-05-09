@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,5 +47,9 @@ public final class DefaultRegistry extends AbstractRegistry {
 
   @Override protected Gauge newGauge(Id id) {
     return new DefaultGauge(clock(), id);
+  }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+    return new DefaultMaxGauge(clock(), id);
   }
 }

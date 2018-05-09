@@ -66,6 +66,10 @@ public final class NoopRegistry implements Registry {
     return NoopGauge.INSTANCE;
   }
 
+  @Override public Gauge maxGauge(Id id) {
+    return NoopGauge.INSTANCE;
+  }
+
   @Override public Meter get(Id id) {
     return null;
   }

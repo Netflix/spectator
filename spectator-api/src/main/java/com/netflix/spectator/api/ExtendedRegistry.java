@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,10 @@ public final class ExtendedRegistry implements Registry {
 
   @Override public Gauge gauge(Id id) {
     return impl.gauge(id);
+  }
+
+  @Override public Gauge maxGauge(Id id) {
+    return impl.maxGauge(id);
   }
 
   @Override public Meter get(Id id) {

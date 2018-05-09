@@ -13,39 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.atlas;
+package com.netflix.spectator.api;
 
-import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.NoopRegistry;
+import com.netflix.spectator.impl.AtomicDouble;
 
 import java.util.Collections;
 
-/**
- * <p><b>Experimental:</b> This type may be removed in a future release.</p>
- *
- * NOOP implementation of max gauge.
- */
-enum NoopMaxGauge implements MaxGauge {
+/** Max gauge implementation for the default registry. */
+class DefaultMaxGauge implements Gauge {
 
-  /** Singleton instance. */
-  INSTANCE;
+  private final Clock clock;
+  private final Id id;
+  private final AtomicDouble value;
 
-  private static final Id ID = new NoopRegistry().createId("NoopMaxGauge");
-
-  @Override public double value() {
-    return Double.NaN;
+  /** Create a new instance. */
+  DefaultMaxGauge(Clock clock, Id id) {
+    this.clock = clock;
+    this.id = id;
+    this.value = new AtomicDouble(Double.NaN);
   }
 
   @Override public Id id() {
-    return ID;
+    return id;
   }
 
   @Override public Iterable<Measurement> measure() {
-    return Collections.emptyList();
+    final Measurement m = new Measurement(id, clock.wallTime(), value());
+    return Collections.singletonList(m);
   }
 
   @Override public boolean hasExpired() {
-    return true;
+    return false;
+  }
+
+  @Override public void set(double v) {
+    value.max(v);
+  }
+
+  @Override public double value() {
+    return value.get();
   }
 }
