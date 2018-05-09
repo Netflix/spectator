@@ -37,7 +37,7 @@ public class SpectatorTest {
     boolean found = false;
     Counter counter = dflt.counter("testCounter");
     for (Meter m : global) {
-      found = m.id().equals(counter.id());
+      found |= m.id().equals(counter.id());
     }
     Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
   }

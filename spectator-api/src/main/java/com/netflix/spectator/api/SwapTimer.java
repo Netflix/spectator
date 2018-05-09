@@ -17,38 +17,43 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
-final class SwapTimer extends AbstractTimer implements SwapMeter<Timer> {
-
-  private final Registry registry;
-  private final Id id;
-  private volatile Timer underlying;
+final class SwapTimer extends SwapMeter<Timer> implements Timer {
 
   /** Create a new instance. */
   SwapTimer(Registry registry, Id id, Timer underlying) {
-    super(registry.clock());
-    this.registry = registry;
-    this.id = id;
-    this.underlying = underlying;
+    super(registry, id, underlying);
   }
 
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public Iterable<Measurement> measure() {
-    return get().measure();
-  }
-
-  @Override public boolean hasExpired() {
-    Timer t = underlying;
-    return t == null || t.hasExpired();
+  @Override public Timer lookup() {
+    return registry.timer(id);
   }
 
   @Override public void record(long amount, TimeUnit unit) {
     get().record(amount, unit);
+  }
+
+  @Override public <T> T record(Callable<T> f) throws Exception {
+    final long s = registry.clock().monotonicTime();
+    try {
+      return f.call();
+    } finally {
+      final long e = registry.clock().monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  @Override public void record(Runnable f) {
+    final long s = registry.clock().monotonicTime();
+    try {
+      f.run();
+    } finally {
+      final long e = registry.clock().monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
   }
 
   @Override public long count() {
@@ -57,26 +62,5 @@ final class SwapTimer extends AbstractTimer implements SwapMeter<Timer> {
 
   @Override public long totalTime() {
     return get().totalTime();
-  }
-
-  @Override public void set(Timer t) {
-    underlying = t;
-  }
-
-  @Override public Timer get() {
-    Timer t = underlying;
-    if (t == null) {
-      t = unwrap(registry.timer(id));
-      underlying = t;
-    }
-    return t;
-  }
-
-  private Timer unwrap(Timer t) {
-    Timer tmp = t;
-    while (tmp instanceof SwapTimer) {
-      tmp = ((SwapTimer) tmp).get();
-    }
-    return tmp;
   }
 }

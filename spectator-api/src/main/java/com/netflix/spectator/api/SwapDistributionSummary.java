@@ -18,30 +18,15 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.impl.SwapMeter;
 
 /** Wraps another distribution summary allowing the underlying type to be swapped. */
-final class SwapDistributionSummary implements DistributionSummary, SwapMeter<DistributionSummary> {
-
-  private final Registry registry;
-  private final Id id;
-  private volatile DistributionSummary underlying;
+final class SwapDistributionSummary extends SwapMeter<DistributionSummary> implements DistributionSummary {
 
   /** Create a new instance. */
   SwapDistributionSummary(Registry registry, Id id, DistributionSummary underlying) {
-    this.registry = registry;
-    this.id = id;
-    this.underlying = underlying;
+    super(registry, id, underlying);
   }
 
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public Iterable<Measurement> measure() {
-    return get().measure();
-  }
-
-  @Override public boolean hasExpired() {
-    DistributionSummary d = underlying;
-    return d == null || d.hasExpired();
+  @Override public DistributionSummary lookup() {
+    return registry.distributionSummary(id);
   }
 
   @Override public void record(long amount) {
@@ -56,26 +41,5 @@ final class SwapDistributionSummary implements DistributionSummary, SwapMeter<Di
   @Override
   public long totalAmount() {
     return get().totalAmount();
-  }
-
-  @Override public void set(DistributionSummary d) {
-    underlying = d;
-  }
-
-  @Override public DistributionSummary get() {
-    DistributionSummary d = underlying;
-    if (d == null) {
-      d = unwrap(registry.distributionSummary(id));
-      underlying = d;
-    }
-    return d;
-  }
-
-  private DistributionSummary unwrap(DistributionSummary d) {
-    DistributionSummary tmp = d;
-    while (tmp instanceof SwapDistributionSummary) {
-      tmp = ((SwapDistributionSummary) tmp).get();
-    }
-    return tmp;
   }
 }

@@ -18,7 +18,6 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
-import com.netflix.spectator.impl.SwapMeter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,10 +77,6 @@ public abstract class AbstractRegistry implements Registry {
    */
   protected abstract Counter newCounter(Id id);
 
-  private Counter createCounter(Id id) {
-    return new SwapCounter(this, id, newCounter(id));
-  }
-
   /**
    * Create a new distribution summary instance for a given id.
    *
@@ -91,10 +86,6 @@ public abstract class AbstractRegistry implements Registry {
    *     New distribution summary instance.
    */
   protected abstract DistributionSummary newDistributionSummary(Id id);
-
-  private DistributionSummary createDistributionSummary(Id id) {
-    return new SwapDistributionSummary(this, id, newDistributionSummary(id));
-  }
 
   /**
    * Create a new timer instance for a given id.
@@ -106,10 +97,6 @@ public abstract class AbstractRegistry implements Registry {
    */
   protected abstract Timer newTimer(Id id);
 
-  private Timer createTimer(Id id) {
-    return new SwapTimer(this, id, newTimer(id));
-  }
-
   /**
    * Create a new gauge instance for a given id.
    *
@@ -120,10 +107,6 @@ public abstract class AbstractRegistry implements Registry {
    */
   protected abstract Gauge newGauge(Id id);
 
-  private Gauge createGauge(Id id) {
-    return new SwapGauge(this, id, newGauge(id));
-  }
-
   /**
    * Create a new max gauge instance for a given id.
    *
@@ -133,10 +116,6 @@ public abstract class AbstractRegistry implements Registry {
    *     New gauge instance.
    */
   protected abstract Gauge newMaxGauge(Id id);
-
-  private Gauge createMaxGauge(Id id) {
-    return new SwapGauge(this, id, newMaxGauge(id));
-  }
 
   @Override public final Clock clock() {
     return clock;
@@ -175,27 +154,32 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Counter counter(Id id) {
-    return getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::createCounter);
+    Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::newCounter);
+    return new SwapCounter(this, id, c);
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
-    return getOrCreate(
+    DistributionSummary ds = getOrCreate(
         id,
         DistributionSummary.class,
         NoopDistributionSummary.INSTANCE,
-        this::createDistributionSummary);
+        this::newDistributionSummary);
+    return new SwapDistributionSummary(this, id, ds);
   }
 
   @Override public final Timer timer(Id id) {
-    return getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::createTimer);
+    Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::newTimer);
+    return new SwapTimer(this, id, t);
   }
 
   @Override public final Gauge gauge(Id id) {
-    return getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::createGauge);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newGauge);
+    return new SwapGauge(this, id, g);
   }
 
   @Override public final Gauge maxGauge(Id id) {
-    return getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::createMaxGauge);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);
+    return new SwapMaxGauge(this, id, g);
   }
 
   /**
@@ -243,22 +227,16 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   /**
-   * Can be called by sub-classes to remove expired meters from the internal map. It will
-   * look for meters that implement {@link SwapMeter} and set the implementation to null.
-   * If user code still holds a reference to the meter, then it should retrieve a new instance
-   * from the registry on the next access.
+   * Can be called by sub-classes to remove expired meters from the internal map.
+   * The SwapMeter types that are returned will lookup a new copy on the next access.
    */
   protected void removeExpiredMeters() {
     Iterator<Map.Entry<Id, Meter>> it = meters.entrySet().iterator();
     while (it.hasNext()) {
       Map.Entry<Id, Meter> entry = it.next();
       Meter m = entry.getValue();
-      if (m instanceof SwapMeter<?>) {
-        SwapMeter<?> swappable = (SwapMeter<?>) m;
-        if (swappable.get().hasExpired()) {
-          swappable.set(null);
-          it.remove();
-        }
+      if (m.hasExpired()) {
+        it.remove();
       }
     }
   }

@@ -18,30 +18,15 @@ package com.netflix.spectator.api;
 import com.netflix.spectator.impl.SwapMeter;
 
 /** Wraps another gauge allowing the underlying type to be swapped. */
-final class SwapGauge implements Gauge, SwapMeter<Gauge> {
-
-  private final Registry registry;
-  private final Id id;
-  private volatile Gauge underlying;
+final class SwapGauge extends SwapMeter<Gauge> implements Gauge {
 
   /** Create a new instance. */
   SwapGauge(Registry registry, Id id, Gauge underlying) {
-    this.registry = registry;
-    this.id = id;
-    this.underlying = underlying;
+    super(registry, id, underlying);
   }
 
-  @Override public Id id() {
-    return id;
-  }
-
-  @Override public Iterable<Measurement> measure() {
-    return get().measure();
-  }
-
-  @Override public boolean hasExpired() {
-    Gauge g = underlying;
-    return g == null || g.hasExpired();
+  @Override public Gauge lookup() {
+    return registry.gauge(id);
   }
 
   @Override public void set(double value) {
@@ -50,26 +35,5 @@ final class SwapGauge implements Gauge, SwapMeter<Gauge> {
 
   @Override public double value() {
     return get().value();
-  }
-
-  @Override public void set(Gauge g) {
-    underlying = g;
-  }
-
-  @Override public Gauge get() {
-    Gauge g = underlying;
-    if (g == null) {
-      g = unwrap(registry.gauge(id));
-      underlying = g;
-    }
-    return g;
-  }
-
-  private Gauge unwrap(Gauge g) {
-    Gauge tmp = g;
-    while (tmp instanceof SwapGauge) {
-      tmp = ((SwapGauge) tmp).get();
-    }
-    return tmp;
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,6 +141,7 @@ public class CompositeRegistryTest {
   public void testCounterBadTypeAccessNoThrow() {
     Registry r = newRegistry(5, false);
     r.counter(r.createId("foo")).count();
+    Counter c = r.counter("foo");
     DistributionSummary ds = r.distributionSummary(r.createId("foo"));
     ds.record(42);
     Assert.assertEquals(ds.count(), 0L);
@@ -245,7 +246,7 @@ public class CompositeRegistryTest {
     CompositeRegistry r = new CompositeRegistry(clock);
 
     Counter c1 = r.counter("id1");
-    Assert.assertTrue(c1.hasExpired());
+    Assert.assertFalse(c1.hasExpired());
 
     Registry r1 = new DefaultRegistry(clock);
     r.add(r1);

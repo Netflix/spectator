@@ -123,4 +123,29 @@ public class ServoRegistryTest {
     Assert.assertEquals(0, registry.counters().count());
   }
 
+  @Test
+  public void resurrectExpiredAndIncrement() {
+    ManualClock clock = new ManualClock();
+    ServoRegistry registry = new ServoRegistry(clock);
+    Counter c = registry.counter("test");
+
+    clock.setWallTime(60000 * 30);
+    registry.getMonitors();
+
+    Assert.assertTrue(c.hasExpired());
+
+    c.increment();
+    Assert.assertEquals(1, c.count());
+    Assert.assertEquals(1, registry.counter("test").count());
+
+    clock.setWallTime(60000 * 60);
+    registry.getMonitors();
+
+    Assert.assertTrue(c.hasExpired());
+
+    c.increment();
+    Assert.assertEquals(1, c.count());
+    Assert.assertEquals(1, registry.counter("test").count());
+  }
+
 }

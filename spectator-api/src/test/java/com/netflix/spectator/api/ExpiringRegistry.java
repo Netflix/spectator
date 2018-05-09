@@ -52,7 +52,34 @@ public class ExpiringRegistry extends AbstractRegistry {
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    return null;
+    return new DistributionSummary() {
+      private final long creationTime = clock().wallTime();
+      private long count = 0;
+
+      @Override public void record(long amount) {
+        ++count;
+      }
+
+      @Override public long count() {
+        return count;
+      }
+
+      @Override public long totalAmount() {
+        return 0;
+      }
+
+      @Override public Id id() {
+        return id;
+      }
+
+      @Override public Iterable<Measurement> measure() {
+        return Collections.emptyList();
+      }
+
+      @Override public boolean hasExpired() {
+        return clock().wallTime() > creationTime;
+      }
+    };
   }
 
   @Override protected Timer newTimer(Id id) {
@@ -87,11 +114,34 @@ public class ExpiringRegistry extends AbstractRegistry {
   }
 
   @Override protected Gauge newGauge(Id id) {
-    return null;
+    return new Gauge() {
+      private final long creationTime = clock().wallTime();
+      private double value = 0.0;
+
+      @Override public void set(double v) {
+        value = v;
+      }
+
+      @Override public double value() {
+        return value;
+      }
+
+      @Override public Id id() {
+        return id;
+      }
+
+      @Override public Iterable<Measurement> measure() {
+        return Collections.emptyList();
+      }
+
+      @Override public boolean hasExpired() {
+        return clock().wallTime() > creationTime;
+      }
+    };
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
-    return null;
+    return newGauge(id);
   }
 
   @Override public void removeExpiredMeters() {
