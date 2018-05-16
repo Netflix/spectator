@@ -24,6 +24,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 
 import java.lang.ref.WeakReference;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -131,12 +132,14 @@ public final class PolledMeter {
     private final Registry registry;
     private final Id baseId;
     private ScheduledExecutorService executor;
+    private long delay;
 
     /** Create a new instance. */
     Builder(Registry registry, Id baseId) {
       super();
       this.registry = registry;
       this.baseId = baseId;
+      this.delay = registry.config().gaugePollingFrequency().toMillis();
     }
 
     /**
@@ -150,6 +153,22 @@ public final class PolledMeter {
      */
     public Builder scheduleOn(ScheduledExecutorService executor) {
       this.executor = executor;
+      return this;
+    }
+
+    /**
+     * Set the delay at which the value should be refreshed. If not set, then
+     * the default value will be the gauge polling frequency set in the registry
+     * configuration.
+     *
+     * @see
+     *     com.netflix.spectator.api.RegistryConfig#gaugePollingFrequency()
+     *
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withDelay(Duration delay) {
+      this.delay = delay.toMillis();
       return this;
     }
 
@@ -202,7 +221,7 @@ public final class PolledMeter {
       } else {
         ValueState<T> t = (ValueState<T>) c;
         t.add(obj, f);
-        t.schedule(registry, executor);
+        t.schedule(registry, executor, delay);
       }
 
       return obj;
@@ -282,7 +301,7 @@ public final class PolledMeter {
       } else {
         CounterState<T> t = (CounterState<T>) c;
         t.add(obj, f);
-        t.schedule(registry, executor);
+        t.schedule(registry, executor, delay);
       }
 
       return obj;
@@ -335,7 +354,8 @@ public final class PolledMeter {
     } else {
       MeterState t = (MeterState) c;
       t.add(meter);
-      t.schedule(registry, null);
+      long delay = registry.config().gaugePollingFrequency().toMillis();
+      t.schedule(registry, null, delay);
     }
   }
 
@@ -365,9 +385,8 @@ public final class PolledMeter {
     }
 
     /** Schedule a task to regularly update the registry. */
-    void schedule(Registry registry, ScheduledExecutorService executor) {
+    void schedule(Registry registry, ScheduledExecutorService executor, long delay) {
       if (!scheduled) {
-        long delay = registry.config().gaugePollingFrequency().toMillis();
         WeakReference<AbstractMeterState> tupleRef = new WeakReference<>(this);
         if (executor == null) {
           GaugePoller.schedule(tupleRef, delay, t -> t.update(registry));
