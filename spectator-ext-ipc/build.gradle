@@ -1,5 +1,7 @@
 dependencies {
   compileApi project(':spectator-api')
+  jmh 'com.netflix.frigga:frigga:0.18.0'
+  testCompile 'com.netflix.frigga:frigga:0.18.0'
 }
 
 jar {
