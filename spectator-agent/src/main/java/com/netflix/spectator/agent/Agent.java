@@ -43,10 +43,11 @@ public final class Agent {
   private Agent() {
   }
 
-  private static Config loadConfig(String userResources) {
+  /** Helper to load config files specified by the user. */
+  static Config loadConfig(String userResources) {
     Config config = ConfigFactory.load("agent");
     if (userResources != null && !"".equals(userResources)) {
-      for (String userResource : userResources.split("[,\\s]+]")) {
+      for (String userResource : userResources.split("[,\\s]+")) {
         if (userResource.startsWith("file:")) {
           File file = new File(userResource.substring("file:".length()));
           LOGGER.info("loading configuration from file: {}", file);
