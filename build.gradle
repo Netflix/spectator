@@ -71,8 +71,8 @@ subprojects {
     testCompile 'junit:junit'
     testCompile 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
-    jmh "org.openjdk.jmh:jmh-core:1.17"
-    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.17"
+    jmh "org.openjdk.jmh:jmh-core:1.19"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.19"
   }
 
   jmh {
@@ -81,8 +81,10 @@ subprojects {
     iterations = 10
     fork = 1
     threads = 1
-    profilers = ['stack']
-    include = ['.*Ids.*']
+    profilers = ['stack', 'gc']
+    includeTests = false
+    duplicateClassesStrategy = 'warn'
+    include = ['.*ServerGroupParsing.*']
   }
 
   jacoco {
