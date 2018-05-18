@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.jvm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.management.Attribute;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -35,6 +38,8 @@ import java.util.concurrent.TimeUnit;
  */
 class JmxData {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(JmxData.class);
+
   /** Get data from JMX using object name query expression. */
   static List<JmxData> query(String query) throws Exception {
     return query(new ObjectName(query));
@@ -45,11 +50,24 @@ class JmxData {
     return query(ManagementFactory.getPlatformMBeanServer(), query);
   }
 
+  /** Convert object to string and checking if it fails. */
+  static String mkString(Object obj) {
+    if (obj == null) {
+      return "null";
+    }
+    try {
+      return obj.toString() + " (type is " + obj.getClass() + ")";
+    } catch (Throwable t) {
+      return t.getClass().toString() + ": " + t.getMessage() + " (type is " + obj.getClass() + ")";
+    }
+  }
+
   /** Get data from JMX using object name query expression. */
   static List<JmxData> query(MBeanServer server, ObjectName query) throws Exception {
     List<JmxData> data = new ArrayList<>();
 
     Set<ObjectName> names = server.queryNames(query, null);
+    LOGGER.trace("query [{}], found {} matches", query, names.size());
     for (ObjectName name : names) {
       MBeanInfo info = server.getMBeanInfo(name);
       MBeanAttributeInfo[] attrs = info.getAttributes();
@@ -61,8 +79,13 @@ class JmxData {
       Map<String, String> stringAttrs = new HashMap<>(name.getKeyPropertyList());
       stringAttrs.put("domain", name.getDomain());
       Map<String, Number> numberAttrs = new HashMap<>();
+
       for (Attribute attr : server.getAttributes(name, attrNames).asList()) {
         Object obj = attr.getValue();
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace("attribute [{}][{}] = {}", name, attr.getName(), mkString(obj));
+        }
+
         if (obj instanceof String) {
           stringAttrs.put(attr.getName(), (String) obj);
         } else if (obj instanceof Number) {
