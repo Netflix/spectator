@@ -21,6 +21,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 @RunWith(JUnit4.class)
 public class AgentTest {
 
@@ -46,5 +50,19 @@ public class AgentTest {
     Assert.assertTrue(config.getBoolean("a"));
     Assert.assertTrue(config.getBoolean("b"));
     Assert.assertTrue(config.getBoolean("c"));
+  }
+
+  @Test
+  public void loadConfigListsAppend() {
+    Config config = Agent.loadConfig("a,b,c");
+    List<String> items = config.getStringList("list");
+    Collections.sort(items);
+
+    List<String> expected = new ArrayList<>();
+    expected.add("a");
+    expected.add("b");
+    expected.add("c");
+
+    Assert.assertEquals(expected, items);
   }
 }

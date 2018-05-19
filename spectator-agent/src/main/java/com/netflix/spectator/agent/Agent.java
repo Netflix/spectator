@@ -51,16 +51,16 @@ public final class Agent {
         if (userResource.startsWith("file:")) {
           File file = new File(userResource.substring("file:".length()));
           LOGGER.info("loading configuration from file: {}", file);
-          Config user = ConfigFactory.parseFile(file).resolve();
+          Config user = ConfigFactory.parseFile(file);
           config = user.withFallback(config);
         } else {
           LOGGER.info("loading configuration from resource: {}", userResource);
-          Config user = ConfigFactory.load(userResource);
+          Config user = ConfigFactory.parseResourcesAnySyntax(userResource);
           config = user.withFallback(config);
         }
       }
     }
-    return config.getConfig("netflix.spectator.agent");
+    return config.resolve().getConfig("netflix.spectator.agent");
   }
 
   /**
@@ -82,6 +82,7 @@ public final class Agent {
   public static void premain(String arg, Instrumentation instrumentation) throws Exception {
     // Setup logging
     Config config = loadConfig(arg);
+    LOGGER.debug("loaded configuration: {}", config.root().render());
     createDependencyProperties(config);
 
     // Setup Registry
