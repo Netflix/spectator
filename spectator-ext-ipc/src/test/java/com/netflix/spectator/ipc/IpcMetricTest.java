@@ -46,6 +46,26 @@ public class IpcMetricTest {
     IpcMetric.clientCall.validate(id);
   }
 
+  @Test
+  public void validateAttemptFinalTrue() {
+    Id id = registry.createId(IpcMetric.clientCall.metricName())
+        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcResult.success)
+        .withTag(IpcAttempt.initial)
+        .withTag(IpcAttemptFinal.is_true);
+    IpcMetric.clientCall.validate(id);
+  }
+
+  @Test
+  public void validateAttemptFinalFalse() {
+    Id id = registry.createId(IpcMetric.clientCall.metricName())
+        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcResult.success)
+        .withTag(IpcAttempt.initial)
+        .withTag(IpcAttemptFinal.is_false);
+    IpcMetric.clientCall.validate(id);
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void validateIdBadName() {
     Id id = registry.createId("ipc.client-call")
