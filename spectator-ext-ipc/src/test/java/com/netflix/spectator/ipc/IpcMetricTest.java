@@ -39,7 +39,7 @@ public class IpcMetricTest {
   @Test
   public void validateIdOk() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
@@ -69,7 +69,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdBadName() {
     Id id = registry.createId("ipc.client-call")
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
@@ -79,7 +79,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdMissingResult() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
     IpcMetric.clientCall.validate(id);
@@ -88,7 +88,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdErrorGroupOnSuccess() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcErrorGroup.general)
         .withTag(IpcAttempt.initial)
@@ -99,7 +99,7 @@ public class IpcMetricTest {
   @Test
   public void validateIdErrorGroupOnFailure() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.failure)
         .withTag(IpcErrorGroup.general)
         .withTag(IpcAttempt.initial)
@@ -110,7 +110,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdErrorGroupNotOnFailure() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.failure)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
@@ -120,8 +120,8 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdBadResultValue() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
-        .withTag(IpcTagKey.result.key(), "foo")
+        .withTag(IpcTagKey.owner.tag("test"))
+        .withTag(IpcTagKey.result.tag("foo"))
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
     IpcMetric.clientCall.validate(id);
@@ -130,7 +130,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateIdBadAttemptFinalValue() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), "foo");
@@ -140,7 +140,7 @@ public class IpcMetricTest {
   @Test
   public void validateRegistryOk() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
@@ -151,7 +151,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateRegistryTimerWrongType() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
-        .withTag(IpcTagKey.owner.key(), "test")
+        .withTag(IpcTagKey.owner.tag("test"))
         .withTag(IpcResult.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
@@ -162,7 +162,7 @@ public class IpcMetricTest {
   @Test(expected = IllegalArgumentException.class)
   public void validateRegistryDistSummaryWrongType() {
     Id id = registry.createId(IpcMetric.clientInflight.metricName())
-        .withTag(IpcTagKey.owner.key(), "test");
+        .withTag(IpcTagKey.owner.tag("test"));
     registry.counter(id).increment();
     IpcMetric.validate(registry);
   }

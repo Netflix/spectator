@@ -15,6 +15,9 @@
  */
 package com.netflix.spectator.ipc;
 
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
+
 /**
  * Standard dimensions used for IPC metrics.
  */
@@ -154,5 +157,10 @@ public enum IpcTagKey {
   /** String to use as the tag key. */
   public String key() {
     return key;
+  }
+
+  /** Create a new tag with the specified value and this key. */
+  public Tag tag(String value) {
+    return new BasicTag(key, value);
   }
 }
