@@ -26,7 +26,10 @@ public enum IpcProtocol implements Tag {
   http_1,
 
   /** HTTP 2.x. */
-  http_2;
+  http_2,
+
+  /** gRPC protocol. */
+  grpc;
 
   @Override public String key() {
     return IpcTagKey.protocol.key();
