@@ -23,14 +23,27 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.patterns.IdBuilder;
+import com.netflix.spectator.api.patterns.TagsBuilder;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Timer that buckets the counts to allow for estimating percentiles.
+ * Timer that buckets the counts to allow for estimating percentiles. This timer type will track
+ * the data distribution for the timer by maintaining a set of counters. The distribution
+ * can then be used on the server side to estimate percentiles while still allowing for
+ * arbitrary slicing and dicing based on dimensions.
+ *
+ * <p><b>Percentile timers are expensive compared to basic timers from the registry.</b> In
+ * particular they have a higher storage cost, worst case ~300x, to maintain the data
+ * distribution. Be diligent about any additional dimensions added to percentile timers and
+ * ensure they have a small bounded cardinality. In addition it is highly recommended to
+ * set a threshold (see {@link Builder#withThreshold(long, TimeUnit)}) whenever possible to
+ * greatly restrict the worst case overhead.</p>
  */
 public final class PercentileTimer implements Timer {
 
@@ -49,7 +62,11 @@ public final class PercentileTimer implements Timer {
   }
 
   /**
-   * Creates a timer object that can be used for estimating percentiles.
+   * Creates a timer object that can be used for estimating percentiles. <b>Percentile timers
+   * are expensive compared to basic timers from the registry.</b> Be diligent with ensuring
+   * that any additional dimensions have a small bounded cardinality. It is also highly
+   * recommended to explicitly set the threshold
+   * (see {@link Builder#withThreshold(long, TimeUnit)}) whenever possible.
    *
    * @param registry
    *     Registry to use.
@@ -60,19 +77,140 @@ public final class PercentileTimer implements Timer {
    *     the percentiles for the distribution.
    */
   public static PercentileTimer get(Registry registry, Id id) {
-    return new PercentileTimer(registry, id);
+    return new PercentileTimer(registry, id, 0L, Long.MAX_VALUE);
+  }
+
+  /**
+   * Return a builder for configuring and retrieving and instance of a percentile timer. If
+   * the timer has dynamic dimensions, then the builder can be used with the new dimensions.
+   * If the id is the same as an existing timer, then it will update the same underlying timers
+   * in the registry.
+   */
+  public static IdBuilder<Builder> builder(Registry registry) {
+    return new IdBuilder<Builder>(registry) {
+      @Override protected Builder createTypeBuilder(Id id) {
+        return new Builder(registry, id);
+      }
+    };
+  }
+
+  /**
+   * Helper for getting instances of a PercentileTimer.
+   */
+  public static final class Builder extends TagsBuilder<Builder> {
+
+    private Registry registry;
+    private Id baseId;
+    private float accuracy;
+    private long max;
+
+    /** Create a new instance. */
+    Builder(Registry registry, Id baseId) {
+      super();
+      this.registry = registry;
+      this.baseId = baseId;
+      this.accuracy = 0.1f;
+      this.max = Long.MAX_VALUE;
+    }
+
+    /**
+     * Sets the desired accuracy for the percentile approximation when an explicit threshold is
+     * set ({@link #withThreshold(long, TimeUnit)}). The accuracy flag is used to help reduce the
+     * cost of the percentile approximation by trading off accuracy for percentiles that are
+     * further away from the known SLA or failure threshold.
+     *
+     * @param accuracy
+     *     Value from 0.0 (least accurate) to 1.0 (most accurate). Default is 0.1.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withAccuracy(float accuracy) {
+      if (accuracy < 0.0f || accuracy > 1.0f) {
+        // Invalid value provided, use default.
+        IllegalArgumentException e = new IllegalArgumentException(
+            "Invalid accuracy value for PercentileTimer [" + baseId + "]. Expected value"
+            + " between 0 and 1, received " + accuracy + ".");
+        registry.propagate(e);
+        this.accuracy = 0.1f;
+      } else {
+        // Use the user selection.
+        this.accuracy = accuracy;
+      }
+      return this;
+    }
+
+    /**
+     * Sets the threshold for this timer. For more information see
+     * {@link #withThreshold(long, TimeUnit)}.
+     *
+     * @param duration
+     *     Duration indicating the threshold for this timer.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withThreshold(Duration duration) {
+      return withThreshold(duration.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * Sets the threshold for this timer. The threshold is should be the SLA boundary or
+     * failure point for the activity. Explicitly setting the threshold allows us to optimize
+     * for the important range of values and reduce the overhead associated with tracking the
+     * data distribution.
+     *
+     * For example, suppose you are making a client call and timeout after 10 seconds. Setting
+     * the threshold to 10 seconds will restrict the possible set of buckets used to those
+     * approaching the boundary. So we can still detect if it is nearing failure, but percentiles
+     * that are further away from the threshold may be inflated compared to the actual value.
+     *
+     * @param amount
+     *     Amount indicating the threshold for this timer.
+     * @param unit
+     *     Unit for the specified amount.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withThreshold(long amount, TimeUnit unit) {
+      max = unit.toNanos(amount);
+      return this;
+    }
+
+    /**
+     * Create or get an instance of the percentile timer with the specified settings.
+     */
+    public PercentileTimer build() {
+      long min = 0L;
+      if (max < Long.MAX_VALUE) {
+        int maxPos = PercentileBuckets.indexOf(max);
+        int num = Math.round(Math.max(100, maxPos) * accuracy);
+        if (num < 4) {
+          // Always ensure there are a few
+          num = 4;
+        }
+
+        int minPos = maxPos - num;
+        min = (minPos > 0) ? PercentileBuckets.get(minPos) : 0L;
+      }
+
+      final Id id = baseId.withTags(extraTags);
+      return new PercentileTimer(registry, id, min, max);
+    }
   }
 
   private final Registry registry;
   private final Id id;
   private final Timer timer;
+  private final long min;
+  private final long max;
   private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
-  PercentileTimer(Registry registry, Id id) {
+  PercentileTimer(Registry registry, Id id, long min, long max) {
     this.registry = registry;
     this.id = id;
     this.timer = registry.timer(id);
+    this.min = min;
+    this.max = max;
     this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
   }
 
@@ -101,8 +239,13 @@ public final class PercentileTimer implements Timer {
     return c;
   }
 
+  private long restrict(long amount) {
+    long v = Math.min(amount, max);
+    return Math.max(v, min);
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = unit.toNanos(amount);
+    final long nanos = restrict(unit.toNanos(amount));
     timer.record(amount, unit);
     counterFor(PercentileBuckets.indexOf(nanos)).increment();
   }

@@ -45,7 +45,7 @@ public abstract class IdBuilder<T> {
   protected final Registry registry;
 
   /** Create a new instance. */
-  IdBuilder(Registry registry) {
+  protected IdBuilder(Registry registry) {
     this.registry = registry;
   }
 
