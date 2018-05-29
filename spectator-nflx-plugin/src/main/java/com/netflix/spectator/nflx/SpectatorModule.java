@@ -20,6 +20,10 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.archaius.api.Config;
 import com.netflix.archaius.config.EmptyConfig;
+import com.netflix.servo.SpectatorContext;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.atlas.AtlasConfig;
+import com.netflix.spectator.atlas.AtlasRegistry;
 import com.netflix.spectator.servo.ServoRegistry;
 
 import javax.annotation.PreDestroy;
@@ -44,7 +48,7 @@ import org.slf4j.LoggerFactory;
  *   private final Counter counter;
  *
  *  {@literal @}Inject
- *   public Foo(ExtendedRegistry registry) {
+ *   public Foo(Registry registry) {
  *     counter = registry.counter("foo.doSomething");
  *   }
  *
@@ -132,7 +136,31 @@ public final class SpectatorModule extends AbstractModule {
 
   private static class RegistryProvider implements Provider<Registry> {
 
-    private ServoRegistry registry = new ServoRegistry();
+    private final Registry registry;
+
+    @Inject
+    RegistryProvider(OptionalInjections opts) {
+      Config config = opts.config();
+      if (Versions.useAtlasRegistry()) {
+        LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
+        AtlasConfig cfg = new AtlasConfig() {
+          @Override public String get(String k) {
+            final String prop = "netflix.spectator.registry." + k;
+            return config.getString(prop, null);
+          }
+
+          @Override public boolean enabled() {
+            String v = get("atlas.enabled");
+            return v != null && Boolean.valueOf(v);
+          }
+        };
+        registry = new AtlasRegistry(Clock.SYSTEM, cfg);
+        SpectatorContext.setRegistry(registry);
+      } else {
+        LOGGER.info("using ServoRegistry");
+        registry = new ServoRegistry();
+      }
+    }
 
     @Override public Registry get() {
       return registry;

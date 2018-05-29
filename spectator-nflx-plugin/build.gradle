@@ -3,6 +3,7 @@ dependencies {
   compile project(':spectator-ext-gc')
   compile project(':spectator-ext-jvm')
   compile project(':spectator-ext-sandbox')
+  compile project(':spectator-reg-atlas')
   compile project(':spectator-reg-servo')
   compile 'javax.inject:javax.inject'
   compile 'commons-configuration:commons-configuration'
