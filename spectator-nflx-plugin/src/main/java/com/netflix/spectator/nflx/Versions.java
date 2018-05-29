@@ -25,9 +25,9 @@ import org.slf4j.LoggerFactory;
  * a more graceful transition as it will fallback to the previous behavior if the other
  * associated libraries are not new enough.
  */
-class Versions {
+final class Versions {
 
-  private static Logger LOGGER = LoggerFactory.getLogger(Versions.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(Versions.class);
 
   /**
    * If the atlas-client version is new enough, then this class will be present in the
@@ -36,9 +36,14 @@ class Versions {
   private static final String ATLAS_CLIENT_CLASS = "com.netflix.atlas.plugin.SpectatorMetricPoller";
 
   /** Check if a class is on the classpath. */
+  @SuppressWarnings({"PMD.AvoidCatchingThrowable", "PMD.UseProperClassLoader"})
   private static boolean isClassPresent(String className) {
     try {
-      Class.forName(className, false, Versions.class.getClassLoader());
+      ClassLoader cl = Thread.currentThread().getContextClassLoader();
+      if (cl == null) {
+        cl = Versions.class.getClassLoader();
+      }
+      Class.forName(className, false, cl);
       LOGGER.debug("class {} found in classpath", className);
       return true;
     } catch (Throwable t) {
@@ -55,4 +60,6 @@ class Versions {
     return isClassPresent(ATLAS_CLIENT_CLASS);
   }
 
+  private Versions() {
+  }
 }

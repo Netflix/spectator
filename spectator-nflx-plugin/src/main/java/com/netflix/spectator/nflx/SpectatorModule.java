@@ -139,7 +139,8 @@ public final class SpectatorModule extends AbstractModule {
     private final Registry registry;
 
     @Inject
-    RegistryProvider(Config config) {
+    RegistryProvider(OptionalInjections opts) {
+      Config config = opts.config();
       if (Versions.useAtlasRegistry()) {
         LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
         AtlasConfig cfg = new AtlasConfig() {
