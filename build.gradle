@@ -14,7 +14,7 @@ buildscript {
 plugins {
   id 'nebula.netflixoss' version '5.0.0'
   id 'me.champeau.gradle.jmh' version '0.4.5'
-  id "com.github.spotbugs" version "1.6.1" apply false
+  id "com.github.spotbugs" version "1.6.2" apply false
 }
 
 // Establish version and status
@@ -88,7 +88,7 @@ subprojects {
   }
 
   jacoco {
-    toolVersion = "0.7.9"
+    toolVersion = "0.8.1"
   }
 
   jacocoTestReport {
