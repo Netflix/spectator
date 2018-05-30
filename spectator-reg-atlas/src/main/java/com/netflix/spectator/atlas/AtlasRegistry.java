@@ -225,6 +225,17 @@ public final class AtlasRegistry extends AbstractRegistry {
     removeExpiredMeters();
   }
 
+  /**
+   * Removes expired meters from the registry. This is public to allow some integration
+   * from third parties. Behavior may change in the future. It is strongly advised to only
+   * interact with AtlasRegistry using the interface provided by Registry.
+   */
+  @SuppressWarnings("PMD.UselessOverridingMethod")
+  @Override public void removeExpiredMeters() {
+    // Overridden to increase visibility from protected in base class to public
+    super.removeExpiredMeters();
+  }
+
   private void handleSubscriptions() {
     List<Subscription> subs = new ArrayList<>(subscriptions.keySet());
     if (!subs.isEmpty()) {
