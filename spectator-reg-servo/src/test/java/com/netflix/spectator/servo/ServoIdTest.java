@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.servo;
 
+import com.netflix.servo.monitor.MonitorConfig;
 import com.netflix.servo.tag.BasicTagList;
 import com.netflix.servo.tag.TagList;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -31,9 +32,11 @@ public class ServoIdTest {
   public void equalsContractTest() {
     TagList ts1 = BasicTagList.of("k1", "v1");
     TagList ts2 = BasicTagList.of("k1", "v1", "k2", "v2");
+    MonitorConfig c1 = new MonitorConfig.Builder("foo").withTags(ts1).build();
+    MonitorConfig c2 = new MonitorConfig.Builder("foo").withTags(ts2).build();
     EqualsVerifier
         .forClass(ServoId.class)
-        .withPrefabValues(TagList.class, ts1, ts2)
+        .withPrefabValues(MonitorConfig.class, c1, c2)
         .suppress(Warning.NULL_FIELDS)
         .verify();
   }
