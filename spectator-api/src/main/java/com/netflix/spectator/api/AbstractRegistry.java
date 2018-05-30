@@ -221,8 +221,6 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Iterator<Meter> iterator() {
-    // Force update of gauges before traversing values
-    PolledMeter.update(this);
     return meters.values().iterator();
   }
 
