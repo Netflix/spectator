@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -110,7 +109,7 @@ public final class Config {
   }
 
   private static boolean isJava8() {
-    String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
+    String version = System.getProperty("java.version", "1.8");
     return version.startsWith("1.8");
   }
 
