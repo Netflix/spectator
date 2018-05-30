@@ -230,7 +230,9 @@ public final class AtlasRegistry extends AbstractRegistry {
    * from third parties. Behavior may change in the future. It is strongly advised to only
    * interact with AtlasRegistry using the interface provided by Registry.
    */
+  @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override public void removeExpiredMeters() {
+    // Overridden to increase visibility from protected in base class to public
     super.removeExpiredMeters();
   }
 
