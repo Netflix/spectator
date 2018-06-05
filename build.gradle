@@ -27,7 +27,7 @@ allprojects {
   apply plugin: 'com.github.ben-manes.versions'
 
   task wrapper(type: Wrapper) {
-    gradleVersion = '2.6'
+    gradleVersion = '4.8'
   }
 }
 

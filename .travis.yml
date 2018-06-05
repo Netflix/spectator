@@ -7,10 +7,6 @@ matrix:
     env: GRADLE_PUBLISH=false
 sudo: false
 dist: trusty
-addons:
-  apt:
-    packages:
-      - oracle-java9-installer
 install: ./installViaTravis.sh
 script: ./buildViaTravis.sh
 env:
