@@ -5,8 +5,6 @@ matrix:
     env: GRADLE_PUBLISH=true
   - jdk: openjdk10
     env: GRADLE_PUBLISH=false
-  - jdk: openjdk11
-    env: GRADLE_PUBLISH=false
 sudo: false
 dist: trusty
 install: ./installViaTravis.sh
