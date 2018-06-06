@@ -15,26 +15,30 @@
  */
 package com.netflix.spectator.ipc;
 
+import java.nio.CharBuffer;
 import java.util.Objects;
 
 /**
- * This is an alternate implementation that uses String for everything rather than wrapping
- * with a CharBuffer to reduce allocations. It is used for the benchmark to verify that the
- * CharBuffer approach actually provides a benefit.
+ * Helper for parsing Netflix server group names that follow the Frigga conventions. For
+ * more information see the IEP documentation for
+ * <a href="https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings">server groups</a>.
+ *
+ * <p>Frigga is not used for the actual parsing as it is quite inefficient. See the
+ * ServerGroupParsing benchmark for a comparison.</p>
  */
-public class StringServerGroup {
+public class SeqServerGroup {
 
   /**
    * Create a new instance of a server group object by parsing the group name.
    */
-  public static StringServerGroup parse(String asg) {
+  public static SeqServerGroup parse(String asg) {
     int d1 = asg.indexOf('-');
     int d2 = asg.indexOf('-', d1 + 1);
     int dN = asg.lastIndexOf('-');
     if (dN < 0 || !isSequence(asg, dN)) {
       dN = asg.length();
     }
-    return new StringServerGroup(asg, d1, d2, dN);
+    return new SeqServerGroup(asg, d1, d2, dN);
   }
 
   /**
@@ -58,23 +62,38 @@ public class StringServerGroup {
    * versions. To reduce the number of allocations we use a char buffer to return a view
    * with just that subset.
    */
-  private static String substr(String str, int s, int e) {
-    return (s >= e) ? null : str.substring(s, e);
+  private static CharSequence substr(CharSequence str, int s, int e) {
+    return (s >= e) ? null : CharBuffer.wrap(str, s, e);
   }
 
-  private final String asg;
+  private final CharSequence asg;
   private final int d1;
   private final int d2;
   private final int dN;
 
-  StringServerGroup(String asg, int d1, int d2, int dN) {
+  /**
+   * Create a new instance of the server group.
+   *
+   * @param asg
+   *     Raw group name received from the user.
+   * @param d1
+   *     Position of the first dash or -1 if there are no dashes in the input.
+   * @param d2
+   *     Position of the second dash or -1 if there is not a second dash in the input.
+   * @param dN
+   *     Position indicating the end of the cluster name. For a server group with a
+   *     sequence this will be the final dash. If the sequence is not present, then
+   *     it will be the end of the string.
+   */
+  SeqServerGroup(CharSequence asg, int d1, int d2, int dN) {
     this.asg = asg;
     this.d1 = d1;
     this.d2 = d2;
     this.dN = dN;
   }
 
-  public String app() {
+  /** Return the application for the server group or null if invalid. */
+  public CharSequence app() {
     if (d1 < 0) {
       // No stack or detail is present
       return asg.length() > 0 ? asg : null;
@@ -87,7 +106,8 @@ public class StringServerGroup {
     }
   }
 
-  public String cluster() {
+  /** Return the cluster name for the server group or null if invalid. */
+  public CharSequence cluster() {
     if (d1 == 0) {
       // Application portion is empty
       return null;
@@ -96,11 +116,13 @@ public class StringServerGroup {
     }
   }
 
-  public String asg() {
+  /** Return the server group name or null if invalid. */
+  public CharSequence asg() {
     return (d1 != 0 && dN > 0) ? asg : null;
   }
 
-  public String stack() {
+  /** If the server group has a stack, then return the stack name. Otherwise return null. */
+  public CharSequence stack() {
     if (d1 <= 0) {
       // No stack, detail or sequence is present
       return null;
@@ -113,18 +135,19 @@ public class StringServerGroup {
     }
   }
 
-  public String detail() {
+  /** If the server group has a detail, then return the detail name. Otherwise return null. */
+  public CharSequence detail() {
     return (d1 != 0 && d2 > 0) ? substr(asg, d2 + 1, dN) : null;
   }
 
   @Override public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    StringServerGroup that = (StringServerGroup) o;
-    return d1 == that.d1 &&
-        d2 == that.d2 &&
-        dN == that.dN &&
-        Objects.equals(asg, that.asg);
+    SeqServerGroup that = (SeqServerGroup) o;
+    return d1 == that.d1
+        && d2 == that.d2
+        && dN == that.dN
+        && Objects.equals(asg, that.asg);
   }
 
   @Override public int hashCode() {
@@ -132,6 +155,6 @@ public class StringServerGroup {
   }
 
   @Override public String toString() {
-    return "StringServerGroup(" + asg + ", " + d1 + ", " + d2 + ", " + dN + ")";
+    return "SeqServerGroup(" + asg + ", " + d1 + ", " + d2 + ", " + dN + ")";
   }
 }
