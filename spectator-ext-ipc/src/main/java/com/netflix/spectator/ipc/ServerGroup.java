@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.ipc;
 
-import java.nio.CharBuffer;
 import java.util.Objects;
 
 /**
@@ -62,11 +61,11 @@ public class ServerGroup {
    * versions. To reduce the number of allocations we use a char buffer to return a view
    * with just that subset.
    */
-  private static CharSequence substr(CharSequence str, int s, int e) {
-    return (s >= e) ? null : CharBuffer.wrap(str, s, e);
+  private static String substr(String str, int s, int e) {
+    return (s >= e) ? null : str.substring(s, e);
   }
 
-  private final CharSequence asg;
+  private final String asg;
   private final int d1;
   private final int d2;
   private final int dN;
@@ -85,7 +84,7 @@ public class ServerGroup {
    *     sequence this will be the final dash. If the sequence is not present, then
    *     it will be the end of the string.
    */
-  ServerGroup(CharSequence asg, int d1, int d2, int dN) {
+  ServerGroup(String asg, int d1, int d2, int dN) {
     this.asg = asg;
     this.d1 = d1;
     this.d2 = d2;
@@ -93,7 +92,7 @@ public class ServerGroup {
   }
 
   /** Return the application for the server group or null if invalid. */
-  public CharSequence app() {
+  public String app() {
     if (d1 < 0) {
       // No stack or detail is present
       return asg.length() > 0 ? asg : null;
@@ -107,7 +106,7 @@ public class ServerGroup {
   }
 
   /** Return the cluster name for the server group or null if invalid. */
-  public CharSequence cluster() {
+  public String cluster() {
     if (d1 == 0) {
       // Application portion is empty
       return null;
@@ -117,12 +116,12 @@ public class ServerGroup {
   }
 
   /** Return the server group name or null if invalid. */
-  public CharSequence asg() {
+  public String asg() {
     return (d1 != 0 && dN > 0) ? asg : null;
   }
 
   /** If the server group has a stack, then return the stack name. Otherwise return null. */
-  public CharSequence stack() {
+  public String stack() {
     if (d1 <= 0) {
       // No stack, detail or sequence is present
       return null;
@@ -136,7 +135,7 @@ public class ServerGroup {
   }
 
   /** If the server group has a detail, then return the detail name. Otherwise return null. */
-  public CharSequence detail() {
+  public String detail() {
     return (d1 != 0 && d2 > 0) ? substr(asg, d2 + 1, dN) : null;
   }
 
