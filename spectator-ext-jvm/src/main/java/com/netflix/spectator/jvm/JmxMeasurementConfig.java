@@ -89,9 +89,7 @@ final class JmxMeasurementConfig {
     Map<String, Number> numberAttrs = new HashMap<>(data.getNumberAttrs());
     JmxData previous = previousData.put(data.getName(), data);
     if (previous != null) {
-      previous.getNumberAttrs().entrySet().forEach(e ->
-          numberAttrs.put("previous:" + e.getKey(), e.getValue())
-      );
+      previous.getNumberAttrs().forEach((key, value) -> numberAttrs.put("previous:" + key, value));
     }
 
     Double v = MappingExpr.eval(valueMapping, numberAttrs);

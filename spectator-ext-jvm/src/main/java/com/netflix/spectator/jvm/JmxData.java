@@ -23,6 +23,8 @@ import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.management.openmbean.CompositeDataSupport;
+import javax.management.openmbean.CompositeType;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -91,6 +93,22 @@ class JmxData {
           stringAttrs.put(attr.getName(), (String) obj);
         } else if (obj instanceof Number) {
           numberAttrs.put(attr.getName(), ((Number) obj).doubleValue());
+        } else if (obj instanceof CompositeDataSupport) {
+          CompositeDataSupport composite = (CompositeDataSupport) obj;
+          CompositeType compositeType = composite.getCompositeType();
+          for (String key : compositeType.keySet()) {
+            if (composite.containsKey(key)) {
+              Object o = composite.get(key);
+              String attrKey = attr.getName() + "." + key;
+              if (o instanceof Number) {
+                numberAttrs.put(attrKey, ((Number) o).doubleValue());
+              } else if (o instanceof String) {
+                stringAttrs.put(attrKey, (String) o);
+              } else if (o instanceof TimeUnit) {
+                stringAttrs.put(attrKey, o.toString());
+              }
+            }
+          }
         } else if (obj instanceof TimeUnit) {
           stringAttrs.put(attr.getName(), obj.toString());
         }
