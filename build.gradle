@@ -3,6 +3,7 @@ buildscript {
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:5.0.0'
+    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:5.1.1-rc.1'
 
     // This is a workaround for getting the shadow plugin to work correctly
     // for some sub-projects. For more details see:
@@ -12,7 +13,6 @@ buildscript {
 }
 
 plugins {
-  id 'nebula.netflixoss' version '5.1.0'
   id 'me.champeau.gradle.jmh' version '0.4.5'
   id "com.github.spotbugs" version "1.6.2" apply false
 }
@@ -25,6 +25,7 @@ allprojects {
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
+  apply plugin: 'nebula.netflixoss'
 
   task wrapper(type: Wrapper) {
     gradleVersion = '4.8'
@@ -32,7 +33,6 @@ allprojects {
 }
 
 subprojects {
-  apply plugin: 'nebula.netflixoss'
   apply plugin: 'nebula.compile-api'
   apply plugin: 'java'
   apply plugin: 'build-dashboard'
