@@ -17,3 +17,5 @@ include 'spectator-api',
         'spectator-reg-metrics3',
         'spectator-reg-servo',
         'spectator-web-spring'
+
+enableFeaturePreview("STABLE_PUBLISHING")
