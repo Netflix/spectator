@@ -3,7 +3,7 @@ matrix:
   include:
   - jdk: oraclejdk8
     env: GRADLE_PUBLISH=true
-  - jdk: openjdk10
+  - jdk: openjdk9
     env: GRADLE_PUBLISH=false
 sudo: false
 dist: trusty
