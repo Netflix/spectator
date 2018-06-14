@@ -198,7 +198,6 @@ public final class CardinalityLimiters {
                 .limit(n)
                 .min(Long::compareUnsigned)
                 .orElseGet(() -> 0L);
-            limiter = first(n);
 
             // Remove less frequent items from the map to avoid a memory leak if unique
             // ids are used
@@ -209,6 +208,7 @@ public final class CardinalityLimiters {
             // older entries have a slight bias
             values.values().forEach(v -> v.set(1L));
             cutoff = 1L;
+            limiter = first(n);
           }
         } finally {
           lock.unlock();
