@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.netflix.spectator.impl;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.management.ManagementFactory;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
 
@@ -33,7 +32,7 @@ import java.util.Arrays;
 public final class AsciiSet {
 
   private static boolean isJava8() {
-    String version = ManagementFactory.getRuntimeMXBean().getSpecVersion();
+    String version = System.getProperty("java.version", "1.8");
     return version.startsWith("1.8");
   }
 

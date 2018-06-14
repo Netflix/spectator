@@ -60,7 +60,7 @@ public class ServerGroupParsing {
   @Benchmark
   public void string(Blackhole bh) {
     for (String asg : asgs) {
-      StringServerGroup group = StringServerGroup.parse(asg);
+      ServerGroup group = ServerGroup.parse(asg);
       bh.consume(group.app());
       bh.consume(group.cluster());
     }
@@ -69,7 +69,7 @@ public class ServerGroupParsing {
   @Benchmark
   public void charSequence(Blackhole bh) {
     for (String asg : asgs) {
-      ServerGroup group = ServerGroup.parse(asg);
+      SeqServerGroup group = SeqServerGroup.parse(asg);
       bh.consume(group.app());
       bh.consume(group.cluster());
     }

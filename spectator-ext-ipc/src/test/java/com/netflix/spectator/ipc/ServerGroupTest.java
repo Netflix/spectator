@@ -73,25 +73,25 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStack() {
     String asg = "app-stack";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStack() {
     String asg = "app-stack";
-    Assert.assertEquals("app-stack", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStack() {
     String asg = "app-stack";
-    Assert.assertEquals("app-stack", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStack() {
     String asg = "app-stack";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
@@ -110,31 +110,31 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStackDetail() {
     String asg = "app-stack-detail";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStackDetail() {
     String asg = "app-stack-detail";
-    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStackDetail() {
     String asg = "app-stack-detail";
-    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStackDetail() {
     String asg = "app-stack-detail";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
   public void getDetailForAppStackDetail() {
     String asg = "app-stack-detail";
-    Assert.assertEquals("detail", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -147,31 +147,31 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
-    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
-    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
   public void getDetailForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
-    Assert.assertEquals("detail_1-detail_2", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail_1-detail_2", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -184,19 +184,19 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppDetail() {
     String asg = "app--detail";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppDetail() {
     String asg = "app--detail";
-    Assert.assertEquals("app--detail", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app--detail", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppDetail() {
     String asg = "app--detail";
-    Assert.assertEquals("app--detail", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app--detail", ServerGroup.parse(asg).asg());
   }
 
   @Test
@@ -208,7 +208,7 @@ public class ServerGroupTest {
   @Test
   public void getDetailForAppDetail() {
     String asg = "app--detail";
-    Assert.assertEquals("detail", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -221,19 +221,19 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppSeq() {
     String asg = "app-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppSeq() {
     String asg = "app-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppSeq() {
     String asg = "app-v001";
-    Assert.assertEquals("app-v001", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-v001", ServerGroup.parse(asg).asg());
   }
 
   @Test
@@ -258,25 +258,25 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStackSeq() {
     String asg = "app-stack-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStackSeq() {
     String asg = "app-stack-v001";
-    Assert.assertEquals("app-stack", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStackSeq() {
     String asg = "app-stack-v001";
-    Assert.assertEquals("app-stack-v001", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack-v001", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStackSeq() {
     String asg = "app-stack-v001";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
@@ -295,31 +295,31 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
-    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack-detail", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
-    Assert.assertEquals("app-stack-detail-v001", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack-detail-v001", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
   public void getDetailForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
-    Assert.assertEquals("detail", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -332,31 +332,31 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
-    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app-stack-detail_1-detail_2", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
-    Assert.assertEquals("app-stack-detail_1-detail_2-v001", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app-stack-detail_1-detail_2-v001", ServerGroup.parse(asg).asg());
   }
 
   @Test
   public void getStackForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
-    Assert.assertEquals("stack", ServerGroup.parse(asg).stack().toString());
+    Assert.assertEquals("stack", ServerGroup.parse(asg).stack());
   }
 
   @Test
   public void getDetailForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
-    Assert.assertEquals("detail_1-detail_2", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail_1-detail_2", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -369,19 +369,19 @@ public class ServerGroupTest {
   @Test
   public void getAppForAppDetailSeq() {
     String asg = "app--detail-v001";
-    Assert.assertEquals("app", ServerGroup.parse(asg).app().toString());
+    Assert.assertEquals("app", ServerGroup.parse(asg).app());
   }
 
   @Test
   public void getClusterForAppDetailSeq() {
     String asg = "app--detail-v001";
-    Assert.assertEquals("app--detail", ServerGroup.parse(asg).cluster().toString());
+    Assert.assertEquals("app--detail", ServerGroup.parse(asg).cluster());
   }
 
   @Test
   public void getAsgForAppDetailSeq() {
     String asg = "app--detail-v001";
-    Assert.assertEquals("app--detail-v001", ServerGroup.parse(asg).asg().toString());
+    Assert.assertEquals("app--detail-v001", ServerGroup.parse(asg).asg());
   }
 
   @Test
@@ -393,7 +393,7 @@ public class ServerGroupTest {
   @Test
   public void getDetailForAppDetailSeq() {
     String asg = "app--detail-v001";
-    Assert.assertEquals("detail", ServerGroup.parse(asg).detail().toString());
+    Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
   }
 
   @Test
@@ -477,10 +477,6 @@ public class ServerGroupTest {
     return builder.toString();
   }
 
-  private String toStr(CharSequence s) {
-    return s == null ? null : s.toString();
-  }
-
   @Test
   public void compatibleWithFrigga() {
     // Seed the RNG so that each run is deterministic. In this case we are just using it to
@@ -490,11 +486,11 @@ public class ServerGroupTest {
       String asg = randomServerGroup(r);
       ServerGroup sg = ServerGroup.parse(asg);
       Names frigga = Names.parseName(asg);
-      Assert.assertEquals("app: " + asg, frigga.getApp(), toStr(sg.app()));
-      Assert.assertEquals("cluster: " + asg, frigga.getCluster(), toStr(sg.cluster()));
-      Assert.assertEquals("asg: " + asg, frigga.getGroup(), toStr(sg.asg()));
-      Assert.assertEquals("stack: " + asg, frigga.getStack(), toStr(sg.stack()));
-      Assert.assertEquals("detail: " + asg, frigga.getDetail(), toStr(sg.detail()));
+      Assert.assertEquals("app: " + asg, frigga.getApp(), sg.app());
+      Assert.assertEquals("cluster: " + asg, frigga.getCluster(), sg.cluster());
+      Assert.assertEquals("asg: " + asg, frigga.getGroup(), sg.asg());
+      Assert.assertEquals("stack: " + asg, frigga.getStack(), sg.stack());
+      Assert.assertEquals("detail: " + asg, frigga.getDetail(), sg.detail());
     }
   }
 }

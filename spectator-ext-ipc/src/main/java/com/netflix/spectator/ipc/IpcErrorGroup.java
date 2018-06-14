@@ -55,7 +55,17 @@ public enum IpcErrorGroup implements Tag {
   /**
    * The client is being throttled due to a problem on the server side.
    */
-  server_throttled;
+  server_throttled,
+
+  /**
+   * There was an error due to problems with the client request, e.g., HTTP status 400.
+   */
+  client_error,
+
+  /**
+   * There was an error due to problems on the server side, e.g., HTTP status 500.
+   */
+  server_error;
 
   @Override public String key() {
     return IpcTagKey.errorGroup.key();

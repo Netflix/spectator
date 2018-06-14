@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package com.netflix.spectator.metrics3;
 
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
-import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,7 +72,7 @@ public class MetricsRegistryTest {
 
   private void assertGaugeValue(
       MetricsRegistry r, MetricRegistry codaRegistry, String name, double expected) {
-    r.iterator(); // To force polling of gauges
+    PolledMeter.update(r);
     Assert.assertEquals(expected, (Double) codaRegistry.getGauges().get(name).getValue(), 1e-12);
   }
 

@@ -16,6 +16,7 @@
 package com.netflix.spectator.controllers;
 
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.controllers.model.TestId;
 
 import com.netflix.spectator.api.BasicTag;
@@ -124,6 +125,7 @@ public class MetricsControllerTest {
     HashMap<String, MetricValues> expect = new HashMap<>();
     expect.put("idB", new MetricValues("Counter", expectedTaggedDataPoints));
 
+    PolledMeter.update(registry);
     Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
 
@@ -156,6 +158,7 @@ public class MetricsControllerTest {
     HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
     expect.put("idA", new MetricValues("Counter", expected_tagged_data_points));
 
+    PolledMeter.update(registry);
     Assert.assertEquals(expect,
                         controller.encodeRegistry(registry, allowAll));
   }

@@ -79,6 +79,7 @@ public class IntervalCounterTest {
   }
 
   private static List<Measurement> getAllMeasurements(Registry registry) {
+    PolledMeter.update(registry);
     final List<Measurement> result = new ArrayList<>();
     registry.stream()
         .filter(meter -> !meter.hasExpired())
