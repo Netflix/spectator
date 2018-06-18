@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,15 @@
  */
 package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.DefaultRegistry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -130,5 +133,34 @@ public class PercentileBucketsTest {
       double threshold = 0.1 * expected;
       Assert.assertEquals(expected, PercentileBuckets.percentile(counts, pcts[i]), threshold);
     }
+  }
+
+  @Test
+  public void foo() {
+    long m = 1_000_000;
+    int e = PercentileBuckets.indexOf(10_000L * m);
+    int s = PercentileBuckets.indexOf(1 * m);
+    System.out.println("" + (e - s + 1));
+
+    /*for (int i = 0; i < PercentileBuckets.length(); ++i) {
+      System.out.printf("T%04X\t%.3f%n", i, PercentileBuckets.get(i) / 1e6);
+    }*/
+
+    DefaultRegistry registry = new DefaultRegistry();
+
+    Map<String, Long> SLOs = new HashMap<>();
+    SLOs.put("/api/fast", 500L);
+    SLOs.put("/api/slow", 10000L);
+    SLOs.put("/api/really-slow", 60000L);
+
+    String endpoint = "/api/fast";
+    long latency = 257L;
+
+    PercentileTimer.builder(registry)
+        .withName("server.requestLatency")
+        .withThreshold(SLOs.get(endpoint), TimeUnit.MILLISECONDS)
+        .withTag("endpoint", endpoint)
+        .build()
+        .record(latency, TimeUnit.MILLISECONDS);
   }
 }
