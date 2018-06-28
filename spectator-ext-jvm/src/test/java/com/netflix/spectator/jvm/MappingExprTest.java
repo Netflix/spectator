@@ -75,6 +75,14 @@ public class MappingExprTest {
   }
 
   @Test
+  public void substituteRaw() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("name", "FooBarBaz");
+    String actual = MappingExpr.substitute("abc.def.{raw:name}", vars);
+    Assert.assertEquals("abc.def.FooBarBaz", actual);
+  }
+
+  @Test
   public void evalMissing() {
     Map<String, Number> vars = new HashMap<>();
     Double v = MappingExpr.eval("{foo}", vars);
