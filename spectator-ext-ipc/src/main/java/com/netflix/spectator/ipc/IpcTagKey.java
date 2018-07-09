@@ -138,6 +138,11 @@ public enum IpcTagKey {
   serverNode("ipc.server.node"),
 
   /**
+   * The port number connected to on the server.
+   */
+  serverPort("ipc.server.port"),
+
+  /**
    * HTTP status code.
    */
   httpStatus("http.status"),
