@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.api.histogram;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
@@ -25,19 +26,44 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class PercentileDistributionSummaryTest {
 
-  @Test
-  public void percentile() {
-    Registry r = new DefaultRegistry();
-    PercentileDistributionSummary t = PercentileDistributionSummary.get(r, r.createId("test"));
+  private Registry newRegistry() {
+    return new DefaultRegistry(Clock.SYSTEM, k -> null);
+  }
+
+  private void checkPercentiles(PercentileDistributionSummary t, int start) {
     for (int i = 0; i < 100_000; ++i) {
       t.record(i);
     }
-
-    for (int i = 0; i <= 100; ++i) {
-      double expected = i * 1e3;
+    for (int i = start; i <= 100; ++i) {
+      double expected = i * 1000.0;
       double threshold = 0.15 * expected;
       Assert.assertEquals(expected, t.percentile(i), threshold);
     }
   }
 
+  @Test
+  public void percentile() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t = PercentileDistributionSummary.get(r, r.createId("test"));
+    checkPercentiles(t, 0);
+  }
+
+  @Test
+  public void builder() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t = PercentileDistributionSummary.builder(r)
+        .withName("test")
+        .build();
+    checkPercentiles(t, 0);
+  }
+
+  @Test
+  public void builderWithThreshold() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t = PercentileDistributionSummary.builder(r)
+        .withName("test")
+        .withRange(25_000, 100_000)
+        .build();
+    checkPercentiles(t, 25);
+  }
 }

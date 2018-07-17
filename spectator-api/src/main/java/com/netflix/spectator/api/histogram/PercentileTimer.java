@@ -23,14 +23,31 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.patterns.IdBuilder;
+import com.netflix.spectator.api.patterns.TagsBuilder;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
- * Timer that buckets the counts to allow for estimating percentiles.
+ * Timer that buckets the counts to allow for estimating percentiles. This timer type will track
+ * the data distribution for the timer by maintaining a set of counters. The distribution
+ * can then be used on the server side to estimate percentiles while still allowing for
+ * arbitrary slicing and dicing based on dimensions.
+ *
+ * <p><b>Percentile timers are expensive compared to basic timers from the registry.</b> In
+ * particular they have a higher storage cost, worst case ~300x, to maintain the data
+ * distribution. Be diligent about any additional dimensions added to percentile timers and
+ * ensure they have a small bounded cardinality. In addition it is highly recommended to
+ * set a range (see {@link Builder#withRange(long, long, TimeUnit)}) whenever possible to
+ * greatly restrict the worst case overhead.</p>
+ *
+ * <p>When using the builder ({@link #builder(Registry)}), the range will default from 10 ms
+ * to 1 minute. Based on data at Netflix this is the most common range for request latencies
+ * and restricting to this window reduces the worst case multiple from 276 to 58</p>
  */
 public final class PercentileTimer implements Timer {
 
@@ -49,7 +66,11 @@ public final class PercentileTimer implements Timer {
   }
 
   /**
-   * Creates a timer object that can be used for estimating percentiles.
+   * Creates a timer object that can be used for estimating percentiles. <b>Percentile timers
+   * are expensive compared to basic timers from the registry.</b> Be diligent with ensuring
+   * that any additional dimensions have a small bounded cardinality. It is also highly
+   * recommended to explicitly set a range
+   * (see {@link Builder#withRange(long, long, TimeUnit)}) whenever possible.
    *
    * @param registry
    *     Registry to use.
@@ -60,19 +81,106 @@ public final class PercentileTimer implements Timer {
    *     the percentiles for the distribution.
    */
   public static PercentileTimer get(Registry registry, Id id) {
-    return new PercentileTimer(registry, id);
+    return new PercentileTimer(registry, id, 0L, Long.MAX_VALUE);
+  }
+
+  /**
+   * Return a builder for configuring and retrieving and instance of a percentile timer. If
+   * the timer has dynamic dimensions, then the builder can be used with the new dimensions.
+   * If the id is the same as an existing timer, then it will update the same underlying timers
+   * in the registry.
+   */
+  public static IdBuilder<Builder> builder(Registry registry) {
+    return new IdBuilder<Builder>(registry) {
+      @Override protected Builder createTypeBuilder(Id id) {
+        return new Builder(registry, id);
+      }
+    };
+  }
+
+  /**
+   * Helper for getting instances of a PercentileTimer.
+   */
+  public static final class Builder extends TagsBuilder<Builder> {
+
+    private Registry registry;
+    private Id baseId;
+    private long min;
+    private long max;
+
+    /** Create a new instance. */
+    Builder(Registry registry, Id baseId) {
+      super();
+      this.registry = registry;
+      this.baseId = baseId;
+      this.min = TimeUnit.MILLISECONDS.toNanos(10);
+      this.max = TimeUnit.MINUTES.toNanos(1);
+    }
+
+    /**
+     * Sets the threshold for this timer. For more information see
+     * {@link #withRange(long, long, TimeUnit)}.
+     *
+     * @param min
+     *     Duration indicating the minimum value for this timer.
+     * @param max
+     *     Duration indicating the maximum value for this timer.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withRange(Duration min, Duration max) {
+      return withRange(min.toNanos(), max.toNanos(), TimeUnit.NANOSECONDS);
+    }
+
+    /**
+     * Sets the range for this timer. The range should be the SLA boundary or
+     * failure point for the activity. Explicitly setting the range allows us to optimize
+     * for the important range of values and reduce the overhead associated with tracking the
+     * data distribution.
+     *
+     * For example, suppose you are making a client call and timeout after 10 seconds. Setting
+     * the range to 10 seconds will restrict the possible set of buckets used to those
+     * approaching the boundary. So we can still detect if it is nearing failure, but percentiles
+     * that are further away from the range may be inflated compared to the actual value.
+     *
+     * @param min
+     *     Amount indicating the minimum allowed value for this timer.
+     * @param max
+     *     Amount indicating the maximum allowed value for this timer.
+     * @param unit
+     *     Unit for the specified amount.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withRange(long min, long max, TimeUnit unit) {
+      this.min = unit.toNanos(min);
+      this.max = unit.toNanos(max);
+      return this;
+    }
+
+    /**
+     * Create or get an instance of the percentile timer with the specified settings.
+     */
+    public PercentileTimer build() {
+      final Id id = baseId.withTags(extraTags);
+      return new PercentileTimer(registry, id, min, max);
+    }
   }
 
   private final Registry registry;
   private final Id id;
   private final Timer timer;
+  private final long min;
+  private final long max;
   private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
-  PercentileTimer(Registry registry, Id id) {
+  PercentileTimer(Registry registry, Id id, long min, long max) {
     this.registry = registry;
     this.id = id;
     this.timer = registry.timer(id);
+    this.min = min;
+    this.max = max;
     this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
   }
 
@@ -101,8 +209,13 @@ public final class PercentileTimer implements Timer {
     return c;
   }
 
+  private long restrict(long amount) {
+    long v = Math.min(amount, max);
+    return Math.max(v, min);
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = unit.toNanos(amount);
+    final long nanos = restrict(unit.toNanos(amount));
     timer.record(amount, unit);
     counterFor(PercentileBuckets.indexOf(nanos)).increment();
   }

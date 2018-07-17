@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(JUnit4.class)
 public class PercentileBucketsTest {
@@ -128,5 +129,12 @@ public class PercentileBucketsTest {
       double threshold = 0.1 * expected;
       Assert.assertEquals(expected, PercentileBuckets.percentile(counts, pcts[i]), threshold);
     }
+  }
+
+  @Test
+  public void foo() {
+    int start = PercentileBuckets.indexOf(TimeUnit.MILLISECONDS.toNanos(10));
+    int end = PercentileBuckets.indexOf(TimeUnit.SECONDS.toNanos(60));
+    System.out.println("start = " + start + ", end = " + end + ", delta = " + (end - start + 1));
   }
 }
