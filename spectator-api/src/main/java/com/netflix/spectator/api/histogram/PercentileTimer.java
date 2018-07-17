@@ -133,15 +133,15 @@ public final class PercentileTimer implements Timer {
     }
 
     /**
-     * Sets the threshold for this timer. The threshold is should be the SLA boundary or
-     * failure point for the activity. Explicitly setting the threshold allows us to optimize
+     * Sets the range for this timer. The range should be the SLA boundary or
+     * failure point for the activity. Explicitly setting the range allows us to optimize
      * for the important range of values and reduce the overhead associated with tracking the
      * data distribution.
      *
      * For example, suppose you are making a client call and timeout after 10 seconds. Setting
-     * the threshold to 10 seconds will restrict the possible set of buckets used to those
+     * the range to 10 seconds will restrict the possible set of buckets used to those
      * approaching the boundary. So we can still detect if it is nearing failure, but percentiles
-     * that are further away from the threshold may be inflated compared to the actual value.
+     * that are further away from the range may be inflated compared to the actual value.
      *
      * @param min
      *     Amount indicating the minimum allowed value for this timer.
