@@ -18,9 +18,7 @@ package com.netflix.spectator.api.histogram;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.RegistryConfig;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -54,20 +52,11 @@ public class PercentileTimerTest {
   }
 
   @Test
-  public void builder() {
-    Registry r = newRegistry();
-    PercentileTimer t = PercentileTimer.builder(r)
-        .withName("test")
-        .build();
-    checkPercentiles(t, 0);
-  }
-
-  @Test
   public void builderWithThreshold() {
     Registry r = newRegistry();
     PercentileTimer t = PercentileTimer.builder(r)
         .withName("test")
-        .withThreshold(100, TimeUnit.SECONDS)
+        .withRange(10, 100, TimeUnit.SECONDS)
         .build();
     checkPercentiles(t, 10);
   }
@@ -77,62 +66,8 @@ public class PercentileTimerTest {
     Registry r = newRegistry();
     PercentileTimer t = PercentileTimer.builder(r)
         .withName("test")
-        .withThreshold(Duration.ofSeconds(100))
-        .build();
-    checkPercentiles(t, 10);
-  }
-
-  @Test
-  public void builderWithAccuracyMax() {
-    Registry r = newRegistry();
-    PercentileTimer t = PercentileTimer.builder(r)
-        .withName("test")
-        .withThreshold(100, TimeUnit.SECONDS)
-        .withAccuracy(1.0f)
+        .withRange(Duration.ZERO, Duration.ofSeconds(100))
         .build();
     checkPercentiles(t, 0);
   }
-
-  @Test
-  public void builderWithAccuracyMin() {
-    Registry r = newRegistry();
-    PercentileTimer t = PercentileTimer.builder(r)
-        .withName("test")
-        .withThreshold(100, TimeUnit.SECONDS)
-        .withAccuracy(0.0f)
-        .build();
-    checkPercentiles(t, 60);
-  }
-
-  @Test
-  public void builderWithAccuracyTooHigh() {
-    Registry r = newRegistry();
-    PercentileTimer t = PercentileTimer.builder(r)
-        .withName("test")
-        .withThreshold(100, TimeUnit.SECONDS)
-        .withAccuracy(2.0f)
-        .build();
-    checkPercentiles(t, 10);
-  }
-
-  @Test(expected = IllegalArgumentException.class)
-  public void builderWithAccuracyTooHighPropagate() {
-    RegistryConfig cfg = k -> "propagateWarnings".equals(k) ? "true" : null;
-    Registry r = new DefaultRegistry(Clock.SYSTEM, cfg);
-    PercentileTimer.builder(r)
-        .withName("test")
-        .withAccuracy(2.0f);
-  }
-
-  @Test
-  public void builderWithAccuracyTooLow() {
-    Registry r = newRegistry();
-    PercentileTimer t = PercentileTimer.builder(r)
-        .withName("test")
-        .withThreshold(100, TimeUnit.SECONDS)
-        .withAccuracy(-1.0f)
-        .build();
-    checkPercentiles(t, 10);
-  }
-
 }

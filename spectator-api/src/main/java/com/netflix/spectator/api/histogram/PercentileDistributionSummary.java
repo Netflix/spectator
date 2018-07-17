@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * from the registry.</b> In particular they have a higher storage cost, worst case ~300x, to
  * maintain the data distribution. Be diligent about any additional dimensions added to percentile
  * distribution summaries and ensure they have a small bounded cardinality. In addition it is
- * highly recommended to set a threshold (see {@link Builder#withThreshold(long)}) whenever
+ * highly recommended to set a threshold (see {@link Builder#withRange(long, long)}) whenever
  * possible to greatly restrict the worst case overhead.</p>
  */
 public class PercentileDistributionSummary implements DistributionSummary {
@@ -62,7 +62,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
    * <b>Percentile timers are expensive compared to basic distribution summaries from the
    * registry.</b> Be diligent with ensuring that any additional dimensions have a small
    * bounded cardinality. It is also highly recommended to explicitly set the threshold
-   * (see {@link Builder#withThreshold(long)}) whenever possible.
+   * (see {@link Builder#withRange(long, long)}) whenever possible.
    *
    * @param registry
    *     Registry to use.
@@ -97,7 +97,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
 
     private Registry registry;
     private Id baseId;
-    private float accuracy;
+    private long min;
     private long max;
 
     /** Create a new instance. */
@@ -105,34 +105,8 @@ public class PercentileDistributionSummary implements DistributionSummary {
       super();
       this.registry = registry;
       this.baseId = baseId;
-      this.accuracy = 0.1f;
+      this.min = 0L;
       this.max = Long.MAX_VALUE;
-    }
-
-    /**
-     * Sets the desired accuracy for the percentile approximation when an explicit threshold is
-     * set ({@link #withThreshold(long)}). The accuracy flag is used to help reduce the
-     * cost of the percentile approximation by trading off accuracy for percentiles that are
-     * further away from the known SLA or failure threshold.
-     *
-     * @param accuracy
-     *     Value from 0.0 (least accurate) to 1.0 (most accurate). Default is 0.1.
-     * @return
-     *     This builder instance to allow chaining of operations.
-     */
-    public Builder withAccuracy(float accuracy) {
-      if (accuracy < 0.0f || accuracy > 1.0f) {
-        // Invalid value provided, use default.
-        IllegalArgumentException e = new IllegalArgumentException(
-            "Invalid accuracy value for PercentileTimer [" + baseId + "]. Expected value"
-                + " between 0 and 1, received " + accuracy + ".");
-        registry.propagate(e);
-        this.accuracy = 0.1f;
-      } else {
-        // Use the user selection.
-        this.accuracy = accuracy;
-      }
-      return this;
     }
 
     /**
@@ -146,13 +120,16 @@ public class PercentileDistributionSummary implements DistributionSummary {
      * the boundary. So we can still detect if it is nearing failure, but percentiles
      * that are further away from the threshold may be inflated compared to the actual value.
      *
-     * @param amount
-     *     Amount indicating the threshold for this summary.
+     * @param min
+     *     Amount indicating the minimum allowed value for this summary.
+     * @param max
+     *     Amount indicating the maximum allowed value for this summary.
      * @return
      *     This builder instance to allow chaining of operations.
      */
-    public Builder withThreshold(long amount) {
-      max = amount;
+    public Builder withRange(long min, long max) {
+      this.min = min;
+      this.max = max;
       return this;
     }
 
@@ -161,19 +138,6 @@ public class PercentileDistributionSummary implements DistributionSummary {
      * settings.
      */
     public PercentileDistributionSummary build() {
-      long min = 0L;
-      if (max < Long.MAX_VALUE) {
-        int maxPos = PercentileBuckets.indexOf(max);
-        int num = Math.round(Math.max(100, maxPos) * accuracy);
-        if (num < 4) {
-          // Always ensure there are a few
-          num = 4;
-        }
-
-        int minPos = maxPos - num;
-        min = (minPos > 0) ? PercentileBuckets.get(minPos) : 0L;
-      }
-
       final Id id = baseId.withTags(extraTags);
       return new PercentileDistributionSummary(registry, id, min, max);
     }

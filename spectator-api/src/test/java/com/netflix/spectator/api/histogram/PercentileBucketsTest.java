@@ -15,15 +15,11 @@
  */
 package com.netflix.spectator.api.histogram;
 
-import com.netflix.spectator.api.DefaultRegistry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -137,30 +133,8 @@ public class PercentileBucketsTest {
 
   @Test
   public void foo() {
-    long m = 1_000_000;
-    int e = PercentileBuckets.indexOf(10_000L * m);
-    int s = PercentileBuckets.indexOf(1 * m);
-    System.out.println("" + (e - s + 1));
-
-    /*for (int i = 0; i < PercentileBuckets.length(); ++i) {
-      System.out.printf("T%04X\t%.3f%n", i, PercentileBuckets.get(i) / 1e6);
-    }*/
-
-    DefaultRegistry registry = new DefaultRegistry();
-
-    Map<String, Long> SLOs = new HashMap<>();
-    SLOs.put("/api/fast", 500L);
-    SLOs.put("/api/slow", 10000L);
-    SLOs.put("/api/really-slow", 60000L);
-
-    String endpoint = "/api/fast";
-    long latency = 257L;
-
-    PercentileTimer.builder(registry)
-        .withName("server.requestLatency")
-        .withThreshold(SLOs.get(endpoint), TimeUnit.MILLISECONDS)
-        .withTag("endpoint", endpoint)
-        .build()
-        .record(latency, TimeUnit.MILLISECONDS);
+    int start = PercentileBuckets.indexOf(TimeUnit.MILLISECONDS.toNanos(10));
+    int end = PercentileBuckets.indexOf(TimeUnit.SECONDS.toNanos(60));
+    System.out.println("start = " + start + ", end = " + end + ", delta = " + (end - start + 1));
   }
 }
