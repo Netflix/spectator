@@ -45,7 +45,9 @@ final class MappingExpr {
   static String substitute(String pattern, Map<String, String> vars) {
     String value = pattern;
     for (Map.Entry<String, String> entry : vars.entrySet()) {
-      String v = Introspector.decapitalize(entry.getValue());
+      String raw = entry.getValue();
+      String v = Introspector.decapitalize(raw);
+      value = value.replace("{raw:" + entry.getKey() + "}", raw);
       value = value.replace("{" + entry.getKey() + "}", v);
     }
     return value;

@@ -48,6 +48,7 @@ class MetricsTimer extends AbstractTimer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
+    totalTime.addAndGet(unit.toNanos(amount));
     impl.update(amount, unit);
   }
 
