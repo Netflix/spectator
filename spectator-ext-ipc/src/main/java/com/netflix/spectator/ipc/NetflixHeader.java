@@ -34,6 +34,11 @@ public enum NetflixHeader {
   Zone,
 
   /**
+   * Instance id of the client or server.
+   */
+  Node,
+
+  /**
    * Route or route handler for a given path. It should have a fixed cardinality. For HTTP
    * this would need to come from the server so there is agreement and the client will report
    * the same value.
