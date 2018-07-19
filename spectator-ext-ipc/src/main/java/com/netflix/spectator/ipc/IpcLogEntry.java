@@ -1031,9 +1031,6 @@ public final class IpcLogEntry {
           case '\t':
             builder.append("\\t");
             break;
-          case ' ':
-            builder.append(' ');
-            break;
           default:
             // Ignore control characters that are not matched explicitly above
             if (!Character.isISOControl(c)) {
