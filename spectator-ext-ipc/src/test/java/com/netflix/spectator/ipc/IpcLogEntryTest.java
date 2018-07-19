@@ -17,12 +17,16 @@ package com.netflix.spectator.ipc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Registry;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
@@ -605,5 +609,32 @@ public class IpcLogEntryTest {
       }
       entry.reset();
     }
+  }
+
+  @Test
+  public void inflightRequests() {
+    Registry registry = new DefaultRegistry();
+    DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    IpcLogEntry logEntry = logger.createClientEntry();
+
+    Assert.assertEquals(0L, summary.totalAmount());
+    logEntry.markStart();
+    Assert.assertEquals(1L, summary.totalAmount());
+    logEntry.markEnd();
+    Assert.assertEquals(1L, summary.totalAmount());
+  }
+
+  @Test
+  public void inflightRequestsMany() {
+    Registry registry = new DefaultRegistry();
+    DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    for (int i = 0; i < 10; ++i) {
+      logger.createClientEntry().markStart().markEnd();
+    }
+    Assert.assertEquals((10 * 11) / 2, summary.totalAmount());
+    Assert.assertEquals(10L, summary.count());
   }
 }
