@@ -70,7 +70,7 @@ public class IpcLogger {
 
   /** Return the number of inflight requests associated with the given id. */
   AtomicInteger inflightRequests(Id id) {
-    return inflightRequests.get(id);
+    return Utils.computeIfAbsent(inflightRequests, id, i -> new AtomicInteger());
   }
 
   /**
