@@ -27,10 +27,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -276,6 +279,39 @@ public class DataExprTest {
   public void inWithGroupBy() {
     // https://github.com/Netflix/spectator/issues/391
     parse("statistic,(,totalAmount,totalTime,),:in,name,jvm.gc.pause,:eq,:and,:sum,(,nf.asg,nf.node,),:by");
+  }
+
+  @Test
+  public void nestedInClauses() {
+    Set<String> values = new TreeSet<>();
+    values.add("key");
+    values.add("(");
+    values.add("a");
+    values.add("b");
+    values.add(")");
+    values.add(":in");
+    DataExpr expected = new DataExpr.Sum(new Query.In("key", values));
+    DataExpr actual = Parser.parseDataExpr("key,(,key,(,a,b,),:in,),:in,:sum");
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void multiNestedInClauses() {
+    Set<String> values = new TreeSet<>(
+        Arrays.asList("key,(,a,(,b,(,c,),),(,),),:in".split(",")));
+    DataExpr expected = new DataExpr.Sum(new Query.In("key", values));
+    DataExpr actual = Parser.parseDataExpr("key,(,key,(,a,(,b,(,c,),),(,),),:in,),:in,:sum");
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void mismatchedOpenParen() {
+    Parser.parseDataExpr("key,(,key,(,),:in,:sum");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void mismatchedClosingParen() {
+    Parser.parseDataExpr("key,(,key,),),:in,:sum");
   }
 
   @Test
