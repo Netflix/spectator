@@ -62,6 +62,7 @@ public final class Parser {
     DataExpr.AggregateFunction af;
     Query q, q1, q2;
     String k, v;
+    int depth = 0;
     List<String> tmp;
     List<String> vs = null;
     String[] parts = expr.split(",");
@@ -71,7 +72,12 @@ public final class Parser {
       if (token.isEmpty()) {
         continue;
       }
-      if (vs != null && !")".equals(token)) {
+      if (vs != null && (depth > 0 || !")".equals(token))) {
+        if ("(".equals(token)) {
+          ++depth;
+        } else if (")".equals(token)) {
+          --depth;
+        }
         vs.add(token);
         continue;
       }
@@ -80,8 +86,12 @@ public final class Parser {
           vs = new ArrayList<>();
           break;
         case ")":
+          if (vs == null) {
+            throw new IllegalArgumentException("unmatched closing paren: " + expr);
+          }
           stack.push(vs);
           vs = null;
+          depth = 0;
           break;
         case ":true":
           stack.push(Query.TRUE);
