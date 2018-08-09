@@ -24,7 +24,6 @@ import com.netflix.servo.SpectatorContext;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.atlas.AtlasConfig;
 import com.netflix.spectator.atlas.AtlasRegistry;
-import com.netflix.spectator.servo.ServoRegistry;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Provider;
@@ -110,12 +109,19 @@ public final class SpectatorModule extends AbstractModule {
     @Inject(optional = true)
     private Config config;
 
+    @Inject(optional = true)
+    private Clock clock;
+
     Config config() {
       if (config == null) {
         LOGGER.warn("no archaius2 binding found, using empty configuration");
         config = EmptyConfig.INSTANCE;
       }
       return config;
+    }
+
+    Clock clock() {
+      return (clock == null) ? Clock.SYSTEM : clock;
     }
   }
 
@@ -141,25 +147,20 @@ public final class SpectatorModule extends AbstractModule {
     @Inject
     RegistryProvider(OptionalInjections opts) {
       Config config = opts.config();
-      if (Versions.useAtlasRegistry()) {
-        LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
-        AtlasConfig cfg = new AtlasConfig() {
-          @Override public String get(String k) {
-            final String prop = "netflix.spectator.registry." + k;
-            return config.getString(prop, null);
-          }
+      LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
+      AtlasConfig cfg = new AtlasConfig() {
+        @Override public String get(String k) {
+          final String prop = "netflix.spectator.registry." + k;
+          return config.getString(prop, null);
+        }
 
-          @Override public boolean enabled() {
-            String v = get("atlas.enabled");
-            return v != null && Boolean.valueOf(v);
-          }
-        };
-        registry = new AtlasRegistry(Clock.SYSTEM, cfg);
-        SpectatorContext.setRegistry(registry);
-      } else {
-        LOGGER.info("using ServoRegistry");
-        registry = new ServoRegistry();
-      }
+        @Override public boolean enabled() {
+          String v = get("atlas.enabled");
+          return v != null && Boolean.valueOf(v);
+        }
+      };
+      registry = new AtlasRegistry(opts.clock(), cfg);
+      SpectatorContext.setRegistry(registry);
     }
 
     @Override public Registry get() {

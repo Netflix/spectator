@@ -15,13 +15,16 @@
  */
 package com.netflix.spectator.nflx;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ExtendedRegistry;
+import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.servo.ServoRegistry;
+import com.netflix.spectator.atlas.AtlasRegistry;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,9 +34,9 @@ import org.junit.runners.JUnit4;
 public class SpectatorModuleTest {
 
   @Test
-  public void servoRegistryIsBound() {
+  public void atlasRegistryIsBound() {
     Injector injector = Guice.createInjector(new SpectatorModule());
-    Assert.assertTrue(injector.getInstance(Registry.class) instanceof ServoRegistry);
+    Assert.assertTrue(injector.getInstance(Registry.class) instanceof AtlasRegistry);
   }
 
   @Test
@@ -44,9 +47,17 @@ public class SpectatorModuleTest {
 
   @Test
   public void injectedRegistryAddedToGlobal() {
-    Injector injector = Guice.createInjector(new SpectatorModule());
+    final ManualClock clock = new ManualClock();
+    Injector injector = Guice.createInjector(
+        new AbstractModule() {
+          @Override protected void configure() {
+            bind(Clock.class).toInstance(clock);
+          }
+        },
+        new SpectatorModule());
     Registry registry = injector.getInstance(Registry.class);
     Spectator.globalRegistry().counter("test").increment();
+    clock.setWallTime(60000);
     Assert.assertEquals(1, registry.counter("test").count());
   }
 
