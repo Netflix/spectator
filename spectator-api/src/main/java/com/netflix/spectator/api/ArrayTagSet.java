@@ -321,6 +321,11 @@ final class ArrayTagSet implements Iterable<Tag> {
     }
   }
 
+  /** Return the current size of this tag set. */
+  public int size() {
+    return length / 2;
+  }
+
   @Override public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
