@@ -17,6 +17,7 @@ include 'spectator-api',
         'spectator-reg-atlas',
         'spectator-reg-metrics3',
         'spectator-reg-servo',
+        'spectator-reg-stateless',
         'spectator-web-spring'
 
 enableFeaturePreview("STABLE_PUBLISHING")

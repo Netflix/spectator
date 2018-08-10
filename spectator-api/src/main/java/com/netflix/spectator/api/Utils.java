@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -231,6 +232,26 @@ public final class Utils {
       buf.add(iter.next());
     }
     return buf;
+  }
+
+  /**
+   * Returns the size of an iterable. This method should only be used with fixed size
+   * collections. It will attempt to find an efficient method to get the size before falling
+   * back to a traversal of the iterable.
+   */
+  @SuppressWarnings("PMD.UnusedLocalVariable")
+  public static <T> int size(Iterable<T> iter) {
+    if (iter instanceof ArrayTagSet) {
+      return ((ArrayTagSet) iter).size();
+    } else if (iter instanceof Collection<?>) {
+      return ((Collection<?>) iter).size();
+    } else {
+      int size = 0;
+      for (T v : iter) {
+        ++size;
+      }
+      return size;
+    }
   }
 
   /**

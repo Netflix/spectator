@@ -1,0 +1,13 @@
+dependencies {
+  compileApi project(':spectator-api')
+  compile project(':spectator-ext-sandbox')
+  compile 'com.fasterxml.jackson.core:jackson-core'
+}
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.stateless"
+    )
+  }
+}
