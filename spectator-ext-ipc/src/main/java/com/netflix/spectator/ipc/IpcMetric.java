@@ -115,10 +115,15 @@ public enum IpcMetric {
     return cls.getSimpleName();
   }
 
+  private static boolean isPercentile(Id id) {
+    final String stat = Utils.getTagValue(id, "statistic");
+    return "percentile".equals(stat);
+  }
+
   private static void validateIpcMeter(Registry registry, IpcMetric metric, Class<?> type) {
     final String name = metric.metricName();
     registry.stream()
-        .filter(m -> name.equals(m.id().name()))
+        .filter(m -> name.equals(m.id().name()) && !isPercentile(m.id()))
         .forEach(m -> {
           assertTrue(type.isAssignableFrom(m.getClass()),
               "[%s] has the wrong type, expected %s but found %s",
