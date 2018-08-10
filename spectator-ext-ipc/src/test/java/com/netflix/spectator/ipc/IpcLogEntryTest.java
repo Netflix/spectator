@@ -653,6 +653,21 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void clientMetricsValidateHttpSuccess() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createClientEntry()
+        .withOwner("test")
+        .markStart()
+        .markEnd()
+        .withHttpStatus(200)
+        .log();
+
+    IpcMetric.validate(registry);
+  }
+
+  @Test
   public void serverMetricsValidate() {
     Registry registry = new DefaultRegistry();
     IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
