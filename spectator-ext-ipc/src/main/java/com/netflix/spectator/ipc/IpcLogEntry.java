@@ -227,6 +227,9 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withException(Throwable exception) {
     this.exception = exception;
+    if (errorReason == null) {
+      errorReason = exception.getClass().getSimpleName();
+    }
     return this;
   }
 
@@ -572,13 +575,6 @@ public final class IpcLogEntry {
     return result;
   }
 
-  private String getErrorReason() {
-    if (isNullOrEmpty(errorReason) && exception != null) {
-      errorReason = exception.getClass().getSimpleName();
-    }
-    return errorReason;
-  }
-
   private IpcAttempt getAttempt() {
     if (attempt == null) {
       attempt = IpcAttempt.forAttemptNumber(1);
@@ -635,7 +631,7 @@ public final class IpcLogEntry {
     putTag(tags, IpcTagKey.endpoint.key(), endpoint);
     putTag(tags, IpcTagKey.vip.key(), vip);
     putTag(tags, IpcTagKey.protocol.key(), protocol);
-    putTag(tags, IpcTagKey.errorReason.key(), getErrorReason());
+    putTag(tags, IpcTagKey.errorReason.key(), errorReason);
     putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
     if (httpStatus >= 100 && httpStatus < 600) {
       putTag(tags, IpcTagKey.httpStatus.key(), "" + httpStatus);

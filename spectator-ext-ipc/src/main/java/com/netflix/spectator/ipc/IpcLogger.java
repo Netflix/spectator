@@ -21,6 +21,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.CardinalityLimiters;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.slf4j.event.Level;
@@ -66,6 +67,11 @@ public class IpcLogger {
   /** Create a new instance. */
   public IpcLogger(Registry registry, Logger logger) {
     this(registry, Clock.SYSTEM, logger);
+  }
+
+  /** Create a new instance. */
+  public IpcLogger(Registry registry) {
+    this(registry, Clock.SYSTEM, LoggerFactory.getLogger(IpcLogger.class));
   }
 
   /** Return the number of inflight requests associated with the given id. */

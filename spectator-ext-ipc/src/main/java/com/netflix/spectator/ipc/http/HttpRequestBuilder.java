@@ -18,7 +18,7 @@ package com.netflix.spectator.ipc.http;
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
-import com.netflix.spectator.ipc.NetflixHeader;
+import com.netflix.spectator.ipc.NetflixHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,37 +46,8 @@ import java.util.zip.Deflater;
 public class HttpRequestBuilder {
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequestBuilder.class);
 
-  private static final String[] NETFLIX_ASG = {
-      "NETFLIX_AUTO_SCALE_GROUP",
-      "CLOUD_AUTO_SCALE_GROUP"
-  };
-
-  private static final String[] NETFLIX_NODE = {
-      "TITUS_TASK_ID",
-      "EC2_INSTANCE_ID"
-  };
-
-  private static final String[] NETFLIX_ZONE = {
-      "EC2_AVAILABILITY_ZONE"
-  };
-
-  private static final Map<String, String> NETFLIX_HEADERS = new LinkedHashMap<>();
-
-  static {
-    addHeader(NetflixHeader.ASG, NETFLIX_ASG);
-    addHeader(NetflixHeader.Node, NETFLIX_NODE);
-    addHeader(NetflixHeader.Zone, NETFLIX_ZONE);
-  }
-
-  private static void addHeader(NetflixHeader header, String[] names) {
-    for (String name : names) {
-      String value = System.getenv(name);
-      if (value != null && !value.isEmpty()) {
-        NETFLIX_HEADERS.put(header.headerName(), value);
-        break;
-      }
-    }
-  }
+  private static final Map<String, String> NETFLIX_HEADERS =
+      NetflixHeaders.extractFromEnvironment();
 
   private final URI uri;
   private final IpcLogEntry entry;
@@ -97,6 +68,7 @@ public class HttpRequestBuilder {
   HttpRequestBuilder(IpcLogger logger, URI uri) {
     this.uri = uri;
     this.entry = logger.createClientEntry()
+        .withOwner("spectator")
         .withUri(uri)
         .withHttpMethod(method);
     this.reqHeaders.putAll(NETFLIX_HEADERS);
