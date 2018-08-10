@@ -435,6 +435,9 @@ public final class IpcLogEntry {
     if (result == null) {
       withResult((status < 400) ? IpcResult.success : IpcResult.failure);
     }
+    if (errorReason == null && status >= 400 & status < 600) {
+      errorReason = "HTTP_" + status;
+    }
     if (errorGroup == null) {
       switch (status) {
         case 429:
@@ -570,12 +573,8 @@ public final class IpcLogEntry {
   }
 
   private String getErrorReason() {
-    if (isNullOrEmpty(errorReason)) {
-      if (exception != null) {
-        errorReason = exception.getClass().getSimpleName();
-      } else if (httpStatus > 0) {
-        errorReason = "HTTP_" + httpStatus;
-      }
+    if (isNullOrEmpty(errorReason) && exception != null) {
+      errorReason = exception.getClass().getSimpleName();
     }
     return errorReason;
   }
