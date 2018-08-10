@@ -29,6 +29,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -141,5 +142,17 @@ public class IpcServletFilter implements Filter {
         entry.addResponseHeader(header, value);
       }
     }
+  }
+
+  //
+  // In the servlet-api 4.x versions there are default implementations of the methods
+  // below. To avoid AbstractMethodErrors when running on older versions, we explicitly
+  // override them with empty implementations.
+  //
+
+  @Override public void init(FilterConfig filterConfig) throws ServletException {
+  }
+
+  @Override public void destroy() {
   }
 }
