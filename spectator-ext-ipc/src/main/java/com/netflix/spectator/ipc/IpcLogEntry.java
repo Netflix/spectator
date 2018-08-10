@@ -550,7 +550,9 @@ public final class IpcLogEntry {
   }
 
   private void putTag(Map<String, String> tags, Tag tag) {
-    tags.put(tag.key(), tag.value());
+    if (tag != null) {
+      tags.put(tag.key(), tag.value());
+    }
   }
 
   private void putTag(Map<String, String> tags, String k, String v) {
@@ -558,6 +560,13 @@ public final class IpcLogEntry {
       String value = logger.limiterForKey(k).apply(v);
       tags.put(k, value);
     }
+  }
+
+  private IpcResult getResult() {
+    if (result == null) {
+      result = errorGroup == null ? IpcResult.success : IpcResult.failure;
+    }
+    return result;
   }
 
   private String getErrorReason() {
@@ -569,6 +578,20 @@ public final class IpcLogEntry {
       }
     }
     return errorReason;
+  }
+
+  private IpcAttempt getAttempt() {
+    if (attempt == null) {
+      attempt = IpcAttempt.forAttemptNumber(1);
+    }
+    return attempt;
+  }
+
+  private IpcAttemptFinal getAttemptFinal() {
+    if (attemptFinal == null) {
+      attemptFinal = IpcAttemptFinal.is_true;
+    }
+    return attemptFinal;
   }
 
   private boolean isClient() {
@@ -586,13 +609,13 @@ public final class IpcLogEntry {
 
     // Required for both client and server
     putTag(tags, IpcTagKey.owner.key(), owner);
-    putTag(tags, result);
+    putTag(tags, getResult());
     putTag(tags, errorGroup);
 
     if (isClient()) {
       // Required for client, should be null on server
-      putTag(tags, attempt);
-      putTag(tags, attemptFinal);
+      putTag(tags, getAttempt());
+      putTag(tags, getAttemptFinal());
 
       // Optional for client
       putTag(tags, IpcTagKey.serverRegion.key(), serverRegion);
@@ -615,6 +638,9 @@ public final class IpcLogEntry {
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.errorReason.key(), getErrorReason());
     putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
+    if (httpStatus >= 100 && httpStatus < 600) {
+      putTag(tags, IpcTagKey.httpStatus.key(), "" + httpStatus);
+    }
 
     return registry.createId(name, tags);
   }
