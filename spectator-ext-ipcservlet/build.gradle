@@ -2,7 +2,8 @@ dependencies {
   compileApi project(':spectator-api')
   compileApi project(':spectator-ext-ipc')
   compile 'javax.inject:javax.inject:1'
-  compile 'javax.servlet:javax.servlet-api:4.0.1'
+  compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
+  testCompile 'javax.servlet:javax.servlet-api:4.0.1' // compileOnly is not included for tests
   testCompile 'org.eclipse.jetty:jetty-servlet:9.4.11.v20180605'
   testCompile 'org.eclipse.jetty:jetty-webapp:9.4.11.v20180605'
   testCompile 'com.google.inject.extensions:guice-servlet:4.1.0'

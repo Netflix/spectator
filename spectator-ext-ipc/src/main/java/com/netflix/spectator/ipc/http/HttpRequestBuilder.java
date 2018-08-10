@@ -18,7 +18,6 @@ package com.netflix.spectator.ipc.http;
 import com.netflix.spectator.impl.Preconditions;
 import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
-import com.netflix.spectator.ipc.NetflixHeader;
 import com.netflix.spectator.ipc.NetflixHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
