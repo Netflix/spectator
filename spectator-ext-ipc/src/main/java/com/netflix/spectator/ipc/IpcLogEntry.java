@@ -573,10 +573,8 @@ public final class IpcLogEntry {
   }
 
   private String getErrorReason() {
-    if (isNullOrEmpty(errorReason)) {
-      if (exception != null) {
-        errorReason = exception.getClass().getSimpleName();
-      }
+    if (isNullOrEmpty(errorReason) && exception != null) {
+      errorReason = exception.getClass().getSimpleName();
     }
     return errorReason;
   }
