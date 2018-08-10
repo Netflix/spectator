@@ -118,6 +118,18 @@ public class IpcMetricTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
+  public void validateIdErrorReasonOnSuccess() {
+    Id id = registry.createId(IpcMetric.clientCall.metricName())
+        .withTag(IpcTagKey.owner.tag("test"))
+        .withTag(IpcResult.success)
+        .withTag(IpcErrorGroup.general)
+        .withTag(IpcTagKey.errorReason.tag("foo"))
+        .withTag(IpcAttempt.initial)
+        .withTag(IpcTagKey.attemptFinal.key(), true);
+    IpcMetric.clientCall.validate(id);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
   public void validateIdBadResultValue() {
     Id id = registry.createId(IpcMetric.clientCall.metricName())
         .withTag(IpcTagKey.owner.tag("test"))

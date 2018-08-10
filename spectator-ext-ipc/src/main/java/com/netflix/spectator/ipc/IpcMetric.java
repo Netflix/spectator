@@ -185,15 +185,19 @@ public enum IpcMetric {
       assertTrue(value != null, "[%s] is missing required dimension %s", id, k.key());
     });
 
-    // Check that error group is only present for failed requests
+    // Check that error group and error reason are only present for failed requests
     if (requiredDimensions.contains(IpcTagKey.errorGroup)) {
       String result = Utils.getTagValue(id, IpcTagKey.result.key());
       String errorGroup = Utils.getTagValue(id, IpcTagKey.errorGroup.key());
+      String errorReason = Utils.getTagValue(id, IpcTagKey.errorReason.key());
       switch (result) {
         case "success":
           assertTrue(errorGroup == null,
               "[%s] %s should not be present on successful request",
               id, IpcTagKey.errorGroup.key());
+          assertTrue(errorReason == null,
+              "[%s] %s should not be present on successful request",
+              id, IpcTagKey.errorReason.key());
           break;
         case "failure":
           assertTrue(errorGroup != null,
