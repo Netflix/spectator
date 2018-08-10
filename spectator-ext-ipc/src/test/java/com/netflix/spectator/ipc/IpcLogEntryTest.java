@@ -637,4 +637,32 @@ public class IpcLogEntryTest {
     Assert.assertEquals((10 * 11) / 2, summary.totalAmount());
     Assert.assertEquals(10L, summary.count());
   }
+
+  @Test
+  public void clientMetricsValidate() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createClientEntry()
+        .withOwner("test")
+        .markStart()
+        .markEnd()
+        .log();
+
+    IpcMetric.validate(registry);
+  }
+
+  @Test
+  public void serverMetricsValidate() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .markStart()
+        .markEnd()
+        .log();
+
+    IpcMetric.validate(registry);
+  }
 }
