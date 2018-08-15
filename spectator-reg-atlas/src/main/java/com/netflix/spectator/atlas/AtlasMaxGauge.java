@@ -44,7 +44,7 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
   }
 
   @Override public Iterable<Measurement> measure() {
-    final Measurement m = new Measurement(stat, clock.wallTime(), value());
+    final Measurement m = new Measurement(stat, value.timestamp(), value());
     return Collections.singletonList(m);
   }
 
