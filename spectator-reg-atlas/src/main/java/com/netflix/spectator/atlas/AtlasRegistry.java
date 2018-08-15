@@ -60,7 +60,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
 
-  private final Clock clock;
+  private final Clock stepClock;
 
   private final boolean enabled;
   private final Duration step;
@@ -92,8 +92,8 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
-    super(new StepClock(clock, config.step().toMillis()), config);
-    this.clock = clock;
+    super(clock, config);
+    this.stepClock = new StepClock(clock, config.step().toMillis());
 
     this.enabled = config.enabled();
     this.step = config.step();
@@ -161,7 +161,7 @@ public final class AtlasRegistry extends AbstractRegistry {
    * during a collection. Randomly distribute across the middle of the step interval.
    */
   long getInitialDelay(long stepSize) {
-    long now = clock.wallTime();
+    long now = clock().wallTime();
     long stepBoundary = now / stepSize * stepSize;
 
     // Buffer by 10% of the step interval on either side
@@ -271,7 +271,7 @@ public final class AtlasRegistry extends AbstractRegistry {
         logger.warn("failed to update subscriptions, received status {}", res.status());
       } else {
         Subscriptions subs = jsonMapper.readValue(res.entity(), Subscriptions.class);
-        long now = clock.wallTime();
+        long now = clock().wallTime();
         subs.update(subscriptions, now, now + configTTL);
       }
     } catch (Exception e) {
@@ -290,7 +290,7 @@ public final class AtlasRegistry extends AbstractRegistry {
     if (responseTimestamp == 0L) {
       logger.debug("no date timestamp on response, cannot record skew");
     } else {
-      final long delta = clock.wallTime() - responseTimestamp;
+      final long delta = clock().wallTime() - responseTimestamp;
       if (delta >= 0L) {
         // Local clock is running fast compared to the server. Note this should also be the
         // common case for if the clocks are in sync as there will be some delay for the server
@@ -347,24 +347,24 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   @Override protected Counter newCounter(Id id) {
-    return new AtlasCounter(id, clock, meterTTL, stepMillis);
+    return new AtlasCounter(id, clock(), meterTTL, stepMillis);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    return new AtlasDistributionSummary(id, clock, meterTTL, stepMillis);
+    return new AtlasDistributionSummary(id, clock(), meterTTL, stepMillis);
   }
 
   @Override protected Timer newTimer(Id id) {
-    return new AtlasTimer(id, clock, meterTTL, stepMillis);
+    return new AtlasTimer(id, clock(), meterTTL, stepMillis);
   }
 
   @Override protected Gauge newGauge(Id id) {
     // Be sure to get StepClock so the measurements will have step aligned
     // timestamps.
-    return new AtlasGauge(id, clock(), meterTTL);
+    return new AtlasGauge(id, stepClock, meterTTL);
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
-    return new AtlasMaxGauge(id, clock, meterTTL, stepMillis);
+    return new AtlasMaxGauge(id, clock(), meterTTL, stepMillis);
   }
 }
