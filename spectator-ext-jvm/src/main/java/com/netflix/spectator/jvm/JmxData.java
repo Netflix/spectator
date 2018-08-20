@@ -79,7 +79,7 @@ class JmxData {
         attrNames[i] = attrs[i].getName();
       }
 
-      Map<String, String> stringAttrs = new HashMap<>(name.getKeyPropertyList());
+      Map<String, String> stringAttrs = new HashMap<>();
       stringAttrs.put("domain", name.getDomain());
       Map<String, Number> numberAttrs = new HashMap<>();
 
@@ -113,6 +113,10 @@ class JmxData {
           stringAttrs.put(attr.getName(), obj.toString());
         }
       }
+
+      // Add properties from ObjectName after attributes to ensure they have a higher
+      // priority if the same key is used both in the Object and as an attribute
+      stringAttrs.putAll(name.getKeyPropertyList());
 
       data.add(new JmxData(name, stringAttrs, numberAttrs));
     }
