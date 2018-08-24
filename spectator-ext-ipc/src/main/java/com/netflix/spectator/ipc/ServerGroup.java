@@ -139,6 +139,11 @@ public class ServerGroup {
     return (d1 != 0 && d2 > 0) ? substr(asg, d2 + 1, dN) : null;
   }
 
+  /** If the server group has a sequence number, then return it. Otherwise return null. */
+  public String sequence() {
+    return dN == asg.length() ? null : substr(asg, dN + 1, asg.length());
+  }
+
   @Override public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
