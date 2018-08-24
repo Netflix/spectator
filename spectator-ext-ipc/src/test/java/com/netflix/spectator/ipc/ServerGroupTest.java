@@ -64,6 +64,12 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getSequenceForApp() {
+    String asg = "app";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
+  }
+
+  @Test
   public void parseAppStack() {
     String asg = "app-stack";
     ServerGroup expected = new ServerGroup(asg, 3, -1, asg.length());
@@ -98,6 +104,12 @@ public class ServerGroupTest {
   public void getDetailForAppStack() {
     String asg = "app-stack";
     Assert.assertNull(ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getSequenceForAppStack() {
+    String asg = "app-stack";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
   }
 
   @Test
@@ -138,6 +150,12 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getSequenceForAppStackDetail() {
+    String asg = "app-stack-detail";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
+  }
+
+  @Test
   public void parseAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
     ServerGroup expected = new ServerGroup(asg, 3, 9, asg.length());
@@ -172,6 +190,12 @@ public class ServerGroupTest {
   public void getDetailForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
     Assert.assertEquals("detail_1-detail_2", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getSequenceForAppStackDetails() {
+    String asg = "app-stack-detail_1-detail_2";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
   }
 
   @Test
@@ -212,6 +236,12 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getSequenceForAppDetail() {
+    String asg = "app--detail";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
+  }
+
+  @Test
   public void parseAppSeq() {
     String asg = "app-v001";
     ServerGroup expected = new ServerGroup(asg, 3, -1, asg.length() - 5);
@@ -246,6 +276,12 @@ public class ServerGroupTest {
   public void getDetailForAppSeq() {
     String asg = "app-v001";
     Assert.assertNull(ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getSequenceForAppSeq() {
+    String asg = "app-v001";
+    Assert.assertEquals("v001", ServerGroup.parse(asg).sequence());
   }
 
   @Test
@@ -286,6 +322,12 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getSequenceForAppStackSeq() {
+    String asg = "app-stack-v001";
+    Assert.assertEquals("v001", ServerGroup.parse(asg).sequence());
+  }
+
+  @Test
   public void parseAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
     ServerGroup expected = new ServerGroup(asg, 3, 9, asg.length() - 5);
@@ -320,6 +362,12 @@ public class ServerGroupTest {
   public void getDetailForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
     Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getSequenceForAppStackDetailSeq() {
+    String asg = "app-stack-detail-v001";
+    Assert.assertEquals("v001", ServerGroup.parse(asg).sequence());
   }
 
   @Test
@@ -360,6 +408,12 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getSequenceForAppStackDetailsSeq() {
+    String asg = "app-stack-detail_1-detail_2-v001";
+    Assert.assertEquals("v001", ServerGroup.parse(asg).sequence());
+  }
+
+  @Test
   public void parseAppDetailSeq() {
     String asg = "app--detail-v001";
     ServerGroup expected = new ServerGroup(asg, 3, 4, asg.length() - 5);
@@ -394,6 +448,12 @@ public class ServerGroupTest {
   public void getDetailForAppDetailSeq() {
     String asg = "app--detail-v001";
     Assert.assertEquals("detail", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getSequenceForAppDetailSeq() {
+    String asg = "app--detail-v001";
+    Assert.assertEquals("v001", ServerGroup.parse(asg).sequence());
   }
 
   @Test
@@ -451,6 +511,13 @@ public class ServerGroupTest {
     String asg = "";
     Assert.assertNull(ServerGroup.parse(asg).detail());
   }
+
+  @Test
+  public void getSequenceForEmptyString() {
+    String asg = "";
+    Assert.assertNull(ServerGroup.parse(asg).sequence());
+  }
+
 
   private void appendRandomString(Random r, StringBuilder builder) {
     int length = r.nextInt(20);
