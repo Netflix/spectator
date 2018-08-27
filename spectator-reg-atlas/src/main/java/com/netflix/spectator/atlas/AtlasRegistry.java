@@ -243,7 +243,7 @@ public final class AtlasRegistry extends AbstractRegistry {
           .map(this::newTagsValuePair)
           .collect(Collectors.toList());
       Evaluator evaluator = new Evaluator().addGroupSubscriptions("local", subs);
-      EvalPayload payload = evaluator.eval("local", clock().wallTime(), ms);
+      EvalPayload payload = evaluator.eval("local", stepClock.wallTime(), ms);
       try {
         String json = jsonMapper.writeValueAsString(payload);
         HttpClient.DEFAULT.newRequest("spectator-lwc-eval", evalUri)
