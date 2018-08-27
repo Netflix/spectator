@@ -270,13 +270,22 @@ public final class AtlasRegistry extends AbstractRegistry {
       if (res.status() != 200) {
         logger.warn("failed to update subscriptions, received status {}", res.status());
       } else {
-        Subscriptions subs = jsonMapper.readValue(res.entity(), Subscriptions.class);
+        Subscriptions subs = filterByStep(jsonMapper.readValue(res.entity(), Subscriptions.class));
         long now = clock().wallTime();
         subs.update(subscriptions, now, now + configTTL);
       }
     } catch (Exception e) {
       logger.warn("failed to send metrics", e);
     }
+  }
+
+  private Subscriptions filterByStep(Subscriptions subs) {
+    List<Subscription> subscriptions = subs
+        .getExpressions()
+        .stream()
+        .filter(s -> s.getFrequency() == stepMillis)
+        .collect(Collectors.toList());
+    return new Subscriptions().withExpressions(subscriptions);
   }
 
   /**
