@@ -56,11 +56,6 @@ public class ServerGroup {
     return true;
   }
 
-  /**
-   * The substring method will create a copy of the substring in JDK 8 and probably newer
-   * versions. To reduce the number of allocations we use a char buffer to return a view
-   * with just that subset.
-   */
   private static String substr(String str, int s, int e) {
     return (s >= e) ? null : str.substring(s, e);
   }
