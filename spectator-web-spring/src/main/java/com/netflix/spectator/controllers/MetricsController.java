@@ -137,6 +137,9 @@ public class MetricsController {
         if (!filter.test(measurement)) {
           continue;
         }
+        if (Double.isNaN(measurement.value())) {
+          continue;
+        }
 
         String measurementName = measurement.id().name();
         MetricValues have = metricMap.get(measurementName);

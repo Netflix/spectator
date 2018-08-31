@@ -130,6 +130,20 @@ public class MetricsControllerTest {
   }
 
   @Test
+  public void testIgnoreNan() {
+    Id id = idB.withTag("tagA", "Z");
+    Measurement measure = new Measurement(id, 100, Double.NaN);
+    Meter meter = new TestMeter("ignoreZ", measure);
+
+    DefaultRegistry registry = new DefaultRegistry(clock);
+    registry.register(meter);
+
+    HashMap<String, MetricValues> expect = new HashMap<>();
+    PolledMeter.update(registry);
+    Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
+  }
+
+  @Test
   public void testEncodeCompositeRegistry() {
     // Multiple occurrences of measurements in the same registry
     // (confirm these are handled within the registry itself).
