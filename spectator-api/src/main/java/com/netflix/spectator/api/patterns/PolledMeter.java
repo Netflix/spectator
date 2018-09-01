@@ -22,6 +22,8 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
 import java.time.Duration;
@@ -75,6 +77,8 @@ import java.util.function.ToLongFunction;
  * registrations.</p>
  */
 public final class PolledMeter {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(PolledMeter.class);
 
   private PolledMeter() {
   }
@@ -380,7 +384,12 @@ public final class PolledMeter {
       if (hasExpired()) {
         registry.state().remove(id());
       } else {
-        update(registry);
+        try {
+          update(registry);
+        } catch (Throwable t) {
+          LOGGER.trace("uncaught exception from gauge function for [{}]", id(), t);
+          throw t;
+        }
       }
     }
 
@@ -389,9 +398,9 @@ public final class PolledMeter {
       if (!scheduled) {
         WeakReference<AbstractMeterState> tupleRef = new WeakReference<>(this);
         if (executor == null) {
-          GaugePoller.schedule(tupleRef, delay, t -> t.update(registry));
+          GaugePoller.schedule(tupleRef, delay, t -> t.doUpdate(registry));
         } else {
-          GaugePoller.schedule(executor, tupleRef, delay, t -> t.update(registry));
+          GaugePoller.schedule(executor, tupleRef, delay, t -> t.doUpdate(registry));
         }
         scheduled = true;
       }
@@ -437,6 +446,10 @@ public final class PolledMeter {
           iter.remove();
         }
       }
+      if (pairs.isEmpty()) {
+        LOGGER.trace("gauge [{}] has expired", gauge.id());
+      }
+      LOGGER.trace("setting gauge [{}] to {}", gauge.id(), sum);
       gauge.set(sum);
     }
   }
@@ -500,11 +513,15 @@ public final class PolledMeter {
           }
         }
       }
+      if (queue.isEmpty()) {
+        LOGGER.trace("meter [{}] has expired", id);
+      }
       return measurements.values();
     }
 
     @Override protected void update(Registry registry) {
       for (Measurement m : measure()) {
+        LOGGER.trace("setting gauge [{}] to {}", m.id(), m.value());
         registry.gauge(m.id()).set(m.value());
       }
     }
@@ -544,6 +561,9 @@ public final class PolledMeter {
           state.update(counter);
         }
       }
+      if (entries.isEmpty()) {
+        LOGGER.trace("monotonic counter [{}] has expired", id());
+      }
     }
   }
 
@@ -565,7 +585,12 @@ public final class PolledMeter {
       if (obj != null) {
         long current = f.applyAsLong(obj);
         if (current > previous) {
-          counter.increment(current - previous);
+          final long delta = current - previous;
+          LOGGER.trace("incrementing counter [{}] by {}", counter.id(), delta);
+          counter.increment(delta);
+        } else {
+          LOGGER.trace("no update to counter [{}]: previous = {}, current = {}",
+              counter.id(), previous, current);
         }
         previous = current;
       }
