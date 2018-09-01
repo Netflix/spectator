@@ -532,4 +532,15 @@ public class RegistryTest {
       Assert.assertEquals(1, registry.counter("test").count());
     }
   }
+
+  @Test(expected = RuntimeException.class)
+  public void uncaughtExceptionFromGaugeFunction() {
+    Registry registry = new DefaultRegistry();
+    PolledMeter.using(registry)
+        .withName("test")
+        .monitorValue(new RuntimeException("failure"), value -> {
+          throw value;
+        });
+    PolledMeter.update(registry);
+  }
 }
