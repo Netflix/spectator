@@ -380,6 +380,7 @@ public final class PolledMeter {
      * Update the registry if this meter is not expired, otherwise cleanup any state
      * associated with this meter.
      */
+    @SuppressWarnings("PMD.AvoidCatchingThrowable")
     void doUpdate(Registry registry) {
       if (hasExpired()) {
         registry.state().remove(id());
