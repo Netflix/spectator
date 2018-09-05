@@ -16,11 +16,14 @@
 
 package com.netflix.spectator.controllers;
 
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 
 import com.netflix.spectator.controllers.filter.PrototypeMeasurementFilter;
 import com.netflix.spectator.controllers.filter.TagMeasurementFilter;
@@ -141,10 +144,10 @@ public class MetricsController {
           continue;
         }
 
-        String measurementName = measurement.id().name();
-        MetricValues have = metricMap.get(measurementName);
+        String meterName = measurement.id().name();
+        MetricValues have = metricMap.get(meterName);
         if (have == null) {
-          metricMap.put(measurementName, new MetricValues(kind, measurement));
+          metricMap.put(meterName, new MetricValues(kind, measurement));
         } else {
           have.addMeasurement(measurement);
         }
@@ -155,23 +158,6 @@ public class MetricsController {
 
   /**
    * Determine the type of a meter for reporting purposes.
-   *
-   * The accuracy of this method is sensitive to the registry value.
-   * In practice meters are often AggrMeter or CompositeMeter so it
-   * is not worth testing the class against the interface because it
-   * is rarely an actual kind. For lack of a direct way to query
-   * we will iterate over all the instances in the registry of a given
-   * type using the registry stream getters.
-   *
-   * 20160918(ewiseblatt):
-   * However, this doesnt work either unless the registry instance
-   * we have is exactly right and spring seems to get in the way.
-   * If the registry was a bean, you might need to autowire it.
-   * But it isnt clear if all the metrics are created through that
-   * registry. The Spectator.globalRegistry, for example, iterates over
-   * all the meters using the generic iterator, but the kind-specific
-   * stream functions are empty if the registry was created as a spring
-   * bean so you need to passing in an @autowired registry.
    *
    * @param registry
    *    Used to provide supplemental information (e.g. to search for the meter).
@@ -186,17 +172,14 @@ public class MetricsController {
    */
   public static String meterToKind(Registry registry, Meter meter) {
     String kind;
-    if (registry.counters()
-              .anyMatch(m -> m.id().equals(meter.id()))) {
-      kind = "Counter";
-    } else if (registry.timers()
-              .anyMatch(m -> m.id().equals(meter.id()))) {
+    if (meter instanceof Timer) {
       kind = "Timer";
-    } else if (registry.distributionSummaries()
-              .anyMatch(m -> m.id().equals(meter.id()))) {
-      kind = "Distribution";
+    } else if (meter instanceof Counter) {
+      kind = "Counter";
     } else if (meter instanceof Gauge) {
       kind = "Gauge";
+    } else if (meter instanceof DistributionSummary) {
+      kind = "DistributionSummary";
     } else {
       kind = meter.getClass().getSimpleName();
     }
