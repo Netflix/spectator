@@ -27,6 +27,7 @@ import com.netflix.spectator.atlas.AtlasRegistry;
 
 import javax.annotation.PreDestroy;
 import javax.inject.Provider;
+import javax.inject.Singleton;
 
 import com.google.inject.AbstractModule;
 import com.netflix.spectator.api.ExtendedRegistry;
@@ -140,9 +141,10 @@ public final class SpectatorModule extends AbstractModule {
     }
   }
 
-  private static class RegistryProvider implements Provider<Registry> {
+  @Singleton
+  private static class RegistryProvider implements Provider<Registry>, AutoCloseable {
 
-    private final Registry registry;
+    private final AtlasRegistry registry;
 
     @Inject
     RegistryProvider(OptionalInjections opts) {
@@ -160,7 +162,12 @@ public final class SpectatorModule extends AbstractModule {
         }
       };
       registry = new AtlasRegistry(opts.clock(), cfg);
+      registry.start();
       SpectatorContext.setRegistry(registry);
+    }
+
+    public void close() {
+      registry.stop();
     }
 
     @Override public Registry get() {
