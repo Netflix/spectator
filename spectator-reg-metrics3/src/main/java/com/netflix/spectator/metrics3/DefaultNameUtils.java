@@ -16,14 +16,21 @@
 package com.netflix.spectator.metrics3;
 
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Utils;
 
 /**
- * Utility interface with methods for creating names to Metrics based on
- * Spectator {@link com.netflix.spectator.api.Id}.
+ * Utility class with static methods for creating names to Metrics based on Spectator
+ * {@link com.netflix.spectator.api.Id}.
  *
- * @author Robert Farr
+ * @author Kennedy Oliveira
  */
-public interface NameUtils {
+final class DefaultNameUtils implements NameUtils {
+
+  /**
+   * Utility Class.
+   */
+  private DefaultNameUtils() { }
 
   /**
    * Convert an Spectator {@link Id} to metrics3 name.
@@ -31,5 +38,18 @@ public interface NameUtils {
    * @param id Spectator {@link Id}
    * @return Metrics3 name
    */
-  public String toMetricName(Id id);
+  public String toMetricName(Id id) {
+    Id normalized = Utils.normalize(id);
+    StringBuilder buf = new StringBuilder();
+    buf.append(normalized.name());
+    for (Tag t : normalized.tags()) {
+      buf.append('.').append(t.key()).append('-').append(t.value());
+    }
+    return buf.toString();
+  }
+
+  /**
+   * Default instance.
+   */
+  static NameUtils INSTANCE = new DefaultNameUtils();
 }

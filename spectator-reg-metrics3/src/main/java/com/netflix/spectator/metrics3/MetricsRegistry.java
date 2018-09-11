@@ -27,13 +27,12 @@ import com.netflix.spectator.api.Timer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
-
 /** Registry implementation that maps spectator types to the metrics3 library. */
 public class MetricsRegistry extends AbstractRegistry {
 
   private final com.codahale.metrics.MetricRegistry impl;
   private final Map<String, DoubleGauge> registeredGauges;
+  private final NameUtils nameUtil;
 
   /** Create a new instance. */
   public MetricsRegistry() {
@@ -42,9 +41,19 @@ public class MetricsRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
+    this(clock, impl, DefaultNameUtils.INSTANCE);
+  }
+
+  /** Create a new instance. */
+  public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl, NameUtils nameUtil) {
     super(clock);
     this.impl = impl;
     this.registeredGauges = new ConcurrentHashMap<>();
+    this.nameUtil = nameUtil;
+  }
+
+  private String toMetricName(Id id) {
+    return nameUtil.toMetricName(id);
   }
 
   @Override protected Counter newCounter(Id id) {
