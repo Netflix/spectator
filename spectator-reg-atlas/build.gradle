@@ -1,6 +1,6 @@
 dependencies {
   compileApi project(':spectator-api')
-  compile project(':spectator-ext-sandbox')
+  compile project(':spectator-ext-ipc')
   compile 'com.fasterxml.jackson.core:jackson-core'
   compile 'com.fasterxml.jackson.core:jackson-databind'
   compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile'

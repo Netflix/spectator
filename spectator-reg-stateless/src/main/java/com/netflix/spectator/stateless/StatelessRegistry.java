@@ -24,8 +24,8 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.Scheduler;
-import com.netflix.spectator.sandbox.HttpClient;
-import com.netflix.spectator.sandbox.HttpResponse;
+import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpResponse;
 
 import java.net.URI;
 import java.time.Duration;
@@ -56,6 +56,8 @@ public final class StatelessRegistry extends AbstractRegistry {
   private final int batchSize;
   private final Map<String, String> commonTags;
 
+  private final HttpClient client;
+
   private Scheduler scheduler;
 
   /** Create a new instance. */
@@ -69,6 +71,7 @@ public final class StatelessRegistry extends AbstractRegistry {
     this.uri = URI.create(config.uri());
     this.batchSize = config.batchSize();
     this.commonTags = config.commonTags();
+    this.client = HttpClient.create(this);
   }
 
   /**
@@ -112,9 +115,7 @@ public final class StatelessRegistry extends AbstractRegistry {
     try {
       for (List<Measurement> batch : getBatches()) {
         byte[] payload = JsonUtils.encode(commonTags, batch);
-        HttpResponse res = HttpClient.DEFAULT
-            .newRequest("spectator-reg-stateless", uri)
-            .withMethod("POST")
+        HttpResponse res = client.post(uri)
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
             .withContent("application/json", payload)
