@@ -37,8 +37,8 @@ import com.netflix.spectator.atlas.impl.Subscriptions;
 import com.netflix.spectator.atlas.impl.TagsValuePair;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
-import com.netflix.spectator.sandbox.HttpClient;
-import com.netflix.spectator.sandbox.HttpResponse;
+import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpResponse;
 
 import java.net.URI;
 import java.time.Duration;
@@ -86,6 +86,8 @@ public final class AtlasRegistry extends AbstractRegistry {
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
 
+  private final HttpClient client;
+
   private Scheduler scheduler;
 
   private final Map<Subscription, Long> subscriptions = new ConcurrentHashMap<>();
@@ -121,6 +123,8 @@ public final class AtlasRegistry extends AbstractRegistry {
         .addSerializer(Measurement.class, new MeasurementSerializer(charset, overrides));
     this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
+
+    this.client = HttpClient.create(this);
   }
 
   /**
@@ -207,8 +211,7 @@ public final class AtlasRegistry extends AbstractRegistry {
       try {
         for (List<Measurement> batch : getBatches()) {
           PublishPayload p = new PublishPayload(commonTags, batch);
-          HttpResponse res = HttpClient.DEFAULT.newRequest("spectator-reg-atlas", uri)
-              .withMethod("POST")
+          HttpResponse res = client.post(uri)
               .withConnectTimeout(connectTimeout)
               .withReadTimeout(readTimeout)
               .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
@@ -246,8 +249,7 @@ public final class AtlasRegistry extends AbstractRegistry {
       EvalPayload payload = evaluator.eval("local", stepClock.wallTime(), ms);
       try {
         String json = jsonMapper.writeValueAsString(payload);
-        HttpClient.DEFAULT.newRequest("spectator-lwc-eval", evalUri)
-            .withMethod("POST")
+        client.post(evalUri)
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
             .withJsonContent(json)
@@ -261,8 +263,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private void fetchSubscriptions() {
     try {
-      HttpResponse res = HttpClient.DEFAULT.newRequest("spectator-lwc-subs", configUri)
-          .withMethod("GET")
+      HttpResponse res = client.get(configUri)
           .withConnectTimeout(connectTimeout)
           .withReadTimeout(readTimeout)
           .send()

@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.ipc.http;
 
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.ipc.IpcLogger;
 import org.slf4j.LoggerFactory;
@@ -57,6 +58,18 @@ public interface HttpClient {
    * possible to inject the {@link IpcLogger} instance. It will use {@link #DEFAULT_LOGGER}.
    */
   HttpClient DEFAULT_CLIENT = create(DEFAULT_LOGGER);
+
+  /**
+   * Create a new client instance.
+   *
+   * @param registry
+   *     Registry to use for reporting metrics.
+   * @return
+   *     Client instance based on {@link java.net.HttpURLConnection}.
+   */
+  static HttpClient create(Registry registry) {
+    return create(new IpcLogger(registry, LoggerFactory.getLogger(HttpClient.class)));
+  }
 
   /**
    * Create a new client instance.
