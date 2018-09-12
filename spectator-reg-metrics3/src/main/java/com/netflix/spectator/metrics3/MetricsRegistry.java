@@ -15,25 +15,26 @@
  */
 package com.netflix.spectator.metrics3;
 
-
 import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static com.netflix.spectator.metrics3.NameUtils.toMetricName;
+import java.util.function.Function;
 
 /** Registry implementation that maps spectator types to the metrics3 library. */
 public class MetricsRegistry extends AbstractRegistry {
 
   private final com.codahale.metrics.MetricRegistry impl;
   private final Map<String, DoubleGauge> registeredGauges;
+  private final Function<Id, String> formatNameFn;
 
   /** Create a new instance. */
   public MetricsRegistry() {
@@ -42,9 +43,27 @@ public class MetricsRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
+    this(clock, impl, id -> {
+      Id normalized = Utils.normalize(id);
+      StringBuilder buf = new StringBuilder();
+      buf.append(normalized.name());
+      for (Tag t : normalized.tags()) {
+        buf.append('.').append(t.key()).append('-').append(t.value());
+      }
+      return buf.toString();
+    });
+  }
+
+  /** Create a new instance. */
+  public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl, Function<Id, String> formatNameFn) {
     super(clock);
     this.impl = impl;
     this.registeredGauges = new ConcurrentHashMap<>();
+    this.formatNameFn = formatNameFn;
+  }
+
+  private String toMetricName(Id id) {
+    return formatNameFn.apply(id);
   }
 
   @Override protected Counter newCounter(Id id) {
