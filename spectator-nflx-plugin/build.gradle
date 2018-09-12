@@ -4,12 +4,12 @@ dependencies {
   compile project(':spectator-ext-jvm')
   compile project(':spectator-ext-sandbox')
   compile project(':spectator-reg-atlas')
-  compile project(':spectator-reg-servo')
   compile 'javax.inject:javax.inject'
   compile 'commons-configuration:commons-configuration'
   compile "com.google.inject:guice"
   compile "com.google.inject.extensions:guice-multibindings"
   compile "com.netflix.archaius:archaius2-core"
+  compile "com.netflix.servo:servo-core"
   testCompile "com.netflix.governator:governator"
 }
 
