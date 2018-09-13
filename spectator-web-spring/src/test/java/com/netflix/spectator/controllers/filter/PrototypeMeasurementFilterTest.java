@@ -16,14 +16,11 @@
 package com.netflix.spectator.controllers.filter;
 
 import com.netflix.spectator.controllers.model.TestId;
-import com.netflix.spectator.controllers.model.TestMeter;
 
 
 import com.netflix.spectator.api.BasicTag;
-import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
 
 import java.io.IOException;
@@ -33,8 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.regex.Pattern;
 
 
@@ -48,12 +43,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class PrototypeMeasurementFilterTest {
     private long millis = 12345L;
-    Clock clock = new Clock() {
-        public long wallTime() { return millis; }
-        public long monotonicTime() { return millis; }
-    };
 
-    PrototypeMeasurementFilterSpecification spec;
     PrototypeMeasurementFilterSpecification.ValueFilterSpecification valueSpecAxBy;
     PrototypeMeasurementFilterSpecification.ValueFilterSpecification valueSpecAyBx;
     PrototypeMeasurementFilterSpecification.ValueFilterSpecification valueSpecAzBy;
@@ -121,8 +111,7 @@ public class PrototypeMeasurementFilterTest {
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternC
             = new PrototypeMeasurementFilter.MeterFilterPattern(".+C.*", meterSpecC);
 
-        final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList
-            = new ArrayList<PrototypeMeasurementFilter.ValueFilterPattern>();
+        final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList = new ArrayList<>();
 
         Assert.assertEquals(
             filter.metricToPatterns("meterA"), 
@@ -151,23 +140,20 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.MeterFilterPattern("ignored", meterSpecA);
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternB
             = new PrototypeMeasurementFilter.MeterFilterPattern("ignored", meterSpecB);
-        final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList
-            = new ArrayList<PrototypeMeasurementFilter.ValueFilterPattern>();
+        final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList = new ArrayList<>();
         Assert.assertEquals(
             filter.metricToPatterns("meterB"), 
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     meterPatternB.getValues(), emptyList));
 
-        List<PrototypeMeasurementFilter.ValueFilterPattern> expect
-            = new ArrayList<PrototypeMeasurementFilter.ValueFilterPattern>();
+        List<PrototypeMeasurementFilter.ValueFilterPattern> expect = new ArrayList<>();
         expect.addAll(meterPatternA.getValues());
         expect.addAll(meterPatternB.getValues());
 
         PrototypeMeasurementFilter.IncludeExcludePatterns patterns
             = filter.metricToPatterns("meterA");
 
-        Assert.assertEquals(new HashSet<PrototypeMeasurementFilter.ValueFilterPattern>(expect),
-                            new HashSet<PrototypeMeasurementFilter.ValueFilterPattern>(patterns.getInclude()));
+        Assert.assertEquals(new HashSet<>(expect), new HashSet<>(patterns.getInclude()));
     }
 
 
@@ -302,15 +288,15 @@ public class PrototypeMeasurementFilterTest {
     public void loadFromJson() throws IOException {
         String path = getClass().getResource("/test_measurement_filter.json").getFile();
         PrototypeMeasurementFilterSpecification spec
-            = PrototypeMeasurementFilterSpecification.loadFromPath(path);;
+            = PrototypeMeasurementFilterSpecification.loadFromPath(path);
         PrototypeMeasurementFilterSpecification specA
-            = new PrototypeMeasurementFilterSpecification();;
+            = new PrototypeMeasurementFilterSpecification();
         specA.getInclude().put("meterA", meterSpecA);
         specA.getInclude().put("meterD", meterSpecD);
         specA.getInclude().put(
              "empty",
              new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
-                     new ArrayList()));
+                     new ArrayList<>()));
 
         List<PrototypeMeasurementFilterSpecification.TagFilterSpecification> tagsX = Arrays.asList(
                 new PrototypeMeasurementFilterSpecification.TagFilterSpecification("tagA", "X"),
