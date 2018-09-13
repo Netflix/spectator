@@ -262,15 +262,6 @@ public final class AtlasRegistry extends AbstractRegistry {
     subManager.refresh();
   }
 
-  private Subscriptions filterByStep(Subscriptions subs) {
-    List<Subscription> subscriptions = subs
-        .getExpressions()
-        .stream()
-        .filter(s -> s.getFrequency() == stepMillis)
-        .collect(Collectors.toList());
-    return new Subscriptions().withExpressions(subscriptions);
-  }
-
   /**
    * Record the difference between the date response time and the local time on the server.
    * This is used to get a rough idea of the amount of skew in the environment. Ideally it
