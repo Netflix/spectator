@@ -65,7 +65,7 @@ public class HttpRequestBuilder {
   private SSLSocketFactory sslFactory = null;
 
   /** Create a new instance for the specified URI. */
-  HttpRequestBuilder(IpcLogger logger, URI uri) {
+  public HttpRequestBuilder(IpcLogger logger, URI uri) {
     this.uri = uri;
     this.entry = logger.createClientEntry()
         .withOwner("spectator")
@@ -83,10 +83,13 @@ public class HttpRequestBuilder {
 
   /**
    * Add a header to the request. Note the content type will be set automatically
-   * when providing the content payload and should not be set here.
+   * when providing the content payload and should not be set here. If the value
+   * is null, then the header will get ignored.
    */
   public HttpRequestBuilder addHeader(String name, String value) {
-    reqHeaders.put(name, value);
+    if (value != null) {
+      reqHeaders.put(name, value);
+    }
     return this;
   }
 
