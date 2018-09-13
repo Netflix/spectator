@@ -56,10 +56,9 @@ public final class Subscriptions {
   public void update(Map<Subscription, Long> subs, long currentTime, long expirationTime) {
     // Update expiration time for existing subs and log new ones
     for (Subscription sub : expressions) {
-      if (!subs.containsKey(sub)) {
+      if (subs.put(sub, expirationTime) == null) {
         LOGGER.info("new subscription: {}", sub);
       }
-      subs.put(sub, expirationTime);
     }
 
     // Remove any expired entries
