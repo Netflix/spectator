@@ -33,7 +33,6 @@ import com.netflix.spectator.atlas.impl.Evaluator;
 import com.netflix.spectator.atlas.impl.MeasurementSerializer;
 import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.atlas.impl.Subscription;
-import com.netflix.spectator.atlas.impl.Subscriptions;
 import com.netflix.spectator.atlas.impl.TagsValuePair;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
