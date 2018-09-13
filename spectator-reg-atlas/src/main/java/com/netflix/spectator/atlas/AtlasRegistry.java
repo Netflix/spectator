@@ -48,7 +48,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -70,8 +69,6 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private final boolean lwcEnabled;
   private final Duration configRefreshFrequency;
-  private final long configTTL;
-  private final URI configUri;
   private final URI evalUri;
 
   private final int connectTimeout;
@@ -90,7 +87,7 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private Scheduler scheduler;
 
-  private final Map<Subscription, Long> subscriptions = new ConcurrentHashMap<>();
+  private final SubscriptionManager subManager;
 
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
@@ -105,8 +102,6 @@ public final class AtlasRegistry extends AbstractRegistry {
 
     this.lwcEnabled = config.lwcEnabled();
     this.configRefreshFrequency = config.configRefreshFrequency();
-    this.configTTL = config.configTTL().toMillis();
-    this.configUri = URI.create(config.configUri());
     this.evalUri = URI.create(config.evalUri());
 
     this.connectTimeout = (int) config.connectTimeout().toMillis();
@@ -125,6 +120,8 @@ public final class AtlasRegistry extends AbstractRegistry {
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
     this.client = HttpClient.create(this);
+
+    this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
   }
 
   /**
@@ -240,7 +237,7 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private void handleSubscriptions() {
-    List<Subscription> subs = new ArrayList<>(subscriptions.keySet());
+    List<Subscription> subs = subManager.subscriptions();
     if (!subs.isEmpty()) {
       List<TagsValuePair> ms = getMeasurements().stream()
           .map(this::newTagsValuePair)
@@ -262,22 +259,7 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private void fetchSubscriptions() {
-    try {
-      HttpResponse res = client.get(configUri)
-          .withConnectTimeout(connectTimeout)
-          .withReadTimeout(readTimeout)
-          .send()
-          .decompress();
-      if (res.status() != 200) {
-        logger.warn("failed to update subscriptions, received status {}", res.status());
-      } else {
-        Subscriptions subs = filterByStep(jsonMapper.readValue(res.entity(), Subscriptions.class));
-        long now = clock().wallTime();
-        subs.update(subscriptions, now, now + configTTL);
-      }
-    } catch (Exception e) {
-      logger.warn("failed to send metrics", e);
-    }
+    subManager.refresh();
   }
 
   private Subscriptions filterByStep(Subscriptions subs) {
