@@ -261,7 +261,7 @@ public final class Utils {
     if (tags.length % 2 == 1) {
       throw new IllegalArgumentException("size must be even, it is a set of key=value pairs");
     }
-    ArrayList<Tag> ts = new ArrayList<>(tags.length);
+    ArrayList<Tag> ts = new ArrayList<>(tags.length / 2);
     for (int i = 0; i < tags.length; i += 2) {
       ts.add(new BasicTag(tags[i], tags[i + 1]));
     }
