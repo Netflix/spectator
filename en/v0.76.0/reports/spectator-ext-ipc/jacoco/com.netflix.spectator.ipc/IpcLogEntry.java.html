@@ -1,0 +1,1071 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcLogEntry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcLogEntry.java</span></div><h1>IpcLogEntry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.histogram.PercentileTimer;
+import org.slf4j.Marker;
+import org.slf4j.event.Level;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+
+/**
+ * Builder used to fill in and submit a log entry associated with an IPC request.
+ */
+@SuppressWarnings({&quot;PMD.ExcessiveClassLength&quot;, &quot;PMD.AvoidStringBufferField&quot;})
+public final class IpcLogEntry {
+
+  private final Clock clock;
+
+  private Registry registry;
+  private IpcLogger logger;
+  private Level level;
+  private Marker marker;
+
+  private long startNanos;
+  private long startTime;
+  private long latency;
+
+  private String owner;
+  private IpcResult result;
+
+  private String protocol;
+
+  private IpcErrorGroup errorGroup;
+  private String errorReason;
+  private Throwable exception;
+
+  private IpcAttempt attempt;
+  private IpcAttemptFinal attemptFinal;
+
+  private String vip;
+  private String endpoint;
+
+  private String clientRegion;
+  private String clientZone;
+  private String clientApp;
+  private String clientCluster;
+  private String clientAsg;
+  private String clientNode;
+
+  private String serverRegion;
+  private String serverZone;
+  private String serverApp;
+  private String serverCluster;
+  private String serverAsg;
+  private String serverNode;
+
+  private String httpMethod;
+  private int httpStatus;
+
+  private String uri;
+  private String path;
+
+<span class="fc" id="L86">  private List&lt;Header&gt; requestHeaders = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L87">  private List&lt;Header&gt; responseHeaders = new ArrayList&lt;&gt;();</span>
+
+  private String remoteAddress;
+  private int remotePort;
+
+<span class="fc" id="L92">  private Map&lt;String, String&gt; additionalTags = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L94">  private StringBuilder builder = new StringBuilder();</span>
+
+  private Id inflightId;
+
+  /** Create a new instance. */
+<span class="fc" id="L99">  IpcLogEntry(Clock clock) {</span>
+<span class="fc" id="L100">    this.clock = clock;</span>
+<span class="fc" id="L101">    reset();</span>
+<span class="fc" id="L102">  }</span>
+
+  /** Set the registry to use for recording metrics. */
+  IpcLogEntry withRegistry(Registry registry) {
+<span class="fc" id="L106">    this.registry = registry;</span>
+<span class="fc" id="L107">    return this;</span>
+  }
+
+  /**
+   * Set the logger instance to use for tracking state such as the number of inflight
+   * requests.
+   */
+  IpcLogEntry withLogger(IpcLogger logger) {
+<span class="fc" id="L115">    this.logger = logger;</span>
+<span class="fc" id="L116">    return this;</span>
+  }
+
+  /**
+   * Set the marker indicating whether it is a client or server request.
+   */
+  IpcLogEntry withMarker(Marker marker) {
+<span class="fc" id="L123">    this.marker = marker;</span>
+<span class="fc" id="L124">    return this;</span>
+  }
+
+  /**
+   * Set the log level to use when sending to SLF4j. The default level is DEBUG. For
+   * high volume use-cases it is recommended to set the level to TRACE to avoid excessive
+   * logging.
+   */
+  public IpcLogEntry withLogLevel(Level level) {
+<span class="nc" id="L133">    this.level = level;</span>
+<span class="nc" id="L134">    return this;</span>
+  }
+
+  /**
+   * Set the latency for the request. This will typically be set automatically using
+   * {@link #markStart()} and {@link #markEnd()}. Use this method if the latency value
+   * is provided by the implementation rather than measured using this entry.
+   */
+  public IpcLogEntry withLatency(long latency, TimeUnit unit) {
+<span class="fc" id="L143">    this.latency = unit.toNanos(latency);</span>
+<span class="fc" id="L144">    return this;</span>
+  }
+
+  /**
+   * Record the starting time for the request and update the number of inflight requests.
+   * This should be called just before starting the execution of the request. As soon as
+   * the request completes it is recommended to call {@link #markEnd()}.
+   */
+  public IpcLogEntry markStart() {
+<span class="fc bfc" id="L153" title="All 2 branches covered.">    if (registry != null) {</span>
+<span class="fc" id="L154">      inflightId = getInflightId();</span>
+<span class="fc" id="L155">      int n = logger.inflightRequests(inflightId).incrementAndGet();</span>
+<span class="fc" id="L156">      registry.distributionSummary(inflightId).record(n);</span>
+    }
+
+<span class="fc" id="L159">    startTime = clock.wallTime();</span>
+<span class="fc" id="L160">    startNanos = clock.monotonicTime();</span>
+<span class="fc" id="L161">    return this;</span>
+  }
+
+  /**
+   * Record the latency for the request based on the completion time. This will be
+   * implicitly called when the request is logged, but it is advisable to call as soon
+   * as the response is received to minimize the amount of response processing that is
+   * counted as part of the request latency.
+   */
+  public IpcLogEntry markEnd() {
+<span class="fc" id="L171">    return withLatency(clock.monotonicTime() - startNanos, TimeUnit.NANOSECONDS);</span>
+  }
+
+  /**
+   * Set the library that produced the metric.
+   */
+  public IpcLogEntry withOwner(String owner) {
+<span class="fc" id="L178">    this.owner = owner;</span>
+<span class="fc" id="L179">    return this;</span>
+  }
+
+  /**
+   * Set the protocol used for this request. See {@link IpcProtocol} for more information.
+   */
+  public IpcLogEntry withProtocol(IpcProtocol protocol) {
+<span class="fc" id="L186">    return withProtocol(protocol.value());</span>
+  }
+
+  /**
+   * Set the protocol used for this request. See {@link IpcProtocol} for more information.
+   */
+  public IpcLogEntry withProtocol(String protocol) {
+<span class="fc" id="L193">    this.protocol = protocol;</span>
+<span class="fc" id="L194">    return this;</span>
+  }
+
+  /**
+   * Set the result for this request. See {@link IpcResult} for more information.
+   */
+  public IpcLogEntry withResult(IpcResult result) {
+<span class="fc" id="L201">    this.result = result;</span>
+<span class="fc" id="L202">    return this;</span>
+  }
+
+  /**
+   * Set the high level cause for a request failure. See {@link IpcErrorGroup} for more
+   * information.
+   */
+  public IpcLogEntry withErrorGroup(IpcErrorGroup errorGroup) {
+<span class="fc" id="L210">    this.errorGroup = errorGroup;</span>
+<span class="fc" id="L211">    return this;</span>
+  }
+
+  /**
+   * Set the implementation specific reason for the request failure. In most cases it
+   * is preferable to use {@link #withException(Throwable)} or {@link #withHttpStatus(int)}
+   * instead of calling this directly.
+   */
+  public IpcLogEntry withErrorReason(String errorReason) {
+<span class="fc" id="L220">    this.errorReason = errorReason;</span>
+<span class="fc" id="L221">    return this;</span>
+  }
+
+  /**
+   * Set the exception that was thrown while trying to execute the request. This will be
+   * logged and can be used to fill in the error reason.
+   */
+  public IpcLogEntry withException(Throwable exception) {
+<span class="fc" id="L229">    this.exception = exception;</span>
+<span class="pc bpc" id="L230" title="1 of 2 branches missed.">    if (errorReason == null) {</span>
+<span class="fc" id="L231">      errorReason = exception.getClass().getSimpleName();</span>
+    }
+<span class="fc" id="L233">    return this;</span>
+  }
+
+  /**
+   * Set the attempt number for the request.
+   */
+  public IpcLogEntry withAttempt(IpcAttempt attempt) {
+<span class="fc" id="L240">    this.attempt = attempt;</span>
+<span class="fc" id="L241">    return this;</span>
+  }
+
+  /**
+   * Set the attempt number for the request.
+   */
+  public IpcLogEntry withAttempt(int attempt) {
+<span class="fc" id="L248">    return withAttempt(IpcAttempt.forAttemptNumber(attempt));</span>
+  }
+
+  /**
+   * Set whether or not this is the final attempt for the request.
+   */
+  public IpcLogEntry withAttemptFinal(boolean isFinal) {
+<span class="fc" id="L255">    this.attemptFinal = IpcAttemptFinal.forValue(isFinal);</span>
+<span class="fc" id="L256">    return this;</span>
+  }
+
+  /**
+   * Set the vip that was used to determine which server to contact. This will only be
+   * present if using client side load balancing via Eureka.
+   */
+  public IpcLogEntry withVip(String vip) {
+<span class="fc" id="L264">    this.vip = vip;</span>
+<span class="fc" id="L265">    return this;</span>
+  }
+
+  /**
+   * Set the endpoint for this request.
+   */
+  public IpcLogEntry withEndpoint(String endpoint) {
+<span class="fc" id="L272">    this.endpoint = endpoint;</span>
+<span class="fc" id="L273">    return this;</span>
+  }
+
+  /**
+   * Set the client region for the request. In the case of the server side this will be
+   * automatically filled in if the {@link NetflixHeader#Zone} is specified on the client
+   * request.
+   */
+  public IpcLogEntry withClientRegion(String region) {
+<span class="fc" id="L282">    this.clientRegion = region;</span>
+<span class="fc" id="L283">    return this;</span>
+  }
+
+  /**
+   * Set the client zone for the request. In the case of the server side this will be
+   * automatically filled in if the {@link NetflixHeader#Zone} is specified on the client
+   * request.
+   */
+  public IpcLogEntry withClientZone(String zone) {
+<span class="fc" id="L292">    this.clientZone = zone;</span>
+<span class="fc bfc" id="L293" title="All 2 branches covered.">    if (clientRegion == null) {</span>
+<span class="fc" id="L294">      clientRegion = extractRegionFromZone(zone);</span>
+    }
+<span class="fc" id="L296">    return this;</span>
+  }
+
+  /**
+   * Set the client app for the request. In the case of the server side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the client
+   * request. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withClientApp(String app) {
+<span class="fc" id="L307">    this.clientApp = app;</span>
+<span class="fc" id="L308">    return this;</span>
+  }
+
+  /**
+   * Set the client cluster for the request. In the case of the server side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the client
+   * request. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withClientCluster(String cluster) {
+<span class="fc" id="L319">    this.clientCluster = cluster;</span>
+<span class="fc" id="L320">    return this;</span>
+  }
+
+  /**
+   * Set the client ASG for the request. In the case of the server side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the client
+   * request. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withClientAsg(String asg) {
+<span class="fc" id="L331">    this.clientAsg = asg;</span>
+<span class="pc bpc" id="L332" title="1 of 4 branches missed.">    if (clientApp == null || clientCluster == null) {</span>
+<span class="fc" id="L333">      ServerGroup group = ServerGroup.parse(asg);</span>
+<span class="fc bfc" id="L334" title="All 2 branches covered.">      clientApp = (clientApp == null) ? group.app() : clientApp;</span>
+<span class="fc bfc" id="L335" title="All 2 branches covered.">      clientCluster = (clientCluster == null) ? group.cluster() : clientCluster;</span>
+    }
+<span class="fc" id="L337">    return this;</span>
+  }
+
+  /**
+   * Set the client node for the request. This will be used for access logging only and will
+   * not be present on metrics. The server will log this value if the {@link NetflixHeader#Node}
+   * header is present on the client request.
+   */
+  public IpcLogEntry withClientNode(String node) {
+<span class="fc" id="L346">    this.clientNode = node;</span>
+<span class="fc" id="L347">    return this;</span>
+  }
+
+  /**
+   * Set the server region for the request. In the case of the client side this will be
+   * automatically filled in if the {@link NetflixHeader#Zone} is specified on the server
+   * response.
+   */
+  public IpcLogEntry withServerRegion(String region) {
+<span class="fc" id="L356">    this.serverRegion = region;</span>
+<span class="fc" id="L357">    return this;</span>
+  }
+
+  /**
+   * Set the server zone for the request. In the case of the client side this will be
+   * automatically filled in if the {@link NetflixHeader#Zone} is specified on the server
+   * response.
+   */
+  public IpcLogEntry withServerZone(String zone) {
+<span class="fc" id="L366">    this.serverZone = zone;</span>
+<span class="fc bfc" id="L367" title="All 2 branches covered.">    if (serverRegion == null) {</span>
+<span class="fc" id="L368">      serverRegion = extractRegionFromZone(zone);</span>
+    }
+<span class="fc" id="L370">    return this;</span>
+  }
+
+  /**
+   * Set the server app for the request. In the case of the client side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the server
+   * response. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withServerApp(String app) {
+<span class="fc" id="L381">    this.serverApp = app;</span>
+<span class="fc" id="L382">    return this;</span>
+  }
+
+  /**
+   * Set the server cluster for the request. In the case of the client side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the server
+   * response. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withServerCluster(String cluster) {
+<span class="fc" id="L393">    this.serverCluster = cluster;</span>
+<span class="fc" id="L394">    return this;</span>
+  }
+
+  /**
+   * Set the server ASG for the request. In the case of the client side this will be
+   * automatically filled in if the {@link NetflixHeader#ASG} is specified on the server
+   * response. The ASG value must follow the
+   * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;
+   * Frigga server group&lt;/a&gt; naming conventions.
+   */
+  public IpcLogEntry withServerAsg(String asg) {
+<span class="fc" id="L405">    this.serverAsg = asg;</span>
+<span class="pc bpc" id="L406" title="1 of 4 branches missed.">    if (serverApp == null || serverCluster == null) {</span>
+<span class="fc" id="L407">      ServerGroup group = ServerGroup.parse(asg);</span>
+<span class="fc bfc" id="L408" title="All 2 branches covered.">      serverApp = (serverApp == null) ? group.app() : serverApp;</span>
+<span class="fc bfc" id="L409" title="All 2 branches covered.">      serverCluster = (serverCluster == null) ? group.cluster() : serverCluster;</span>
+    }
+<span class="fc" id="L411">    return this;</span>
+  }
+
+  /**
+   * Set the server node for the request. This will be used for access logging only and will
+   * not be present on metrics. The client will log this value if the {@link NetflixHeader#Node}
+   * header is present on the server response.
+   */
+  public IpcLogEntry withServerNode(String node) {
+<span class="fc" id="L420">    this.serverNode = node;</span>
+<span class="fc" id="L421">    return this;</span>
+  }
+
+  /**
+   * Set the HTTP method used for this request.
+   */
+  public IpcLogEntry withHttpMethod(String method) {
+<span class="fc" id="L428">    this.httpMethod = method;</span>
+<span class="fc" id="L429">    return this;</span>
+  }
+
+  /**
+   * Set the HTTP status code for this request. For the metrics this will be used to populate
+   * the {@link #withErrorReason(String)}.
+   */
+  public IpcLogEntry withHttpStatus(int status) {
+<span class="fc" id="L437">    this.httpStatus = status;</span>
+<span class="fc bfc" id="L438" title="All 2 branches covered.">    if (result == null) {</span>
+<span class="fc bfc" id="L439" title="All 2 branches covered.">      withResult((status &lt; 400) ? IpcResult.success : IpcResult.failure);</span>
+    }
+<span class="pc bpc" id="L441" title="2 of 8 branches missed.">    if (errorReason == null &amp;&amp; status &gt;= 400 &amp; status &lt; 600) {</span>
+<span class="fc" id="L442">      errorReason = &quot;HTTP_&quot; + status;</span>
+    }
+<span class="pc bpc" id="L444" title="1 of 2 branches missed.">    if (errorGroup == null) {</span>
+<span class="fc bfc" id="L445" title="All 3 branches covered.">      switch (status) {</span>
+        case 429:
+<span class="fc" id="L447">          errorGroup = IpcErrorGroup.client_throttled;</span>
+<span class="fc" id="L448">          break;</span>
+        case 503:
+<span class="fc" id="L450">          errorGroup = IpcErrorGroup.server_throttled;</span>
+<span class="fc" id="L451">          break;</span>
+        default:
+<span class="pc bpc" id="L453" title="1 of 4 branches missed.">          if (status &gt;= 400 &amp;&amp; status &lt; 500) {</span>
+<span class="fc" id="L454">            errorGroup = IpcErrorGroup.client_error;</span>
+<span class="pc bpc" id="L455" title="1 of 2 branches missed.">          } else if (status &gt;= 500) {</span>
+<span class="nc" id="L456">            errorGroup = IpcErrorGroup.server_error;</span>
+          }
+          break;
+      }
+    }
+<span class="fc" id="L461">    return this;</span>
+  }
+
+  /**
+   * Set the URI and path for the request.
+   */
+  public IpcLogEntry withUri(String uri, String path) {
+<span class="fc" id="L468">    this.uri = uri;</span>
+<span class="fc" id="L469">    this.path = path;</span>
+<span class="fc" id="L470">    return this;</span>
+  }
+
+  /**
+   * Set the URI and path for the request. The path will get extracted from the URI. If the
+   * URI is non-strict and cannot be parsed with the java URI class, then use
+   * {@link #withUri(String, String)} instead.
+   */
+  public IpcLogEntry withUri(URI uri) {
+<span class="fc" id="L479">    return withUri(uri.toString(), uri.getPath());</span>
+  }
+
+  /**
+   * Add a request header value. For special headers in {@link NetflixHeader} it will
+   * automatically fill in the more specific fields based on the header values.
+   */
+  public IpcLogEntry addRequestHeader(String name, String value) {
+<span class="fc bfc" id="L487" title="All 4 branches covered.">    if (clientAsg == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.ASG.headerName())) {</span>
+<span class="fc" id="L488">        withClientAsg(value);</span>
+<span class="fc bfc" id="L489" title="All 4 branches covered.">    } else if (clientZone == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Zone.headerName())) {</span>
+<span class="fc" id="L490">      withClientZone(value);</span>
+<span class="pc bpc" id="L491" title="1 of 4 branches missed.">    } else if (clientNode == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Node.headerName())) {</span>
+<span class="fc" id="L492">      withClientNode(value);</span>
+<span class="pc bpc" id="L493" title="1 of 4 branches missed.">    } else if (vip == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Vip.headerName())) {</span>
+<span class="fc" id="L494">      withVip(value);</span>
+    } else {
+<span class="fc" id="L496">      this.requestHeaders.add(new Header(name, value));</span>
+    }
+<span class="fc" id="L498">    return this;</span>
+  }
+
+  /**
+   * Add a response header value. For special headers in {@link NetflixHeader} it will
+   * automatically fill in the more specific fields based on the header values.
+   */
+  public IpcLogEntry addResponseHeader(String name, String value) {
+<span class="fc bfc" id="L506" title="All 4 branches covered.">    if (serverAsg == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.ASG.headerName())) {</span>
+<span class="fc" id="L507">      withServerAsg(value);</span>
+<span class="fc bfc" id="L508" title="All 4 branches covered.">    } else if (serverZone == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Zone.headerName())) {</span>
+<span class="fc" id="L509">      withServerZone(value);</span>
+<span class="pc bpc" id="L510" title="1 of 4 branches missed.">    } else if (serverNode == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Node.headerName())) {</span>
+<span class="fc" id="L511">      withServerNode(value);</span>
+<span class="pc bpc" id="L512" title="1 of 4 branches missed.">    } else if (endpoint == null &amp;&amp; name.equalsIgnoreCase(NetflixHeader.Endpoint.headerName())) {</span>
+<span class="fc" id="L513">      withEndpoint(value);</span>
+    } else {
+<span class="fc" id="L515">      this.responseHeaders.add(new Header(name, value));</span>
+    }
+<span class="fc" id="L517">    return this;</span>
+  }
+
+  /**
+   * Set the remote address for the request.
+   */
+  public IpcLogEntry withRemoteAddress(String remoteAddress) {
+<span class="fc" id="L524">    this.remoteAddress = remoteAddress;</span>
+<span class="fc" id="L525">    return this;</span>
+  }
+
+  /**
+   * Set the remote port for the request.
+   */
+  public IpcLogEntry withRemotePort(int remotePort) {
+<span class="fc" id="L532">    this.remotePort = remotePort;</span>
+<span class="fc" id="L533">    return this;</span>
+  }
+
+  /**
+   * Add custom tags to the request metrics. Note, IPC metrics already have many tags and it
+   * is not recommended for users to tack on additional context. In particular, any additional
+   * tags should have a &lt;b&gt;guaranteed&lt;/b&gt; low cardinality. If additional tagging causes these
+   * metrics to exceed limits, then you may lose all visibility into requests.
+   */
+  public IpcLogEntry addTag(Tag tag) {
+<span class="fc" id="L543">    this.additionalTags.put(tag.key(), tag.value());</span>
+<span class="fc" id="L544">    return this;</span>
+  }
+
+  /**
+   * Add custom tags to the request metrics. Note, IPC metrics already have many tags and it
+   * is not recommended for users to tack on additional context. In particular, any additional
+   * tags should have a &lt;b&gt;guaranteed&lt;/b&gt; low cardinality. If additional tagging causes these
+   * metrics to exceed limits, then you may lose all visibility into requests.
+   */
+  public IpcLogEntry addTag(String k, String v) {
+<span class="fc" id="L554">    this.additionalTags.put(k, v);</span>
+<span class="fc" id="L555">    return this;</span>
+  }
+
+  private void putTag(Map&lt;String, String&gt; tags, Tag tag) {
+<span class="fc bfc" id="L559" title="All 2 branches covered.">    if (tag != null) {</span>
+<span class="fc" id="L560">      tags.put(tag.key(), tag.value());</span>
+    }
+<span class="fc" id="L562">  }</span>
+
+  private void putTag(Map&lt;String, String&gt; tags, String k, String v) {
+<span class="fc bfc" id="L565" title="All 2 branches covered.">    if (!isNullOrEmpty(v)) {</span>
+<span class="fc" id="L566">      String value = logger.limiterForKey(k).apply(v);</span>
+<span class="fc" id="L567">      tags.put(k, value);</span>
+    }
+<span class="fc" id="L569">  }</span>
+
+  private IpcResult getResult() {
+<span class="fc bfc" id="L572" title="All 2 branches covered.">    if (result == null) {</span>
+<span class="pc bpc" id="L573" title="1 of 2 branches missed.">      result = errorGroup == null ? IpcResult.success : IpcResult.failure;</span>
+    }
+<span class="fc" id="L575">    return result;</span>
+  }
+
+  private IpcAttempt getAttempt() {
+<span class="pc bpc" id="L579" title="1 of 2 branches missed.">    if (attempt == null) {</span>
+<span class="fc" id="L580">      attempt = IpcAttempt.forAttemptNumber(1);</span>
+    }
+<span class="fc" id="L582">    return attempt;</span>
+  }
+
+  private IpcAttemptFinal getAttemptFinal() {
+<span class="pc bpc" id="L586" title="1 of 2 branches missed.">    if (attemptFinal == null) {</span>
+<span class="fc" id="L587">      attemptFinal = IpcAttemptFinal.is_true;</span>
+    }
+<span class="fc" id="L589">    return attemptFinal;</span>
+  }
+
+  private boolean isClient() {
+<span class="pc bpc" id="L593" title="1 of 4 branches missed.">    return marker != null &amp;&amp; &quot;ipc-client&quot;.equals(marker.getName());</span>
+  }
+
+  private Id createCallId(String name) {
+<span class="fc" id="L597">    Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+
+    // User specified custom tags, add individually to ensure that limiter is applied
+    // to the values
+<span class="pc bpc" id="L601" title="1 of 2 branches missed.">    for (Map.Entry&lt;String, String&gt; entry : additionalTags.entrySet()) {</span>
+<span class="nc" id="L602">      putTag(tags, entry.getKey(), entry.getValue());</span>
+<span class="nc" id="L603">    }</span>
+
+    // Required for both client and server
+<span class="fc" id="L606">    putTag(tags, IpcTagKey.owner.key(), owner);</span>
+<span class="fc" id="L607">    putTag(tags, getResult());</span>
+<span class="fc" id="L608">    putTag(tags, errorGroup);</span>
+
+<span class="fc bfc" id="L610" title="All 2 branches covered.">    if (isClient()) {</span>
+      // Required for client, should be null on server
+<span class="fc" id="L612">      putTag(tags, getAttempt());</span>
+<span class="fc" id="L613">      putTag(tags, getAttemptFinal());</span>
+
+      // Optional for client
+<span class="fc" id="L616">      putTag(tags, IpcTagKey.serverRegion.key(), serverRegion);</span>
+<span class="fc" id="L617">      putTag(tags, IpcTagKey.serverZone.key(), serverZone);</span>
+<span class="fc" id="L618">      putTag(tags, IpcTagKey.serverApp.key(), serverApp);</span>
+<span class="fc" id="L619">      putTag(tags, IpcTagKey.serverCluster.key(), serverCluster);</span>
+<span class="fc" id="L620">      putTag(tags, IpcTagKey.serverAsg.key(), serverAsg);</span>
+    } else {
+      // Optional for server
+<span class="fc" id="L623">      putTag(tags, IpcTagKey.clientRegion.key(), clientRegion);</span>
+<span class="fc" id="L624">      putTag(tags, IpcTagKey.clientZone.key(), clientZone);</span>
+<span class="fc" id="L625">      putTag(tags, IpcTagKey.clientApp.key(), clientApp);</span>
+<span class="fc" id="L626">      putTag(tags, IpcTagKey.clientCluster.key(), clientCluster);</span>
+<span class="fc" id="L627">      putTag(tags, IpcTagKey.clientAsg.key(), clientAsg);</span>
+    }
+
+    // Optional for both client and server
+<span class="fc" id="L631">    putTag(tags, IpcTagKey.endpoint.key(), endpoint);</span>
+<span class="fc" id="L632">    putTag(tags, IpcTagKey.vip.key(), vip);</span>
+<span class="fc" id="L633">    putTag(tags, IpcTagKey.protocol.key(), protocol);</span>
+<span class="fc" id="L634">    putTag(tags, IpcTagKey.errorReason.key(), errorReason);</span>
+<span class="fc" id="L635">    putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);</span>
+<span class="pc bpc" id="L636" title="1 of 4 branches missed.">    if (httpStatus &gt;= 100 &amp;&amp; httpStatus &lt; 600) {</span>
+<span class="fc" id="L637">      putTag(tags, IpcTagKey.httpStatus.key(), &quot;&quot; + httpStatus);</span>
+    }
+
+<span class="fc" id="L640">    return registry.createId(name, tags);</span>
+  }
+
+  private Id getInflightId() {
+<span class="pc bpc" id="L644" title="1 of 2 branches missed.">    if (inflightId == null) {</span>
+<span class="fc" id="L645">      Map&lt;String, String&gt; tags = new HashMap&lt;&gt;();</span>
+
+      // Required for both client and server
+<span class="fc" id="L648">      putTag(tags, IpcTagKey.owner.key(), owner);</span>
+
+      // Optional for both client and server
+<span class="fc" id="L651">      putTag(tags, IpcTagKey.vip.key(), vip);</span>
+
+<span class="fc bfc" id="L653" title="All 2 branches covered.">      String name = isClient()</span>
+<span class="fc" id="L654">          ? IpcMetric.clientInflight.metricName()</span>
+<span class="fc" id="L655">          : IpcMetric.serverInflight.metricName();</span>
+<span class="fc" id="L656">      inflightId = registry.createId(name, tags);</span>
+    }
+<span class="fc" id="L658">    return inflightId;</span>
+  }
+
+  private void recordClientMetrics() {
+<span class="fc" id="L662">    Id clientCall = createCallId(IpcMetric.clientCall.metricName());</span>
+<span class="fc" id="L663">    PercentileTimer.builder(registry)</span>
+<span class="fc" id="L664">        .withId(clientCall)</span>
+<span class="fc" id="L665">        .build()</span>
+<span class="fc" id="L666">        .record(getLatency(), TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L667">  }</span>
+
+  private void recordServerMetrics() {
+<span class="fc" id="L670">    Id serverCall = createCallId(IpcMetric.serverCall.metricName());</span>
+<span class="fc" id="L671">    PercentileTimer.builder(registry)</span>
+<span class="fc" id="L672">        .withId(serverCall)</span>
+<span class="fc" id="L673">        .build()</span>
+<span class="fc" id="L674">        .record(getLatency(), TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L675">  }</span>
+
+  /**
+   * Log the request. This entry will potentially be reused after this is called. The user
+   * should not attempt any further modifications to the state of this entry.
+   */
+  public void log() {
+<span class="pc bpc" id="L682" title="1 of 2 branches missed.">    if (logger != null) {</span>
+<span class="pc bpc" id="L683" title="1 of 2 branches missed.">      if (registry != null) {</span>
+<span class="fc bfc" id="L684" title="All 2 branches covered.">        if (isClient()) {</span>
+<span class="fc" id="L685">          recordClientMetrics();</span>
+        } else {
+<span class="fc" id="L687">          recordServerMetrics();</span>
+        }
+      }
+<span class="pc bpc" id="L690" title="1 of 2 branches missed.">      if (inflightId != null) {</span>
+<span class="fc" id="L691">        logger.inflightRequests(inflightId).decrementAndGet();</span>
+      }
+
+<span class="fc" id="L694">      logger.log(this);</span>
+    } else {
+<span class="nc" id="L696">      reset();</span>
+    }
+<span class="fc" id="L698">  }</span>
+
+  /** Return the log level set for this log entry. */
+  Level getLevel() {
+<span class="fc" id="L702">    return level;</span>
+  }
+
+  /** Return the marker set for this log entry. */
+  Marker getMarker() {
+<span class="fc" id="L707">    return marker;</span>
+  }
+
+  /** Return true if the request is successful and the entry can be reused. */
+  boolean isSuccessful() {
+<span class="pc bpc" id="L712" title="1 of 2 branches missed.">    return result == IpcResult.success;</span>
+  }
+
+  private String extractRegionFromZone(String zone) {
+<span class="fc" id="L716">    int n = zone.length();</span>
+<span class="fc bfc" id="L717" title="All 2 branches covered.">    if (n &lt; 4) {</span>
+<span class="fc" id="L718">      return null;</span>
+    } else {
+<span class="fc" id="L720">      char c = zone.charAt(n - 2);</span>
+<span class="pc bpc" id="L721" title="1 of 4 branches missed.">      if (Character.isDigit(c) &amp;&amp; zone.charAt(n - 3) == '-') {</span>
+        // AWS zones have a pattern of `${region}[a-f]`, for example: `us-east-1a`
+<span class="fc" id="L723">        return zone.substring(0, n - 1);</span>
+<span class="fc bfc" id="L724" title="All 2 branches covered.">      } else if (c == '-') {</span>
+        // GCE zones have a pattern of `${region}-[a-f]`, for example: `us-east1-c`
+        // https://cloud.google.com/compute/docs/regions-zones/
+<span class="fc" id="L727">        return zone.substring(0, n - 2);</span>
+      } else {
+        // Pattern doesn't look familiar
+<span class="fc" id="L730">        return null;</span>
+      }
+    }
+  }
+
+  private long getLatency() {
+<span class="fc bfc" id="L736" title="All 4 branches covered.">    if (startNanos &gt;= 0L &amp;&amp; latency &lt; 0L) {</span>
+      // If latency was not explicitly set but the start time was, then compute the
+      // time since the start. The field is updated so subsequent calls will return
+      // a consistent value for the latency.
+<span class="fc" id="L740">      latency = clock.monotonicTime() - startNanos;</span>
+    }
+<span class="fc" id="L742">    return latency;</span>
+  }
+
+  private String getExceptionClass() {
+<span class="fc bfc" id="L746" title="All 2 branches covered.">    return (exception == null)</span>
+        ? null
+<span class="fc" id="L748">        : exception.getClass().getName();</span>
+  }
+
+  private String getExceptionMessage() {
+<span class="fc bfc" id="L752" title="All 2 branches covered.">    return (exception == null)</span>
+        ? null
+<span class="fc" id="L754">        : exception.getMessage();</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="fc" id="L759">    return new JsonStringBuilder(builder)</span>
+<span class="fc" id="L760">        .startObject()</span>
+<span class="fc" id="L761">        .addField(&quot;owner&quot;, owner)</span>
+<span class="fc" id="L762">        .addField(&quot;start&quot;, startTime)</span>
+<span class="fc" id="L763">        .addField(&quot;latency&quot;, getLatency() / 1e9)</span>
+<span class="fc" id="L764">        .addField(&quot;protocol&quot;, protocol)</span>
+<span class="fc" id="L765">        .addField(&quot;uri&quot;, uri)</span>
+<span class="fc" id="L766">        .addField(&quot;path&quot;, path)</span>
+<span class="fc" id="L767">        .addField(&quot;endpoint&quot;, endpoint)</span>
+<span class="fc" id="L768">        .addField(&quot;vip&quot;, vip)</span>
+<span class="fc" id="L769">        .addField(&quot;clientRegion&quot;, clientRegion)</span>
+<span class="fc" id="L770">        .addField(&quot;clientZone&quot;, clientZone)</span>
+<span class="fc" id="L771">        .addField(&quot;clientApp&quot;, clientApp)</span>
+<span class="fc" id="L772">        .addField(&quot;clientCluster&quot;, clientCluster)</span>
+<span class="fc" id="L773">        .addField(&quot;clientAsg&quot;, clientAsg)</span>
+<span class="fc" id="L774">        .addField(&quot;clientNode&quot;, clientNode)</span>
+<span class="fc" id="L775">        .addField(&quot;serverRegion&quot;, serverRegion)</span>
+<span class="fc" id="L776">        .addField(&quot;serverZone&quot;, serverZone)</span>
+<span class="fc" id="L777">        .addField(&quot;serverApp&quot;, serverApp)</span>
+<span class="fc" id="L778">        .addField(&quot;serverCluster&quot;, serverCluster)</span>
+<span class="fc" id="L779">        .addField(&quot;serverAsg&quot;, serverAsg)</span>
+<span class="fc" id="L780">        .addField(&quot;serverNode&quot;, serverNode)</span>
+<span class="fc" id="L781">        .addField(&quot;remoteAddress&quot;, remoteAddress)</span>
+<span class="fc" id="L782">        .addField(&quot;remotePort&quot;, remotePort)</span>
+<span class="fc" id="L783">        .addField(&quot;attempt&quot;, attempt)</span>
+<span class="fc" id="L784">        .addField(&quot;attemptFinal&quot;, attemptFinal)</span>
+<span class="fc" id="L785">        .addField(&quot;result&quot;, result)</span>
+<span class="fc" id="L786">        .addField(&quot;errorGroup&quot;, errorGroup)</span>
+<span class="fc" id="L787">        .addField(&quot;errorReason&quot;, errorReason)</span>
+<span class="fc" id="L788">        .addField(&quot;exceptionClass&quot;, getExceptionClass())</span>
+<span class="fc" id="L789">        .addField(&quot;exceptionMessage&quot;, getExceptionMessage())</span>
+<span class="fc" id="L790">        .addField(&quot;httpMethod&quot;, httpMethod)</span>
+<span class="fc" id="L791">        .addField(&quot;httpStatus&quot;, httpStatus)</span>
+<span class="fc" id="L792">        .addField(&quot;requestHeaders&quot;, requestHeaders)</span>
+<span class="fc" id="L793">        .addField(&quot;responseHeaders&quot;, responseHeaders)</span>
+<span class="fc" id="L794">        .addField(&quot;additionalTags&quot;, additionalTags)</span>
+<span class="fc" id="L795">        .endObject()</span>
+<span class="fc" id="L796">        .toString();</span>
+  }
+
+  /**
+   * Resets this log entry so the instance can be reused. This helps to reduce allocations.
+   */
+  void reset() {
+<span class="fc" id="L803">    logger = null;</span>
+<span class="fc" id="L804">    level = Level.DEBUG;</span>
+<span class="fc" id="L805">    marker = null;</span>
+<span class="fc" id="L806">    startTime = -1L;</span>
+<span class="fc" id="L807">    startNanos = -1L;</span>
+<span class="fc" id="L808">    latency = -1L;</span>
+<span class="fc" id="L809">    owner = null;</span>
+<span class="fc" id="L810">    result = null;</span>
+<span class="fc" id="L811">    protocol = null;</span>
+<span class="fc" id="L812">    errorGroup = null;</span>
+<span class="fc" id="L813">    errorReason = null;</span>
+<span class="fc" id="L814">    exception = null;</span>
+<span class="fc" id="L815">    attempt = null;</span>
+<span class="fc" id="L816">    attemptFinal = null;</span>
+<span class="fc" id="L817">    vip = null;</span>
+<span class="fc" id="L818">    endpoint = null;</span>
+<span class="fc" id="L819">    clientRegion = null;</span>
+<span class="fc" id="L820">    clientZone = null;</span>
+<span class="fc" id="L821">    clientApp = null;</span>
+<span class="fc" id="L822">    clientCluster = null;</span>
+<span class="fc" id="L823">    clientAsg = null;</span>
+<span class="fc" id="L824">    clientNode = null;</span>
+<span class="fc" id="L825">    serverRegion = null;</span>
+<span class="fc" id="L826">    serverZone = null;</span>
+<span class="fc" id="L827">    serverApp = null;</span>
+<span class="fc" id="L828">    serverCluster = null;</span>
+<span class="fc" id="L829">    serverAsg = null;</span>
+<span class="fc" id="L830">    serverNode = null;</span>
+<span class="fc" id="L831">    httpMethod = null;</span>
+<span class="fc" id="L832">    httpStatus = -1;</span>
+<span class="fc" id="L833">    uri = null;</span>
+<span class="fc" id="L834">    path = null;</span>
+<span class="fc" id="L835">    requestHeaders.clear();</span>
+<span class="fc" id="L836">    responseHeaders.clear();</span>
+<span class="fc" id="L837">    remoteAddress = null;</span>
+<span class="fc" id="L838">    remotePort = -1;</span>
+<span class="fc" id="L839">    additionalTags.clear();</span>
+<span class="fc" id="L840">    builder.delete(0, builder.length());</span>
+<span class="fc" id="L841">    inflightId = null;</span>
+<span class="fc" id="L842">  }</span>
+
+  /**
+   * Partially reset this log entry so it can be used for another request attempt. Any
+   * attributes that can change for a given request need to be cleared.
+   */
+  void resetForRetry() {
+<span class="nc" id="L849">    startTime = -1L;</span>
+<span class="nc" id="L850">    startNanos = -1L;</span>
+<span class="nc" id="L851">    latency = -1L;</span>
+<span class="nc" id="L852">    result = null;</span>
+<span class="nc" id="L853">    errorGroup = null;</span>
+<span class="nc" id="L854">    errorReason = null;</span>
+<span class="nc" id="L855">    exception = null;</span>
+<span class="nc" id="L856">    attempt = null;</span>
+<span class="nc" id="L857">    attemptFinal = null;</span>
+<span class="nc" id="L858">    vip = null;</span>
+<span class="nc" id="L859">    serverRegion = null;</span>
+<span class="nc" id="L860">    serverZone = null;</span>
+<span class="nc" id="L861">    serverApp = null;</span>
+<span class="nc" id="L862">    serverCluster = null;</span>
+<span class="nc" id="L863">    serverAsg = null;</span>
+<span class="nc" id="L864">    serverNode = null;</span>
+<span class="nc" id="L865">    httpStatus = -1;</span>
+<span class="nc" id="L866">    requestHeaders.clear();</span>
+<span class="nc" id="L867">    responseHeaders.clear();</span>
+<span class="nc" id="L868">    remoteAddress = null;</span>
+<span class="nc" id="L869">    remotePort = -1;</span>
+<span class="nc" id="L870">    builder.delete(0, builder.length());</span>
+<span class="nc" id="L871">    inflightId = null;</span>
+<span class="nc" id="L872">  }</span>
+
+  /**
+   * Apply a mapping function to this log entry. This method is mostly used to allow the
+   * final mapping to be applied to the entry without breaking the operator chaining.
+   */
+  public &lt;T&gt; T convert(Function&lt;IpcLogEntry, T&gt; mapper) {
+<span class="fc" id="L879">    return mapper.apply(this);</span>
+  }
+
+  private static boolean isNullOrEmpty(String s) {
+<span class="pc bpc" id="L883" title="1 of 4 branches missed.">    return s == null || s.isEmpty();</span>
+  }
+
+  private static class Header {
+    private final String name;
+    private final String value;
+
+<span class="fc" id="L890">    Header(String name, String value) {</span>
+<span class="fc" id="L891">      this.name = name;</span>
+<span class="fc" id="L892">      this.value = value;</span>
+<span class="fc" id="L893">    }</span>
+
+    String name() {
+<span class="fc" id="L896">      return name;</span>
+    }
+
+    String value() {
+<span class="fc" id="L900">      return value;</span>
+    }
+  }
+
+  private static class JsonStringBuilder {
+    private final StringBuilder builder;
+<span class="fc" id="L906">    private boolean firstEntry = true;</span>
+
+<span class="fc" id="L908">    JsonStringBuilder(StringBuilder builder) {</span>
+<span class="fc" id="L909">      this.builder = builder;</span>
+<span class="fc" id="L910">    }</span>
+
+    JsonStringBuilder startObject() {
+<span class="fc" id="L913">      builder.append('{');</span>
+<span class="fc" id="L914">      return this;</span>
+    }
+
+    JsonStringBuilder endObject() {
+<span class="fc" id="L918">      builder.append('}');</span>
+<span class="fc" id="L919">      return this;</span>
+    }
+
+    private void addSep() {
+<span class="fc bfc" id="L923" title="All 2 branches covered.">      if (firstEntry) {</span>
+<span class="fc" id="L924">        firstEntry = false;</span>
+      } else {
+<span class="fc" id="L926">        builder.append(',');</span>
+      }
+<span class="fc" id="L928">    }</span>
+
+    JsonStringBuilder addField(String k, String v) {
+<span class="fc bfc" id="L931" title="All 2 branches covered.">      if (!isNullOrEmpty(v)) {</span>
+<span class="fc" id="L932">        addSep();</span>
+<span class="fc" id="L933">        builder.append('&quot;');</span>
+<span class="fc" id="L934">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L935">        builder.append(&quot;\&quot;:\&quot;&quot;);</span>
+<span class="fc" id="L936">        escapeAndAppend(builder, v);</span>
+<span class="fc" id="L937">        builder.append('&quot;');</span>
+      }
+<span class="fc" id="L939">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, Tag tag) {
+<span class="fc bfc" id="L943" title="All 2 branches covered.">      if (tag != null) {</span>
+<span class="fc" id="L944">        addField(k, tag.value());</span>
+      }
+<span class="fc" id="L946">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, int v) {
+<span class="fc bfc" id="L950" title="All 2 branches covered.">      if (v &gt;= 0) {</span>
+<span class="fc" id="L951">        addSep();</span>
+<span class="fc" id="L952">        builder.append('&quot;');</span>
+<span class="fc" id="L953">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L954">        builder.append(&quot;\&quot;:&quot;).append(v);</span>
+      }
+<span class="fc" id="L956">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, long v) {
+<span class="fc bfc" id="L960" title="All 2 branches covered.">      if (v &gt;= 0L) {</span>
+<span class="fc" id="L961">        addSep();</span>
+<span class="fc" id="L962">        builder.append('&quot;');</span>
+<span class="fc" id="L963">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L964">        builder.append(&quot;\&quot;:&quot;).append(v);</span>
+      }
+<span class="fc" id="L966">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, double v) {
+<span class="fc bfc" id="L970" title="All 2 branches covered.">      if (v &gt;= 0.0) {</span>
+<span class="fc" id="L971">        addSep();</span>
+<span class="fc" id="L972">        builder.append('&quot;');</span>
+<span class="fc" id="L973">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L974">        builder.append(&quot;\&quot;:&quot;).append(v);</span>
+      }
+<span class="fc" id="L976">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, List&lt;Header&gt; headers) {
+<span class="fc bfc" id="L980" title="All 2 branches covered.">      if (!headers.isEmpty()) {</span>
+<span class="fc" id="L981">        addSep();</span>
+<span class="fc" id="L982">        builder.append('&quot;');</span>
+<span class="fc" id="L983">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L984">        builder.append(&quot;\&quot;:[&quot;);</span>
+
+<span class="fc" id="L986">        boolean first = true;</span>
+<span class="fc bfc" id="L987" title="All 2 branches covered.">        for (Header h : headers) {</span>
+<span class="fc bfc" id="L988" title="All 2 branches covered.">          if (first) {</span>
+<span class="fc" id="L989">            first = false;</span>
+          } else {
+<span class="fc" id="L991">            builder.append(',');</span>
+          }
+<span class="fc" id="L993">          builder.append(&quot;{\&quot;name\&quot;:\&quot;&quot;);</span>
+<span class="fc" id="L994">          escapeAndAppend(builder, h.name());</span>
+<span class="fc" id="L995">          builder.append(&quot;\&quot;,\&quot;value\&quot;:\&quot;&quot;);</span>
+<span class="fc" id="L996">          escapeAndAppend(builder, h.value());</span>
+<span class="fc" id="L997">          builder.append(&quot;\&quot;}&quot;);</span>
+<span class="fc" id="L998">        }</span>
+<span class="fc" id="L999">        builder.append(']');</span>
+      }
+<span class="fc" id="L1001">      return this;</span>
+    }
+
+    JsonStringBuilder addField(String k, Map&lt;String, String&gt; tags) {
+<span class="fc bfc" id="L1005" title="All 2 branches covered.">      if (!tags.isEmpty()) {</span>
+<span class="fc" id="L1006">        addSep();</span>
+<span class="fc" id="L1007">        builder.append('&quot;');</span>
+<span class="fc" id="L1008">        escapeAndAppend(builder, k);</span>
+<span class="fc" id="L1009">        builder.append(&quot;\&quot;:{&quot;);</span>
+
+<span class="fc" id="L1011">        boolean first = true;</span>
+<span class="fc bfc" id="L1012" title="All 2 branches covered.">        for (Map.Entry&lt;String, String&gt; entry : tags.entrySet()) {</span>
+<span class="fc bfc" id="L1013" title="All 2 branches covered.">          if (first) {</span>
+<span class="fc" id="L1014">            first = false;</span>
+          } else {
+<span class="fc" id="L1016">            builder.append(',');</span>
+          }
+<span class="fc" id="L1018">          builder.append('&quot;');</span>
+<span class="fc" id="L1019">          escapeAndAppend(builder, entry.getKey());</span>
+<span class="fc" id="L1020">          builder.append(&quot;\&quot;:\&quot;&quot;);</span>
+<span class="fc" id="L1021">          escapeAndAppend(builder, entry.getValue());</span>
+<span class="fc" id="L1022">          builder.append('&quot;');</span>
+<span class="fc" id="L1023">        }</span>
+<span class="fc" id="L1024">        builder.append('}');</span>
+      }
+<span class="fc" id="L1026">      return this;</span>
+    }
+
+    private void escapeAndAppend(StringBuilder builder, String str) {
+<span class="fc" id="L1030">      int length = str.length();</span>
+<span class="fc bfc" id="L1031" title="All 2 branches covered.">      for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L1032">        char c = str.charAt(i);</span>
+<span class="fc bfc" id="L1033" title="All 8 branches covered.">        switch (c) {</span>
+          case '&quot;':
+<span class="fc" id="L1035">            builder.append(&quot;\\\&quot;&quot;);</span>
+<span class="fc" id="L1036">            break;</span>
+          case '\\':
+<span class="fc" id="L1038">            builder.append(&quot;\\\\&quot;);</span>
+<span class="fc" id="L1039">            break;</span>
+          case '\b':
+<span class="fc" id="L1041">            builder.append(&quot;\\b&quot;);</span>
+<span class="fc" id="L1042">            break;</span>
+          case '\f':
+<span class="fc" id="L1044">            builder.append(&quot;\\f&quot;);</span>
+<span class="fc" id="L1045">            break;</span>
+          case '\n':
+<span class="fc" id="L1047">            builder.append(&quot;\\n&quot;);</span>
+<span class="fc" id="L1048">            break;</span>
+          case '\r':
+<span class="fc" id="L1050">            builder.append(&quot;\\r&quot;);</span>
+<span class="fc" id="L1051">            break;</span>
+          case '\t':
+<span class="fc" id="L1053">            builder.append(&quot;\\t&quot;);</span>
+<span class="fc" id="L1054">            break;</span>
+          default:
+            // Ignore control characters that are not matched explicitly above
+<span class="fc bfc" id="L1057" title="All 2 branches covered.">            if (!Character.isISOControl(c)) {</span>
+<span class="fc" id="L1058">              builder.append(c);</span>
+            }
+            break;
+        }
+      }
+<span class="fc" id="L1063">    }</span>
+
+    @Override
+    public String toString() {
+<span class="fc" id="L1067">      return builder.toString();</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NoopTimer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">NoopTimer.java</span></div><h1>NoopTimer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+/** Counter implementation for the no-op registry. */
+<span class="fc" id="L23">enum NoopTimer implements Timer {</span>
+  /** Singleton instance. */
+<span class="fc" id="L25">  INSTANCE;</span>
+
+  @Override public Id id() {
+<span class="fc" id="L28">    return NoopId.INSTANCE;</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="fc" id="L32">    return false;</span>
+  }
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L36">  }</span>
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L39">    return Collections.emptyList();</span>
+  }
+
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="nc" id="L43">    return f.call();</span>
+  }
+
+  @Override public void record(Runnable f) {
+<span class="fc" id="L47">    f.run();</span>
+<span class="fc" id="L48">  }</span>
+
+  @Override public long count() {
+<span class="fc" id="L51">    return 0L;</span>
+  }
+
+  @Override public long totalTime() {
+<span class="fc" id="L55">    return 0L;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

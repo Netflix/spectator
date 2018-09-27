@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServerGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">ServerGroup.java</span></div><h1>ServerGroup.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import java.util.Objects;
+
+/**
+ * Helper for parsing Netflix server group names that follow the Frigga conventions. For
+ * more information see the IEP documentation for
+ * &lt;a href=&quot;https://github.com/Netflix/iep/tree/master/iep-nflxenv#server-group-settings&quot;&gt;server groups&lt;/a&gt;.
+ *
+ * &lt;p&gt;Frigga is not used for the actual parsing as it is quite inefficient. See the
+ * ServerGroupParsing benchmark for a comparison.&lt;/p&gt;
+ */
+public class ServerGroup {
+
+  /**
+   * Create a new instance of a server group object by parsing the group name.
+   */
+  public static ServerGroup parse(String asg) {
+<span class="fc" id="L34">    int d1 = asg.indexOf('-');</span>
+<span class="fc" id="L35">    int d2 = asg.indexOf('-', d1 + 1);</span>
+<span class="fc" id="L36">    int dN = asg.lastIndexOf('-');</span>
+<span class="fc bfc" id="L37" title="All 4 branches covered.">    if (dN &lt; 0 || !isSequence(asg, dN)) {</span>
+<span class="fc" id="L38">      dN = asg.length();</span>
+    }
+<span class="fc" id="L40">    return new ServerGroup(asg, d1, d2, dN);</span>
+  }
+
+  /**
+   * Check if the last portion of the server group name is a version sequence (v\d+).
+   */
+  private static boolean isSequence(String asg, int dN) {
+<span class="fc" id="L47">    int length = asg.length();</span>
+<span class="fc bfc" id="L48" title="All 4 branches covered.">    if (length - dN &lt; 3 || asg.charAt(dN + 1) != 'v') {</span>
+<span class="fc" id="L49">      return false;</span>
+    }
+<span class="fc bfc" id="L51" title="All 2 branches covered.">    for (int i = dN + 2; i &lt; length; ++i) {</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">      if (!Character.isDigit(asg.charAt(i))) {</span>
+<span class="fc" id="L53">        return false;</span>
+      }
+    }
+<span class="fc" id="L56">    return true;</span>
+  }
+
+  private static String substr(String str, int s, int e) {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">    return (s &gt;= e) ? null : str.substring(s, e);</span>
+  }
+
+  private final String asg;
+  private final int d1;
+  private final int d2;
+  private final int dN;
+
+  /**
+   * Create a new instance of the server group.
+   *
+   * @param asg
+   *     Raw group name received from the user.
+   * @param d1
+   *     Position of the first dash or -1 if there are no dashes in the input.
+   * @param d2
+   *     Position of the second dash or -1 if there is not a second dash in the input.
+   * @param dN
+   *     Position indicating the end of the cluster name. For a server group with a
+   *     sequence this will be the final dash. If the sequence is not present, then
+   *     it will be the end of the string.
+   */
+<span class="fc" id="L82">  ServerGroup(String asg, int d1, int d2, int dN) {</span>
+<span class="fc" id="L83">    this.asg = asg;</span>
+<span class="fc" id="L84">    this.d1 = d1;</span>
+<span class="fc" id="L85">    this.d2 = d2;</span>
+<span class="fc" id="L86">    this.dN = dN;</span>
+<span class="fc" id="L87">  }</span>
+
+  /** Return the application for the server group or null if invalid. */
+  public String app() {
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (d1 &lt; 0) {</span>
+      // No stack or detail is present
+<span class="fc bfc" id="L93" title="All 2 branches covered.">      return asg.length() &gt; 0 ? asg : null;</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">    } else if (d1 == 0) {</span>
+      // Application portion is empty
+<span class="fc" id="L96">      return null;</span>
+    } else {
+      // Application is present along with stack, detail, or sequence
+<span class="fc" id="L99">      return substr(asg, 0, d1);</span>
+    }
+  }
+
+  /** Return the cluster name for the server group or null if invalid. */
+  public String cluster() {
+<span class="fc bfc" id="L105" title="All 2 branches covered.">    if (d1 == 0) {</span>
+      // Application portion is empty
+<span class="fc" id="L107">      return null;</span>
+    } else {
+<span class="fc bfc" id="L109" title="All 4 branches covered.">      return (dN &gt; 0 &amp;&amp; dN == asg.length()) ? asg() : substr(asg, 0, dN);</span>
+    }
+  }
+
+  /** Return the server group name or null if invalid. */
+  public String asg() {
+<span class="fc bfc" id="L115" title="All 4 branches covered.">    return (d1 != 0 &amp;&amp; dN &gt; 0) ? asg : null;</span>
+  }
+
+  /** If the server group has a stack, then return the stack name. Otherwise return null. */
+  public String stack() {
+<span class="fc bfc" id="L120" title="All 2 branches covered.">    if (d1 &lt;= 0) {</span>
+      // No stack, detail or sequence is present
+<span class="fc" id="L122">      return null;</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">    } else if (d2 &lt; 0) {</span>
+      // Stack, but no detail is present
+<span class="fc" id="L125">      return substr(asg, d1 + 1, dN);</span>
+    } else {
+      // Stack and at least one of detail or sequence is present
+<span class="fc" id="L128">      return substr(asg, d1 + 1, d2);</span>
+    }
+  }
+
+  /** If the server group has a detail, then return the detail name. Otherwise return null. */
+  public String detail() {
+<span class="fc bfc" id="L134" title="All 4 branches covered.">    return (d1 != 0 &amp;&amp; d2 &gt; 0) ? substr(asg, d2 + 1, dN) : null;</span>
+  }
+
+  /** If the server group has a sequence number, then return it. Otherwise return null. */
+  public String sequence() {
+<span class="fc bfc" id="L139" title="All 2 branches covered.">    return dN == asg.length() ? null : substr(asg, dN + 1, asg.length());</span>
+  }
+
+  @Override public boolean equals(Object o) {
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">    if (this == o) return true;</span>
+<span class="pc bpc" id="L144" title="2 of 4 branches missed.">    if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L145">    ServerGroup that = (ServerGroup) o;</span>
+<span class="pc bpc" id="L146" title="3 of 6 branches missed.">    return d1 == that.d1</span>
+        &amp;&amp; d2 == that.d2
+        &amp;&amp; dN == that.dN
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">        &amp;&amp; Objects.equals(asg, that.asg);</span>
+  }
+
+  @Override public int hashCode() {
+<span class="nc" id="L153">    return Objects.hash(asg, d1, d2, dN);</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L157">    return &quot;ServerGroup(&quot; + asg + &quot;, &quot; + d1 + &quot;, &quot; + d2 + &quot;, &quot; + dN + &quot;)&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

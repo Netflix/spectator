@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcLogger.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcLogger.java</span></div><h1>IpcLogger.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.api.patterns.CardinalityLimiters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+import org.slf4j.event.Level;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+/**
+ * Logger for recording IPC metrics and providing a basic access log. A single logger instance
+ * should be reused for all requests in a given context because it maintains the state such as
+ * number of inflight requests.
+ */
+public class IpcLogger {
+
+<span class="fc" id="L43">  private static final Marker CLIENT = MarkerFactory.getMarker(&quot;ipc-client&quot;);</span>
+<span class="fc" id="L44">  private static final Marker SERVER = MarkerFactory.getMarker(&quot;ipc-server&quot;);</span>
+
+  private final Registry registry;
+  private final Clock clock;
+  private final Logger logger;
+
+  private final ConcurrentHashMap&lt;Id, AtomicInteger&gt; inflightRequests;
+  private final ConcurrentHashMap&lt;String, Function&lt;String, String&gt;&gt; limiters;
+
+  private final LinkedBlockingQueue&lt;IpcLogEntry&gt; entries;
+
+  /**
+   * Create a new instance. Allows the clock to be explicitly set for unit tests.
+   */
+<span class="fc" id="L58">  IpcLogger(Registry registry, Clock clock, Logger logger) {</span>
+<span class="fc" id="L59">    this.registry = registry;</span>
+<span class="fc" id="L60">    this.clock = clock;</span>
+<span class="fc" id="L61">    this.logger = logger;</span>
+<span class="fc" id="L62">    this.inflightRequests = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L63">    this.limiters = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L64">    this.entries = new LinkedBlockingQueue&lt;&gt;(1000);</span>
+<span class="fc" id="L65">  }</span>
+
+  /** Create a new instance. */
+  public IpcLogger(Registry registry, Logger logger) {
+<span class="fc" id="L69">    this(registry, Clock.SYSTEM, logger);</span>
+<span class="fc" id="L70">  }</span>
+
+  /** Create a new instance. */
+  public IpcLogger(Registry registry) {
+<span class="nc" id="L74">    this(registry, Clock.SYSTEM, LoggerFactory.getLogger(IpcLogger.class));</span>
+<span class="nc" id="L75">  }</span>
+
+  /** Return the number of inflight requests associated with the given id. */
+  AtomicInteger inflightRequests(Id id) {
+<span class="fc" id="L79">    return Utils.computeIfAbsent(inflightRequests, id, i -&gt; new AtomicInteger());</span>
+  }
+
+  /**
+   * Return the cardinality limiter for a given key. This is used to protect the metrics
+   * backend from a metrics explosion if some dimensions have a high cardinality.
+   */
+  Function&lt;String, String&gt; limiterForKey(String key) {
+<span class="fc" id="L87">    return Utils.computeIfAbsent(limiters, key, k -&gt; CardinalityLimiters.mostFrequent(25));</span>
+  }
+
+  private IpcLogEntry newEntry() {
+<span class="fc" id="L91">    IpcLogEntry entry = entries.poll();</span>
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">    return (entry == null) ? new IpcLogEntry(clock) : entry;</span>
+  }
+
+  /**
+   * Create a new log entry for client requests. Log entry objects may be reused to minimize
+   * the number of allocations so they should only be modified in the context of a single
+   * request.
+   */
+  public IpcLogEntry createClientEntry() {
+<span class="fc" id="L101">    return newEntry()</span>
+<span class="fc" id="L102">        .withRegistry(registry)</span>
+<span class="fc" id="L103">        .withLogger(this)</span>
+<span class="fc" id="L104">        .withMarker(CLIENT);</span>
+  }
+
+  /**
+   * Create a new log entry for server requests. Log entry objects may be reused to minimize
+   * the number of allocations so they should only be modified in the context of a single
+   * request.
+   */
+  public IpcLogEntry createServerEntry() {
+<span class="fc" id="L113">    return newEntry()</span>
+<span class="fc" id="L114">        .withRegistry(registry)</span>
+<span class="fc" id="L115">        .withLogger(this)</span>
+<span class="fc" id="L116">        .withMarker(SERVER);</span>
+  }
+
+  /**
+   * Called by the entry to log the request.
+   */
+  void log(IpcLogEntry entry) {
+<span class="fc" id="L123">    Level level = entry.getLevel();</span>
+    Predicate&lt;Marker&gt; isEnabled;
+    BiConsumer&lt;Marker, String&gt; log;
+<span class="pc bpc" id="L126" title="5 of 6 branches missed.">    switch (level) {</span>
+      case TRACE:
+<span class="nc" id="L128">        isEnabled = logger::isTraceEnabled;</span>
+<span class="nc" id="L129">        log = logger::trace;</span>
+<span class="nc" id="L130">        break;</span>
+      case DEBUG:
+<span class="fc" id="L132">        isEnabled = logger::isDebugEnabled;</span>
+<span class="fc" id="L133">        log = logger::debug;</span>
+<span class="fc" id="L134">        break;</span>
+      case INFO:
+<span class="nc" id="L136">        isEnabled = logger::isInfoEnabled;</span>
+<span class="nc" id="L137">        log = logger::info;</span>
+<span class="nc" id="L138">        break;</span>
+      case WARN:
+<span class="nc" id="L140">        isEnabled = logger::isWarnEnabled;</span>
+<span class="nc" id="L141">        log = logger::warn;</span>
+<span class="nc" id="L142">        break;</span>
+      case ERROR:
+<span class="nc" id="L144">        isEnabled = logger::isErrorEnabled;</span>
+<span class="nc" id="L145">        log = logger::error;</span>
+<span class="nc" id="L146">        break;</span>
+      default:
+<span class="nc" id="L148">        isEnabled = logger::isDebugEnabled;</span>
+<span class="nc" id="L149">        log = logger::debug;</span>
+        break;
+    }
+
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">    if (isEnabled.test(entry.getMarker())) {</span>
+<span class="nc" id="L154">      log.accept(entry.getMarker(), entry.toString());</span>
+    }
+
+    // For successful responses we can reuse the entry to avoid additional allocations. Failed
+    // requests might have retries so we just reset the response portion to avoid incorrectly
+    // having state bleed through from one request to the next.
+<span class="pc bpc" id="L160" title="1 of 2 branches missed.">    if (entry.isSuccessful()) {</span>
+<span class="fc" id="L161">      entry.reset();</span>
+<span class="fc" id="L162">      entries.offer(entry);</span>
+    } else {
+<span class="nc" id="L164">      entry.resetForRetry();</span>
+    }
+<span class="fc" id="L166">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

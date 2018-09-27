@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatelessRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-stateless</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.stateless</a> &gt; <span class="el_source">StatelessRegistry.java</span></div><h1>StatelessRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.stateless;
+
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.Scheduler;
+import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpResponse;
+
+import java.net.URI;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+/**
+ * Registry for reporting deltas to an aggregation service. This registry is intended for
+ * use-cases where the instance cannot maintain state over the step interval. For example,
+ * if running via a FaaS system like AWS Lambda, the lifetime of an invocation can be quite
+ * small. Thus this registry would track the deltas and rely on a separate service to
+ * consolidate the state over time if needed.
+ *
+ * The registry should be tied to the lifecyle of the container to ensure that the last set
+ * of deltas are flushed properly. This will happen automatically when calling {@link #stop()}.
+ */
+public final class StatelessRegistry extends AbstractRegistry {
+
+  private final boolean enabled;
+  private final Duration frequency;
+  private final long meterTTL;
+  private final int connectTimeout;
+  private final int readTimeout;
+  private final URI uri;
+  private final int batchSize;
+  private final Map&lt;String, String&gt; commonTags;
+
+  private final HttpClient client;
+
+  private Scheduler scheduler;
+
+  /** Create a new instance. */
+  public StatelessRegistry(Clock clock, StatelessConfig config) {
+<span class="fc" id="L65">    super(clock, config);</span>
+<span class="fc" id="L66">    this.enabled = config.enabled();</span>
+<span class="fc" id="L67">    this.frequency = config.frequency();</span>
+<span class="fc" id="L68">    this.meterTTL = config.meterTTL().toMillis();</span>
+<span class="fc" id="L69">    this.connectTimeout = (int) config.connectTimeout().toMillis();</span>
+<span class="fc" id="L70">    this.readTimeout = (int) config.readTimeout().toMillis();</span>
+<span class="fc" id="L71">    this.uri = URI.create(config.uri());</span>
+<span class="fc" id="L72">    this.batchSize = config.batchSize();</span>
+<span class="fc" id="L73">    this.commonTags = config.commonTags();</span>
+<span class="fc" id="L74">    this.client = HttpClient.create(this);</span>
+<span class="fc" id="L75">  }</span>
+
+  /**
+   * Start the scheduler to collect metrics data.
+   */
+  public void start() {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">    if (scheduler == null) {</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">      if (enabled) {</span>
+<span class="nc" id="L83">        Scheduler.Options options = new Scheduler.Options()</span>
+<span class="nc" id="L84">            .withFrequency(Scheduler.Policy.FIXED_DELAY, frequency)</span>
+<span class="nc" id="L85">            .withInitialDelay(frequency)</span>
+<span class="nc" id="L86">            .withStopOnFailure(false);</span>
+<span class="nc" id="L87">        scheduler = new Scheduler(this, &quot;spectator-reg-stateless&quot;, 1);</span>
+<span class="nc" id="L88">        scheduler.schedule(options, this::collectData);</span>
+<span class="nc" id="L89">        logger.info(&quot;started collecting metrics every {} reporting to {}&quot;, frequency, uri);</span>
+<span class="nc" id="L90">        logger.info(&quot;common tags: {}&quot;, commonTags);</span>
+<span class="nc" id="L91">      } else {</span>
+<span class="nc" id="L92">        logger.info(&quot;publishing is not enabled&quot;);</span>
+      }
+    } else {
+<span class="nc" id="L95">      logger.warn(&quot;registry already started, ignoring duplicate request&quot;);</span>
+    }
+<span class="nc" id="L97">  }</span>
+
+  /**
+   * Stop the scheduler reporting data.
+   */
+  public void stop() {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    if (scheduler != null) {</span>
+<span class="nc" id="L104">      scheduler.shutdown();</span>
+<span class="nc" id="L105">      scheduler = null;</span>
+<span class="nc" id="L106">      logger.info(&quot;flushing metrics before stopping the registry&quot;);</span>
+<span class="nc" id="L107">      collectData();</span>
+<span class="nc" id="L108">      logger.info(&quot;stopped collecting metrics every {} reporting to {}&quot;, frequency, uri);</span>
+    } else {
+<span class="nc" id="L110">      logger.warn(&quot;registry stopped, but was never started&quot;);</span>
+    }
+<span class="nc" id="L112">  }</span>
+
+  private void collectData() {
+    try {
+<span class="nc bnc" id="L116" title="All 2 branches missed.">      for (List&lt;Measurement&gt; batch : getBatches()) {</span>
+<span class="nc" id="L117">        byte[] payload = JsonUtils.encode(commonTags, batch);</span>
+<span class="nc" id="L118">        HttpResponse res = client.post(uri)</span>
+<span class="nc" id="L119">            .withConnectTimeout(connectTimeout)</span>
+<span class="nc" id="L120">            .withReadTimeout(readTimeout)</span>
+<span class="nc" id="L121">            .withContent(&quot;application/json&quot;, payload)</span>
+<span class="nc" id="L122">            .send();</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (res.status() != 200) {</span>
+<span class="nc" id="L124">          logger.warn(&quot;failed to send metrics, status {}: {}&quot;, res.status(), res.entityAsString());</span>
+        }
+<span class="nc" id="L126">      }</span>
+<span class="nc" id="L127">    } catch (Exception e) {</span>
+<span class="nc" id="L128">      logger.warn(&quot;failed to send metrics&quot;, e);</span>
+<span class="nc" id="L129">    }</span>
+<span class="nc" id="L130">  }</span>
+
+  /** Get a list of all measurements from the registry. */
+  List&lt;Measurement&gt; getMeasurements() {
+<span class="fc" id="L134">    return stream()</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        .filter(m -&gt; !m.hasExpired())</span>
+<span class="fc" id="L136">        .flatMap(m -&gt; StreamSupport.stream(m.measure().spliterator(), false))</span>
+<span class="fc" id="L137">        .collect(Collectors.toList());</span>
+  }
+
+  /** Get a list of all measurements and break them into batches. */
+  List&lt;List&lt;Measurement&gt;&gt; getBatches() {
+<span class="fc" id="L142">    List&lt;List&lt;Measurement&gt;&gt; batches = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L143">    List&lt;Measurement&gt; ms = getMeasurements();</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">    for (int i = 0; i &lt; ms.size(); i += batchSize) {</span>
+<span class="fc" id="L145">      List&lt;Measurement&gt; batch = ms.subList(i, Math.min(ms.size(), i + batchSize));</span>
+<span class="fc" id="L146">      batches.add(batch);</span>
+    }
+<span class="fc" id="L148">    return batches;</span>
+  }
+
+  @Override protected Counter newCounter(Id id) {
+<span class="fc" id="L152">    return new StatelessCounter(id, clock(), meterTTL);</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="fc" id="L156">    return new StatelessDistributionSummary(id, clock(), meterTTL);</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="fc" id="L160">    return new StatelessTimer(id, clock(), meterTTL);</span>
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+<span class="fc" id="L164">    return new StatelessGauge(id, clock(), meterTTL);</span>
+  }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+<span class="fc" id="L168">    return new StatelessMaxGauge(id, clock(), meterTTL);</span>
+  }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PercentileDistributionSummary.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.histogram</a> &gt; <span class="el_source">PercentileDistributionSummary.java</span></div><h1>PercentileDistributionSummary.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.histogram;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.patterns.IdBuilder;
+import com.netflix.spectator.api.patterns.TagsBuilder;
+
+import java.util.Collections;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+
+/**
+ * Distribution summary that buckets the counts to allow for estimating percentiles. This
+ * distribution summary type will track the data distribution for the summary by maintaining a
+ * set of counters. The distribution can then be used on the server side to estimate percentiles
+ * while still allowing for arbitrary slicing and dicing based on dimensions.
+ *
+ * &lt;p&gt;&lt;b&gt;Percentile distribution summaries are expensive compared to basic distribution summaries
+ * from the registry.&lt;/b&gt; In particular they have a higher storage cost, worst case ~300x, to
+ * maintain the data distribution. Be diligent about any additional dimensions added to percentile
+ * distribution summaries and ensure they have a small bounded cardinality. In addition it is
+ * highly recommended to set a threshold (see {@link Builder#withRange(long, long)}) whenever
+ * possible to greatly restrict the worst case overhead.&lt;/p&gt;
+ */
+public class PercentileDistributionSummary implements DistributionSummary {
+
+  // Precomputed values for the corresponding buckets. This is done to avoid expensive
+  // String.format calls when creating new instances of a percentile variant. The
+  // String.format calls uses regex internally to parse out the `%` substitutions which
+  // has a lot of overhead.
+  private static final String[] TAG_VALUES;
+
+  static {
+<span class="fc" id="L53">    int length = PercentileBuckets.length();</span>
+<span class="fc" id="L54">    TAG_VALUES = new String[length];</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">    for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L56">      TAG_VALUES[i] = String.format(&quot;D%04X&quot;, i);</span>
+    }
+<span class="fc" id="L58">  }</span>
+
+  /**
+   * Creates a distribution summary object that can be used for estimating percentiles.
+   * &lt;b&gt;Percentile timers are expensive compared to basic distribution summaries from the
+   * registry.&lt;/b&gt; Be diligent with ensuring that any additional dimensions have a small
+   * bounded cardinality. It is also highly recommended to explicitly set the threshold
+   * (see {@link Builder#withRange(long, long)}) whenever possible.
+   *
+   * @param registry
+   *     Registry to use.
+   * @param id
+   *     Identifier for the metric being registered.
+   * @return
+   *     Distribution summary that keeps track of counts by buckets that can be used to estimate
+   *     the percentiles for the distribution.
+   */
+  public static PercentileDistributionSummary get(Registry registry, Id id) {
+<span class="fc" id="L76">    return new PercentileDistributionSummary(registry, id, 0L, Long.MAX_VALUE);</span>
+  }
+
+  /**
+   * Return a builder for configuring and retrieving and instance of a percentile distribution
+   * summary. If the distribution summary has dynamic dimensions, then the builder can be used
+   * with the new dimensions. If the id is the same as an existing distribution summary, then it
+   * will update the same underlying distribution summaries in the registry.
+   */
+  public static IdBuilder&lt;Builder&gt; builder(Registry registry) {
+<span class="fc" id="L86">    return new IdBuilder&lt;Builder&gt;(registry) {</span>
+      @Override protected Builder createTypeBuilder(Id id) {
+<span class="fc" id="L88">        return new Builder(registry, id);</span>
+      }
+    };
+  }
+
+  /**
+   * Helper for getting instances of a PercentileDistributionSummary.
+   */
+  public static final class Builder extends TagsBuilder&lt;Builder&gt; {
+
+    private Registry registry;
+    private Id baseId;
+    private long min;
+    private long max;
+
+    /** Create a new instance. */
+    Builder(Registry registry, Id baseId) {
+<span class="fc" id="L105">      super();</span>
+<span class="fc" id="L106">      this.registry = registry;</span>
+<span class="fc" id="L107">      this.baseId = baseId;</span>
+<span class="fc" id="L108">      this.min = 0L;</span>
+<span class="fc" id="L109">      this.max = Long.MAX_VALUE;</span>
+<span class="fc" id="L110">    }</span>
+
+    /**
+     * Sets the range for this summary. The range is should be the SLA boundary or
+     * failure point for the activity. Explicitly setting the threshold allows us to optimize
+     * for the important range of values and reduce the overhead associated with tracking the
+     * data distribution.
+     *
+     * For example, suppose you are making a client call and the max payload size is 8mb. Setting
+     * the threshold to 8mb will restrict the possible set of buckets used to those approaching
+     * the boundary. So we can still detect if it is nearing failure, but percentiles
+     * that are further away from the range may be inflated compared to the actual value.
+     *
+     * @param min
+     *     Amount indicating the minimum allowed value for this summary.
+     * @param max
+     *     Amount indicating the maximum allowed value for this summary.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withRange(long min, long max) {
+<span class="fc" id="L131">      this.min = min;</span>
+<span class="fc" id="L132">      this.max = max;</span>
+<span class="fc" id="L133">      return this;</span>
+    }
+
+    /**
+     * Create or get an instance of the percentile distribution summary with the specified
+     * settings.
+     */
+    public PercentileDistributionSummary build() {
+<span class="fc" id="L141">      final Id id = baseId.withTags(extraTags);</span>
+<span class="fc" id="L142">      return new PercentileDistributionSummary(registry, id, min, max);</span>
+    }
+  }
+
+  private final Registry registry;
+  private final Id id;
+  private final DistributionSummary summary;
+  private final long min;
+  private final long max;
+  private final AtomicReferenceArray&lt;Counter&gt; counters;
+
+  /** Create a new instance. */
+<span class="fc" id="L154">  PercentileDistributionSummary(Registry registry, Id id, long min, long max) {</span>
+<span class="fc" id="L155">    this.registry = registry;</span>
+<span class="fc" id="L156">    this.id = id;</span>
+<span class="fc" id="L157">    this.summary = registry.distributionSummary(id);</span>
+<span class="fc" id="L158">    this.min = min;</span>
+<span class="fc" id="L159">    this.max = max;</span>
+<span class="fc" id="L160">    this.counters = new AtomicReferenceArray&lt;&gt;(PercentileBuckets.length());</span>
+<span class="fc" id="L161">  }</span>
+
+  @Override public Id id() {
+<span class="nc" id="L164">    return id;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="nc" id="L168">    return Collections.emptyList();</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="nc" id="L172">    return summary.hasExpired();</span>
+  }
+
+  // Lazily load the counter for a given bucket. This avoids the allocation for
+  // creating the id and the map lookup after the first time a given bucket is
+  // accessed for a timer.
+  private Counter counterFor(int i) {
+<span class="fc" id="L179">    Counter c = counters.get(i);</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">    if (c == null) {</span>
+<span class="fc" id="L181">      Id counterId = id.withTags(Statistic.percentile, new BasicTag(&quot;percentile&quot;, TAG_VALUES[i]));</span>
+<span class="fc" id="L182">      c = registry.counter(counterId);</span>
+<span class="fc" id="L183">      counters.set(i, c);</span>
+    }
+<span class="fc" id="L185">    return c;</span>
+  }
+
+  private long restrict(long amount) {
+<span class="fc" id="L189">    long v = Math.min(amount, max);</span>
+<span class="fc" id="L190">    return Math.max(v, min);</span>
+  }
+
+  @Override public void record(long amount) {
+<span class="pc bpc" id="L194" title="1 of 2 branches missed.">    if (amount &gt;= 0L) {</span>
+<span class="fc" id="L195">      summary.record(amount);</span>
+<span class="fc" id="L196">      counterFor(PercentileBuckets.indexOf(restrict(amount))).increment();</span>
+    }
+<span class="fc" id="L198">  }</span>
+
+  /**
+   * Computes the specified percentile for this distribution summary.
+   *
+   * @param p
+   *     Percentile to compute, value must be {@code 0.0 &lt;= p &lt;= 100.0}.
+   * @return
+   *     An approximation of the {@code p}`th percentile in seconds.
+   */
+  public double percentile(double p) {
+<span class="fc" id="L209">    long[] counts = new long[PercentileBuckets.length()];</span>
+<span class="fc bfc" id="L210" title="All 2 branches covered.">    for (int i = 0; i &lt; counts.length; ++i) {</span>
+<span class="fc" id="L211">      counts[i] = counterFor(i).count();</span>
+    }
+<span class="fc" id="L213">    return PercentileBuckets.percentile(counts, p);</span>
+  }
+
+  @Override public long count() {
+<span class="nc" id="L217">    return summary.count();</span>
+  }
+
+  @Override public long totalAmount() {
+<span class="nc" id="L221">    return summary.totalAmount();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

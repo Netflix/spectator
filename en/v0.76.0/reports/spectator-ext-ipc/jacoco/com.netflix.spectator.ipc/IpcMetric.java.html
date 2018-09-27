@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcMetric.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcMetric.java</span></div><h1>IpcMetric.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
+
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+/**
+ * IPC metric names and associated metadata.
+ */
+<span class="fc" id="L35">public enum IpcMetric {</span>
+  /**
+   * Timer recording the number and latency of outbound requests.
+   */
+<span class="fc" id="L39">  clientCall(&quot;ipc.client.call&quot;, EnumSet.of(</span>
+      IpcTagKey.owner,
+      IpcTagKey.result,
+      IpcTagKey.attempt,
+      IpcTagKey.attemptFinal,
+      IpcTagKey.errorGroup // For result == failure only
+  )),
+
+  /**
+   * Timer recording the number and latency of inbound requests.
+   */
+<span class="fc" id="L50">  serverCall(&quot;ipc.server.call&quot;, EnumSet.of(</span>
+      IpcTagKey.owner,
+      IpcTagKey.result,
+      IpcTagKey.errorGroup // For result == failure only
+  )),
+
+  /**
+   * Number of outbound requests that are currently in flight.
+   */
+<span class="fc" id="L59">  clientInflight(&quot;ipc.client.inflight&quot;, EnumSet.of(</span>
+      IpcTagKey.owner
+  )),
+
+  /**
+   * Number of inbound requests that are currently in flight.
+   */
+<span class="fc" id="L66">  serverInflight(&quot;ipc.server.inflight&quot;, EnumSet.of(</span>
+      IpcTagKey.owner
+  ));
+
+  private final String metricName;
+  private final EnumSet&lt;IpcTagKey&gt; requiredDimensions;
+
+  /** Create a new instance. */
+<span class="fc" id="L74">  IpcMetric(String metricName, EnumSet&lt;IpcTagKey&gt; requiredDimensions) {</span>
+<span class="fc" id="L75">    this.metricName = metricName;</span>
+<span class="fc" id="L76">    this.requiredDimensions = requiredDimensions;</span>
+<span class="fc" id="L77">  }</span>
+
+  /** Returns the metric name to use in the meter id. */
+  public String metricName() {
+<span class="fc" id="L81">    return metricName;</span>
+  }
+
+  /** Returns the set of dimensions that are required for this metrics. */
+  public EnumSet&lt;IpcTagKey&gt; requiredDimensions() {
+<span class="nc" id="L86">    return requiredDimensions;</span>
+  }
+
+<span class="fc" id="L89">  private static final Class&lt;?&gt;[] METER_TYPES = {</span>
+      Counter.class,
+      Timer.class,
+      DistributionSummary.class,
+      Gauge.class
+  };
+
+<span class="fc" id="L96">  private static final SortedSet&lt;String&gt; ATTEMPT_FINAL_VALUES = new TreeSet&lt;&gt;();</span>
+
+  static {
+<span class="fc" id="L99">    ATTEMPT_FINAL_VALUES.add(Boolean.TRUE.toString());</span>
+<span class="fc" id="L100">    ATTEMPT_FINAL_VALUES.add(Boolean.FALSE.toString());</span>
+<span class="fc" id="L101">  }</span>
+
+  private static void assertTrue(boolean condition, String description, Object... args) {
+<span class="fc bfc" id="L104" title="All 2 branches covered.">    if (!condition) {</span>
+<span class="fc" id="L105">      throw new IllegalArgumentException(String.format(description, args));</span>
+    }
+<span class="fc" id="L107">  }</span>
+
+  private static String getName(Class&lt;?&gt; cls) {
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">    for (Class&lt;?&gt; c : METER_TYPES) {</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">      if (c.isAssignableFrom(cls)) {</span>
+<span class="fc" id="L112">        return c.getSimpleName();</span>
+      }
+    }
+<span class="nc" id="L115">    return cls.getSimpleName();</span>
+  }
+
+  private static boolean isPercentile(Id id) {
+<span class="fc" id="L119">    final String stat = Utils.getTagValue(id, &quot;statistic&quot;);</span>
+<span class="fc" id="L120">    return &quot;percentile&quot;.equals(stat);</span>
+  }
+
+  private static void validateIpcMeter(Registry registry, IpcMetric metric, Class&lt;?&gt; type) {
+<span class="fc" id="L124">    final String name = metric.metricName();</span>
+<span class="fc" id="L125">    registry.stream()</span>
+<span class="fc bfc" id="L126" title="All 4 branches covered.">        .filter(m -&gt; name.equals(m.id().name()) &amp;&amp; !isPercentile(m.id()))</span>
+<span class="fc" id="L127">        .forEach(m -&gt; {</span>
+<span class="fc" id="L128">          assertTrue(type.isAssignableFrom(m.getClass()),</span>
+              &quot;[%s] has the wrong type, expected %s but found %s&quot;,
+<span class="fc" id="L130">              m.id(), type.getSimpleName(), getName(m.getClass()));</span>
+<span class="fc" id="L131">          metric.validate(m.id());</span>
+<span class="fc" id="L132">        });</span>
+<span class="fc" id="L133">  }</span>
+
+  /**
+   * Validate all of the common IPC metrics contained within the specified registry.
+   *
+   * @param registry
+   *     Registry to query for IPC metrics.
+   */
+  public static void validate(Registry registry) {
+<span class="fc" id="L142">    validateIpcMeter(registry, IpcMetric.clientCall, Timer.class);</span>
+<span class="fc" id="L143">    validateIpcMeter(registry, IpcMetric.serverCall, Timer.class);</span>
+<span class="fc" id="L144">    validateIpcMeter(registry, IpcMetric.clientInflight, DistributionSummary.class);</span>
+<span class="fc" id="L145">    validateIpcMeter(registry, IpcMetric.serverInflight, DistributionSummary.class);</span>
+<span class="fc" id="L146">  }</span>
+
+  @SuppressWarnings(&quot;PMD.PreserveStackTrace&quot;)
+  private &lt;T extends Enum&lt;T&gt;&gt; void validateValues(Id id, String key, Class&lt;T&gt; cls) {
+<span class="fc" id="L150">    String value = Utils.getTagValue(id, key);</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">    if (value != null) {</span>
+      try {
+<span class="fc" id="L153">        Enum.valueOf(cls, value);</span>
+<span class="fc" id="L154">      } catch (Exception e) {</span>
+<span class="fc" id="L155">        String values = Arrays.stream(cls.getEnumConstants())</span>
+<span class="fc" id="L156">            .map(Enum::name)</span>
+<span class="fc" id="L157">            .collect(Collectors.joining(&quot;, &quot;));</span>
+<span class="fc" id="L158">        throw new IllegalArgumentException(String.format(</span>
+            &quot;[%s] invalid value for dimension %s, acceptable values are (%s)&quot;,
+            id, key, values));
+<span class="fc" id="L161">      }</span>
+    }
+<span class="fc" id="L163">  }</span>
+
+  private void validateValues(Id id, String key, SortedSet&lt;String&gt; allowedValues) {
+<span class="fc" id="L166">    String value = Utils.getTagValue(id, key);</span>
+<span class="fc bfc" id="L167" title="All 4 branches covered.">    if (value != null &amp;&amp; !allowedValues.contains(value)) {</span>
+<span class="fc" id="L168">      String values = allowedValues.stream()</span>
+<span class="fc" id="L169">          .collect(Collectors.joining(&quot;, &quot;));</span>
+<span class="fc" id="L170">      throw new IllegalArgumentException(String.format(</span>
+          &quot;[%s] invalid value for dimension %s, acceptable values are (%s)&quot;,
+          id, key, values));
+    }
+<span class="fc" id="L174">  }</span>
+
+  /**
+   * Validate that the specified id has the correct tagging for this IPC metric.
+   *
+   * @param id
+   *     Meter identifier to validate.
+   */
+  public void validate(Id id) {
+<span class="fc" id="L183">    assertTrue(metricName.equals(id.name()), &quot;%s != %s&quot;, metricName, id.name());</span>
+
+    // Check that required dimensions other than error group are present
+<span class="fc" id="L186">    EnumSet&lt;IpcTagKey&gt; dimensions = requiredDimensions.clone();</span>
+<span class="fc" id="L187">    dimensions.remove(IpcTagKey.errorGroup);</span>
+<span class="fc" id="L188">    dimensions.forEach(k -&gt; {</span>
+<span class="fc" id="L189">      String value = Utils.getTagValue(id, k.key());</span>
+<span class="fc bfc" id="L190" title="All 2 branches covered.">      assertTrue(value != null, &quot;[%s] is missing required dimension %s&quot;, id, k.key());</span>
+<span class="fc" id="L191">    });</span>
+
+    // Check that error group and error reason are only present for failed requests
+<span class="fc bfc" id="L194" title="All 2 branches covered.">    if (requiredDimensions.contains(IpcTagKey.errorGroup)) {</span>
+<span class="fc" id="L195">      String result = Utils.getTagValue(id, IpcTagKey.result.key());</span>
+<span class="fc" id="L196">      String errorGroup = Utils.getTagValue(id, IpcTagKey.errorGroup.key());</span>
+<span class="fc" id="L197">      String errorReason = Utils.getTagValue(id, IpcTagKey.errorReason.key());</span>
+<span class="fc bfc" id="L198" title="All 3 branches covered.">      switch (result) {</span>
+        case &quot;success&quot;:
+<span class="fc bfc" id="L200" title="All 2 branches covered.">          assertTrue(errorGroup == null,</span>
+              &quot;[%s] %s should not be present on successful request&quot;,
+<span class="fc" id="L202">              id, IpcTagKey.errorGroup.key());</span>
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">          assertTrue(errorReason == null,</span>
+              &quot;[%s] %s should not be present on successful request&quot;,
+<span class="fc" id="L205">              id, IpcTagKey.errorReason.key());</span>
+<span class="fc" id="L206">          break;</span>
+        case &quot;failure&quot;:
+<span class="fc bfc" id="L208" title="All 2 branches covered.">          assertTrue(errorGroup != null,</span>
+              &quot;[%s] %s must be present on failed request&quot;,
+<span class="fc" id="L210">              id, IpcTagKey.errorGroup.key());</span>
+<span class="fc" id="L211">          break;</span>
+        default:
+          // Invalid value for result, will be caught later on
+          break;
+      }
+    }
+
+    // Check the values are correct for enum keys
+<span class="fc" id="L219">    validateValues(id, IpcTagKey.attemptFinal.key(), ATTEMPT_FINAL_VALUES);</span>
+<span class="fc" id="L220">    validateValues(id, IpcTagKey.attempt.key(), IpcAttempt.class);</span>
+<span class="fc" id="L221">    validateValues(id, IpcTagKey.result.key(), IpcResult.class);</span>
+<span class="fc" id="L222">    validateValues(id, IpcTagKey.errorGroup.key(), IpcErrorGroup.class);</span>
+<span class="fc" id="L223">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

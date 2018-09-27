@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JsonUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-stateless</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.stateless</a> &gt; <span class="el_source">JsonUtils.java</span></div><h1>JsonUtils.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.stateless;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Helper for encoding measurements into a JSON array that can be read by the aggregator
+ * service. For more information see:
+ *
+ * https://github.com/Netflix-Skunkworks/iep-apps/tree/master/atlas-aggregator
+ */
+final class JsonUtils {
+
+<span class="fc" id="L42">  private static final Logger LOGGER = LoggerFactory.getLogger(JsonUtils.class);</span>
+
+<span class="fc" id="L44">  private static final JsonFactory FACTORY = new JsonFactory();</span>
+
+  private static final int UNKNOWN = -1;
+  private static final int ADD = 0;
+  private static final int MAX = 10;
+
+  private JsonUtils() {
+  }
+
+  /** Encode the measurements to a JSON payload that can be sent to the aggregator. */
+  static byte[] encode(
+      Map&lt;String, String&gt; commonTags,
+      List&lt;Measurement&gt; measurements) throws IOException {
+
+<span class="fc" id="L58">    ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="fc" id="L59">    JsonGenerator gen = FACTORY.createGenerator(baos);</span>
+<span class="fc" id="L60">    gen.writeStartArray();</span>
+<span class="fc" id="L61">    Map&lt;String, Integer&gt; strings = buildStringTable(gen, commonTags, measurements);</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">    for (Measurement m : measurements) {</span>
+<span class="fc" id="L63">      appendMeasurement(gen, strings, commonTags, m.id(), m.value());</span>
+<span class="fc" id="L64">    }</span>
+<span class="fc" id="L65">    gen.writeEndArray();</span>
+<span class="fc" id="L66">    gen.close();</span>
+<span class="fc" id="L67">    return baos.toByteArray();</span>
+  }
+
+  private static Map&lt;String, Integer&gt; buildStringTable(
+      JsonGenerator gen,
+      Map&lt;String, String&gt; commonTags,
+      List&lt;Measurement&gt; measurements) throws IOException {
+<span class="fc" id="L74">    Map&lt;String, Integer&gt; strings = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L76">    strings.put(&quot;name&quot;, 0);</span>
+<span class="fc" id="L77">    commonTags.forEach((k, v) -&gt; {</span>
+<span class="fc" id="L78">      strings.put(k, 0);</span>
+<span class="fc" id="L79">      strings.put(v, 0);</span>
+<span class="fc" id="L80">    });</span>
+
+<span class="fc bfc" id="L82" title="All 2 branches covered.">    for (Measurement m : measurements) {</span>
+<span class="fc" id="L83">      Id id = m.id();</span>
+<span class="fc" id="L84">      strings.put(id.name(), 0);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">      for (Tag t : id.tags()) {</span>
+<span class="fc" id="L86">        strings.put(t.key(), 0);</span>
+<span class="fc" id="L87">        strings.put(t.value(), 0);</span>
+<span class="fc" id="L88">      }</span>
+<span class="fc" id="L89">    }</span>
+
+<span class="fc" id="L91">    String[] sorted = strings.keySet().toArray(new String[0]);</span>
+<span class="fc" id="L92">    Arrays.sort(sorted);</span>
+
+<span class="fc" id="L94">    gen.writeNumber(sorted.length);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    for (int i = 0; i &lt; sorted.length; ++i) {</span>
+<span class="fc" id="L96">      gen.writeString(sorted[i]);</span>
+<span class="fc" id="L97">      strings.put(sorted[i], i);</span>
+    }
+
+<span class="fc" id="L100">    return strings;</span>
+  }
+
+  private static void appendMeasurement(
+      JsonGenerator gen,
+      Map&lt;String, Integer&gt; strings,
+      Map&lt;String, String&gt; commonTags,
+      Id id,
+      double value) throws IOException {
+
+<span class="fc" id="L110">    int op = operation(id);</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">    if (shouldSend(op, value)) {</span>
+      // Number of tag entries, commonTags + name + tags
+<span class="fc" id="L113">      int n = commonTags.size() + 1 + Utils.size(id.tags());</span>
+<span class="fc" id="L114">      gen.writeNumber(n);</span>
+
+      // Write out the key/value pairs for the tags
+<span class="fc bfc" id="L117" title="All 2 branches covered.">      for (Map.Entry&lt;String, String&gt; entry : commonTags.entrySet()) {</span>
+<span class="fc" id="L118">        gen.writeNumber(strings.get(entry.getKey()));</span>
+<span class="fc" id="L119">        gen.writeNumber(strings.get(entry.getValue()));</span>
+<span class="fc" id="L120">      }</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">      for (Tag t : id.tags()) {</span>
+<span class="fc" id="L122">        gen.writeNumber(strings.get(t.key()));</span>
+<span class="fc" id="L123">        gen.writeNumber(strings.get(t.value()));</span>
+<span class="fc" id="L124">      }</span>
+<span class="fc" id="L125">      gen.writeNumber(strings.get(&quot;name&quot;));</span>
+<span class="fc" id="L126">      gen.writeNumber(strings.get(id.name()));</span>
+
+      // Write out the operation and delta value
+<span class="fc" id="L129">      gen.writeNumber(op);</span>
+<span class="fc" id="L130">      gen.writeNumber(value);</span>
+    }
+<span class="fc" id="L132">  }</span>
+
+  private static int operation(Id id) {
+<span class="fc bfc" id="L135" title="All 2 branches covered.">    for (Tag t : id.tags()) {</span>
+<span class="pc bpc" id="L136" title="1 of 2 branches missed.">      if (&quot;statistic&quot;.equals(t.key())) {</span>
+<span class="fc" id="L137">        return operation(t.value());</span>
+      }
+<span class="nc" id="L139">    }</span>
+<span class="fc" id="L140">    LOGGER.warn(&quot;invalid statistic for {}, value will be dropped&quot;, id);</span>
+<span class="fc" id="L141">    return UNKNOWN;</span>
+  }
+
+  private static int operation(String stat) {
+    int op;
+<span class="fc bfc" id="L146" title="All 10 branches covered.">    switch (stat) {</span>
+<span class="fc" id="L147">      case &quot;count&quot;:          op = ADD; break;</span>
+<span class="fc" id="L148">      case &quot;totalAmount&quot;:    op = ADD; break;</span>
+<span class="fc" id="L149">      case &quot;totalTime&quot;:      op = ADD; break;</span>
+<span class="fc" id="L150">      case &quot;totalOfSquares&quot;: op = ADD; break;</span>
+<span class="fc" id="L151">      case &quot;percentile&quot;:     op = ADD; break;</span>
+<span class="fc" id="L152">      case &quot;max&quot;:            op = MAX; break;</span>
+<span class="fc" id="L153">      case &quot;gauge&quot;:          op = MAX; break;</span>
+<span class="fc" id="L154">      case &quot;activeTasks&quot;:    op = MAX; break;</span>
+<span class="fc" id="L155">      case &quot;duration&quot;:       op = MAX; break;</span>
+<span class="fc" id="L156">      default:               op = UNKNOWN; break;</span>
+    }
+<span class="fc" id="L158">    return op;</span>
+  }
+
+  private static boolean shouldSend(int op, double value) {
+<span class="fc bfc" id="L162" title="All 8 branches covered.">    return op != UNKNOWN &amp;&amp; !Double.isNaN(value) &amp;&amp; (value &gt; 0.0 || op == MAX);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

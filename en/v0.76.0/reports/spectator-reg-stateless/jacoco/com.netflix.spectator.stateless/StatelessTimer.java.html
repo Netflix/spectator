@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatelessTimer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-stateless</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.stateless</a> &gt; <span class="el_source">StatelessTimer.java</span></div><h1>StatelessTimer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.stateless;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.AtomicDouble;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongToDoubleFunction;
+
+/**
+ * Timer that keeps track of the deltas since the last time it was measured.
+ */
+class StatelessTimer extends StatelessMeter implements Timer {
+
+  private final AtomicLong count;
+  private final AtomicDouble totalTime;
+  private final AtomicDouble totalOfSquares;
+  private final AtomicDouble max;
+
+  private final Id[] stats;
+
+  /** Create a new instance. */
+  StatelessTimer(Id id, Clock clock, long ttl) {
+<span class="fc" id="L47">    super(id, clock, ttl);</span>
+<span class="fc" id="L48">    count = new AtomicLong(0);</span>
+<span class="fc" id="L49">    totalTime = new AtomicDouble(0);</span>
+<span class="fc" id="L50">    totalOfSquares = new AtomicDouble(0.0);</span>
+<span class="fc" id="L51">    max = new AtomicDouble(0);</span>
+<span class="fc" id="L52">    stats = new Id[] {</span>
+<span class="fc" id="L53">        id.withTags(Statistic.count),</span>
+<span class="fc" id="L54">        id.withTags(Statistic.totalTime),</span>
+<span class="fc" id="L55">        id.withTags(Statistic.totalOfSquares),</span>
+<span class="fc" id="L56">        id.withTags(Statistic.max)</span>
+    };
+<span class="fc" id="L58">  }</span>
+
+  @Override public void record(long amount, TimeUnit unit) {
+<span class="fc" id="L61">    final double seconds = unit.toNanos(amount) / 1e9;</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">    if (seconds &gt;= 0.0) {</span>
+<span class="fc" id="L63">      count.incrementAndGet();</span>
+<span class="fc" id="L64">      totalTime.addAndGet(seconds);</span>
+<span class="fc" id="L65">      totalOfSquares.addAndGet(seconds * seconds);</span>
+<span class="fc" id="L66">      max.max(seconds);</span>
+<span class="fc" id="L67">      updateLastModTime();</span>
+    }
+<span class="fc" id="L69">  }</span>
+
+  @Override public &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception {
+<span class="nc" id="L72">    final long start = clock.monotonicTime();</span>
+    try {
+<span class="nc" id="L74">      return f.call();</span>
+    } finally {
+<span class="nc" id="L76">      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+    }
+  }
+
+  @Override public void record(Runnable f) {
+<span class="nc" id="L81">    final long start = clock.monotonicTime();</span>
+    try {
+<span class="nc" id="L83">      f.run();</span>
+    } finally {
+<span class="nc" id="L85">      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);</span>
+    }
+<span class="nc" id="L87">  }</span>
+
+  @Override public long count() {
+<span class="nc" id="L90">    return count.get();</span>
+  }
+
+  @Override public long totalTime() {
+<span class="nc" id="L94">    return (long) (totalTime.get() * 1e9);</span>
+  }
+
+  @Override
+  public Iterable&lt;Measurement&gt; measure() {
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">    if (count.get() == 0) {</span>
+<span class="nc" id="L100">      return Collections.emptyList();</span>
+    } else {
+<span class="fc" id="L102">      List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;(4);</span>
+<span class="fc" id="L103">      ms.add(newMeasurement(stats[0], count::getAndSet));</span>
+<span class="fc" id="L104">      ms.add(newMeasurement(stats[1], totalTime::getAndSet));</span>
+<span class="fc" id="L105">      ms.add(newMeasurement(stats[2], totalOfSquares::getAndSet));</span>
+<span class="fc" id="L106">      ms.add(newMeasurement(stats[3], max::getAndSet));</span>
+<span class="fc" id="L107">      return ms;</span>
+    }
+  }
+
+  private Measurement newMeasurement(Id mid, LongToDoubleFunction getAndSet) {
+<span class="fc" id="L112">    double delta = getAndSet.applyAsDouble(0);</span>
+<span class="fc" id="L113">    long timestamp = clock.wallTime();</span>
+<span class="fc" id="L114">    return new Measurement(mid, timestamp, delta);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultPlaceholderId.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-placeholders</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.placeholders</a> &gt; <span class="el_source">DefaultPlaceholderId.java</span></div><h1>DefaultPlaceholderId.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.placeholders;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+/**
+ * Default/standard implementation of the PlaceholderId interface.
+ */
+final class DefaultPlaceholderId implements PlaceholderId {
+  /**
+   * Utility class for sorting and deduplicating lists of tag factories.
+   */
+  private static final class FactorySorterAndDeduplicator {
+    /** Map used to sort and deduplicate the presented tag factories. */
+<span class="fc" id="L40">    private final Map&lt;String, TagFactory&gt; map = new TreeMap&lt;&gt;();</span>
+
+    /** Construct a new instance with the specified factories in it. */
+<span class="fc" id="L43">    FactorySorterAndDeduplicator(Iterable&lt;TagFactory&gt; tagFactories) {</span>
+<span class="fc" id="L44">      addFactories(tagFactories);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Adds the specified tag to the collected tags. It will overwrite any existing value
+     * associated the key in the specified tag.
+     *
+     * @param factory
+     *      The tag factory to add to the collection
+     */
+    void addFactory(TagFactory factory) {
+<span class="fc" id="L55">      map.put(factory.name(), factory);</span>
+<span class="fc" id="L56">    }</span>
+
+    /**
+     * Adds the tags (key, value)-pairs to the collected tags. Any values associated with the tags
+     * in the map will overwrite any existing values with the same key that are already in the
+     * collection.
+     *
+     * @param factories
+     *     The set of tag factories to add.
+     */
+    void addFactories(Iterable&lt;TagFactory&gt; factories) {
+<span class="fc bfc" id="L67" title="All 2 branches covered.">      for (TagFactory factory : factories) {</span>
+<span class="fc" id="L68">          map.put(factory.name(), factory);</span>
+<span class="fc" id="L69">      }</span>
+<span class="fc" id="L70">    }</span>
+
+    /** Returns the sorted set of tag factories as an unmodifiable collection. */
+    Collection&lt;TagFactory&gt; asCollection() {
+<span class="fc" id="L74">      return Collections.unmodifiableCollection(map.values());</span>
+    }
+  }
+
+  private final String name;
+  private final Collection&lt;TagFactory&gt; tagFactories;
+  private final Registry registry;
+
+  /**
+   * Creates a new id with the specified name and collection of factories.
+   *
+   * @param name
+   *      the name of the new id
+   * @param tagFactories
+   *      the possibly empty collection of factories to be attached to the new id
+   * @param registry
+   *      the registry to use when resolving to an {@link Id}
+   * @return
+   *      the newly created id
+   */
+  static DefaultPlaceholderId createWithFactories(String name, Iterable&lt;TagFactory&gt; tagFactories, Registry registry) {
+<span class="fc bfc" id="L95" title="All 2 branches covered.">    if (tagFactories == null) {</span>
+<span class="fc" id="L96">      return new DefaultPlaceholderId(name, registry);</span>
+    } else {
+<span class="fc" id="L98">      FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);</span>
+
+<span class="fc" id="L100">      return new DefaultPlaceholderId(name, sorter.asCollection(), registry);</span>
+    }
+  }
+
+  /**
+   * Constructs a new id with the specified name and no associated tag factories.
+   */
+  DefaultPlaceholderId(String name, Registry registry) {
+<span class="fc" id="L108">    this(name, Collections.emptyList(), registry);</span>
+<span class="fc" id="L109">  }</span>
+
+  /**
+   * Constructs a new id with the specified name and tag factories.
+   *  @param name
+   *      the name of the new id
+   * @param tagFactories
+   *      the possibly empty collection of factories to be attached to the new id
+   * @param registry
+   *      the registry to use when resolving to an {@link Id}
+   */
+<span class="fc" id="L120">  private DefaultPlaceholderId(String name, Collection&lt;TagFactory&gt; tagFactories, Registry registry) {</span>
+<span class="fc" id="L121">    this.name = Preconditions.checkNotNull(name, &quot;name&quot;);</span>
+<span class="fc" id="L122">    this.tagFactories = tagFactories;</span>
+<span class="fc" id="L123">    this.registry = registry;</span>
+<span class="fc" id="L124">  }</span>
+
+  @Override
+  public String name() {
+<span class="fc" id="L128">    return name;</span>
+  }
+
+  @Override
+  public DefaultPlaceholderId withTag(String k, String v) {
+<span class="fc" id="L133">    return withTagFactory(new ConstantTagFactory(new BasicTag(k, v)));</span>
+  }
+
+  @Override
+  public DefaultPlaceholderId withTag(Tag t) {
+<span class="fc" id="L138">    return withTagFactory(new ConstantTagFactory(t));</span>
+  }
+
+  @Override
+  public DefaultPlaceholderId withTags(Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L143">    return createNewId(sorter -&gt; tags.forEach(tag -&gt; sorter.addFactory(new ConstantTagFactory(tag))));</span>
+  }
+
+  @Override
+  public DefaultPlaceholderId withTags(Map&lt;String, String&gt; tags) {
+<span class="fc" id="L148">    return createNewId(sorter -&gt;</span>
+<span class="fc" id="L149">            tags.forEach((key, value) -&gt; sorter.addFactory(new ConstantTagFactory(new BasicTag(key, value)))));</span>
+  }
+
+  @Override
+  public DefaultPlaceholderId withTagFactory(TagFactory factory) {
+<span class="fc bfc" id="L154" title="All 2 branches covered.">    if (tagFactories.isEmpty()) {</span>
+<span class="fc" id="L155">      return new DefaultPlaceholderId(name, Collections.singleton(factory), registry);</span>
+    } else {
+<span class="fc" id="L157">      return createNewId(sorter -&gt; sorter.addFactory(factory));</span>
+    }
+  }
+
+  @Override
+  public DefaultPlaceholderId withTagFactories(Iterable&lt;TagFactory&gt; factories) {
+<span class="fc" id="L163">    return createNewId(sorter -&gt; sorter.addFactories(factories));</span>
+  }
+
+  @Override
+  public Id resolveToId() {
+<span class="fc" id="L168">    Iterable&lt;Tag&gt; tags = tagFactories.stream()</span>
+<span class="fc" id="L169">            .map(TagFactory::createTag)</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">            .filter(tag -&gt; tag != null)</span>
+<span class="fc" id="L171">            .collect(Collectors.toList());</span>
+
+<span class="fc" id="L173">    return registry.createId(name, tags);</span>
+  }
+
+  @Override
+  public boolean equals(Object o) {
+<span class="fc bfc" id="L178" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L179" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+
+<span class="fc" id="L181">    DefaultPlaceholderId that = (DefaultPlaceholderId) o;</span>
+
+    // We cannot use tagFactories.equals(that.tagFactories) below, because Java
+    // unmodifiable collections do not override equals appropriately.
+<span class="fc bfc" id="L185" title="All 4 branches covered.">    return name.equals(that.name)</span>
+        &amp;&amp; registry == that.registry
+<span class="pc bpc" id="L187" title="1 of 2 branches missed.">        &amp;&amp; tagFactories.size() == that.tagFactories.size()</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        &amp;&amp; tagFactories.containsAll(that.tagFactories);</span>
+  }
+
+  @Override
+  public int hashCode() {
+<span class="fc" id="L193">    return 31 * name.hashCode() + 31 * registry.hashCode() + tagFactories.hashCode();</span>
+  }
+
+  @Override
+  public String toString() {
+<span class="fc" id="L198">    return resolveToId().toString();</span>
+  }
+
+  /**
+   * Creates a new dynamic id based on the factories associated with this id
+   * and whatever additions are made by the specified consumer.
+   *
+   * @param consumer
+   *      lambda that can update the sorter with additional tag factories
+   * @return
+   *      the newly created id
+   */
+  private DefaultPlaceholderId createNewId(Consumer&lt;FactorySorterAndDeduplicator&gt; consumer) {
+<span class="fc" id="L211">    FactorySorterAndDeduplicator sorter = new FactorySorterAndDeduplicator(tagFactories);</span>
+
+<span class="fc" id="L213">    consumer.accept(sorter);</span>
+<span class="fc" id="L214">    return new DefaultPlaceholderId(name, sorter.asCollection(), registry);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

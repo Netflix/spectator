@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcAttempt.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcAttempt.java</span></div><h1>IpcAttempt.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.Tag;
+
+/**
+ * Dimension indicating the retry attempt.
+ *
+ * @see IpcTagKey#attempt
+ * @see IpcTagKey#attemptFinal
+ */
+<span class="fc" id="L26">public enum IpcAttempt implements Tag {</span>
+  /** Initial request. */
+<span class="fc" id="L28">  initial,</span>
+
+  /** Second attempt or the first retry. */
+<span class="fc" id="L31">  second,</span>
+
+  /** A third or later attempt. */
+<span class="fc" id="L34">  third_up,</span>
+
+  /** The attempt number cannot be determined. */
+<span class="fc" id="L37">  unknown;</span>
+
+  @Override public String key() {
+<span class="fc" id="L40">    return IpcTagKey.attempt.key();</span>
+  }
+
+  @Override public String value() {
+<span class="fc" id="L44">    return name();</span>
+  }
+
+  /**
+   * Get the appropriate tag value based on the current attempt number. The attempt number
+   * should start at 1 for the initial request and increment for each retry.
+   *
+   * @param attempt
+   *     Current attempt number.
+   * @return
+   *     Tag value corresponding to the attempt number.
+   */
+  public static IpcAttempt forAttemptNumber(int attempt) {
+    IpcAttempt t;
+<span class="fc bfc" id="L58" title="All 3 branches covered.">    switch (attempt) {</span>
+<span class="fc" id="L59">      case 1:  t = initial;                             break;</span>
+<span class="fc" id="L60">      case 2:  t = second;                              break;</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">      default: t = (attempt &gt;= 3) ? third_up : unknown; break;</span>
+    }
+<span class="fc" id="L63">    return t;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

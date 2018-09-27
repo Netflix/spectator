@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CompositeRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">CompositeRegistry.java</span></div><h1>CompositeRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.api.patterns.PolledMeter;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+
+/**
+ * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
+ * registry. Otherwise activity will be sent to all registries that are part of the composite.
+ */
+public final class CompositeRegistry implements Registry {
+
+<span class="fc" id="L37">  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();</span>
+<span class="fc" id="L38">  private final ReentrantReadWriteLock.ReadLock rlock = lock.readLock();</span>
+<span class="fc" id="L39">  private final ReentrantReadWriteLock.WriteLock wlock = lock.writeLock();</span>
+
+  private final Clock clock;
+
+  private final List&lt;Registry&gt; registries;
+
+  private final ConcurrentHashMap&lt;Id, SwapCounter&gt; counters;
+  private final ConcurrentHashMap&lt;Id, SwapDistributionSummary&gt; distSummaries;
+  private final ConcurrentHashMap&lt;Id, SwapTimer&gt; timers;
+  private final ConcurrentHashMap&lt;Id, SwapGauge&gt; gauges;
+
+  private final ConcurrentHashMap&lt;Id, Object&gt; state;
+
+  /** Creates a new instance. */
+<span class="fc" id="L53">  CompositeRegistry(Clock clock) {</span>
+<span class="fc" id="L54">    this.clock = clock;</span>
+<span class="fc" id="L55">    this.registries = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L56">    this.counters = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L57">    this.distSummaries = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L58">    this.timers = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L59">    this.gauges = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L60">    this.state = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L61">  }</span>
+
+  /**
+   * Find the first registry in the composite that is an instance of {@code c}. If no match is
+   * found then null will be returned.
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  &lt;T extends Registry&gt; T find(Class&lt;T&gt; c) {
+<span class="nc bnc" id="L69" title="All 2 branches missed.">    for (Registry r : registries) {</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">      if (c.isAssignableFrom(r.getClass())) {</span>
+<span class="nc" id="L71">        return (T) r;</span>
+      }
+<span class="nc" id="L73">    }</span>
+<span class="nc" id="L74">    return null;</span>
+  }
+
+  /** Add a registry to the composite. */
+  public void add(Registry registry) {
+<span class="fc" id="L79">    wlock.lock();</span>
+    try {
+<span class="fc" id="L81">      registries.add(registry);</span>
+<span class="fc" id="L82">      updateMeters();</span>
+    } finally {
+<span class="fc" id="L84">      wlock.unlock();</span>
+    }
+<span class="fc" id="L86">  }</span>
+
+  /** Remove a registry from the composite. */
+  public void remove(Registry registry) {
+<span class="fc" id="L90">    wlock.lock();</span>
+    try {
+<span class="fc" id="L92">      registries.remove(registry);</span>
+<span class="fc" id="L93">      updateMeters();</span>
+    } finally {
+<span class="fc" id="L95">      wlock.unlock();</span>
+    }
+<span class="fc" id="L97">  }</span>
+
+  /** Remove all registries from the composite. */
+  public void removeAll() {
+<span class="fc" id="L101">    wlock.lock();</span>
+    try {
+<span class="fc" id="L103">      registries.clear();</span>
+<span class="fc" id="L104">      counters.clear();</span>
+<span class="fc" id="L105">      distSummaries.clear();</span>
+<span class="fc" id="L106">      timers.clear();</span>
+<span class="fc" id="L107">      gauges.clear();</span>
+    } finally {
+<span class="fc" id="L109">      wlock.unlock();</span>
+    }
+<span class="fc" id="L111">  }</span>
+
+  private void updateMeters() {
+<span class="fc" id="L114">    counters.forEach((id, c) -&gt; c.set(newCounter(id)));</span>
+<span class="pc" id="L115">    distSummaries.forEach((id, d) -&gt; d.set(newDistributionSummary(id)));</span>
+<span class="pc" id="L116">    timers.forEach((id, t) -&gt; t.set(newTimer(id)));</span>
+<span class="pc" id="L117">    gauges.forEach((id, g) -&gt; g.set(newGauge(id)));</span>
+<span class="fc" id="L118">  }</span>
+
+  @Override public Clock clock() {
+<span class="fc" id="L121">    return clock;</span>
+  }
+
+  @Override public Id createId(String name) {
+<span class="fc" id="L125">    return new DefaultId(name);</span>
+  }
+
+  @Override public Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L129">    return new DefaultId(name, ArrayTagSet.create(tags));</span>
+  }
+
+  @Override public void register(Meter meter) {
+<span class="fc" id="L133">    PolledMeter.monitorMeter(this, meter);</span>
+<span class="fc" id="L134">  }</span>
+
+  @Override public ConcurrentMap&lt;Id, Object&gt; state() {
+<span class="fc" id="L137">    return state;</span>
+  }
+
+  private Counter newCounter(Id id) {
+<span class="fc" id="L141">    rlock.lock();</span>
+    try {
+      Counter c;
+<span class="fc bfc" id="L144" title="All 3 branches covered.">      switch (registries.size()) {</span>
+        case 0:
+<span class="fc" id="L146">          c = NoopCounter.INSTANCE;</span>
+<span class="fc" id="L147">          break;</span>
+        case 1:
+<span class="fc" id="L149">          c = registries.get(0).counter(id);</span>
+<span class="fc" id="L150">          break;</span>
+        default:
+<span class="fc" id="L152">          List&lt;Counter&gt; cs = registries.stream()</span>
+<span class="fc" id="L153">              .map(r -&gt; r.counter(id))</span>
+<span class="fc" id="L154">              .collect(Collectors.toList());</span>
+<span class="fc" id="L155">          c = new CompositeCounter(id, cs);</span>
+          break;
+      }
+<span class="fc" id="L158">      return c;</span>
+    } finally {
+<span class="fc" id="L160">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public Counter counter(Id id) {
+<span class="fc" id="L165">    return Utils.computeIfAbsent(counters, id, i -&gt; new SwapCounter(this, i, newCounter(i)));</span>
+  }
+
+  private DistributionSummary newDistributionSummary(Id id) {
+<span class="fc" id="L169">    rlock.lock();</span>
+    try {
+      DistributionSummary t;
+<span class="pc bpc" id="L172" title="2 of 3 branches missed.">      switch (registries.size()) {</span>
+        case 0:
+<span class="nc" id="L174">          t = NoopDistributionSummary.INSTANCE;</span>
+<span class="nc" id="L175">          break;</span>
+        case 1:
+<span class="nc" id="L177">          t = registries.get(0).distributionSummary(id);</span>
+<span class="nc" id="L178">          break;</span>
+        default:
+<span class="fc" id="L180">          List&lt;DistributionSummary&gt; ds = registries.stream()</span>
+<span class="fc" id="L181">              .map(r -&gt; r.distributionSummary(id))</span>
+<span class="fc" id="L182">              .collect(Collectors.toList());</span>
+<span class="fc" id="L183">          t = new CompositeDistributionSummary(id, ds);</span>
+          break;
+      }
+<span class="fc" id="L186">      return t;</span>
+    } finally {
+<span class="fc" id="L188">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public DistributionSummary distributionSummary(Id id) {
+<span class="fc" id="L193">    return Utils.computeIfAbsent(distSummaries, id,</span>
+<span class="fc" id="L194">        i -&gt; new SwapDistributionSummary(this, i, newDistributionSummary(i)));</span>
+  }
+
+  private Timer newTimer(Id id) {
+<span class="fc" id="L198">    rlock.lock();</span>
+    try {
+      Timer t;
+<span class="pc bpc" id="L201" title="2 of 3 branches missed.">      switch (registries.size()) {</span>
+        case 0:
+<span class="nc" id="L203">          t = NoopTimer.INSTANCE;</span>
+<span class="nc" id="L204">          break;</span>
+        case 1:
+<span class="nc" id="L206">          t = registries.get(0).timer(id);</span>
+<span class="nc" id="L207">          break;</span>
+        default:
+<span class="fc" id="L209">          List&lt;Timer&gt; ts = registries.stream()</span>
+<span class="fc" id="L210">              .map(r -&gt; r.timer(id))</span>
+<span class="fc" id="L211">              .collect(Collectors.toList());</span>
+<span class="fc" id="L212">          t = new CompositeTimer(id, clock, ts);</span>
+          break;
+      }
+<span class="fc" id="L215">      return t;</span>
+    } finally {
+<span class="fc" id="L217">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public Timer timer(Id id) {
+<span class="fc" id="L222">    return Utils.computeIfAbsent(timers, id, i -&gt; new SwapTimer(this, i, newTimer(i)));</span>
+  }
+
+  private Gauge newGauge(Id id) {
+<span class="fc" id="L226">    rlock.lock();</span>
+    try {
+      Gauge t;
+<span class="pc bpc" id="L229" title="2 of 3 branches missed.">      switch (registries.size()) {</span>
+        case 0:
+<span class="nc" id="L231">          t = NoopGauge.INSTANCE;</span>
+<span class="nc" id="L232">          break;</span>
+        case 1:
+<span class="nc" id="L234">          t = registries.get(0).gauge(id);</span>
+<span class="nc" id="L235">          break;</span>
+        default:
+<span class="fc" id="L237">          List&lt;Gauge&gt; gs = registries.stream()</span>
+<span class="fc" id="L238">              .map(r -&gt; r.gauge(id))</span>
+<span class="fc" id="L239">              .collect(Collectors.toList());</span>
+<span class="fc" id="L240">          t = new CompositeGauge(id, gs);</span>
+          break;
+      }
+<span class="fc" id="L243">      return t;</span>
+    } finally {
+<span class="fc" id="L245">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public Gauge gauge(Id id) {
+<span class="fc" id="L250">    return Utils.computeIfAbsent(gauges, id, i -&gt; new SwapGauge(this, i, newGauge(i)));</span>
+  }
+
+  private Gauge newMaxGauge(Id id) {
+<span class="nc" id="L254">    rlock.lock();</span>
+    try {
+      Gauge t;
+<span class="nc bnc" id="L257" title="All 3 branches missed.">      switch (registries.size()) {</span>
+        case 0:
+<span class="nc" id="L259">          t = NoopGauge.INSTANCE;</span>
+<span class="nc" id="L260">          break;</span>
+        case 1:
+<span class="nc" id="L262">          t = registries.get(0).maxGauge(id);</span>
+<span class="nc" id="L263">          break;</span>
+        default:
+<span class="nc" id="L265">          List&lt;Gauge&gt; gs = registries.stream()</span>
+<span class="nc" id="L266">              .map(r -&gt; r.maxGauge(id))</span>
+<span class="nc" id="L267">              .collect(Collectors.toList());</span>
+<span class="nc" id="L268">          t = new CompositeGauge(id, gs);</span>
+          break;
+      }
+<span class="nc" id="L271">      return t;</span>
+    } finally {
+<span class="nc" id="L273">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public Gauge maxGauge(Id id) {
+<span class="nc" id="L278">    return Utils.computeIfAbsent(gauges, id, i -&gt; new SwapGauge(this, i, newMaxGauge(i)));</span>
+  }
+
+  @Override public Meter get(Id id) {
+<span class="fc" id="L282">    rlock.lock();</span>
+    try {
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">      for (Registry r : registries) {</span>
+<span class="fc" id="L285">        Meter m = r.get(id);</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">        if (m != null) {</span>
+<span class="fc bfc" id="L287" title="All 2 branches covered.">          if (m instanceof Counter) {</span>
+<span class="fc" id="L288">            return counter(id);</span>
+<span class="fc bfc" id="L289" title="All 2 branches covered.">          } else if (m instanceof Timer) {</span>
+<span class="fc" id="L290">            return timer(id);</span>
+<span class="fc bfc" id="L291" title="All 2 branches covered.">          } else if (m instanceof DistributionSummary) {</span>
+<span class="fc" id="L292">            return distributionSummary(id);</span>
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">          } else if (m instanceof Gauge) {</span>
+<span class="fc" id="L294">            return gauge(id);</span>
+          } else {
+<span class="nc" id="L296">            return null;</span>
+          }
+        }
+<span class="fc" id="L299">      }</span>
+<span class="nc" id="L300">      return null;</span>
+    } finally {
+<span class="fc" id="L302">      rlock.unlock();</span>
+    }
+  }
+
+  @Override public Iterator&lt;Meter&gt; iterator() {
+<span class="fc" id="L307">    rlock.lock();</span>
+    try {
+<span class="fc bfc" id="L309" title="All 2 branches covered.">      if (registries.isEmpty()) {</span>
+<span class="fc" id="L310">        return Collections.&lt;Meter&gt;emptyList().iterator();</span>
+      } else {
+<span class="fc" id="L312">        final Set&lt;Id&gt; ids = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L313" title="All 2 branches covered.">        for (Registry r : registries) {</span>
+<span class="fc bfc" id="L314" title="All 2 branches covered.">          for (Meter m : r) ids.add(m.id());</span>
+<span class="fc" id="L315">        }</span>
+
+<span class="fc" id="L317">        return new Iterator&lt;Meter&gt;() {</span>
+<span class="fc" id="L318">          private final Iterator&lt;Id&gt; idIter = ids.iterator();</span>
+
+          @Override
+          public boolean hasNext() {
+<span class="fc" id="L322">            return idIter.hasNext();</span>
+          }
+
+          @Override
+          public Meter next() {
+<span class="fc" id="L327">            return get(idIter.next());</span>
+          }
+
+          @Override
+          public void remove() {
+<span class="fc" id="L332">            throw new UnsupportedOperationException();</span>
+          }
+        };
+      }
+    } finally {
+<span class="fc" id="L337">      rlock.unlock();</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatelessConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-stateless</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.stateless</a> &gt; <span class="el_source">StatelessConfig.java</span></div><h1>StatelessConfig.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.stateless;
+
+import com.netflix.spectator.api.RegistryConfig;
+
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Map;
+
+/**
+ * Configuration for stateless registry.
+ */
+public interface StatelessConfig extends RegistryConfig {
+
+  /**
+   * Returns true if publishing is enabled. Default is true.
+   */
+  default boolean enabled() {
+<span class="fc" id="L33">    String v = get(&quot;stateless.enabled&quot;);</span>
+<span class="fc bfc" id="L34" title="All 4 branches covered.">    return v == null || Boolean.valueOf(v);</span>
+  }
+
+  /**
+   * Returns the frequency to collect data and forward to the aggregation service. The
+   * default is 5 seconds.
+   */
+  default Duration frequency() {
+<span class="fc" id="L42">    String v = get(&quot;stateless.enabled&quot;);</span>
+<span class="pc bpc" id="L43" title="1 of 2 branches missed.">    return v == null ? Duration.ofSeconds(5) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the TTL for meters that do not have any activity. After this period the meter
+   * will be considered expired and will not get reported. Default is 15 minutes.
+   */
+  default Duration meterTTL() {
+<span class="fc" id="L51">    String v = get(&quot;stateless.meterTTL&quot;);</span>
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofMinutes(15) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the connection timeout for requests to the backend. The default is
+   * 1 second.
+   */
+  default Duration connectTimeout() {
+<span class="fc" id="L60">    String v = get(&quot;stateless.connectTimeout&quot;);</span>
+<span class="pc bpc" id="L61" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofSeconds(1) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the read timeout for requests to the backend. The default is
+   * 10 seconds.
+   */
+  default Duration readTimeout() {
+<span class="fc" id="L69">    String v = get(&quot;stateless.readTimeout&quot;);</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">    return (v == null) ? Duration.ofSeconds(10) : Duration.parse(v);</span>
+  }
+
+  /**
+   * Returns the URI for the aggregation service. The default is
+   * {@code http://localhost:7101/api/v4/update}.
+   */
+  default String uri() {
+<span class="fc" id="L78">    String v = get(&quot;stateless.uri&quot;);</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">    return (v == null) ? &quot;http://localhost:7101/api/v4/update&quot; : v;</span>
+  }
+
+  /**
+   * Returns the number of measurements per request to use for the backend. If more
+   * measurements are found, then multiple requests will be made. The default is
+   * 10,000.
+   */
+  default int batchSize() {
+<span class="fc" id="L88">    String v = get(&quot;stateless.batchSize&quot;);</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">    return (v == null) ? 10000 : Integer.parseInt(v);</span>
+  }
+
+  /**
+   * Returns the common tags to apply to all metrics. The default is an empty map.
+   */
+  default Map&lt;String, String&gt; commonTags() {
+<span class="fc" id="L96">    return Collections.emptyMap();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcTagKey.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcTagKey.java</span></div><h1>IpcTagKey.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Tag;
+
+/**
+ * Standard dimensions used for IPC metrics.
+ */
+<span class="fc" id="L24">public enum IpcTagKey {</span>
+
+  /** The library that produced the metric. */
+<span class="fc" id="L27">  owner(&quot;owner&quot;),</span>
+
+  /**
+   * Indicates whether or not the request was successful. See {@link IpcResult}
+   * for permitted values.
+   */
+<span class="fc" id="L33">  result(&quot;ipc.result&quot;),</span>
+
+  /**
+   * Dimension indicating a high level cause for the request failure. These groups
+   * are the same for all implementations to make it easier to query across all
+   * services and client implementations. See {@link IpcErrorGroup} for permitted
+   * values.
+   */
+<span class="fc" id="L41">  errorGroup(&quot;ipc.error.group&quot;),</span>
+
+  /**
+   * Implementation specific error code.
+   */
+<span class="fc" id="L46">  errorReason(&quot;ipc.error.reason&quot;),</span>
+
+  /**
+   * Indicates the attempt number for the request.
+   */
+<span class="fc" id="L51">  attempt(&quot;ipc.attempt&quot;),</span>
+
+  /**
+   * Indicates if this is the final attempt for the request. For example, if the client
+   * is configured to allow 1 retry, then the second attempt would be final. Acceptable
+   * values are {@code true} and {@code false}.
+   */
+<span class="fc" id="L58">  attemptFinal(&quot;ipc.attempt.final&quot;),</span>
+
+  /**
+   * Identifier for the client instance making the request. This is typically the name used
+   * to see the associated configuration settings for the client.
+   */
+<span class="fc" id="L64">  id(&quot;id&quot;),</span>
+
+  /**
+   * Eureka VIP used to select the server. If there are multiple vips in the list, then it
+   * should be the first vip that caused the server to get selected.
+   */
+<span class="fc" id="L70">  vip(&quot;ipc.vip&quot;),</span>
+
+  /**
+   * The server side endpoint that is being requested. This should be a bounded set that
+   * will have a small cardinality. &lt;b&gt;Do not pass in the unsanitized path value for a
+   * URI.&lt;/b&gt;
+   */
+<span class="fc" id="L77">  endpoint(&quot;ipc.endpoint&quot;),</span>
+
+  /**
+   * Protocol used for the request. For example {@code http_1} or {@code http_2}.
+   */
+<span class="fc" id="L82">  protocol(&quot;ipc.protocol&quot;),</span>
+
+  /**
+   * Region where the client is located.
+   */
+<span class="fc" id="L87">  clientRegion(&quot;ipc.client.region&quot;),</span>
+
+  /**
+   * Availability zone where the client is located.
+   */
+<span class="fc" id="L92">  clientZone(&quot;ipc.client.zone&quot;),</span>
+
+  /**
+   * Application that is running the client.
+   */
+<span class="fc" id="L97">  clientApp(&quot;ipc.client.app&quot;),</span>
+
+  /**
+   * Cluster that is running the client.
+   */
+<span class="fc" id="L102">  clientCluster(&quot;ipc.client.cluster&quot;),</span>
+
+  /**
+   * Server group that is running the client.
+   */
+<span class="fc" id="L107">  clientAsg(&quot;ipc.client.asg&quot;),</span>
+
+  /**
+   * Region where the server is located.
+   */
+<span class="fc" id="L112">  serverRegion(&quot;ipc.server.region&quot;),</span>
+
+  /**
+   * Availability zone where the server is located.
+   */
+<span class="fc" id="L117">  serverZone(&quot;ipc.server.zone&quot;),</span>
+
+  /**
+   * Application name for the server.
+   */
+<span class="fc" id="L122">  serverApp(&quot;ipc.server.app&quot;),</span>
+
+  /**
+   * Cluster name for the server.
+   */
+<span class="fc" id="L127">  serverCluster(&quot;ipc.server.cluster&quot;),</span>
+
+  /**
+   * Server group name for the server.
+   */
+<span class="fc" id="L132">  serverAsg(&quot;ipc.server.asg&quot;),</span>
+
+  /**
+   * Instance id for the server. &lt;b&gt;Do not use this unless you know it will not
+   * cause a metrics explosion. If there is any doubt, then do not enable it.&lt;/b&gt;
+   */
+<span class="fc" id="L138">  serverNode(&quot;ipc.server.node&quot;),</span>
+
+  /**
+   * The port number connected to on the server.
+   */
+<span class="fc" id="L143">  serverPort(&quot;ipc.server.port&quot;),</span>
+
+  /**
+   * HTTP status code.
+   */
+<span class="fc" id="L148">  httpStatus(&quot;http.status&quot;),</span>
+
+  /**
+   * HTTP method such as GET, PUT, or POST.
+   */
+<span class="fc" id="L153">  httpMethod(&quot;http.method&quot;);</span>
+
+  private final String key;
+
+  /** Create a new instance. */
+<span class="fc" id="L158">  IpcTagKey(String key) {</span>
+<span class="fc" id="L159">    this.key = key;</span>
+<span class="fc" id="L160">  }</span>
+
+  /** String to use as the tag key. */
+  public String key() {
+<span class="fc" id="L164">    return key;</span>
+  }
+
+  /** Create a new tag with the specified value and this key. */
+  public Tag tag(String value) {
+<span class="fc" id="L169">    return new BasicTag(key, value);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

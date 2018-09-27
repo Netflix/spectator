@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Timer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">Timer.java</span></div><h1>Timer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import java.time.Duration;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Timer intended to track a large number of short running events. Example would be something like
+ * an http request. Though &quot;short running&quot; is a bit subjective the assumption is that it should be
+ * under a minute.
+ *
+ * The precise set of information maintained by the timer depends on the implementation. Most
+ * should try to provide a consistent implementation of {@link #count()} and {@link #totalTime()},
+ * but some implementations may not. In particular, the implementation from {@link NoopRegistry}
+ * will always return 0.
+ */
+public interface Timer extends Meter {
+  /**
+   * Updates the statistics kept by the counter with the specified amount.
+   *
+   * @param amount
+   *     Duration of a single event being measured by this timer. If the amount is less than 0
+   *     the value will be dropped.
+   * @param unit
+   *     Time unit for the amount being recorded.
+   */
+  void record(long amount, TimeUnit unit);
+
+  /**
+   * Updates the statistics kept by the counter with the specified amount.
+   *
+   * @param amount
+   *     Duration of a single event being measured by this timer.
+   */
+  default void record(Duration amount) {
+<span class="fc" id="L51">    record(amount.toNanos(), TimeUnit.NANOSECONDS);</span>
+<span class="fc" id="L52">  }</span>
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  &lt;T&gt; T record(Callable&lt;T&gt; f) throws Exception;
+
+  /**
+   * Executes the runnable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   */
+  void record(Runnable f);
+
+  /**
+   * The number of times that record has been called since this timer was last reset.
+   * How often a timer is reset depends on the underlying registry implementation.
+   */
+  long count();
+
+  /**
+   * The total time in nanoseconds of all recorded events since this timer was last reset.
+   * How often a timer is reset depends on the underlying registry implementation.
+   */
+  long totalTime();
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

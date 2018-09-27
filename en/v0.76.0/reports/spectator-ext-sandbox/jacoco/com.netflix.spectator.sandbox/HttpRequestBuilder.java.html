@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HttpRequestBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-sandbox</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.sandbox</a> &gt; <span class="el_source">HttpRequestBuilder.java</span></div><h1>HttpRequestBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2016 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.sandbox;
+
+import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.zip.Deflater;
+
+/**
+ * Helper for executing simple HTTP client requests using {@link HttpURLConnection}
+ * and logging via {@link HttpLogEntry}. This is mostly used for simple use-cases
+ * where it is undesirable to have additional dependencies on a more robust HTTP
+ * library.
+ */
+public class HttpRequestBuilder {
+<span class="fc" id="L44">  private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequestBuilder.class);</span>
+
+  private final URI uri;
+  private final HttpLogEntry entry;
+<span class="fc" id="L48">  private String method = &quot;GET&quot;;</span>
+<span class="fc" id="L49">  private Map&lt;String, String&gt; reqHeaders = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L50">  private byte[] entity = HttpUtils.EMPTY;</span>
+
+<span class="fc" id="L52">  private int connectTimeout = 1000;</span>
+<span class="fc" id="L53">  private int readTimeout = 30000;</span>
+
+<span class="fc" id="L55">  private long initialRetryDelay = 1000L;</span>
+<span class="fc" id="L56">  private int numAttempts = 1;</span>
+
+<span class="fc" id="L58">  private HostnameVerifier hostVerifier = null;</span>
+<span class="fc" id="L59">  private SSLSocketFactory sslFactory = null;</span>
+
+  /** Create a new instance for the specified URI. */
+<span class="fc" id="L62">  public HttpRequestBuilder(String clientName, URI uri) {</span>
+<span class="fc" id="L63">    this.uri = uri;</span>
+<span class="fc" id="L64">    this.entry = new HttpLogEntry()</span>
+<span class="fc" id="L65">        .withRequestUri(uri)</span>
+<span class="fc" id="L66">        .withClientName(clientName)</span>
+<span class="fc" id="L67">        .withMethod(method);</span>
+<span class="fc" id="L68">  }</span>
+
+  /** Set the request method (GET, PUT, POST, DELETE). */
+  public HttpRequestBuilder withMethod(String m) {
+<span class="fc" id="L72">    this.method = m;</span>
+<span class="fc" id="L73">    entry.withMethod(method);</span>
+<span class="fc" id="L74">    return this;</span>
+  }
+
+  /**
+   * Add a header to the request. Note the content type will be set automatically
+   * when providing the content payload and should not be set here.
+   */
+  public HttpRequestBuilder addHeader(String name, String value) {
+<span class="fc" id="L82">    reqHeaders.put(name, value);</span>
+<span class="fc" id="L83">    entry.withRequestHeader(name, value);</span>
+<span class="fc" id="L84">    return this;</span>
+  }
+
+  /** Add user-agent header. */
+  public HttpRequestBuilder userAgent(String agent) {
+<span class="nc" id="L89">    return addHeader(&quot;User-Agent&quot;, agent);</span>
+  }
+
+  /** Add header to accept {@code application/json} data. */
+  public HttpRequestBuilder acceptJson() {
+<span class="nc" id="L94">    return addHeader(&quot;Accept&quot;, &quot;application/json&quot;);</span>
+  }
+
+  /** Add accept header. */
+  public HttpRequestBuilder accept(String type) {
+<span class="nc" id="L99">    return addHeader(&quot;Accept&quot;, type);</span>
+  }
+
+  /** Add header to accept-encoding of gzip. */
+  public HttpRequestBuilder acceptGzip() {
+<span class="fc" id="L104">    return acceptEncoding(&quot;gzip&quot;);</span>
+  }
+
+  /** Add accept-encoding header. */
+  public HttpRequestBuilder acceptEncoding(String enc) {
+<span class="fc" id="L109">    return addHeader(&quot;Accept-Encoding&quot;, enc);</span>
+  }
+
+  /** Set the connection timeout for the request in milliseconds. */
+  public HttpRequestBuilder withConnectTimeout(int timeout) {
+<span class="nc" id="L114">    this.connectTimeout = timeout;</span>
+<span class="nc" id="L115">    return this;</span>
+  }
+
+  /** Set the read timeout for the request milliseconds. */
+  public HttpRequestBuilder withReadTimeout(int timeout) {
+<span class="nc" id="L120">    this.readTimeout = timeout;</span>
+<span class="nc" id="L121">    return this;</span>
+  }
+
+  /** Set the request body as JSON. */
+  public HttpRequestBuilder withJsonContent(String content) {
+<span class="nc" id="L126">    return withContent(&quot;application/json&quot;, content);</span>
+  }
+
+  /** Set the request body. */
+  public HttpRequestBuilder withContent(String type, String content) {
+<span class="fc" id="L131">    return withContent(type, content.getBytes(StandardCharsets.UTF_8));</span>
+  }
+
+  /** Set the request body. */
+  public HttpRequestBuilder withContent(String type, byte[] content) {
+<span class="fc" id="L136">    addHeader(&quot;Content-Type&quot;, type);</span>
+<span class="fc" id="L137">    entity = content;</span>
+<span class="fc" id="L138">    return this;</span>
+  }
+
+  /**
+   * Compress the request body using the default compression level.
+   * The content must have already been set on the builder.
+   */
+  public HttpRequestBuilder compress() throws IOException {
+<span class="fc" id="L146">    return compress(Deflater.DEFAULT_COMPRESSION);</span>
+  }
+
+  /**
+   * Compress the request body using the specified compression level.
+   * The content must have already been set on the builder.
+   */
+  public HttpRequestBuilder compress(int level) throws IOException {
+<span class="fc" id="L154">    addHeader(&quot;Content-Encoding&quot;, &quot;gzip&quot;);</span>
+<span class="fc" id="L155">    entity = HttpUtils.gzip(entity, level);</span>
+<span class="fc" id="L156">    return this;</span>
+  }
+
+  /** How many times to retry if the intial attempt fails? */
+  public HttpRequestBuilder withRetries(int n) {
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">    Preconditions.checkArg(n &gt;= 0, &quot;number of retries must be &gt;= 0&quot;);</span>
+<span class="fc" id="L162">    this.numAttempts = n + 1;</span>
+<span class="fc" id="L163">    entry.withMaxAttempts(numAttempts);</span>
+<span class="fc" id="L164">    return this;</span>
+  }
+
+  /**
+   * How long to delay before retrying if the request is throttled. This will get doubled
+   * for each attempt that is throttled. Unit is milliseconds.
+   */
+  public HttpRequestBuilder withInitialRetryDelay(long delay) {
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">    Preconditions.checkArg(delay &gt;= 0L, &quot;initial retry delay must be &gt;= 0&quot;);</span>
+<span class="fc" id="L173">    this.initialRetryDelay = delay;</span>
+<span class="fc" id="L174">    return this;</span>
+  }
+
+  private void requireHttps(String msg) {
+<span class="fc" id="L178">    Preconditions.checkState(&quot;https&quot;.equals(uri.getScheme()), msg);</span>
+<span class="fc" id="L179">  }</span>
+
+  /** Sets the policy used to verify hostnames when using HTTPS. */
+  public HttpRequestBuilder withHostnameVerifier(HostnameVerifier verifier) {
+<span class="fc" id="L183">    requireHttps(&quot;hostname verification cannot be used with http, switch to https&quot;);</span>
+<span class="fc" id="L184">    this.hostVerifier = verifier;</span>
+<span class="fc" id="L185">    return this;</span>
+  }
+
+  /**
+   * Specify that all hosts are allowed. Using this option effectively disables hostname
+   * verification. Use with caution.
+   */
+  public HttpRequestBuilder allowAllHosts() {
+<span class="pc" id="L193">    return withHostnameVerifier((host, session) -&gt; true);</span>
+  }
+
+  /** Sets the socket factory to use with HTTPS. */
+  public HttpRequestBuilder withSSLSocketFactory(SSLSocketFactory factory) {
+<span class="nc" id="L198">    requireHttps(&quot;ssl cannot be used with http, use https&quot;);</span>
+<span class="nc" id="L199">    this.sslFactory = factory;</span>
+<span class="nc" id="L200">    return this;</span>
+  }
+
+  /** Send the request and log/update metrics for the results. */
+  @SuppressWarnings(&quot;PMD.ExceptionAsFlowControl&quot;)
+  public HttpResponse send() throws IOException {
+<span class="fc" id="L206">    HttpResponse response = null;</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">    for (int attempt = 1; attempt &lt;= numAttempts; ++attempt) {</span>
+<span class="fc" id="L208">      entry.withAttempt(attempt);</span>
+      try {
+<span class="fc" id="L210">        response = sendImpl();</span>
+<span class="fc" id="L211">        int s = response.status();</span>
+<span class="fc bfc" id="L212" title="All 4 branches covered.">        if (s == 429 || s == 503) {</span>
+          // Request is getting throttled, exponentially back off
+          // - 429 client sending too many requests
+          // - 503 server unavailable
+          try {
+<span class="fc" id="L217">            long delay = initialRetryDelay &lt;&lt; (attempt - 1);</span>
+<span class="fc" id="L218">            LOGGER.debug(&quot;request throttled, delaying for {}ms: {} {}&quot;, delay, method, uri);</span>
+<span class="fc" id="L219">            Thread.sleep(delay);</span>
+<span class="nc" id="L220">          } catch (InterruptedException e) {</span>
+<span class="nc" id="L221">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L222">            throw new IOException(&quot;request failed &quot; + method + &quot; &quot; + uri, e);</span>
+<span class="fc" id="L223">          }</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        } else if (s &lt; 500) {</span>
+          // 4xx errors other than 429 are not considered retriable, so for anything
+          // less than 500 just return the response to the user
+<span class="fc" id="L227">          return response;</span>
+        }
+<span class="fc" id="L229">      } catch (IOException e) {</span>
+        // All exceptions are considered retriable. Some like UnknownHostException are
+        // debatable, but we have seen them in some cases if there is a high latency for
+        // DNS lookups. So for now assume all exceptions are transient issues.
+<span class="fc bfc" id="L233" title="All 2 branches covered.">        if (attempt == numAttempts) {</span>
+<span class="fc" id="L234">          throw e;</span>
+        } else {
+<span class="fc" id="L236">          LOGGER.warn(&quot;attempt {} of {} failed: {} {}&quot;, attempt, numAttempts, method, uri);</span>
+        }
+<span class="fc" id="L238">      }</span>
+    }
+
+<span class="pc bpc" id="L241" title="1 of 2 branches missed.">    if (response == null) {</span>
+      // Should not get here
+<span class="nc" id="L243">      throw new IOException(&quot;request failed &quot; + method + &quot; &quot; + uri);</span>
+    }
+<span class="fc" id="L245">    return response;</span>
+  }
+
+  private void configureHTTPS(HttpURLConnection http) {
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">    if (http instanceof HttpsURLConnection) {</span>
+<span class="nc" id="L250">      HttpsURLConnection https = (HttpsURLConnection) http;</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">      if (hostVerifier != null) {</span>
+<span class="nc" id="L252">        https.setHostnameVerifier(hostVerifier);</span>
+      }
+<span class="nc bnc" id="L254" title="All 2 branches missed.">      if (sslFactory != null) {</span>
+<span class="nc" id="L255">        https.setSSLSocketFactory(sslFactory);</span>
+      }
+    }
+<span class="fc" id="L258">  }</span>
+
+  /** Send the request and log/update metrics for the results. */
+  protected HttpResponse sendImpl() throws IOException {
+<span class="fc" id="L262">    HttpURLConnection con = (HttpURLConnection) uri.toURL().openConnection();</span>
+<span class="fc" id="L263">    con.setConnectTimeout(connectTimeout);</span>
+<span class="fc" id="L264">    con.setReadTimeout(readTimeout);</span>
+<span class="fc" id="L265">    con.setRequestMethod(method);</span>
+<span class="fc bfc" id="L266" title="All 2 branches covered.">    for (Map.Entry&lt;String, String&gt; h : reqHeaders.entrySet()) {</span>
+<span class="fc" id="L267">      con.setRequestProperty(h.getKey(), h.getValue());</span>
+<span class="fc" id="L268">    }</span>
+<span class="fc" id="L269">    configureHTTPS(con);</span>
+
+<span class="fc" id="L271">    boolean canRetry = true;</span>
+    try {
+<span class="fc" id="L273">      con.setDoInput(true);</span>
+
+      // HttpURLConnection will change method to POST if there is a body associated
+      // with a GET request. Only try to write entity if it is not empty.
+<span class="fc" id="L277">      entry.withRequestContentLength(entity.length).mark(&quot;start&quot;);</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">      if (entity.length &gt; 0) {</span>
+<span class="fc" id="L279">        con.setDoOutput(true);</span>
+<span class="fc" id="L280">        try (OutputStream out = con.getOutputStream()) {</span>
+<span class="fc" id="L281">          out.write(entity);</span>
+        }
+      }
+
+<span class="fc" id="L285">      int status = con.getResponseCode();</span>
+<span class="pc bpc" id="L286" title="1 of 4 branches missed.">      canRetry = (status &gt;= 500 || status == 429);</span>
+<span class="fc" id="L287">      entry.mark(&quot;complete&quot;).withStatusCode(status);</span>
+
+      // A null key is used to return the status line, remove it before sending to
+      // the log entry or creating the response object
+<span class="fc" id="L291">      Map&lt;String, List&lt;String&gt;&gt; headers = new LinkedHashMap&lt;&gt;(con.getHeaderFields());</span>
+<span class="fc" id="L292">      headers.remove(null);</span>
+<span class="fc bfc" id="L293" title="All 2 branches covered.">      for (Map.Entry&lt;String, List&lt;String&gt;&gt; h : headers.entrySet()) {</span>
+<span class="fc bfc" id="L294" title="All 2 branches covered.">        for (String v : h.getValue()) {</span>
+<span class="fc" id="L295">          entry.withResponseHeader(h.getKey(), v);</span>
+<span class="fc" id="L296">        }</span>
+<span class="fc" id="L297">      }</span>
+
+<span class="fc bfc" id="L299" title="All 2 branches covered.">      try (InputStream in = (status &gt;= 400) ? con.getErrorStream() : con.getInputStream()) {</span>
+<span class="fc" id="L300">        byte[] data = readAll(in);</span>
+<span class="fc" id="L301">        entry.withResponseContentLength(data.length);</span>
+<span class="fc" id="L302">        return new HttpResponse(status, headers, data);</span>
+      }
+<span class="nc" id="L304">    } catch (IOException e) {</span>
+<span class="nc" id="L305">      entry.mark(&quot;complete&quot;).withException(e);</span>
+<span class="nc" id="L306">      throw e;</span>
+    } finally {
+<span class="fc" id="L308">      entry.withCanRetry(canRetry);</span>
+<span class="fc" id="L309">      HttpLogEntry.logClientRequest(entry);</span>
+    }
+  }
+
+  @SuppressWarnings(&quot;PMD.AssignmentInOperand&quot;)
+  private byte[] readAll(InputStream in) throws IOException {
+<span class="fc bfc" id="L315" title="All 2 branches covered.">    if (in == null) {</span>
+      // For error status codes with a content-length of 0 we see this case
+<span class="fc" id="L317">      return new byte[0];</span>
+    } else {
+<span class="fc" id="L319">      ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="fc" id="L320">      byte[] buffer = new byte[4096];</span>
+      int length;
+<span class="fc bfc" id="L322" title="All 2 branches covered.">      while ((length = in.read(buffer)) &gt; 0) {</span>
+<span class="fc" id="L323">        baos.write(buffer, 0, length);</span>
+      }
+<span class="fc" id="L325">      return baos.toByteArray();</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

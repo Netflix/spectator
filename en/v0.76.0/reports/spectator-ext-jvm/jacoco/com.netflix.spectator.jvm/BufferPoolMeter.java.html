@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BufferPoolMeter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-jvm</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.jvm</a> &gt; <span class="el_source">BufferPoolMeter.java</span></div><h1>BufferPoolMeter.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.jvm;
+
+import com.netflix.spectator.api.*;
+
+import java.lang.management.BufferPoolMXBean;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Wraps a {@link java.lang.management.BufferPoolMXBean} so it can be registered with spectator.
+ */
+class BufferPoolMeter extends AbstractMeter&lt;BufferPoolMXBean&gt; {
+
+  private static Id meterId(Registry registry, String id) {
+<span class="nc" id="L30">    return registry.createId(&quot;jvm.buffer&quot;).withTag(&quot;id&quot;, id);</span>
+  }
+
+  private static Id bufferCountId(Registry registry, String id) {
+<span class="nc" id="L34">    return registry.createId(&quot;jvm.buffer.count&quot;).withTag(&quot;id&quot;, id);</span>
+  }
+
+  private static Id bufferMemoryUsedId(Registry registry, String id) {
+<span class="nc" id="L38">    return registry.createId(&quot;jvm.buffer.memoryUsed&quot;).withTag(&quot;id&quot;, id);</span>
+  }
+
+  private final Id countId;
+  private final Id memoryUsedId;
+
+  /**
+   * Creates a new instance.
+   *
+   * @param registry
+   *     Spectator registry to use for naming and clock source.
+   * @param mbean
+   *     Mbean to collect the data from.
+   */
+  BufferPoolMeter(Registry registry, BufferPoolMXBean mbean) {
+<span class="nc" id="L53">    super(registry.clock(), meterId(registry, mbean.getName()), mbean);</span>
+<span class="nc" id="L54">    countId = bufferCountId(registry, mbean.getName());</span>
+<span class="nc" id="L55">    memoryUsedId = bufferMemoryUsedId(registry, mbean.getName());</span>
+<span class="nc" id="L56">  }</span>
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="nc" id="L59">    final long timestamp = clock.wallTime();</span>
+<span class="nc" id="L60">    final BufferPoolMXBean mbean = ref.get();</span>
+<span class="nc" id="L61">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">    if (mbean != null) {</span>
+<span class="nc" id="L63">      ms.add(new Measurement(countId, timestamp, mbean.getCount()));</span>
+<span class="nc" id="L64">      ms.add(new Measurement(memoryUsedId, timestamp, mbean.getMemoryUsed()));</span>
+    }
+<span class="nc" id="L66">    return ms;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

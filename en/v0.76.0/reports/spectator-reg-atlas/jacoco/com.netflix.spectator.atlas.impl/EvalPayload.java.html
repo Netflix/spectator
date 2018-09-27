@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EvalPayload.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas.impl</a> &gt; <span class="el_source">EvalPayload.java</span></div><h1>EvalPayload.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas.impl;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Wraps a list of measurements with a set of common tags. The common tags are
+ * typically used for things like the application and instance id.
+ *
+ * &lt;b&gt;Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.&lt;/b&gt;
+ */
+public final class EvalPayload {
+
+  private final long timestamp;
+  private final List&lt;Metric&gt; metrics;
+
+  /** Create a new instance. */
+<span class="fc" id="L34">  public EvalPayload(long timestamp, List&lt;Metric&gt; metrics) {</span>
+<span class="fc" id="L35">    this.timestamp = timestamp;</span>
+<span class="fc" id="L36">    this.metrics = metrics;</span>
+<span class="fc" id="L37">  }</span>
+
+  /** Return the timestamp for metrics in this payload. */
+  public long getTimestamp() {
+<span class="nc" id="L41">    return timestamp;</span>
+  }
+
+  /** Return the metric values for the data for this payload. */
+  public List&lt;Metric&gt; getMetrics() {
+<span class="nc" id="L46">    return metrics;</span>
+  }
+
+  @Override public boolean equals(Object o) {
+<span class="fc bfc" id="L50" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L51" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L52">    EvalPayload payload = (EvalPayload) o;</span>
+<span class="fc bfc" id="L53" title="All 4 branches covered.">    return timestamp == payload.timestamp &amp;&amp; metrics.equals(payload.metrics);</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc" id="L57">    int result = (int) (timestamp ^ (timestamp &gt;&gt;&gt; 32));</span>
+<span class="fc" id="L58">    result = 31 * result + metrics.hashCode();</span>
+<span class="fc" id="L59">    return result;</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L63">    return &quot;EvalPayload(timestamp=&quot; + timestamp + &quot;, metrics=&quot; + metrics + &quot;)&quot;;</span>
+  }
+
+  /** Metric value. */
+  public static final class Metric {
+    private final String id;
+    private final Map&lt;String, String&gt; tags;
+    private final double value;
+
+    /** Create a new instance. */
+<span class="fc" id="L73">    public Metric(String id, Map&lt;String, String&gt; tags, double value) {</span>
+<span class="fc" id="L74">      this.id = id;</span>
+<span class="fc" id="L75">      this.tags = tags;</span>
+<span class="fc" id="L76">      this.value = value;</span>
+<span class="fc" id="L77">    }</span>
+
+    /** Id for the expression that this data corresponds with. */
+    public String getId() {
+<span class="nc" id="L81">      return id;</span>
+    }
+
+    /** Tags for identifying the metric. */
+    public Map&lt;String, String&gt; getTags() {
+<span class="nc" id="L86">      return tags;</span>
+    }
+
+    /** Value for the metric. */
+    public double getValue() {
+<span class="nc" id="L91">      return value;</span>
+    }
+
+    @Override public boolean equals(Object o) {
+<span class="fc bfc" id="L95" title="All 2 branches covered.">      if (this == o) return true;</span>
+<span class="fc bfc" id="L96" title="All 4 branches covered.">      if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L97">      Metric metric = (Metric) o;</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">      return Double.compare(metric.value, value) == 0</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">          &amp;&amp; id.equals(metric.id)</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">          &amp;&amp; tags.equals(metric.tags);</span>
+    }
+
+    @Override public int hashCode() {
+      int result;
+      long temp;
+<span class="fc" id="L106">      result = id.hashCode();</span>
+<span class="fc" id="L107">      result = 31 * result + tags.hashCode();</span>
+<span class="fc" id="L108">      temp = Double.doubleToLongBits(value);</span>
+<span class="fc" id="L109">      result = 31 * result + (int) (temp ^ (temp &gt;&gt;&gt; 32));</span>
+<span class="fc" id="L110">      return result;</span>
+    }
+
+    @Override public String toString() {
+<span class="nc" id="L114">      return &quot;Metric(id=&quot; + id + &quot;, tags=&quot; + tags + &quot;, value=&quot; + value + &quot;)&quot;;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

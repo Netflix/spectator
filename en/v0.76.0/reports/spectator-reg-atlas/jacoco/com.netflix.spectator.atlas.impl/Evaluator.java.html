@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Evaluator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas.impl</a> &gt; <span class="el_source">Evaluator.java</span></div><h1>Evaluator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas.impl;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Evaluates all of the expressions for subscriptions associated with a group.
+ *
+ * &lt;b&gt;Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.&lt;/b&gt;
+ */
+<span class="fc" id="L34">public class Evaluator {</span>
+
+<span class="fc" id="L36">  private static final Logger LOGGER = LoggerFactory.getLogger(Evaluator.class);</span>
+
+  // Subscriptions by group
+<span class="fc" id="L39">  private final Map&lt;String, List&lt;Subscription&gt;&gt; subscriptions = new ConcurrentHashMap&lt;&gt;();</span>
+
+  /**
+   * Synchronize the internal set of subscriptions with the map that is passed in.
+   *
+   * @param subs
+   *     Complete set of subscriptions for all groups. The keys for the map are the
+   *     group names.
+   * @return
+   *     This instance for chaining of update operations.
+   */
+  public Evaluator sync(Map&lt;String, List&lt;Subscription&gt;&gt; subs) {
+<span class="nc" id="L51">    Set&lt;String&gt; removed = subscriptions.keySet();</span>
+<span class="nc" id="L52">    removed.removeAll(subs.keySet());</span>
+<span class="nc" id="L53">    removed.forEach(this::removeGroupSubscriptions);</span>
+<span class="nc" id="L54">    subs.forEach(this::addGroupSubscriptions);</span>
+<span class="nc" id="L55">    return this;</span>
+  }
+
+  /**
+   * Add subscriptions for a given group.
+   *
+   * @param group
+   *     Name of the group. At Netflix this is typically the cluster that includes
+   *     the instance reporting data.
+   * @param subs
+   *     Set of subscriptions for the group.
+   * @return
+   *     This instance for chaining of update operations.
+   */
+  public Evaluator addGroupSubscriptions(String group, List&lt;Subscription&gt; subs) {
+<span class="fc" id="L70">    List&lt;Subscription&gt; oldSubs = subscriptions.put(group, subs);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">    if (oldSubs == null) {</span>
+<span class="fc" id="L72">      LOGGER.debug(&quot;added group {} with {} subscriptions&quot;, group, subs.size());</span>
+    } else {
+<span class="fc" id="L74">      LOGGER.debug(&quot;updated group {}, {} subscriptions before, {} subscriptions now&quot;,</span>
+<span class="fc" id="L75">          group, oldSubs.size(), subs.size());</span>
+    }
+<span class="fc" id="L77">    return this;</span>
+  }
+
+  /**
+   * Remove subscriptions for a given group.
+   *
+   * @param group
+   *     Name of the group. At Netflix this is typically the cluster that includes
+   *     the instance reporting data.
+   * @return
+   *     This instance for chaining of update operations.
+   */
+  public Evaluator removeGroupSubscriptions(String group) {
+<span class="fc" id="L90">    List&lt;Subscription&gt; oldSubs = subscriptions.remove(group);</span>
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">    if (oldSubs != null) {</span>
+<span class="fc" id="L92">      LOGGER.debug(&quot;removed group {} with {} subscriptions&quot;, group, oldSubs.size());</span>
+    }
+<span class="fc" id="L94">    return this;</span>
+  }
+
+  /**
+   * Evaluate expressions for all subscriptions associated with the specified group using
+   * the provided data.
+   *
+   * @param group
+   *     Name of the group. At Netflix this is typically the cluster that includes
+   *     the instance reporting data.
+   * @param timestamp
+   *     Timestamp to use for the payload response.
+   * @param vs
+   *     Set of values received for the group for the current time period.
+   * @return
+   *     Payload that can be encoded and sent to Atlas streaming evaluation cluster.
+   */
+  public EvalPayload eval(String group, long timestamp, List&lt;TagsValuePair&gt; vs) {
+<span class="fc" id="L112">    List&lt;Subscription&gt; subs = subscriptions.getOrDefault(group, Collections.emptyList());</span>
+<span class="fc" id="L113">    List&lt;EvalPayload.Metric&gt; metrics = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">    for (Subscription s : subs) {</span>
+<span class="fc" id="L115">      DataExpr expr = s.dataExpr();</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">      for (TagsValuePair pair : expr.eval(vs)) {</span>
+<span class="fc" id="L117">        EvalPayload.Metric m = new EvalPayload.Metric(s.getId(), pair.tags(), pair.value());</span>
+<span class="fc" id="L118">        metrics.add(m);</span>
+<span class="fc" id="L119">      }</span>
+<span class="fc" id="L120">    }</span>
+<span class="fc" id="L121">    return new EvalPayload(timestamp, metrics);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

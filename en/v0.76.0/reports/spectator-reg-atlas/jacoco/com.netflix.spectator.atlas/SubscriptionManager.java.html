@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SubscriptionManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas</a> &gt; <span class="el_source">SubscriptionManager.java</span></div><h1>SubscriptionManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.atlas.impl.Subscription;
+import com.netflix.spectator.atlas.impl.Subscriptions;
+import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * Helper for managing the set of LWC subscriptions.
+ */
+class SubscriptionManager {
+
+<span class="fc" id="L39">  private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionManager.class);</span>
+
+  private final ObjectMapper mapper;
+  private final HttpClient client;
+  private final Clock clock;
+  private final URI uri;
+  private final int connectTimeout;
+  private final int readTimeout;
+  private final long stepMillis;
+
+  private final long configTTL;
+
+<span class="fc" id="L51">  private final Map&lt;Subscription, Long&gt; subscriptions = new ConcurrentHashMap&lt;&gt;();</span>
+
+  private Subscriptions payload;
+  private String etag;
+
+  /** Create a new instance. */
+<span class="fc" id="L57">  SubscriptionManager(ObjectMapper mapper, HttpClient client, Clock clock, AtlasConfig config) {</span>
+<span class="fc" id="L58">    this.mapper = mapper;</span>
+<span class="fc" id="L59">    this.client = client;</span>
+<span class="fc" id="L60">    this.clock = clock;</span>
+<span class="fc" id="L61">    this.uri = URI.create(config.configUri());</span>
+<span class="fc" id="L62">    this.connectTimeout = (int) config.connectTimeout().toMillis();</span>
+<span class="fc" id="L63">    this.readTimeout = (int) config.readTimeout().toMillis();</span>
+<span class="fc" id="L64">    this.stepMillis = config.step().toMillis();</span>
+<span class="fc" id="L65">    this.configTTL = config.configTTL().toMillis();</span>
+<span class="fc" id="L66">  }</span>
+
+  /** Returns the current set of active subscriptions. */
+  List&lt;Subscription&gt; subscriptions() {
+<span class="fc" id="L70">    return new ArrayList&lt;&gt;(subscriptions.keySet());</span>
+  }
+
+  /** Refresh the subscriptions from the server. */
+  void refresh() {
+    // Request latest expressions from the server
+    try {
+<span class="fc" id="L77">      HttpResponse res = client.get(uri)</span>
+<span class="fc" id="L78">          .withConnectTimeout(connectTimeout)</span>
+<span class="fc" id="L79">          .withReadTimeout(readTimeout)</span>
+<span class="fc" id="L80">          .addHeader(&quot;If-None-Match&quot;, etag)</span>
+<span class="fc" id="L81">          .send()</span>
+<span class="fc" id="L82">          .decompress();</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">      if (res.status() == 304) {</span>
+<span class="fc" id="L84">        LOGGER.debug(&quot;no modification to subscriptions&quot;);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">      } else if (res.status() != 200) {</span>
+<span class="fc" id="L86">        LOGGER.warn(&quot;failed to update subscriptions, received status {}&quot;, res.status());</span>
+      } else {
+<span class="fc" id="L88">        etag = res.header(&quot;ETag&quot;);</span>
+<span class="fc" id="L89">        payload = filterByStep(mapper.readValue(res.entity(), Subscriptions.class));</span>
+      }
+<span class="fc" id="L91">    } catch (Exception e) {</span>
+<span class="fc" id="L92">      LOGGER.warn(&quot;failed to update subscriptions&quot;, e);</span>
+<span class="fc" id="L93">    }</span>
+
+    // Update with the current payload, it will be null if there hasn't been a single
+    // successful request
+<span class="fc bfc" id="L97" title="All 2 branches covered.">    if (payload != null) {</span>
+<span class="fc" id="L98">      long now = clock.wallTime();</span>
+<span class="fc" id="L99">      payload.update(subscriptions, now, now + configTTL);</span>
+    }
+<span class="fc" id="L101">  }</span>
+
+  private Subscriptions filterByStep(Subscriptions subs) {
+<span class="fc" id="L104">    List&lt;Subscription&gt; subscriptions = subs</span>
+<span class="fc" id="L105">        .getExpressions()</span>
+<span class="fc" id="L106">        .stream()</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        .filter(s -&gt; s.getFrequency() == stepMillis)</span>
+<span class="fc" id="L108">        .collect(Collectors.toList());</span>
+<span class="fc" id="L109">    return new Subscriptions().withExpressions(subscriptions);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

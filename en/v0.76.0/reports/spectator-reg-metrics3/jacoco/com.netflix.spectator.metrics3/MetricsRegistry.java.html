@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricsRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-metrics3</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.metrics3</a> &gt; <span class="el_source">MetricsRegistry.java</span></div><h1>MetricsRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.metrics3;
+
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
+/** Registry implementation that maps spectator types to the metrics3 library. */
+public class MetricsRegistry extends AbstractRegistry {
+
+  private final com.codahale.metrics.MetricRegistry impl;
+  private final Map&lt;String, DoubleGauge&gt; registeredGauges;
+  private final Function&lt;Id, String&gt; formatNameFn;
+
+  /** Create a new instance. */
+  public MetricsRegistry() {
+<span class="nc" id="L41">    this(Clock.SYSTEM, new com.codahale.metrics.MetricRegistry());</span>
+<span class="nc" id="L42">  }</span>
+
+  /** Create a new instance. */
+  public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl) {
+<span class="fc" id="L46">    this(clock, impl, id -&gt; {</span>
+<span class="fc" id="L47">      Id normalized = Utils.normalize(id);</span>
+<span class="fc" id="L48">      StringBuilder buf = new StringBuilder();</span>
+<span class="fc" id="L49">      buf.append(normalized.name());</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">      for (Tag t : normalized.tags()) {</span>
+<span class="fc" id="L51">        buf.append('.').append(t.key()).append('-').append(t.value());</span>
+<span class="fc" id="L52">      }</span>
+<span class="fc" id="L53">      return buf.toString();</span>
+    });
+<span class="fc" id="L55">  }</span>
+
+  /** Create a new instance. */
+  public MetricsRegistry(Clock clock, com.codahale.metrics.MetricRegistry impl, Function&lt;Id, String&gt; formatNameFn) {
+<span class="fc" id="L59">    super(clock);</span>
+<span class="fc" id="L60">    this.impl = impl;</span>
+<span class="fc" id="L61">    this.registeredGauges = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L62">    this.formatNameFn = formatNameFn;</span>
+<span class="fc" id="L63">  }</span>
+
+  private String toMetricName(Id id) {
+<span class="fc" id="L66">    return formatNameFn.apply(id);</span>
+  }
+
+  @Override protected Counter newCounter(Id id) {
+<span class="fc" id="L70">    final String name = toMetricName(id);</span>
+<span class="fc" id="L71">    return new MetricsCounter(clock(), id, impl.meter(name));</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="fc" id="L75">    final String name = toMetricName(id);</span>
+<span class="fc" id="L76">    return new MetricsDistributionSummary(clock(), id, impl.histogram(name));</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="fc" id="L80">    final String name = toMetricName(id);</span>
+<span class="fc" id="L81">    return new MetricsTimer(clock(), id, impl.timer(name));</span>
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+<span class="fc" id="L85">    final String name = toMetricName(id);</span>
+<span class="fc" id="L86">    DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -&gt; {</span>
+<span class="fc" id="L87">      DoubleGauge g = new DoubleGauge();</span>
+<span class="fc" id="L88">      impl.register(name, g);</span>
+<span class="fc" id="L89">      return g;</span>
+    });
+<span class="fc" id="L91">    return new MetricsGauge(clock(), id, gauge);</span>
+  }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+<span class="nc" id="L95">    final String name = toMetricName(id);</span>
+<span class="nc" id="L96">    DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -&gt; {</span>
+<span class="nc" id="L97">      DoubleMaxGauge g = new DoubleMaxGauge();</span>
+<span class="nc" id="L98">      impl.register(name, g);</span>
+<span class="nc" id="L99">      return g;</span>
+    });
+<span class="nc" id="L101">    return new MetricsGauge(clock(), id, gauge);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

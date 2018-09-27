@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcAttempt.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcAttemptFinal.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcErrorGroup.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcLogEntry.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcLogger.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcMetric.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcProtocol.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcResult.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/IpcTagKey.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/NetflixHeader.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/NetflixHeaders.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/ServerGroup.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/http/HttpClient.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/http/HttpRequestBuilder.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/http/HttpResponse.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-ext-ipc/src/main/java/com/netflix/spectator/ipc/http/HttpUtils.java">
+</file>
+</checkstyle>

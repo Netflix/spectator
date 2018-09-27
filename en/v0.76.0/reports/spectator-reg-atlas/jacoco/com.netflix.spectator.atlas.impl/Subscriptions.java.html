@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Subscriptions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-atlas</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.atlas.impl</a> &gt; <span class="el_source">Subscriptions.java</span></div><h1>Subscriptions.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.atlas.impl;
+
+import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Model object for subscriptions payload coming from LWC service.
+ *
+ * &lt;b&gt;Classes in this package are only intended for use internally within spectator. They may
+ * change at any time and without notice.&lt;/b&gt;
+ */
+public final class Subscriptions {
+
+<span class="fc" id="L35">  private static final Logger LOGGER = LoggerFactory.getLogger(Subscriptions.class);</span>
+
+<span class="fc" id="L37">  private List&lt;Subscription&gt; expressions = Collections.emptyList();</span>
+
+  /** Create a new instance. */
+<span class="fc" id="L40">  public Subscriptions() {</span>
+    // Will get filled in with set methods
+<span class="fc" id="L42">  }</span>
+
+  /**
+   * Merge the subscriptions from this update into a map from subscriptions to
+   * expiration times.
+   *
+   * @param subs
+   *     Existing subscriptions. The map value is the expiration time in millis since
+   *     the epoch.
+   * @param currentTime
+   *     Current time to use for checking if entries are expired.
+   * @param expirationTime
+   *     Expiration time used for new and updated entries.
+   */
+  public void update(Map&lt;Subscription, Long&gt; subs, long currentTime, long expirationTime) {
+    // Update expiration time for existing subs and log new ones
+<span class="fc bfc" id="L58" title="All 2 branches covered.">    for (Subscription sub : expressions) {</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">      if (subs.put(sub, expirationTime) == null) {</span>
+<span class="fc" id="L60">        LOGGER.info(&quot;new subscription: {}&quot;, sub);</span>
+      }
+<span class="fc" id="L62">    }</span>
+
+    // Remove any expired entries
+<span class="fc" id="L65">    Iterator&lt;Map.Entry&lt;Subscription, Long&gt;&gt; it = subs.entrySet().iterator();</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">    while (it.hasNext()) {</span>
+<span class="fc" id="L67">      Map.Entry&lt;Subscription, Long&gt; entry = it.next();</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">      if (entry.getValue() &lt; currentTime) {</span>
+<span class="fc" id="L69">        LOGGER.info(&quot;expired: {}&quot;, entry.getKey());</span>
+<span class="fc" id="L70">        it.remove();</span>
+      }
+<span class="fc" id="L72">    }</span>
+<span class="fc" id="L73">  }</span>
+
+  /** Return the available subscriptions. */
+  public List&lt;Subscription&gt; getExpressions() {
+<span class="fc" id="L77">    return expressions;</span>
+  }
+
+  /** Set the available subscriptions. */
+  public void setExpressions(List&lt;Subscription&gt; expressions) {
+<span class="fc" id="L82">    this.expressions = Preconditions.checkNotNull(expressions, &quot;expressions&quot;);</span>
+<span class="fc" id="L83">  }</span>
+
+  /** Set the available subscriptions. */
+  public Subscriptions withExpressions(List&lt;Subscription&gt; expressions) {
+<span class="fc" id="L87">    setExpressions(expressions);</span>
+<span class="fc" id="L88">    return this;</span>
+  }
+
+  @Override public boolean equals(Object o) {
+<span class="fc bfc" id="L92" title="All 2 branches covered.">    if (this == o) return true;</span>
+<span class="fc bfc" id="L93" title="All 4 branches covered.">    if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="fc" id="L94">    Subscriptions that = (Subscriptions) o;</span>
+<span class="fc" id="L95">    return expressions.equals(that.expressions);</span>
+  }
+
+  @Override public int hashCode() {
+<span class="fc" id="L99">    return expressions.hashCode();</span>
+  }
+
+  @Override public String toString() {
+<span class="nc" id="L103">    return &quot;Subscriptions(&quot; + expressions + &quot;)&quot;;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

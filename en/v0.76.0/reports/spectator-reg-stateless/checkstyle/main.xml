@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/JsonUtils.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessConfig.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessCounter.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessDistributionSummary.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessGauge.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessMaxGauge.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessMeter.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessRegistry.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-reg-stateless/src/main/java/com/netflix/spectator/stateless/StatelessTimer.java">
+</file>
+</checkstyle>

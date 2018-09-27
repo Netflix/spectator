@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcServletFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipcservlet</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipcservlet</a> &gt; <span class="el_source">IpcServletFilter.java</span></div><h1>IpcServletFilter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipcservlet;
+
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.ipc.IpcErrorGroup;
+import com.netflix.spectator.ipc.IpcLogEntry;
+import com.netflix.spectator.ipc.IpcLogger;
+import com.netflix.spectator.ipc.NetflixHeader;
+import com.netflix.spectator.ipc.NetflixHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.Map;
+
+/**
+ * Servlet filter implementation that provides common IPC metrics for filtered requests.
+ */
+@Singleton
+public class IpcServletFilter implements Filter {
+
+<span class="fc" id="L49">  private static final Logger LOGGER = LoggerFactory.getLogger(IpcServletFilter.class);</span>
+
+  private final IpcLogger ipcLogger;
+  private final Map&lt;String, String&gt; netflixHeaders;
+
+  /**
+   * Create a new instance using the global registry. This is typically used when defining
+   * the filter in the {@code web.xml} file and it is created by the container.
+   */
+  public IpcServletFilter() {
+<span class="fc" id="L59">    this(Spectator.globalRegistry());</span>
+<span class="fc" id="L60">  }</span>
+
+  /** Create a new instance using the specified registry. */
+  @Inject
+<span class="fc" id="L64">  public IpcServletFilter(Registry registry) {</span>
+<span class="fc" id="L65">    this.ipcLogger = new IpcLogger(registry, LOGGER);</span>
+<span class="fc" id="L66">    this.netflixHeaders = NetflixHeaders.extractFromEnvironment();</span>
+<span class="fc" id="L67">  }</span>
+
+  @SuppressWarnings(&quot;PMD.AvoidCatchingThrowable&quot;)
+  @Override
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+      throws IOException, ServletException {
+
+<span class="pc bpc" id="L74" title="2 of 4 branches missed.">    if (request instanceof HttpServletRequest &amp;&amp; response instanceof HttpServletResponse) {</span>
+<span class="fc" id="L75">      HttpServletRequest httpReq = (HttpServletRequest) request;</span>
+<span class="fc" id="L76">      HttpServletResponse httpRes = (HttpServletResponse) response;</span>
+
+<span class="fc" id="L78">      String endpoint = getEndpoint(httpReq);</span>
+
+<span class="fc" id="L80">      IpcLogEntry entry = ipcLogger.createServerEntry()</span>
+<span class="fc" id="L81">          .withOwner(&quot;spectator&quot;)</span>
+<span class="fc" id="L82">          .withHttpMethod(httpReq.getMethod())</span>
+<span class="fc" id="L83">          .withUri(httpReq.getRequestURI(), httpReq.getRequestURI());</span>
+<span class="fc" id="L84">      addRequestHeaders(httpReq, entry);</span>
+
+<span class="fc" id="L86">      entry.markStart();</span>
+      try {
+<span class="fc" id="L88">        chain.doFilter(request, response);</span>
+<span class="fc" id="L89">        entry.markEnd().withHttpStatus(httpRes.getStatus());</span>
+<span class="fc" id="L90">      } catch (Throwable t) {</span>
+<span class="fc" id="L91">        entry.markEnd()</span>
+<span class="fc" id="L92">            .withErrorGroup(IpcErrorGroup.server_error)</span>
+<span class="fc" id="L93">            .withException(t)</span>
+<span class="fc" id="L94">            .withHttpStatus(500);</span>
+<span class="fc" id="L95">        throw t;</span>
+      } finally {
+<span class="fc" id="L97">        addNetflixHeaders(httpRes, endpoint);</span>
+<span class="fc" id="L98">        addResponseHeaders(httpRes, entry);</span>
+<span class="fc" id="L99">        entry.log();</span>
+      }
+<span class="fc" id="L101">    } else {</span>
+<span class="nc" id="L102">      chain.doFilter(request, response);</span>
+    }
+<span class="fc" id="L104">  }</span>
+
+  private String getEndpoint(HttpServletRequest httpReq) {
+<span class="fc" id="L107">    String servletPath = ServletPathHack.getServletPath(httpReq);</span>
+<span class="pc bpc" id="L108" title="1 of 4 branches missed.">    return (servletPath == null || servletPath.isEmpty())</span>
+        ? &quot;/&quot;
+        : servletPath;
+  }
+
+  private void addNetflixHeaders(HttpServletResponse httpRes, String endpoint) {
+<span class="fc" id="L114">    addIfNotPresent(httpRes, NetflixHeader.Endpoint.headerName(), endpoint);</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">    for (Map.Entry&lt;String, String&gt; entry : netflixHeaders.entrySet()) {</span>
+<span class="nc" id="L116">      addIfNotPresent(httpRes, entry.getKey(), entry.getValue());</span>
+<span class="nc" id="L117">    }</span>
+<span class="fc" id="L118">  }</span>
+
+  private void addIfNotPresent(HttpServletResponse httpRes, String name, String value) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">    if (httpRes.getHeader(name) == null) {</span>
+<span class="fc" id="L122">      httpRes.addHeader(name, value);</span>
+    }
+<span class="fc" id="L124">  }</span>
+
+  private void addRequestHeaders(HttpServletRequest httpReq, IpcLogEntry entry) {
+<span class="fc" id="L127">    Enumeration&lt;String&gt; headers = httpReq.getHeaderNames();</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">    while (headers.hasMoreElements()) {</span>
+<span class="fc" id="L129">      String header = headers.nextElement();</span>
+<span class="fc" id="L130">      Enumeration&lt;String&gt; values = httpReq.getHeaders(header);</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">      while (values.hasMoreElements()) {</span>
+<span class="fc" id="L132">        entry.addRequestHeader(header, values.nextElement());</span>
+      }
+<span class="fc" id="L134">    }</span>
+<span class="fc" id="L135">  }</span>
+
+  private void addResponseHeaders(HttpServletResponse httpRes, IpcLogEntry entry) {
+<span class="fc" id="L138">    Collection&lt;String&gt; headers = httpRes.getHeaderNames();</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">    for (String header : headers) {</span>
+<span class="fc" id="L140">      Collection&lt;String&gt; values = httpRes.getHeaders(header);</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">      for (String value : values) {</span>
+<span class="fc" id="L142">        entry.addResponseHeader(header, value);</span>
+<span class="fc" id="L143">      }</span>
+<span class="fc" id="L144">    }</span>
+<span class="fc" id="L145">  }</span>
+
+  //
+  // In the servlet-api 4.x versions there are default implementations of the methods
+  // below. To avoid AbstractMethodErrors when running on older versions, we explicitly
+  // override them with empty implementations.
+  //
+
+  @Override public void init(FilterConfig filterConfig) throws ServletException {
+<span class="fc" id="L154">  }</span>
+
+  @Override public void destroy() {
+<span class="fc" id="L157">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

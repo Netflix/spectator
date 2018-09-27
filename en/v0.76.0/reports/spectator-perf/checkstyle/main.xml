@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="6.7">
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-perf/src/main/java/com/netflix/spectator/perf/Main.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-perf/src/main/java/com/netflix/spectator/perf/ManyTags.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-perf/src/main/java/com/netflix/spectator/perf/NameExplosion.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-perf/src/main/java/com/netflix/spectator/perf/TagKeyExplosion.java">
+</file>
+<file name="/Users/brharrington/repos/scratch/spectator/spectator-perf/src/main/java/com/netflix/spectator/perf/TagValueExplosion.java">
+</file>
+</checkstyle>

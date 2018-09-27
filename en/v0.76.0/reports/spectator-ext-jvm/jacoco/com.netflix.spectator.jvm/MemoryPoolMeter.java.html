@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MemoryPoolMeter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-jvm</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.jvm</a> &gt; <span class="el_source">MemoryPoolMeter.java</span></div><h1>MemoryPoolMeter.java</h1><pre class="source lang-java linenums">/**
+ * Copyright 2015 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.jvm;
+
+import com.netflix.spectator.api.*;
+
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Wraps a {@link java.lang.management.MemoryPoolMXBean} so it can be registered with spectator.
+ */
+class MemoryPoolMeter extends AbstractMeter&lt;MemoryPoolMXBean&gt; {
+
+  private final Id usedId;
+  private final Id committedId;
+  private final Id maxId;
+
+  /**
+   * Creates a new instance.
+   *
+   * @param registry
+   *     Spectator registry to use for naming and clock source.
+   * @param mbean
+   *     Mbean to collect the data from.
+   */
+  MemoryPoolMeter(Registry registry, MemoryPoolMXBean mbean) {
+<span class="nc" id="L43">    super(registry.clock(), registry.createId(&quot;jvm.memory&quot;).withTag(&quot;id&quot;, mbean.getName()), mbean);</span>
+<span class="nc" id="L44">    usedId = registry.createId(&quot;jvm.memory.used&quot;).withTag(&quot;id&quot;, mbean.getName());</span>
+<span class="nc" id="L45">    committedId = registry.createId(&quot;jvm.memory.committed&quot;).withTag(&quot;id&quot;, mbean.getName());</span>
+<span class="nc" id="L46">    maxId = registry.createId(&quot;jvm.memory.max&quot;).withTag(&quot;id&quot;, mbean.getName());</span>
+<span class="nc" id="L47">  }</span>
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="nc" id="L50">    final long timestamp = clock.wallTime();</span>
+<span class="nc" id="L51">    final MemoryPoolMXBean mbean = ref.get();</span>
+<span class="nc" id="L52">    final List&lt;Measurement&gt; ms = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">    if (mbean != null) {</span>
+<span class="nc" id="L54">      final String typeKey = &quot;memtype&quot;;</span>
+<span class="nc" id="L55">      final String type = mbean.getType().name();</span>
+
+<span class="nc" id="L57">      final MemoryUsage usage = mbean.getUsage();</span>
+<span class="nc" id="L58">      ms.add(new Measurement(usedId.withTag(typeKey, type), timestamp, usage.getUsed()));</span>
+<span class="nc" id="L59">      ms.add(new Measurement(committedId.withTag(typeKey, type), timestamp, usage.getCommitted()));</span>
+<span class="nc" id="L60">      ms.add(new Measurement(maxId.withTag(typeKey, type), timestamp, usage.getMax()));</span>
+    }
+<span class="nc" id="L62">    return ms;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

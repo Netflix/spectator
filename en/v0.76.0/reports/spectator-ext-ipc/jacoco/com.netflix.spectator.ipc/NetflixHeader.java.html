@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NetflixHeader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">NetflixHeader.java</span></div><h1>NetflixHeader.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+/**
+ * Headers in use at Netflix to relay information between the client and the server. This
+ * information provides additional context for logs and is used to tag the IPC metrics
+ * consistently between the client and the server.
+ */
+<span class="fc" id="L23">public enum NetflixHeader {</span>
+
+  /**
+   * Server group name for the client or the server. It should follow the naming conventions
+   * expected by Frigga. See {@link ServerGroup} for more information.
+   */
+<span class="fc" id="L29">  ASG,</span>
+
+  /**
+   * Availability zone of the client or server instance.
+   */
+<span class="fc" id="L34">  Zone,</span>
+
+  /**
+   * Instance id of the client or server.
+   */
+<span class="fc" id="L39">  Node,</span>
+
+  /**
+   * Route or route handler for a given path. It should have a fixed cardinality. For HTTP
+   * this would need to come from the server so there is agreement and the client will report
+   * the same value.
+   */
+<span class="fc" id="L46">  Endpoint,</span>
+
+  /**
+   * VIP that was used to lookup instances for a service when using a client side load balancer.
+   * This should be set on the client request to the vip used for the lookup. In the case of NIWS,
+   * that would be the VIP used for the DeploymentContextBasedVipAddresses. If multiple VIPs are
+   * used, then the first VIP that caused a given server instance to be selected should be used.
+   *
+   * For server side load balancers the VIP header should be omitted.
+   */
+<span class="fc" id="L56">  Vip;</span>
+
+<span class="fc" id="L58">  private final String headerName = &quot;Netflix-&quot; + name();</span>
+
+  /** Return the fully qualified header name. */
+  public String headerName() {
+<span class="fc" id="L62">    return headerName;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

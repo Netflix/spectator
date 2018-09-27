@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricsController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers</a> &gt; <span class="el_source">MetricsController.java</span></div><h1>MetricsController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.netflix.spectator.controllers;
+
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
+
+import com.netflix.spectator.controllers.filter.PrototypeMeasurementFilter;
+import com.netflix.spectator.controllers.filter.TagMeasurementFilter;
+import com.netflix.spectator.controllers.model.ApplicationRegistry;
+import com.netflix.spectator.controllers.model.MetricValues;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
+import java.util.function.Predicate;
+import java.util.Map;
+import java.util.HashMap;
+
+
+/**
+ * Provides an HTTP endpoint for polling spectator metrics.
+ */
+@RequestMapping(&quot;/spectator/metrics&quot;)
+@RestController
+@ConditionalOnExpression(&quot;${spectator.webEndpoint.enabled:false}&quot;)
+<span class="fc" id="L53">public class MetricsController {</span>
+  @Autowired
+  private Registry registry;
+
+  /**
+   * A measurement filter that accepts all measurements.
+   */
+<span class="fc" id="L60">  public static final Predicate&lt;Measurement&gt; ALL_MEASUREMENTS_FILTER = m -&gt; true;</span>
+
+  @Value(&quot;${spectator.applicationName:}&quot;)
+  private String applicationName;
+
+  @Value(&quot;${spectator.applicationVersion:}&quot;)
+  private String applicationVersion;
+
+  @Value(&quot;${spectator.webEndpoint.prototypeFilter.path:}&quot;)
+  private String prototypeFilterPath;
+
+<span class="fc" id="L71">  private Map&lt;Id, String&gt; knownMeterKinds = new HashMap&lt;Id, String&gt;();</span>
+<span class="fc" id="L72">  private Predicate&lt;Measurement&gt; defaultMeasurementFilter = null;</span>
+
+  /**
+   * The default measurement filter is configured through properties.
+   */
+  public Predicate&lt;Measurement&gt; getDefaultMeasurementFilter() throws IOException {
+<span class="nc bnc" id="L78" title="All 2 branches missed.">    if (defaultMeasurementFilter != null) {</span>
+<span class="nc" id="L79">      return defaultMeasurementFilter;</span>
+    }
+
+<span class="nc bnc" id="L82" title="All 2 branches missed.">    if (!prototypeFilterPath.isEmpty()) {</span>
+<span class="nc" id="L83">      defaultMeasurementFilter = PrototypeMeasurementFilter.loadFromPath(</span>
+          prototypeFilterPath);
+    } else {
+<span class="nc" id="L86">      defaultMeasurementFilter = ALL_MEASUREMENTS_FILTER;</span>
+    }
+
+<span class="nc" id="L89">    return defaultMeasurementFilter;</span>
+  }
+
+
+  /**
+   * Endpoint for querying current metric values.
+   *
+   * The result is a JSON document describing the metrics and their values.
+   * The result can be filtered using query parameters or configuring the
+   * controller instance itself.
+   */
+  @RequestMapping(method = RequestMethod.GET)
+  public ApplicationRegistry getMetrics(@RequestParam Map&lt;String, String&gt; filters)
+    throws IOException {
+<span class="nc bnc" id="L103" title="All 2 branches missed.">    boolean all = filters.get(&quot;all&quot;) != null;</span>
+<span class="nc" id="L104">    String filterMeterNameRegex = filters.getOrDefault(&quot;meterNameRegex&quot;, &quot;&quot;);</span>
+<span class="nc" id="L105">    String filterTagNameRegex = filters.getOrDefault(&quot;tagNameRegex&quot;, &quot;&quot;);</span>
+<span class="nc" id="L106">    String filterTagValueRegex = filters.getOrDefault(&quot;tagValueRegex&quot;, &quot;&quot;);</span>
+<span class="nc" id="L107">    TagMeasurementFilter queryFilter = new TagMeasurementFilter(</span>
+        filterMeterNameRegex, filterTagNameRegex, filterTagValueRegex);
+    Predicate&lt;Measurement&gt; filter;
+<span class="nc bnc" id="L110" title="All 2 branches missed.">    if (all) {</span>
+<span class="nc" id="L111">      filter = queryFilter;</span>
+    } else {
+<span class="nc" id="L113">      filter = queryFilter.and(getDefaultMeasurementFilter());</span>
+    }
+
+<span class="nc" id="L116">    ApplicationRegistry response = new ApplicationRegistry();</span>
+<span class="nc" id="L117">    response.setApplicationName(applicationName);</span>
+<span class="nc" id="L118">    response.setApplicationVersion(applicationVersion);</span>
+<span class="nc" id="L119">    response.setMetrics(encodeRegistry(registry, filter));</span>
+<span class="nc" id="L120">    return response;</span>
+  }
+
+  /**
+   * Internal API for encoding a registry that can be encoded as JSON.
+   * This is a helper function for the REST endpoint and to test against.
+   */
+  Map&lt;String, MetricValues&gt; encodeRegistry(
+        Registry sourceRegistry, Predicate&lt;Measurement&gt; filter) {
+<span class="fc" id="L129">    Map&lt;String, MetricValues&gt; metricMap = new HashMap&lt;String, MetricValues&gt;();</span>
+
+    /**
+     * Flatten the meter measurements into a map of measurements keyed by
+     * the name and mapped to the different tag variants.
+     */
+<span class="fc bfc" id="L135" title="All 2 branches covered.">    for (Meter meter : sourceRegistry) {</span>
+<span class="fc" id="L136">      String kind = knownMeterKinds.computeIfAbsent(</span>
+<span class="fc" id="L137">                         meter.id(), k -&gt; meterToKind(sourceRegistry, meter));</span>
+
+<span class="fc bfc" id="L139" title="All 2 branches covered.">      for (Measurement measurement : meter.measure()) {</span>
+<span class="pc bpc" id="L140" title="1 of 2 branches missed.">        if (!filter.test(measurement)) {</span>
+<span class="nc" id="L141">          continue;</span>
+        }
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        if (Double.isNaN(measurement.value())) {</span>
+<span class="fc" id="L144">          continue;</span>
+        }
+
+<span class="fc" id="L147">        String meterName = measurement.id().name();</span>
+<span class="fc" id="L148">        MetricValues have = metricMap.get(meterName);</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">        if (have == null) {</span>
+<span class="fc" id="L150">          metricMap.put(meterName, new MetricValues(kind, measurement));</span>
+        } else {
+<span class="fc" id="L152">          have.addMeasurement(measurement);</span>
+        }
+<span class="fc" id="L154">      }</span>
+<span class="fc" id="L155">    }</span>
+<span class="fc" id="L156">    return metricMap;</span>
+  }
+
+  /**
+   * Determine the type of a meter for reporting purposes.
+   *
+   * @param registry
+   *    Used to provide supplemental information (e.g. to search for the meter).
+   *
+   * @param meter
+   *    The meters whose kind we want to know.
+   *
+   * @return
+   *    A string such as &quot;Counter&quot;. If the type cannot be identified as one of
+   *    the standard Spectator api interface variants, then the simple class name
+   *    is returned.
+   */
+  public static String meterToKind(Registry registry, Meter meter) {
+    String kind;
+<span class="fc bfc" id="L175" title="All 2 branches covered.">    if (meter instanceof Timer) {</span>
+<span class="fc" id="L176">      kind = &quot;Timer&quot;;</span>
+<span class="fc bfc" id="L177" title="All 2 branches covered.">    } else if (meter instanceof Counter) {</span>
+<span class="fc" id="L178">      kind = &quot;Counter&quot;;</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">    } else if (meter instanceof Gauge) {</span>
+<span class="fc" id="L180">      kind = &quot;Gauge&quot;;</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">    } else if (meter instanceof DistributionSummary) {</span>
+<span class="nc" id="L182">      kind = &quot;DistributionSummary&quot;;</span>
+    } else {
+<span class="fc" id="L184">      kind = meter.getClass().getSimpleName();</span>
+    }
+<span class="fc" id="L186">    return kind;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

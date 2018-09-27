@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PrototypeMeasurementFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-web-spring</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.controllers.filter</a> &gt; <span class="el_source">PrototypeMeasurementFilter.java</span></div><h1>PrototypeMeasurementFilter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2016 Google, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;)
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.netflix.spectator.controllers.filter;
+
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Tag;
+
+import java.io.IOException;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
+import java.util.Map;
+
+
+/**
+ * A general filter specified using a prototype &quot;JSON&quot; document.
+ *
+ * The json document generally follows the structure of the response,
+ * however in addition to containing a &quot;metrics&quot; section of what is desired,
+ * it also contains an &quot;excludes&quot; section saying what is not desired.
+ *
+ * Each of the section contains regular expression rather than literals
+ * where the regular expressions are matched against the actual names (or values).
+ * Thus the excludes section can be used to restrict more general matching
+ * expressions.
+ *
+ * Each measurement is evaluated against all the entries in the filter until one
+ * is found that would cause it to be accepted and not excluded.
+ */
+public class PrototypeMeasurementFilter implements Predicate&lt;Measurement&gt; {
+  /**
+   * Filters based on Spectator Id tag names and/or values.
+   */
+  public static class TagFilterPattern {
+    /**
+     * Construct from regex patterns.
+     */
+<span class="fc" id="L55">    public TagFilterPattern(Pattern key, Pattern value) {</span>
+<span class="fc" id="L56">     this.key = key;</span>
+<span class="fc" id="L57">     this.value = value;</span>
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * Construct from the prototype specification.
+     */
+<span class="fc" id="L63">    public TagFilterPattern(PrototypeMeasurementFilterSpecification.TagFilterSpecification spec) {</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">      if (spec == null) return;</span>
+
+<span class="fc" id="L66">      String keySpec = spec.getKey();</span>
+<span class="fc" id="L67">      String valueSpec = spec.getValue();</span>
+<span class="pc bpc" id="L68" title="1 of 6 branches missed.">      if (keySpec != null &amp;&amp; !keySpec.isEmpty() &amp;&amp; !keySpec.equals(&quot;.*&quot;)) {</span>
+<span class="fc" id="L69">        key = Pattern.compile(keySpec);</span>
+      }
+<span class="pc bpc" id="L71" title="1 of 6 branches missed.">      if (valueSpec != null &amp;&amp; !valueSpec.isEmpty() &amp;&amp; !valueSpec.equals(&quot;.*&quot;)) {</span>
+<span class="fc" id="L72">        value = Pattern.compile(valueSpec);</span>
+      }
+<span class="fc" id="L74">    }</span>
+
+    @Override
+    public int hashCode() {
+<span class="fc" id="L78">      return Objects.hash(key.pattern(), value.pattern());</span>
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L83" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof TagFilterPattern)) return false;</span>
+<span class="fc" id="L84">      TagFilterPattern other = (TagFilterPattern) obj;</span>
+<span class="pc bpc" id="L85" title="2 of 4 branches missed.">      return key.pattern().equals(other.key.pattern()) &amp;&amp; value.pattern().equals(other.value.pattern());</span>
+    }
+
+    /**
+     * Implements the MeasurementFilter interface.
+     */
+    @SuppressWarnings(&quot;PMD.JUnit4TestShouldUseTestAnnotation&quot;)
+    public boolean test(Tag tag) {
+<span class="fc bfc" id="L93" title="All 4 branches covered.">      if ((key != null) &amp;&amp; !key.matcher(tag.key()).matches()) return false;</span>
+
+<span class="fc bfc" id="L95" title="All 4 branches covered.">      return ((value == null) || value.matcher(tag.value()).matches());</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L100">      return String.format(&quot;%s=%s&quot;, key.pattern(), value.pattern());</span>
+    }
+
+    /**
+     * Pattern for matching the Spectator tag key.
+     */
+    private Pattern key;
+
+    /**
+     * Pattern for matching the Spectator tag value.
+     */
+    private Pattern value;
+  };
+
+
+  /**
+   * Filters on measurement values.
+   *
+   * A value includes a set of tags.
+   * This filter does not currently include the actual measurement value, only sets of tags.
+   */
+  public static class ValueFilterPattern {
+    /**
+     * Constructs a filter from a specification.
+     */
+<span class="fc" id="L125">    public ValueFilterPattern(PrototypeMeasurementFilterSpecification.ValueFilterSpecification spec) {</span>
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">      if (spec == null) return;</span>
+
+<span class="fc bfc" id="L128" title="All 2 branches covered.">      for (PrototypeMeasurementFilterSpecification.TagFilterSpecification tag : spec.getTags()) {</span>
+<span class="fc" id="L129">          this.tags.add(new TagFilterPattern(tag));</span>
+<span class="fc" id="L130">      }</span>
+<span class="fc" id="L131">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L135" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof ValueFilterPattern)) return false;</span>
+<span class="fc" id="L136">      ValueFilterPattern other = (ValueFilterPattern) obj;</span>
+<span class="fc" id="L137">      return tags.equals(other.tags);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="fc" id="L142">      return tags.hashCode();</span>
+    }
+
+    /**
+     * Determins if a particular TagFilter is satisfied among the value's tag set.
+     */
+    static boolean patternInList(TagFilterPattern tagPattern,
+                                 Iterable&lt;Tag&gt; sourceTags) {
+<span class="fc bfc" id="L150" title="All 2 branches covered.">      for (Tag candidateTag : sourceTags) {</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">          if (tagPattern.test(candidateTag)) {</span>
+<span class="fc" id="L152">            return true;</span>
+          }
+<span class="fc" id="L154">      }</span>
+<span class="fc" id="L155">      return false;</span>
+    }
+
+    /**
+     * Implements the MeasurementFilter interface.
+     */
+    @SuppressWarnings(&quot;PMD.JUnit4TestShouldUseTestAnnotation&quot;)
+    public boolean test(Iterable&lt;Tag&gt; sourceTags) {
+<span class="fc bfc" id="L163" title="All 2 branches covered.">      for (TagFilterPattern tagPattern : this.tags) {</span>
+<span class="fc bfc" id="L164" title="All 2 branches covered.">        if (!patternInList(tagPattern, sourceTags)) {</span>
+<span class="fc" id="L165">          return false;</span>
+        }
+<span class="fc" id="L167">      }</span>
+<span class="fc" id="L168">      return true;</span>
+    }
+
+
+    /**
+     * The list of tag filters that must be satisfied for the value to be satisfied.
+     */
+    public List&lt;TagFilterPattern&gt; getTags() {
+<span class="fc" id="L176">      return tags;</span>
+    }
+<span class="fc" id="L178">    private final List&lt;TagFilterPattern&gt; tags = new ArrayList&lt;TagFilterPattern&gt;();</span>
+  };
+
+
+  /**
+   * Filters a meter.
+   */
+  public static class MeterFilterPattern {
+    /**
+     * Constructs from a specification.
+     *
+     * The nameRegex specifies the name of the Spectator meter itself.
+     */
+    public MeterFilterPattern(
+            String nameRegex,
+<span class="fc" id="L193">            PrototypeMeasurementFilterSpecification.MeterFilterSpecification spec) {</span>
+<span class="fc" id="L194">      namePattern = Pattern.compile(nameRegex);</span>
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">      if (spec == null) return;</span>
+
+<span class="fc bfc" id="L197" title="All 2 branches covered.">      if (spec.getValues().isEmpty()) {</span>
+<span class="fc" id="L198">        values.add(new ValueFilterPattern(PrototypeMeasurementFilterSpecification.ValueFilterSpecification.ALL));</span>
+      }
+<span class="fc bfc" id="L200" title="All 2 branches covered.">      for (PrototypeMeasurementFilterSpecification.ValueFilterSpecification value : spec.getValues()) {</span>
+<span class="fc" id="L201">          values.add(new ValueFilterPattern(value));</span>
+<span class="fc" id="L202">      }</span>
+<span class="fc" id="L203">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="nc bnc" id="L207" title="All 4 branches missed.">      if (obj == null || !(obj instanceof MeterFilterPattern)) return false;</span>
+<span class="nc" id="L208">      MeterFilterPattern other = (MeterFilterPattern) obj;</span>
+<span class="nc bnc" id="L209" title="All 4 branches missed.">      return namePattern.equals(other.namePattern) &amp;&amp; values.equals(other.values);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L214">      return Objects.hash(namePattern, values);</span>
+    }
+
+    /**
+     * Filters the name of the meter.
+     */
+    private final Pattern namePattern;
+
+    /**
+     * A list of value filters acts as a disjunction.
+     * Any of the values can be satisifed to satisfy the Meter.
+     */
+    public List&lt;ValueFilterPattern&gt; getValues() {
+<span class="fc" id="L227">      return values;</span>
+    }
+<span class="fc" id="L229">    private final List&lt;ValueFilterPattern&gt; values = new ArrayList&lt;ValueFilterPattern&gt;();</span>
+  };
+
+
+  /**
+   * A collection of Include patterns and Exclude patterns for filtering.
+   */
+  public static class IncludeExcludePatterns {
+    /**
+     * The value patterns that must be satisifed to include.
+     */
+    public List&lt;ValueFilterPattern&gt; getInclude() {
+<span class="fc" id="L241">      return include;</span>
+    }
+<span class="fc" id="L243">    private List&lt;ValueFilterPattern&gt; include = new ArrayList&lt;ValueFilterPattern&gt;();</span>
+
+    /**
+     * The value patterns that cannot be satisifed to include.
+     * This is meant to refine the include list from being too generous.
+     */
+    public List&lt;ValueFilterPattern&gt; getExclude() {
+<span class="nc" id="L250">      return exclude;</span>
+    }
+<span class="fc" id="L252">    private List&lt;ValueFilterPattern&gt; exclude = new ArrayList&lt;ValueFilterPattern&gt;();</span>
+
+
+    /**
+     * Default constructor.
+     */
+<span class="fc" id="L258">    public IncludeExcludePatterns() {</span>
+      // empty.
+<span class="fc" id="L260">    }</span>
+
+    /**
+     * Constructor.
+     */
+    public IncludeExcludePatterns(List&lt;ValueFilterPattern&gt; include,
+<span class="fc" id="L266">                                  List&lt;ValueFilterPattern&gt; exclude) {</span>
+<span class="fc" id="L267">      this.include.addAll(include);</span>
+<span class="fc" id="L268">      this.exclude.addAll(exclude);</span>
+<span class="fc" id="L269">    }</span>
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L273" title="2 of 4 branches missed.">      if (obj == null || !(obj instanceof IncludeExcludePatterns)) {</span>
+<span class="nc" id="L274">        return false;</span>
+      }
+<span class="fc" id="L276">      IncludeExcludePatterns other = (IncludeExcludePatterns) obj;</span>
+<span class="pc bpc" id="L277" title="2 of 4 branches missed.">      return include.equals(other.include) &amp;&amp; exclude.equals(other.exclude);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L282">      return Objects.hash(include, exclude);</span>
+    }
+
+    /**
+     * Implements the MeasurementFilter interface.
+     */
+    @SuppressWarnings(&quot;PMD.JUnit4TestShouldUseTestAnnotation&quot;)
+    public boolean test(Measurement measurement) {
+<span class="fc" id="L290">      boolean ok = include.isEmpty();</span>
+<span class="fc bfc" id="L291" title="All 2 branches covered.">      for (ValueFilterPattern pattern : include) {</span>
+<span class="fc bfc" id="L292" title="All 2 branches covered.">        if (pattern.test(measurement.id().tags())) {</span>
+<span class="fc" id="L293">          ok = true;</span>
+<span class="fc" id="L294">          break;</span>
+        }
+<span class="fc" id="L296">      }</span>
+
+<span class="fc bfc" id="L298" title="All 2 branches covered.">      if (ok) {</span>
+<span class="fc bfc" id="L299" title="All 2 branches covered.">        for (ValueFilterPattern pattern : exclude) {</span>
+<span class="pc bpc" id="L300" title="1 of 2 branches missed.">          if (pattern.test(measurement.id().tags())) {</span>
+<span class="fc" id="L301">           return false;</span>
+          }
+<span class="nc" id="L303">        }</span>
+      }
+<span class="fc" id="L305">      return ok;</span>
+    }
+  };
+
+  /**
+   * Constructor.
+   */
+<span class="fc" id="L312">  public PrototypeMeasurementFilter(PrototypeMeasurementFilterSpecification specification) {</span>
+    for (Map.Entry&lt;String, PrototypeMeasurementFilterSpecification.MeterFilterSpecification&gt; entry
+<span class="fc bfc" id="L314" title="All 2 branches covered.">             : specification.getInclude().entrySet()) {</span>
+<span class="fc" id="L315">      includePatterns.add(new MeterFilterPattern(entry.getKey(), entry.getValue()));</span>
+<span class="fc" id="L316">    }</span>
+    for (Map.Entry&lt;String, PrototypeMeasurementFilterSpecification.MeterFilterSpecification&gt; entry
+<span class="fc bfc" id="L318" title="All 2 branches covered.">             : specification.getExclude().entrySet()) {</span>
+<span class="fc" id="L319">      excludePatterns.add(new MeterFilterPattern(entry.getKey(), entry.getValue()));</span>
+<span class="fc" id="L320">    }</span>
+<span class="fc" id="L321">  }</span>
+
+  /**
+   * Implements the MeasurementFilter interface.
+   */
+  @SuppressWarnings(&quot;PMD.JUnit4TestShouldUseTestAnnotation&quot;)
+  public boolean test(Measurement measurement) {
+<span class="fc" id="L328">    IncludeExcludePatterns patterns = metricToPatterns(measurement.id().name());</span>
+<span class="pc bpc" id="L329" title="1 of 4 branches missed.">    return patterns != null &amp;&amp; patterns.test(measurement);</span>
+  }
+
+  /**
+   * Find the IncludeExcludePatterns for filtering a given metric.
+   *
+   * The result is the union of all the individual pattern entries
+   * where their specified metric name patterns matches the actual metric name.
+   */
+  public IncludeExcludePatterns metricToPatterns(String metric) {
+<span class="fc" id="L339">    IncludeExcludePatterns foundPatterns = metricNameToPatterns.get(metric);</span>
+<span class="pc bpc" id="L340" title="1 of 2 branches missed.">    if (foundPatterns != null) {</span>
+<span class="nc" id="L341">        return foundPatterns;</span>
+    }
+
+    // Since the keys in the prototype can be regular expressions,
+    // need to look at all of them and can potentially match multiple,
+    // each having a different set of rules.
+<span class="fc" id="L347">    foundPatterns = new IncludeExcludePatterns();</span>
+<span class="fc bfc" id="L348" title="All 2 branches covered.">    for (MeterFilterPattern meterPattern : includePatterns) {</span>
+<span class="fc bfc" id="L349" title="All 2 branches covered.">      if (meterPattern.namePattern.matcher(metric).matches()) {</span>
+<span class="fc" id="L350">        foundPatterns.include.addAll(meterPattern.values);</span>
+      }
+<span class="fc" id="L352">    }</span>
+<span class="fc bfc" id="L353" title="All 2 branches covered.">    for (MeterFilterPattern meterPattern : excludePatterns) {</span>
+<span class="fc bfc" id="L354" title="All 2 branches covered.">      if (meterPattern.namePattern.matcher(metric).matches()) {</span>
+<span class="fc" id="L355">        foundPatterns.exclude.addAll(meterPattern.values);</span>
+      }
+<span class="fc" id="L357">    }</span>
+<span class="fc" id="L358">    metricNameToPatterns.put(metric, foundPatterns);</span>
+<span class="fc" id="L359">    return foundPatterns;</span>
+  }
+
+  /**
+   * Factory method building a filter from a specification file.
+   */
+  public static PrototypeMeasurementFilter loadFromPath(String path) throws IOException {
+<span class="nc" id="L366">    PrototypeMeasurementFilterSpecification spec =</span>
+<span class="nc" id="L367">        PrototypeMeasurementFilterSpecification.loadFromPath(path);</span>
+<span class="nc" id="L368">    return new PrototypeMeasurementFilter(spec);</span>
+  }
+
+  /**
+   * All the meter filter patterns that can be satisfied.
+   */
+<span class="fc" id="L374">  private final List&lt;MeterFilterPattern&gt; includePatterns = new ArrayList&lt;MeterFilterPattern&gt;();</span>
+
+  /**
+   * All the meter filter patterns that cannot be satisfied.
+   */
+<span class="fc" id="L379">  private final List&lt;MeterFilterPattern&gt; excludePatterns = new ArrayList&lt;MeterFilterPattern&gt;();</span>
+
+  /**
+   * A cache of previously computed includeExcludePatterns.
+   * Since the patterns are static and meters heavily reused,
+   * we'll cache previous results for the next time we apply the filter.
+   */
+<span class="fc" id="L386">  private final Map&lt;String, IncludeExcludePatterns&gt; metricNameToPatterns</span>
+      = new HashMap&lt;String, IncludeExcludePatterns&gt;();
+};
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

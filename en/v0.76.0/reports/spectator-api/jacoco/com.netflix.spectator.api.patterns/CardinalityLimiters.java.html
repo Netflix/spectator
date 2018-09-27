@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CardinalityLimiters.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.patterns</a> &gt; <span class="el_source">CardinalityLimiters.java</span></div><h1>CardinalityLimiters.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Utils;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Helper functions to help manage the cardinality of tag values. This should be used
+ * anywhere you cannot guarantee that the tag values being used are strictly bounded.
+ * There is support for two different modes, 1) selecting the first N values that are
+ * seen, or 2) selecting the most frequent N values that are seen.
+ *
+ * &lt;p&gt;Sample usage:&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ * class WebServer {
+ *
+ *   // Limiter instance, should be shared for all uses of that
+ *   // tag value
+ *   private final Function&amp;lt;String, String&amp;gt; pathLimiter =
+ *     CardinalityLimiters.mostFrequent(10);
+ *
+ *   private final Registry registry;
+ *   private final Id baseId;
+ *
+ *   public WebServer(Registry registry) {
+ *     this.registry = registry;
+ *     this.baseId = registry.createId(&quot;server.requestCount&quot;);
+ *   }
+ *
+ *   public Response handleRequest(Request req) {
+ *     Response res = doSomething(req);
+ *
+ *     // Update metrics, use limiter to restrict the set of values
+ *     // for the path and avoid an explosion
+ *     String pathValue = pathLimiter.apply(req.getPath());
+ *     Id id = baseId
+ *       .withTag(&quot;path&quot;, pathValue)
+ *       .withTag(&quot;status&quot;, res.getStatus());
+ *     registry.counter(id).increment();
+ *   }
+ * }
+ * &lt;/pre&gt;
+ */
+public final class CardinalityLimiters {
+
+  /** How often to refresh the frequencies. */
+  private static final long REFRESH_INTERVAL = 10 * 60000;
+
+  /** Bound on how large N can be for the limiter. */
+  private static final int MAX_LIMIT = 100;
+
+  /** Replacement value that is used if the number of values exceeds the limit. */
+  public static final String OTHERS = &quot;--others--&quot;;
+
+  private CardinalityLimiters() {
+  }
+
+  /**
+   * Restrict the cardinality of the input to the first {@code n} values that are seen.
+   *
+   * @param n
+   *     Number of values to select.
+   * @return
+   *     The input value if it is within the bounds or is selected. Otherwise map to
+   *     {@link #OTHERS}.
+   */
+  public static Function&lt;String, String&gt; first(int n) {
+<span class="fc" id="L90">    return new FirstLimiter(Math.min(n, MAX_LIMIT));</span>
+  }
+
+  /**
+   * Restrict the cardinality of the input to the top {@code n} values based on the
+   * frequency of the lookup. This limiter is useful when the frequency of the values
+   * is non-uniform and the most common are the most important. If there are many
+   * values with roughly the same frequency, then it will use a {@link #first(int)}
+   * limiter to keep the number of values within bounds.
+   *
+   * &lt;p&gt;The limiter will adjust to changes in the frequency over time, but it must also
+   * protect against high rates of churn in the values. Keep in mind that this can cause
+   * a delay in new high frequency value being used instead of being grouped as part of
+   * {@link #OTHERS}.&lt;/p&gt;
+   *
+   * @param n
+   *     Number of values to select.
+   * @return
+   *     The input value if it is within the bounds or is selected. Otherwise map to
+   *     {@link #OTHERS}.
+   */
+  public static Function&lt;String, String&gt; mostFrequent(int n) {
+<span class="nc" id="L112">    return mostFrequent(n, Clock.SYSTEM);</span>
+  }
+
+  /**
+   * Allows the clock to be specified for testing. See {@link #mostFrequent(int)} for
+   * details on the usage.
+   */
+  static Function&lt;String, String&gt; mostFrequent(int n, Clock clock) {
+<span class="fc" id="L120">    return new MostFrequentLimiter(Math.min(n, MAX_LIMIT), clock);</span>
+  }
+
+  private static class FirstLimiter implements Function&lt;String, String&gt; {
+<span class="fc" id="L124">    private final ReentrantLock lock = new ReentrantLock();</span>
+<span class="fc" id="L125">    private final ConcurrentHashMap&lt;String, String&gt; values = new ConcurrentHashMap&lt;&gt;();</span>
+    private final AtomicInteger remaining;
+
+<span class="fc" id="L128">    FirstLimiter(int n) {</span>
+<span class="fc" id="L129">      remaining = new AtomicInteger(n);</span>
+<span class="fc" id="L130">    }</span>
+
+    private void add(String s) {
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">      if (remaining.get() &gt; 0) {</span>
+        // Lock to keep hashmap consistent with counter for remaining
+<span class="fc" id="L135">        lock.lock();</span>
+        try {
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">          if (remaining.get() &gt; 0) {</span>
+<span class="fc" id="L138">            values.put(s, s);</span>
+<span class="fc" id="L139">            remaining.decrementAndGet();</span>
+          }
+        } finally {
+<span class="fc" id="L142">          lock.unlock();</span>
+        }
+      }
+<span class="fc" id="L145">    }</span>
+
+    @Override public String apply(String s) {
+<span class="fc bfc" id="L148" title="All 2 branches covered.">      if (remaining.get() &lt;= 0) {</span>
+<span class="fc" id="L149">        return values.getOrDefault(s, OTHERS);</span>
+      } else {
+<span class="fc" id="L151">        String v = values.get(s);</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (v == null) {</span>
+<span class="fc" id="L153">          add(s);</span>
+<span class="fc" id="L154">          v = values.getOrDefault(s, OTHERS);</span>
+        }
+<span class="fc" id="L156">        return v;</span>
+      }
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L161">      final String vs = values.keySet()</span>
+<span class="fc" id="L162">          .stream()</span>
+<span class="fc" id="L163">          .sorted()</span>
+<span class="fc" id="L164">          .collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L165">      return &quot;FirstLimiter(&quot; + vs + &quot;)&quot;;</span>
+    }
+  }
+
+  private static class MostFrequentLimiter implements Function&lt;String, String&gt; {
+<span class="fc" id="L170">    private final ReentrantLock lock = new ReentrantLock();</span>
+<span class="fc" id="L171">    private final ConcurrentHashMap&lt;String, AtomicLong&gt; values = new ConcurrentHashMap&lt;&gt;();</span>
+    private final int n;
+    private final Clock clock;
+
+    private volatile Function&lt;String, String&gt; limiter;
+    private volatile long limiterTimestamp;
+    private volatile long cutoff;
+
+<span class="fc" id="L179">    MostFrequentLimiter(int n, Clock clock) {</span>
+<span class="fc" id="L180">      this.n = n;</span>
+<span class="fc" id="L181">      this.clock = clock;</span>
+<span class="fc" id="L182">      this.limiter = first(n);</span>
+<span class="fc" id="L183">      this.limiterTimestamp = clock.wallTime();</span>
+<span class="fc" id="L184">      this.cutoff = 0L;</span>
+<span class="fc" id="L185">    }</span>
+
+    private synchronized void updateCutoff() {
+<span class="fc" id="L188">      long now = clock.wallTime();</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">      if (now - limiterTimestamp &gt; REFRESH_INTERVAL) {</span>
+<span class="fc" id="L190">        lock.lock();</span>
+        try {
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">          if (now - limiterTimestamp &gt; REFRESH_INTERVAL) {</span>
+<span class="fc" id="L193">            limiterTimestamp = clock.wallTime();</span>
+<span class="fc" id="L194">            long min = values.values()</span>
+<span class="fc" id="L195">                .stream()</span>
+<span class="fc" id="L196">                .map(AtomicLong::get)</span>
+<span class="fc" id="L197">                .sorted((a, b) -&gt; Long.compareUnsigned(b, a))</span>
+<span class="fc" id="L198">                .limit(n)</span>
+<span class="fc" id="L199">                .min(Long::compareUnsigned)</span>
+<span class="pc" id="L200">                .orElseGet(() -&gt; 0L);</span>
+
+            // Remove less frequent items from the map to avoid a memory leak if unique
+            // ids are used
+<span class="fc" id="L204">            long dropCutoff = Math.max(min / 2, 1);</span>
+<span class="fc bfc" id="L205" title="All 2 branches covered.">            values.entrySet().removeIf(e -&gt; e.getValue().get() &lt;= dropCutoff);</span>
+
+            // Reset the counts so new items will have a chance to catch up, use 1 instead of 0 so
+            // older entries have a slight bias
+<span class="fc" id="L209">            values.values().forEach(v -&gt; v.set(1L));</span>
+<span class="fc" id="L210">            cutoff = 1L;</span>
+<span class="fc" id="L211">            limiter = first(n);</span>
+          }
+        } finally {
+<span class="fc" id="L214">          lock.unlock();</span>
+        }
+      }
+<span class="fc" id="L217">    }</span>
+
+    @Override public String apply(String s) {
+<span class="fc" id="L220">      AtomicLong count = Utils.computeIfAbsent(values, s, k -&gt; new AtomicLong(0));</span>
+<span class="fc" id="L221">      long num = count.incrementAndGet();</span>
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">      if (num &gt;= cutoff) {</span>
+<span class="fc" id="L223">        updateCutoff();</span>
+<span class="fc" id="L224">        return limiter.apply(s);</span>
+      } else {
+<span class="nc" id="L226">        return OTHERS;</span>
+      }
+    }
+
+    @Override public String toString() {
+<span class="fc" id="L231">      final String vs = values.entrySet()</span>
+<span class="fc" id="L232">          .stream()</span>
+<span class="pc bpc" id="L233" title="1 of 2 branches missed.">          .filter(e -&gt; e.getValue().get() &gt;= cutoff)</span>
+<span class="fc" id="L234">          .map(e -&gt; &quot;(&quot; + e.getKey() + &quot;,&quot; + e.getValue() + &quot;)&quot;)</span>
+<span class="fc" id="L235">          .sorted()</span>
+<span class="fc" id="L236">          .collect(Collectors.joining(&quot;,&quot;));</span>
+<span class="fc" id="L237">      return &quot;MostFrequentLimiter(&quot; + cutoff + &quot;,&quot; + limiter + &quot;,values=[&quot; + vs + &quot;])&quot;;</span>
+    }
+
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

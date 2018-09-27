@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api</a> &gt; <span class="el_source">AbstractRegistry.java</span></div><h1>AbstractRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api;
+
+import com.netflix.spectator.api.patterns.PolledMeter;
+import com.netflix.spectator.impl.Config;
+import com.netflix.spectator.impl.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+
+/**
+ * Base class to make it easier to implement a simple registry that only needs to customise the
+ * types returned for Counter, DistributionSummary, and Timer calls.
+ */
+public abstract class AbstractRegistry implements Registry {
+  /** Logger instance for the class. */
+  protected final Logger logger;
+
+  private final Clock clock;
+  private final RegistryConfig config;
+
+  private final ConcurrentHashMap&lt;Id, Meter&gt; meters;
+  private final ConcurrentHashMap&lt;Id, Object&gt; state;
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   */
+  public AbstractRegistry(Clock clock) {
+<span class="fc" id="L51">    this(clock, Config.defaultConfig());</span>
+<span class="fc" id="L52">  }</span>
+
+  /**
+   * Create a new instance.
+   *
+   * @param clock
+   *     Clock used for performing all timing measurements.
+   * @param config
+   *     Configuration settings for the registry.
+   */
+<span class="fc" id="L62">  public AbstractRegistry(Clock clock, RegistryConfig config) {</span>
+<span class="fc" id="L63">    this.logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L64">    this.clock = clock;</span>
+<span class="fc" id="L65">    this.config = config;</span>
+<span class="fc" id="L66">    this.meters = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L67">    this.state = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L68">  }</span>
+
+  /**
+   * Create a new counter instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New counter instance.
+   */
+  protected abstract Counter newCounter(Id id);
+
+  /**
+   * Create a new distribution summary instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New distribution summary instance.
+   */
+  protected abstract DistributionSummary newDistributionSummary(Id id);
+
+  /**
+   * Create a new timer instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New timer instance.
+   */
+  protected abstract Timer newTimer(Id id);
+
+  /**
+   * Create a new gauge instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New gauge instance.
+   */
+  protected abstract Gauge newGauge(Id id);
+
+  /**
+   * Create a new max gauge instance for a given id.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @return
+   *     New gauge instance.
+   */
+  protected abstract Gauge newMaxGauge(Id id);
+
+  @Override public final Clock clock() {
+<span class="fc" id="L121">    return clock;</span>
+  }
+
+  @Override public final RegistryConfig config() {
+<span class="fc" id="L125">    return config;</span>
+  }
+
+  @Override public final Id createId(String name) {
+<span class="fc" id="L129">    return new DefaultId(name);</span>
+  }
+
+  @Override public final Id createId(String name, Iterable&lt;Tag&gt; tags) {
+<span class="fc" id="L133">    return new DefaultId(name, ArrayTagSet.create(tags));</span>
+  }
+
+  private void logTypeError(Id id, Class&lt;?&gt; desired, Class&lt;?&gt; found) {
+<span class="fc" id="L137">    final String dtype = desired.getName();</span>
+<span class="fc" id="L138">    final String ftype = found.getName();</span>
+<span class="fc" id="L139">    final String msg = String.format(&quot;cannot access '%s' as a %s, it already exists as a %s&quot;,</span>
+      id, dtype, ftype);
+<span class="fc" id="L141">    propagate(new IllegalStateException(msg));</span>
+<span class="fc" id="L142">  }</span>
+
+  private Meter compute(Meter m, Meter fallback) {
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">    return (meters.size() &gt;= config.maxNumberOfMeters()) ? fallback : m;</span>
+  }
+
+  @Override public void register(Meter meter) {
+<span class="nc" id="L149">    PolledMeter.monitorMeter(this, meter);</span>
+<span class="nc" id="L150">  }</span>
+
+  @Override public ConcurrentMap&lt;Id, Object&gt; state() {
+<span class="fc" id="L153">    return state;</span>
+  }
+
+  @Override public final Counter counter(Id id) {
+<span class="fc" id="L157">    Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::newCounter);</span>
+<span class="fc" id="L158">    return new SwapCounter(this, id, c);</span>
+  }
+
+  @Override public final DistributionSummary distributionSummary(Id id) {
+<span class="fc" id="L162">    DistributionSummary ds = getOrCreate(</span>
+        id,
+        DistributionSummary.class,
+        NoopDistributionSummary.INSTANCE,
+        this::newDistributionSummary);
+<span class="fc" id="L167">    return new SwapDistributionSummary(this, id, ds);</span>
+  }
+
+  @Override public final Timer timer(Id id) {
+<span class="fc" id="L171">    Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::newTimer);</span>
+<span class="fc" id="L172">    return new SwapTimer(this, id, t);</span>
+  }
+
+  @Override public final Gauge gauge(Id id) {
+<span class="fc" id="L176">    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newGauge);</span>
+<span class="fc" id="L177">    return new SwapGauge(this, id, g);</span>
+  }
+
+  @Override public final Gauge maxGauge(Id id) {
+<span class="fc" id="L181">    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);</span>
+<span class="fc" id="L182">    return new SwapMaxGauge(this, id, g);</span>
+  }
+
+  /**
+   * Helper used to get or create an instance of a core meter type. This is mostly used
+   * internally to this implementation, but may be useful in rare cases for creating
+   * customizations based on a core type in a sub-class.
+   *
+   * @param id
+   *     Identifier used to lookup this meter in the registry.
+   * @param cls
+   *     Type of the meter.
+   * @param dflt
+   *     Default value used if there is a failure during the lookup and it is not configured
+   *     to propagate.
+   * @param factory
+   *     Function for creating a new instance of the meter type if one is not already available
+   *     in the registry.
+   * @return
+   *     Instance of the meter.
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  protected &lt;T extends Meter&gt; T getOrCreate(Id id, Class&lt;T&gt; cls, T dflt, Function&lt;Id, T&gt; factory) {
+    try {
+<span class="fc" id="L206">      Preconditions.checkNotNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L207">      Meter m = Utils.computeIfAbsent(meters, id, i -&gt; compute(factory.apply(i), dflt));</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">      if (!cls.isAssignableFrom(m.getClass())) {</span>
+<span class="fc" id="L209">        logTypeError(id, cls, m.getClass());</span>
+<span class="fc" id="L210">        m = dflt;</span>
+      }
+<span class="fc" id="L212">      return (T) m;</span>
+<span class="fc" id="L213">    } catch (Exception e) {</span>
+<span class="nc" id="L214">      propagate(e);</span>
+<span class="nc" id="L215">      return dflt;</span>
+    }
+  }
+
+  @Override public final Meter get(Id id) {
+<span class="fc" id="L220">    return meters.get(id);</span>
+  }
+
+  @Override public final Iterator&lt;Meter&gt; iterator() {
+<span class="fc" id="L224">    return meters.values().iterator();</span>
+  }
+
+  /**
+   * Can be called by sub-classes to remove expired meters from the internal map.
+   * The SwapMeter types that are returned will lookup a new copy on the next access.
+   */
+  protected void removeExpiredMeters() {
+<span class="fc" id="L232">    Iterator&lt;Map.Entry&lt;Id, Meter&gt;&gt; it = meters.entrySet().iterator();</span>
+<span class="fc bfc" id="L233" title="All 2 branches covered.">    while (it.hasNext()) {</span>
+<span class="fc" id="L234">      Map.Entry&lt;Id, Meter&gt; entry = it.next();</span>
+<span class="fc" id="L235">      Meter m = entry.getValue();</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">      if (m.hasExpired()) {</span>
+<span class="fc" id="L237">        it.remove();</span>
+      }
+<span class="fc" id="L239">    }</span>
+<span class="fc" id="L240">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

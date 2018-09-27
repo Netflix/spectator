@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ThreadPoolMonitor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.api.patterns</a> &gt; <span class="el_source">ThreadPoolMonitor.java</span></div><h1>ThreadPoolMonitor.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.api.patterns;
+
+import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.Preconditions;
+
+import java.util.concurrent.ThreadPoolExecutor;
+
+/**
+ * Monitors and reports a common set of metrics for thread pools.
+ *
+ * &lt;p&gt;The following is the list of metrics reported followed by which {@link ThreadPoolExecutor}
+ * method populates it.&lt;/p&gt;
+ *
+ * &lt;pre&gt;
+ *  +-----------------------------------------------------------------------------+
+ *  | Metric Name                  | Data Source                                  |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.taskCount          | {@link ThreadPoolExecutor#getTaskCount()}            |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.completedTaskCount | {@link ThreadPoolExecutor#getCompletedTaskCount()}   |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.currentThreadsBusy | {@link ThreadPoolExecutor#getActiveCount()}          |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.maxThreads         | {@link ThreadPoolExecutor#getMaximumPoolSize()}      |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.poolSize           | {@link ThreadPoolExecutor#getPoolSize()}             |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.corePoolSize       | {@link ThreadPoolExecutor#getCorePoolSize()}         |
+ *  +------------------------------+----------------------------------------------+
+ *  |threadpool.queueSize          | {@link ThreadPoolExecutor#getQueue()}.size()         |
+ *  +-----------------------------------------------------------------------------+
+ * &lt;/pre&gt;
+ */
+public final class ThreadPoolMonitor {
+
+  /**
+   * The default ID tag name.
+   */
+  static final String ID_TAG_NAME = &quot;id&quot;;
+
+  /**
+   * The default ID value.
+   */
+  static final String DEFAULT_ID = &quot;default&quot;;
+
+  /**
+   * Task count meter name.
+   */
+  static final String TASK_COUNT = &quot;threadpool.taskCount&quot;;
+
+  /**
+   * Completed task count meter name.
+   */
+  static final String COMPLETED_TASK_COUNT = &quot;threadpool.completedTaskCount&quot;;
+
+  /**
+   * Current threads busy meter name.
+   */
+  static final String CURRENT_THREADS_BUSY = &quot;threadpool.currentThreadsBusy&quot;;
+
+  /**
+   * Max threads meter name.
+   */
+  static final String MAX_THREADS = &quot;threadpool.maxThreads&quot;;
+
+  /**
+   * Pool size meter name.
+   */
+  static final String POOL_SIZE = &quot;threadpool.poolSize&quot;;
+
+  /**
+   * Core pool size meter name.
+   */
+  static final String CORE_POOL_SIZE = &quot;threadpool.corePoolSize&quot;;
+
+  /**
+   * Queue size meter name.
+   */
+  static final String QUEUE_SIZE = &quot;threadpool.queueSize&quot;;
+
+  // prevent direct instantiation.
+  private ThreadPoolMonitor() { }
+
+  /**
+   * Register the provided thread pool, optionally tagged with a name.
+   *
+   * @param registry the registry to use
+   * @param threadPool the thread pool on which to attach monitoring
+   * @param threadPoolName a name with which to tag the metrics (default name used if {@code null} or empty)
+   */
+  public static void attach(
+      final Registry registry,
+      final ThreadPoolExecutor threadPool,
+      final String threadPoolName) {
+
+<span class="fc" id="L113">    Preconditions.checkNotNull(registry, &quot;registry&quot;);</span>
+<span class="fc" id="L114">    Preconditions.checkNotNull(threadPool, &quot;threadPool&quot;);</span>
+
+    final String idValue;
+<span class="fc bfc" id="L117" title="All 4 branches covered.">    if (threadPoolName == null || threadPoolName.isEmpty()) {</span>
+<span class="fc" id="L118">      idValue = DEFAULT_ID;</span>
+    } else {
+<span class="fc" id="L120">      idValue = threadPoolName;</span>
+    }
+
+<span class="fc" id="L123">    final Tag idTag = new BasicTag(ID_TAG_NAME, idValue);</span>
+
+<span class="fc" id="L125">    PolledMeter.using(registry)</span>
+<span class="fc" id="L126">        .withName(TASK_COUNT)</span>
+<span class="fc" id="L127">        .withTag(idTag)</span>
+<span class="fc" id="L128">        .monitorMonotonicCounter(threadPool, ThreadPoolExecutor::getTaskCount);</span>
+<span class="fc" id="L129">    PolledMeter.using(registry)</span>
+<span class="fc" id="L130">        .withName(COMPLETED_TASK_COUNT)</span>
+<span class="fc" id="L131">        .withTag(idTag)</span>
+<span class="fc" id="L132">        .monitorMonotonicCounter(threadPool, ThreadPoolExecutor::getCompletedTaskCount);</span>
+<span class="fc" id="L133">    PolledMeter.using(registry)</span>
+<span class="fc" id="L134">        .withName(CURRENT_THREADS_BUSY)</span>
+<span class="fc" id="L135">        .withTag(idTag)</span>
+<span class="fc" id="L136">        .monitorValue(threadPool, ThreadPoolExecutor::getActiveCount);</span>
+<span class="fc" id="L137">    PolledMeter.using(registry)</span>
+<span class="fc" id="L138">        .withName(MAX_THREADS)</span>
+<span class="fc" id="L139">        .withTag(idTag)</span>
+<span class="fc" id="L140">        .monitorValue(threadPool, ThreadPoolExecutor::getMaximumPoolSize);</span>
+<span class="fc" id="L141">    PolledMeter.using(registry)</span>
+<span class="fc" id="L142">        .withName(POOL_SIZE)</span>
+<span class="fc" id="L143">        .withTag(idTag)</span>
+<span class="fc" id="L144">        .monitorValue(threadPool, ThreadPoolExecutor::getPoolSize);</span>
+<span class="fc" id="L145">    PolledMeter.using(registry)</span>
+<span class="fc" id="L146">        .withName(CORE_POOL_SIZE)</span>
+<span class="fc" id="L147">        .withTag(idTag)</span>
+<span class="fc" id="L148">        .monitorValue(threadPool, ThreadPoolExecutor::getCorePoolSize);</span>
+<span class="fc" id="L149">    PolledMeter.using(registry)</span>
+<span class="fc" id="L150">        .withName(QUEUE_SIZE)</span>
+<span class="fc" id="L151">        .withTag(idTag)</span>
+<span class="fc" id="L152">        .monitorValue(threadPool, tp -&gt; tp.getQueue().size());</span>
+<span class="fc" id="L153">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

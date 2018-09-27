@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServoRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-reg-servo</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.servo</a> &gt; <span class="el_source">ServoRegistry.java</span></div><h1>ServoRegistry.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2017 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.servo;
+
+import com.netflix.servo.DefaultMonitorRegistry;
+import com.netflix.servo.monitor.*;
+import com.netflix.spectator.api.*;
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.impl.SwapMeter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+/** Registry that maps spectator types to servo. */
+public class ServoRegistry extends AbstractRegistry implements CompositeMonitor&lt;Integer&gt; {
+
+
+<span class="fc" id="L37">  private static final Logger LOGGER = LoggerFactory.getLogger(ServoRegistry.class);</span>
+
+  /**
+   * The amount of time in milliseconds after which activity based meters will get marked as
+   * expired. Right now they will not go away completely so the total count for the life of the
+   * process can be maintained in the api.
+   *
+   * The configuration setting is in minutes.
+   */
+<span class="fc" id="L46">  static final long EXPIRATION_TIME_MILLIS = getExpirationTimeMillis();</span>
+
+  private static long getExpirationTimeMillis() {
+<span class="fc" id="L49">    final String key = &quot;spectator.servo.expirationTimeInMinutes&quot;;</span>
+<span class="fc" id="L50">    long minutes = 15;</span>
+<span class="fc" id="L51">    String v = System.getProperty(key, &quot;&quot; + minutes);</span>
+    try {
+<span class="fc" id="L53">      minutes = Long.parseLong(v);</span>
+<span class="nc" id="L54">    } catch (NumberFormatException e) {</span>
+<span class="nc" id="L55">      LOGGER.error(&quot;invalid value for property '&quot; + key + &quot;', expecting integer: '&quot; + v + &quot;'.&quot;</span>
+        + &quot; The default value of &quot; + minutes + &quot; minutes will be used.&quot;, e);
+<span class="fc" id="L57">    }</span>
+<span class="fc" id="L58">    return TimeUnit.MINUTES.toMillis(minutes);</span>
+  }
+
+  // Create an id for the composite monitor that will be used with Servo. This
+  // id will not get reported since the composite will get flattened. The UUID
+  // is to avoid having multiple instances of ServoRegistry clobber each other.
+  private MonitorConfig defaultConfig() {
+<span class="fc" id="L65">    return (new MonitorConfig.Builder(&quot;spectator.registry&quot;))</span>
+<span class="fc" id="L66">        .withTag(&quot;id&quot;, UUID.randomUUID().toString()).build();</span>
+  }
+
+  private final MonitorConfig config;
+
+  /** Create a new instance. */
+  public ServoRegistry() {
+<span class="fc" id="L73">    this(Clock.SYSTEM);</span>
+<span class="fc" id="L74">  }</span>
+
+  /** Create a new instance. */
+  public ServoRegistry(Clock clock) {
+<span class="fc" id="L78">    this(clock, null);</span>
+<span class="fc" id="L79">  }</span>
+
+  /** Create a new instance. */
+  ServoRegistry(Clock clock, MonitorConfig config) {
+<span class="fc" id="L83">    super(clock);</span>
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">    this.config = (config == null) ? defaultConfig() : config;</span>
+<span class="fc" id="L85">    DefaultMonitorRegistry.getInstance().register(this);</span>
+<span class="fc" id="L86">  }</span>
+
+  /** Converts a spectator id into a MonitorConfig that can be used by servo. */
+  MonitorConfig toMonitorConfig(Id id, Tag stat) {
+<span class="fc" id="L90">    MonitorConfig.Builder builder = new MonitorConfig.Builder(id.name());</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">    if (stat != null) {</span>
+<span class="fc" id="L92">      builder.withTag(stat.key(), stat.value());</span>
+    }
+<span class="fc bfc" id="L94" title="All 2 branches covered.">    for (Tag t : id.tags()) {</span>
+<span class="fc" id="L95">      builder.withTag(t.key(), t.value());</span>
+<span class="fc" id="L96">    }</span>
+<span class="fc" id="L97">    return builder.build();</span>
+  }
+
+  @Override protected Counter newCounter(Id id) {
+<span class="fc" id="L101">    MonitorConfig cfg = toMonitorConfig(id, Statistic.count);</span>
+<span class="fc" id="L102">    DoubleCounter counter = new DoubleCounter(cfg, new ServoClock(clock()));</span>
+<span class="fc" id="L103">    return new ServoCounter(id, clock(), counter);</span>
+  }
+
+  @Override protected DistributionSummary newDistributionSummary(Id id) {
+<span class="fc" id="L107">    return new ServoDistributionSummary(this, id);</span>
+  }
+
+  @Override protected Timer newTimer(Id id) {
+<span class="fc" id="L111">    return new ServoTimer(this, id);</span>
+  }
+
+  @Override protected Gauge newGauge(Id id) {
+<span class="fc" id="L115">    return new ServoGauge(id, clock(), toMonitorConfig(id, Statistic.gauge));</span>
+  }
+
+  @Override protected Gauge newMaxGauge(Id id) {
+<span class="nc" id="L119">    return new ServoMaxGauge(id, clock(), toMonitorConfig(id, Statistic.max));</span>
+  }
+
+  @Override public Integer getValue() {
+<span class="nc" id="L123">    return 0;</span>
+  }
+
+  @Override public Integer getValue(int pollerIndex) {
+<span class="nc" id="L127">    return 0;</span>
+  }
+
+  @Override public MonitorConfig getConfig() {
+<span class="fc" id="L131">    return config;</span>
+  }
+
+  @Override public List&lt;Monitor&lt;?&gt;&gt; getMonitors() {
+<span class="fc" id="L135">    List&lt;Monitor&lt;?&gt;&gt; monitors = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L136" title="All 2 branches covered.">    for (Meter meter : this) {</span>
+<span class="fc" id="L137">      ServoMeter sm = getServoMeter(meter);</span>
+<span class="pc bpc" id="L138" title="1 of 4 branches missed.">      if (!meter.hasExpired() &amp;&amp; sm != null) {</span>
+<span class="fc" id="L139">        sm.addMonitors(monitors);</span>
+      }
+<span class="fc" id="L141">    }</span>
+<span class="fc" id="L142">    removeExpiredMeters();</span>
+<span class="fc" id="L143">    return monitors;</span>
+  }
+
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private ServoMeter getServoMeter(Meter meter) {
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">    if (meter instanceof SwapMeter&lt;?&gt;) {</span>
+<span class="nc" id="L149">      return getServoMeter(((SwapMeter&lt;?&gt;) meter).get());</span>
+<span class="pc bpc" id="L150" title="1 of 2 branches missed.">    } else if (meter instanceof ServoMeter) {</span>
+<span class="fc" id="L151">      return (ServoMeter) meter;</span>
+    } else {
+<span class="nc" id="L153">      return null;</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

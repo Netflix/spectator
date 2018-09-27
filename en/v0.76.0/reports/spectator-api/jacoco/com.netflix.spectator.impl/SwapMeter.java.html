@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SwapMeter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">SwapMeter.java</span></div><h1>SwapMeter.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Registry;
+
+/**
+ * Base type for meters that allow the underlying implementation to be replaced with
+ * another. This is used by {@link com.netflix.spectator.api.AbstractRegistry} as the
+ * basis for expiring types where a user may have a reference in their code.
+ *
+ * &lt;p&gt;&lt;b&gt;This class is an internal implementation detail only intended for use within
+ * spectator. It is subject to change without notice.&lt;/b&gt;&lt;/p&gt;
+ */
+public abstract class SwapMeter&lt;T extends Meter&gt; implements Meter {
+
+  /** Registry used to lookup values after expiration. */
+  protected final Registry registry;
+
+  /** Id to use when performing a lookup after expiration. */
+  protected final Id id;
+
+  /** Current meter to delegate operations. */
+  private volatile T underlying;
+
+  /** Create a new instance. */
+<span class="fc" id="L43">  public SwapMeter(Registry registry, Id id, T underlying) {</span>
+<span class="fc" id="L44">    this.registry = registry;</span>
+<span class="fc" id="L45">    this.id = id;</span>
+<span class="fc" id="L46">    this.underlying = unwrap(underlying);</span>
+<span class="fc" id="L47">  }</span>
+
+  /**
+   * Lookup the meter from the registry.
+   */
+  public abstract T lookup();
+
+  @Override public Id id() {
+<span class="fc" id="L55">    return id;</span>
+  }
+
+  @Override public Iterable&lt;Measurement&gt; measure() {
+<span class="fc" id="L59">    return get().measure();</span>
+  }
+
+  @Override public boolean hasExpired() {
+<span class="fc" id="L63">    return underlying.hasExpired();</span>
+  }
+
+  /**
+   * Set the underlying instance of the meter to use. This can be set to {@code null}
+   * to indicate that the meter has expired and is no longer in the registry.
+   */
+  public void set(T meter) {
+<span class="fc" id="L71">    underlying = unwrap(meter);</span>
+<span class="fc" id="L72">  }</span>
+
+  /** Return the underlying instance of the meter. */
+  public T get() {
+<span class="fc bfc" id="L76" title="All 2 branches covered.">    if (underlying.hasExpired()) {</span>
+<span class="fc" id="L77">      underlying = unwrap(lookup());</span>
+    }
+<span class="fc" id="L79">    return underlying;</span>
+  }
+
+  /**
+   * If the values are nested, then unwrap any that have the same registry instance.
+   */
+  @SuppressWarnings(&quot;unchecked&quot;)
+  private T unwrap(T meter) {
+<span class="fc" id="L87">    T tmp = meter;</span>
+<span class="fc bfc" id="L88" title="All 4 branches covered.">    while (tmp instanceof SwapMeter&lt;?&gt; &amp;&amp; registry == ((SwapMeter&lt;?&gt;) tmp).registry) {</span>
+<span class="fc" id="L89">      tmp = ((SwapMeter&lt;T&gt;) tmp).underlying;</span>
+    }
+<span class="fc" id="L91">    return tmp;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

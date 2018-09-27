@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IpcErrorGroup.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipc</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipc</a> &gt; <span class="el_source">IpcErrorGroup.java</span></div><h1>IpcErrorGroup.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipc;
+
+import com.netflix.spectator.api.Tag;
+
+/**
+ * Dimension indicating a high level cause for the request failure. These groups
+ * are the same for all implementations to make it easier to query across all
+ * services and client implementations. An implementation specific failure can be
+ * specified with {@link IpcTagKey#errorReason}.
+ */
+<span class="fc" id="L26">public enum IpcErrorGroup implements Tag {</span>
+
+  /** No error. */
+<span class="fc" id="L29">  none,</span>
+
+  /** Catch all category for errors that do not fit a more specific group. */
+<span class="fc" id="L32">  general,</span>
+
+  /**
+   * Any failure to initialize the connection. Examples include connection timeout,
+   * host not found exception, and SSL handshake errors.
+   */
+<span class="fc" id="L38">  connection_init,</span>
+
+  /**
+   * The request timed out while waiting for a response to arrive or be generated.
+   */
+<span class="fc" id="L43">  read_timeout,</span>
+
+  /**
+   * The client cancelled the request before the server generated a response.
+   */
+<span class="fc" id="L48">  cancelled,</span>
+
+  /**
+   * The client is being throttled due to an excessive number of requests.
+   */
+<span class="fc" id="L53">  client_throttled,</span>
+
+  /**
+   * The client is being throttled due to a problem on the server side.
+   */
+<span class="fc" id="L58">  server_throttled,</span>
+
+  /**
+   * There was an error due to problems with the client request, e.g., HTTP status 400.
+   */
+<span class="fc" id="L63">  client_error,</span>
+
+  /**
+   * There was an error due to problems on the server side, e.g., HTTP status 500.
+   */
+<span class="fc" id="L68">  server_error;</span>
+
+  @Override public String key() {
+<span class="fc" id="L71">    return IpcTagKey.errorGroup.key();</span>
+  }
+
+  @Override public String value() {
+<span class="fc" id="L75">    return name();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

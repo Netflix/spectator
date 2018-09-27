@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AtomicDouble.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-api</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.impl</a> &gt; <span class="el_source">AtomicDouble.java</span></div><h1>AtomicDouble.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * Wrapper around AtomicLong to make working with double values easier.
+ *
+ * &lt;p&gt;&lt;b&gt;This class is an internal implementation detail only intended for use within spectator.
+ * It is subject to change without notice.&lt;/b&gt;&lt;/p&gt;
+ */
+public class AtomicDouble extends Number {
+
+  private final AtomicLong value;
+
+  /** Create an instance with an initial value of 0. */
+  public AtomicDouble() {
+<span class="fc" id="L32">    this(0.0);</span>
+<span class="fc" id="L33">  }</span>
+
+  /** Create an instance with an initial value of {@code init}. */
+  public AtomicDouble(double init) {
+<span class="fc" id="L37">    super();</span>
+<span class="fc" id="L38">    value = new AtomicLong(Double.doubleToLongBits(init));</span>
+<span class="fc" id="L39">  }</span>
+
+  /** Return the current value. */
+  public double get() {
+<span class="fc" id="L43">    return Double.longBitsToDouble(value.get());</span>
+  }
+
+  /** Add {@code amount} to the value and return the new value. */
+  public double addAndGet(double amount) {
+    long v;
+    double d;
+    double n;
+    long next;
+    do {
+<span class="fc" id="L53">      v = value.get();</span>
+<span class="fc" id="L54">      d = Double.longBitsToDouble(v);</span>
+<span class="fc" id="L55">      n = d + amount;</span>
+<span class="fc" id="L56">      next = Double.doubleToLongBits(n);</span>
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">    } while (!value.compareAndSet(v, next));</span>
+<span class="fc" id="L58">    return n;</span>
+  }
+
+  /** Add {@code amount} to the value and return the previous value. */
+  public double getAndAdd(double amount) {
+    long v;
+    double d;
+    double n;
+    long next;
+    do {
+<span class="fc" id="L68">      v = value.get();</span>
+<span class="fc" id="L69">      d = Double.longBitsToDouble(v);</span>
+<span class="fc" id="L70">      n = d + amount;</span>
+<span class="fc" id="L71">      next = Double.doubleToLongBits(n);</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">    } while (!value.compareAndSet(v, next));</span>
+<span class="fc" id="L73">    return d;</span>
+  }
+
+  /** Set the value to  {@code amount} and return the previous value. */
+  public double getAndSet(double amount) {
+<span class="fc" id="L78">    long v = value.getAndSet(Double.doubleToLongBits(amount));</span>
+<span class="fc" id="L79">    return Double.longBitsToDouble(v);</span>
+  }
+
+  /**
+   * Set the value to  {@code amount} if the current value is {@code expect}. Return true if the
+   * value was updated.
+   */
+  public boolean compareAndSet(double expect, double update) {
+<span class="fc" id="L87">    long e = Double.doubleToLongBits(expect);</span>
+<span class="fc" id="L88">    long u = Double.doubleToLongBits(update);</span>
+<span class="fc" id="L89">    return value.compareAndSet(e, u);</span>
+  }
+
+  /** Set the current value to {@code amount}. */
+  public void set(double amount) {
+<span class="fc" id="L94">    value.set(Double.doubleToLongBits(amount));</span>
+<span class="fc" id="L95">  }</span>
+
+  private boolean isGreaterThan(double v1, double v2) {
+<span class="fc bfc" id="L98" title="All 4 branches covered.">    return v1 &gt; v2 || Double.isNaN(v2);</span>
+  }
+
+  /** Set the current value to the maximum of the current value or the provided value. */
+  public void max(double v) {
+<span class="fc bfc" id="L103" title="All 2 branches covered.">    if (Double.isFinite(v)) {</span>
+<span class="fc" id="L104">      double max = get();</span>
+<span class="pc bpc" id="L105" title="1 of 4 branches missed.">      while (isGreaterThan(v, max) &amp;&amp; !compareAndSet(max, v)) {</span>
+<span class="nc" id="L106">        max = value.get();</span>
+      }
+    }
+<span class="fc" id="L109">  }</span>
+
+  @Override public int intValue() {
+<span class="nc" id="L112">    return (int) get();</span>
+  }
+
+  @Override public long longValue() {
+<span class="nc" id="L116">    return (long) get();</span>
+  }
+
+  @Override public float floatValue() {
+<span class="nc" id="L120">    return (float) get();</span>
+  }
+
+  @Override public double doubleValue() {
+<span class="nc" id="L124">    return get();</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

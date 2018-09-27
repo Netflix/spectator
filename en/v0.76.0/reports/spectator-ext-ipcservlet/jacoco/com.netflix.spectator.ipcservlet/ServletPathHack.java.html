@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServletPathHack.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">spectator-ext-ipcservlet</a> &gt; <a href="index.source.html" class="el_package">com.netflix.spectator.ipcservlet</a> &gt; <span class="el_source">ServletPathHack.java</span></div><h1>ServletPathHack.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2014-2018 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.ipcservlet;
+
+import javax.servlet.http.HttpServletRequest;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
+/**
+ * This is a hack to work around &lt;a href=&quot;https://github.com/google/guice/issues/807&quot;&gt;#807&lt;/a&gt;.
+ * It uses reflection to extract the servlet path based on the pattern that was used for the
+ * guice bindings.
+ */
+final class ServletPathHack {
+
+  private ServletPathHack() {
+  }
+
+  private static final String PACKAGE = &quot;com.google.inject.servlet&quot;;
+
+<span class="fc" id="L35">  private static volatile boolean hackWorks = true;</span>
+
+  private static Object get(Object obj, String name) throws Exception {
+<span class="fc" id="L38">    Field f = obj.getClass().getDeclaredField(name);</span>
+<span class="fc" id="L39">    f.setAccessible(true);</span>
+<span class="fc" id="L40">    return f.get(obj);</span>
+  }
+
+  private static boolean matches(Object obj, String path) throws Exception {
+<span class="fc" id="L44">    Method m = obj.getClass().getDeclaredMethod(&quot;matches&quot;, String.class);</span>
+<span class="fc" id="L45">    m.setAccessible(true);</span>
+<span class="fc" id="L46">    return (Boolean) m.invoke(obj, path);</span>
+  }
+
+  private static String extractPath(Object obj, String path) throws Exception {
+<span class="fc" id="L50">    Method m = obj.getClass().getDeclaredMethod(&quot;extractPath&quot;, String.class);</span>
+<span class="fc" id="L51">    m.setAccessible(true);</span>
+<span class="fc" id="L52">    return (String) m.invoke(obj, path);</span>
+  }
+
+  /** Helper to get the servlet path for the request. */
+  static String getServletPath(HttpServletRequest request) {
+<span class="fc" id="L57">    String servletPath = request.getServletPath();</span>
+<span class="pc bpc" id="L58" title="1 of 4 branches missed.">    if (hackWorks &amp;&amp; PACKAGE.equals(request.getClass().getPackage().getName())) {</span>
+      try {
+<span class="fc" id="L60">        Object outer = get(request, &quot;this$0&quot;);</span>
+<span class="fc" id="L61">        Object servletPipeline = get(outer, &quot;servletPipeline&quot;);</span>
+<span class="fc" id="L62">        Object servletDefs = get(servletPipeline, &quot;servletDefinitions&quot;);</span>
+<span class="fc" id="L63">        int length = Array.getLength(servletDefs);</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        for (int i = 0; i &lt; length; ++i) {</span>
+<span class="fc" id="L65">          Object pattern = get(Array.get(servletDefs, i), &quot;patternMatcher&quot;);</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">          if (matches(pattern, servletPath)) {</span>
+<span class="fc" id="L67">            servletPath = extractPath(pattern, servletPath);</span>
+<span class="fc" id="L68">            break;</span>
+          }
+        }
+<span class="nc" id="L71">      } catch (Exception e) {</span>
+<span class="nc" id="L72">        hackWorks = false;</span>
+<span class="fc" id="L73">      }</span>
+    }
+<span class="fc" id="L75">    return servletPath;</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
