@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import java.nio.file.AccessMode;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -190,6 +191,19 @@ public class DefaultIdTest {
   public void withTagBooleanObjNull() {
     Boolean value = null;
     new DefaultId("test").withTag("bool", value);
+  }
+  
+  @Test
+  public void withTagEnum() {
+    Id id = new DefaultId("test").withTag("enum", AccessMode.WRITE);
+    Assert.assertEquals("test:enum=WRITE", id.toString());
+    Assert.assertEquals(new DefaultId("test").withTag("enum", "WRITE"), id);
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void withTagEnumNull() {
+    Enum value = null;
+    new DefaultId("test").withTag("enum", value);
   }
 
   @Test

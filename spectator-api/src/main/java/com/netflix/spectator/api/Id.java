@@ -47,6 +47,19 @@ public interface Id {
   }
 
   /**
+   * Return a new id with an additional tag value using {@link Enum#name()} to
+   * convert the Enum to a string representation. This is merely a convenience function
+   * for:
+   *
+   * <pre>
+   *   id.withTag("key", myEnum.name())
+   * </pre>
+   */
+  default <E extends Enum<E>> Id withTag(String k, Enum<E> v) {
+    return withTag(k, v.name());
+  }
+
+  /**
    * Return a new id with additional tag values. This overload is to avoid allocating a
    * parameters array for the more generic varargs method {@link #withTags(String...)}.
    */
