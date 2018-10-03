@@ -118,9 +118,6 @@ public final class SpectatorModule extends AbstractModule {
 
     Config config() {
       if (atlasConfig == null) {
-        if (config == null) {
-          LOGGER.warn("no archaius2 binding found");
-        }
         atlasConfig = NetflixConfig.createConfig(config);
       }
 

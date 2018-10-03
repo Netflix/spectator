@@ -37,6 +37,7 @@ import java.util.Properties;
 
 /**
  * Utility class for creating a configuration to be used in the Netflix environment.
+ * This class is not intended to be relied on by others, and is subject to change at any time.
  */
 public final class NetflixConfig {
   private NetflixConfig() {
