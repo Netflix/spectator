@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,12 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
 
   /** Add an additional tag value. */
   public T withTag(String k, Boolean v) {
-    extraTags.add(new BasicTag(k, Boolean.toString(v)));
-    return (T) this;
+    return withTag(k, Boolean.toString(v));
+  }
+
+  /** Add an additional tag value based on the name of the enum. */
+  public <E extends Enum<E>> T withTag(String k, Enum<E> v) {
+    return withTag(k, v.name());
   }
 
   /** Add an additional tag value. */
@@ -61,7 +65,7 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
   /** Add additional tag values. */
   public T withTags(String... tags) {
     for (int i = 0; i < tags.length; i += 2) {
-      extraTags.add(new BasicTag(tags[0], tags[1]));
+      extraTags.add(new BasicTag(tags[i], tags[i + 1]));
     }
     return (T) this;
   }
