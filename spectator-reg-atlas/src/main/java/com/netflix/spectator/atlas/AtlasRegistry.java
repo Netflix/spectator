@@ -60,13 +60,13 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private final Clock stepClock;
 
-  private final boolean enabled;
+  private final AtlasConfig config;
+
   private final Duration step;
   private final long stepMillis;
   private final long meterTTL;
   private final URI uri;
 
-  private final boolean lwcEnabled;
   private final Duration configRefreshFrequency;
   private final URI evalUri;
 
@@ -91,15 +91,14 @@ public final class AtlasRegistry extends AbstractRegistry {
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     super(clock, config);
+    this.config = config;
     this.stepClock = new StepClock(clock, config.step().toMillis());
 
-    this.enabled = config.enabled();
     this.step = config.step();
     this.stepMillis = step.toMillis();
     this.meterTTL = config.meterTTL().toMillis();
     this.uri = URI.create(config.uri());
 
-    this.lwcEnabled = config.lwcEnabled();
     this.configRefreshFrequency = config.configRefreshFrequency();
     this.evalUri = URI.create(config.evalUri());
 
@@ -129,28 +128,20 @@ public final class AtlasRegistry extends AbstractRegistry {
   public void start() {
     if (scheduler == null) {
       // Setup main collection for publishing to Atlas
-      if (enabled || lwcEnabled) {
-        Scheduler.Options options = new Scheduler.Options()
-            .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
-            .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
-            .withStopOnFailure(false);
-        scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
-        scheduler.schedule(options, this::collectData);
-        logger.info("started collecting metrics every {} reporting to {}", step, uri);
-        logger.info("common tags: {}", commonTags);
-      } else {
-        logger.info("publishing is not enabled");
-      }
+      Scheduler.Options options = new Scheduler.Options()
+          .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
+          .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
+          .withStopOnFailure(false);
+      scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
+      scheduler.schedule(options, this::collectData);
+      logger.info("started collecting metrics every {} reporting to {}", step, uri);
+      logger.info("common tags: {}", commonTags);
 
       // Setup collection for subscriptions
-      if (lwcEnabled) {
-        Scheduler.Options options = new Scheduler.Options()
-            .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
-            .withStopOnFailure(false);
-        scheduler.schedule(options, this::fetchSubscriptions);
-      } else {
-        logger.info("subscriptions are not enabled");
-      }
+      Scheduler.Options subOptions = new Scheduler.Options()
+          .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
+          .withStopOnFailure(false);
+      scheduler.schedule(subOptions, this::fetchSubscriptions);
     } else {
       logger.warn("registry already started, ignoring duplicate request");
     }
@@ -194,16 +185,18 @@ public final class AtlasRegistry extends AbstractRegistry {
   /** Collect data and send to Atlas. */
   void collectData() {
     // Send data for any subscriptions
-    if (lwcEnabled) {
+    if (config.lwcEnabled()) {
       try {
         handleSubscriptions();
       } catch (Exception e) {
         logger.warn("failed to handle subscriptions", e);
       }
+    } else {
+      logger.debug("lwc is disabled, skipping subscriptions");
     }
 
     // Publish to Atlas
-    if (enabled) {
+    if (config.enabled()) {
       try {
         for (List<Measurement> batch : getBatches()) {
           PublishPayload p = new PublishPayload(commonTags, batch);
@@ -218,6 +211,8 @@ public final class AtlasRegistry extends AbstractRegistry {
       } catch (Exception e) {
         logger.warn("failed to send metrics", e);
       }
+    } else {
+      logger.debug("publishing is disabled, skipping collection");
     }
 
     // Clean up any expired meters
@@ -258,7 +253,11 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   private void fetchSubscriptions() {
-    subManager.refresh();
+    if (config.lwcEnabled()) {
+      subManager.refresh();
+    } else {
+      logger.debug("lwc is disabled, skipping subscription config refresh");
+    }
   }
 
   /**
