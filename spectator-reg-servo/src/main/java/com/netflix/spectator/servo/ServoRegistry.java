@@ -30,7 +30,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/** Registry that maps spectator types to servo. */
+/**
+ * Registry that maps spectator types to servo.
+ *
+ * @deprecated Servo is deprecated and we do not encourage new use of this implementation.
+ * Consider use of another implementation.
+ */
+@Deprecated
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
 
 

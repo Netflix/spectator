@@ -44,8 +44,8 @@ The core spectator library, `spectator-api`, comes with the following registry i
        </td>
        <td>[spectator-reg-servo](../registry/servo.md)</td>
        <td>
-       Map to [servo library](https://github.com/Netflix/servo). This is the implementation
-       typically used at Netflix to report data into [Atlas](https://github.com/Netflix/atlas).
+       Map to [servo library](https://github.com/Netflix/servo). ServoRegistry is deprecated;
+       consider use of another implementation.
        </td>
      </tr>
      <tr>

@@ -3,7 +3,7 @@ site_url: 'http://netflix.github.io/spectator'
 repo_url: 'https://github.com/Netflix/spectator'
 google_analytics: ['UA-82153845-2', 'auto']
 strict: True
-pages:
+nav:
 - Home: index.md
 - 'Getting Started':
   - Registry: intro/registry.md
