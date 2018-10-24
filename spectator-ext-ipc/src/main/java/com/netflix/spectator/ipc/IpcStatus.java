@@ -19,6 +19,8 @@ import com.netflix.spectator.api.Tag;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Dimension indicating the high level status for the request.
@@ -145,6 +147,8 @@ public enum IpcStatus implements Tag {
     IpcStatus status;
     if (t instanceof SSLException) {
       status = access_denied;
+    } else if (t instanceof SocketTimeoutException || t instanceof TimeoutException) {
+      status = timeout;
     } else if (t instanceof IOException) {
       status = connection_error;
     } else if (t instanceof IllegalArgumentException || t instanceof IllegalStateException) {

@@ -255,6 +255,9 @@ public final class IpcLogEntry {
     if (statusDetail == null) {
       statusDetail = exception.getClass().getSimpleName();
     }
+    if (status == null) {
+      status = IpcStatus.forException(exception);
+    }
     return this;
   }
 
