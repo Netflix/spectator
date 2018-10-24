@@ -39,9 +39,9 @@ public enum IpcMetric {
   clientCall("ipc.client.call", EnumSet.of(
       IpcTagKey.owner,
       IpcTagKey.result,
+      IpcTagKey.status,
       IpcTagKey.attempt,
-      IpcTagKey.attemptFinal,
-      IpcTagKey.errorGroup // For result == failure only
+      IpcTagKey.attemptFinal
   )),
 
   /**
@@ -50,7 +50,7 @@ public enum IpcMetric {
   serverCall("ipc.server.call", EnumSet.of(
       IpcTagKey.owner,
       IpcTagKey.result,
-      IpcTagKey.errorGroup // For result == failure only
+      IpcTagKey.status
   )),
 
   /**
@@ -182,43 +182,25 @@ public enum IpcMetric {
   public void validate(Id id) {
     assertTrue(metricName.equals(id.name()), "%s != %s", metricName, id.name());
 
-    // Check that required dimensions other than error group are present
+    // Check that required dimensions are present
     EnumSet<IpcTagKey> dimensions = requiredDimensions.clone();
-    dimensions.remove(IpcTagKey.errorGroup);
     dimensions.forEach(k -> {
       String value = Utils.getTagValue(id, k.key());
       assertTrue(value != null, "[%s] is missing required dimension %s", id, k.key());
     });
 
-    // Check that error group and error reason are only present for failed requests
-    if (requiredDimensions.contains(IpcTagKey.errorGroup)) {
-      String result = Utils.getTagValue(id, IpcTagKey.result.key());
-      String errorGroup = Utils.getTagValue(id, IpcTagKey.errorGroup.key());
-      String errorReason = Utils.getTagValue(id, IpcTagKey.errorReason.key());
-      switch (result) {
-        case "success":
-          assertTrue(errorGroup == null,
-              "[%s] %s should not be present on successful request",
-              id, IpcTagKey.errorGroup.key());
-          assertTrue(errorReason == null,
-              "[%s] %s should not be present on successful request",
-              id, IpcTagKey.errorReason.key());
-          break;
-        case "failure":
-          assertTrue(errorGroup != null,
-              "[%s] %s must be present on failed request",
-              id, IpcTagKey.errorGroup.key());
-          break;
-        default:
-          // Invalid value for result, will be caught later on
-          break;
-      }
-    }
-
     // Check the values are correct for enum keys
     validateValues(id, IpcTagKey.attemptFinal.key(), ATTEMPT_FINAL_VALUES);
     validateValues(id, IpcTagKey.attempt.key(), IpcAttempt.class);
     validateValues(id, IpcTagKey.result.key(), IpcResult.class);
-    validateValues(id, IpcTagKey.errorGroup.key(), IpcErrorGroup.class);
+    validateValues(id, IpcTagKey.status.key(), IpcStatus.class);
+
+    // Check that result and status are consistent
+    String status = Utils.getTagValue(id, IpcTagKey.status.key());
+    if (status != null) {
+      IpcResult expected = IpcStatus.valueOf(status).result();
+      IpcResult actual = IpcResult.valueOf(Utils.getTagValue(id, IpcTagKey.result.key()));
+      assertTrue(actual == expected, "[%s] result is inconsistent with status", id);
+    }
   }
 }

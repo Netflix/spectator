@@ -82,7 +82,6 @@ public class IpcServletFilterTest {
   public void validateIdTest() throws Exception {
     client.get(baseUri.resolve("/test/foo/12345?q=54321")).send();
     checkResult(registry, "success");
-    checkErrorReason(registry, null);
     checkStatus(registry, "200");
     checkMethod(registry, "GET");
     checkEndpoint(registry, "/test/foo");
@@ -120,7 +119,6 @@ public class IpcServletFilterTest {
     checkResult(registry, "failure");
     checkClientErrorReason(registry, "HTTP_500");
     checkServerErrorReason(registry, "RuntimeException");
-    checkStatus(registry, "500");
     checkMethod(registry, "GET");
     checkClientEndpoint(registry, null);
     checkServerEndpoint(registry, "/throw");
@@ -131,7 +129,6 @@ public class IpcServletFilterTest {
   public void validateIdCustom() throws Exception {
     client.delete(baseUri.resolve("/endpoint/foo/12345?q=54321")).send();
     checkResult(registry, "success");
-    checkErrorReason(registry, null);
     checkStatus(registry, "200");
     checkMethod(registry, "DELETE");
     checkEndpoint(registry, "/servlet"); // header set in the servlet
