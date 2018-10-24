@@ -136,22 +136,22 @@ public class IpcLogEntryTest {
   }
 
   @Test
-  public void errorGroup() {
-    String expected = IpcErrorGroup.cancelled.value();
+  public void status() {
+    String expected = IpcStatus.cancelled.value();
     String actual = (String) entry
-        .withErrorGroup(IpcErrorGroup.cancelled)
+        .withStatus(IpcStatus.cancelled)
         .convert(this::toMap)
-        .get("errorGroup");
+        .get("status");
     Assert.assertEquals(expected, actual);
   }
 
   @Test
-  public void errorReason() {
+  public void statusDetail() {
     String expected = "connection_failed";
     String actual = (String) entry
-        .withErrorReason(expected)
+        .withStatusDetail(expected)
         .convert(this::toMap)
-        .get("errorReason");
+        .get("statusDetail");
     Assert.assertEquals(expected, actual);
   }
 
@@ -466,8 +466,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpStatus(429)
         .convert(this::toMap)
-        .get("errorGroup");
-    Assert.assertEquals(IpcErrorGroup.client_throttled.value(), actual);
+        .get("status");
+    Assert.assertEquals(IpcStatus.throttled.value(), actual);
   }
 
   @Test
@@ -475,8 +475,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpStatus(503)
         .convert(this::toMap)
-        .get("errorGroup");
-    Assert.assertEquals(IpcErrorGroup.server_throttled.value(), actual);
+        .get("status");
+    Assert.assertEquals(IpcStatus.unavailable.value(), actual);
   }
 
   @Test
@@ -598,9 +598,9 @@ public class IpcLogEntryTest {
   public void stringEscape() {
     for (char c = 0; c < 65535; ++c) {
       String actual = (String) entry
-          .withErrorReason("" + c)
+          .withStatusDetail("" + c)
           .convert(this::toMap)
-          .get("errorReason");
+          .get("statusDetail");
       if (actual.length() == 0) {
         Assert.assertTrue(Character.isISOControl(c));
         Assert.assertEquals("", actual);
