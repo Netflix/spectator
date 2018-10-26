@@ -80,7 +80,7 @@ assignment:
 ```java
 AtomicInteger size = PolledMeter.using(registry)
   .withName("queue.size")
-  .monitorValue(size);
+  .monitorValue(new AtomicInteger());
 ```
 
 Updates to the value are preformed by updating the number instance directly.
