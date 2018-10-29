@@ -44,7 +44,7 @@ public enum IpcTagKey {
    * implementation specific. For example with HTTP, the status code would be a likely
    * value used here.
    */
-  statusDetail("icp.status.detail"),
+  statusDetail("ipc.status.detail"),
 
   /**
    * Dimension indicating a high level cause for the request failure. These groups
