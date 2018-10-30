@@ -85,13 +85,16 @@ measurements due to time adjustments. For more information see the
 To get started create an instance using the registry:
 
 ```java
+import com.netflix.spectator.api.LongTaskTimer;
+
 public class MetadataService {
 
   private final LongTaskTimer metadataRefresh;
 
   @Inject
   public MetadataService(Registry registry) {
-    metadataRefresh = registry.longTaskTimer("metadata.refreshDuration");
+    metadataRefresh = com.netflix.spectator.api.patterns.LongTaskTimer(
+        registry.createId("metadata.refreshDuration"));
     // setup background thread to call refresh()
   }
 
@@ -105,7 +108,8 @@ public class MetadataService {
   }
 ```
 
-The id is used to keep track of a particular task being measured by the timer.
+The id value returned by the `start` method is used to keep track of a
+particular task being measured by the timer.
 It must be stopped using the provided id. Note that unlike a regular timer
 that does not do anything until the final duration is recorded, a long duration
 timer will report as two gauges:
@@ -116,9 +120,9 @@ timer will report as two gauges:
 This means that you can see what is happening while the task is running, but
 you need to keep in mind:
 
-* The id is fixed before the task begins. There is no way to change tags based
+* The meter id is fixed before the task begins. There is no way to change tags based
   on the run, e.g., update a different timer if an exception is thrown.
-* Being a guage it is inappropriate for short tasks. In particular, gauges are
+* Being a gauge it is inappropriate for short tasks. In particular, gauges are
   sampled and if it is not sampled during the execution or the sampling period
   is a significant subset of the expected duration, then the duration value
   will not be meaningful.
