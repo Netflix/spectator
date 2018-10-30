@@ -85,7 +85,7 @@ measurements due to time adjustments. For more information see the
 To get started create an instance using the registry:
 
 ```java
-import com.netflix.spectator.api.LongTaskTimer;
+import com.netflix.spectator.api.patterns.LongTaskTimer;
 
 public class MetadataService {
 
@@ -93,7 +93,7 @@ public class MetadataService {
 
   @Inject
   public MetadataService(Registry registry) {
-    metadataRefresh = com.netflix.spectator.api.patterns.LongTaskTimer(
+    metadataRefresh = LongTaskTimer.get(
         registry.createId("metadata.refreshDuration"));
     // setup background thread to call refresh()
   }
