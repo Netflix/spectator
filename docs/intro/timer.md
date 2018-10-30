@@ -94,7 +94,7 @@ public class MetadataService {
   @Inject
   public MetadataService(Registry registry) {
     metadataRefresh = LongTaskTimer.get(
-        registry.createId("metadata.refreshDuration"));
+        registry, registry.createId("metadata.refreshDuration"));
     // setup background thread to call refresh()
   }
 
