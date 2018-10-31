@@ -9,7 +9,6 @@
   </description>
 
   <rule ref="rulesets/internal/all-java.xml">
-    <exclude name="AbstractNaming"/>
     <exclude name="AccessorMethodGeneration"/>
     <exclude name="AddEmptyString"/>
     <exclude name="AppendCharacterWithChar"/>
@@ -21,18 +20,19 @@
     <exclude name="AvoidFinalLocalVariable"/>
     <exclude name="AvoidInstantiatingObjectsInLoops"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
-    <exclude name="AvoidPrefixingMethodParameters"/>
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
     <exclude name="AvoidThrowingNullPointerException"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
     <exclude name="AvoidUsingShortType"/>
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="BeanMembersShouldSerialize"/>
+    <exclude name="ClassNamingConventions"/>
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="CommentRequired"/>
     <exclude name="CommentSize"/>
     <exclude name="CompareObjectsWithEquals"/>
     <exclude name="ConfusingTernary"/>
+    <exclude name="ControlStatementBraces"/>
     <exclude name="CyclomaticComplexity"/>
     <exclude name="DataflowAnomalyAnalysis"/>
     <exclude name="DefaultPackage"/>
@@ -43,12 +43,9 @@
     <exclude name="ExcessiveImports"/>
     <exclude name="ExcessivePublicCount"/>
     <exclude name="FieldDeclarationsShouldBeAtStartOfClass"/>
-    <exclude name="ForLoopsMustUseBraces"/>
+    <exclude name="FieldNamingConventions"/>
     <exclude name="GodClass"/>
-    <exclude name="GuardDebugLogging"/>
     <exclude name="GuardLogStatement"/>
-    <exclude name="GuardLogStatementJavaUtil"/>
-    <exclude name="IfStmtsMustUseBraces"/>
     <exclude name="ImmutableField"/>
     <exclude name="LawOfDemeter"/>
     <exclude name="LocalVariableCouldBeFinal"/>
@@ -57,7 +54,6 @@
     <exclude name="LoosePackageCoupling"/>
     <exclude name="MethodArgumentCouldBeFinal"/>
     <exclude name="MethodReturnsInternalArray"/>
-    <exclude name="ModifiedCyclomaticComplexity"/>
     <exclude name="NullAssignment"/>
     <exclude name="OneDeclarationPerLine"/>
     <exclude name="OnlyOneReturn"/>
@@ -70,13 +66,11 @@
     <exclude name="ShortMethodName"/>
     <exclude name="ShortMethodName"/>
     <exclude name="ShortVariable"/>
-    <exclude name="StdCyclomaticComplexity"/>
     <exclude name="TooManyFields"/>
     <exclude name="TooManyMethods"/>
     <exclude name="UncommentedEmptyMethodBody"/>
     <exclude name="UnusedPrivateMethod"/>
     <exclude name="UnnecessaryConstructor"/>
-    <exclude name="UnnecessaryParentheses"/>
     <exclude name="UseConcurrentHashMap"/>
     <exclude name="UseIndexOfChar"/>
     <exclude name="UselessParentheses"/>

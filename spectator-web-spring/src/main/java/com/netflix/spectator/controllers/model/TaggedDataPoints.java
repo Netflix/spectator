@@ -18,8 +18,8 @@ package com.netflix.spectator.controllers.model;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Tag;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,18 +30,18 @@ import java.util.Objects;
  */
 public class TaggedDataPoints {
   private static class JacksonableTag implements Tag {
-    private String key;
-    private String value;
+    private final String key;
+    private final String value;
 
     JacksonableTag(Tag tag) {
       key = tag.key();
       value = tag.value();
     }
 
-    public String key() {
+    @Override public String key() {
       return key;
     }
-    public String value() {
+    @Override public String value() {
       return value;
     }
     public String getKey() {
@@ -68,13 +68,13 @@ public class TaggedDataPoints {
     }
 
     static List<Tag> convertTags(Iterable<Tag> iterable) {
-      ArrayList<Tag> result = new ArrayList<Tag>();
+      ArrayList<Tag> result = new ArrayList<>();
       for (Tag tag : iterable) {
         result.add(new JacksonableTag(tag));
       }
       return result;
     }
-  };
+  }
 
   /**
    * The tag bindings for the values.
@@ -95,7 +95,7 @@ public class TaggedDataPoints {
    */
   public TaggedDataPoints(Measurement measurement) {
     tags = JacksonableTag.convertTags(measurement.id().tags());
-    dataPoints = Arrays.asList(DataPoint.make(measurement));
+    dataPoints = Collections.singletonList(DataPoint.make(measurement));
   }
 
   /**
@@ -113,7 +113,7 @@ public class TaggedDataPoints {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof TaggedDataPoints)) return false;
+    if (!(obj instanceof TaggedDataPoints)) return false;
     TaggedDataPoints other = (TaggedDataPoints) obj;
     return tags.equals(other.tags) && dataPoints.equals(other.dataPoints);
   }
@@ -123,6 +123,6 @@ public class TaggedDataPoints {
     return Objects.hash(tags, dataPoints);
   }
 
-  private List<Tag> tags;
-  private List<DataPoint> dataPoints;
+  private final List<Tag> tags;
+  private final List<DataPoint> dataPoints;
 }

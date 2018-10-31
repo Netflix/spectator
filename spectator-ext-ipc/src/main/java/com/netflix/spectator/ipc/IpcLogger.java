@@ -121,36 +121,36 @@ public class IpcLogger {
    */
   void log(IpcLogEntry entry) {
     Level level = entry.getLevel();
-    Predicate<Marker> isEnabled;
+    Predicate<Marker> enabled;
     BiConsumer<Marker, String> log;
     switch (level) {
       case TRACE:
-        isEnabled = logger::isTraceEnabled;
+        enabled = logger::isTraceEnabled;
         log = logger::trace;
         break;
       case DEBUG:
-        isEnabled = logger::isDebugEnabled;
+        enabled = logger::isDebugEnabled;
         log = logger::debug;
         break;
       case INFO:
-        isEnabled = logger::isInfoEnabled;
+        enabled = logger::isInfoEnabled;
         log = logger::info;
         break;
       case WARN:
-        isEnabled = logger::isWarnEnabled;
+        enabled = logger::isWarnEnabled;
         log = logger::warn;
         break;
       case ERROR:
-        isEnabled = logger::isErrorEnabled;
+        enabled = logger::isErrorEnabled;
         log = logger::error;
         break;
       default:
-        isEnabled = logger::isDebugEnabled;
+        enabled = logger::isDebugEnabled;
         log = logger::debug;
         break;
     }
 
-    if (isEnabled.test(entry.getMarker())) {
+    if (enabled.test(entry.getMarker())) {
       log.accept(entry.getMarker(), entry.toString());
     }
 

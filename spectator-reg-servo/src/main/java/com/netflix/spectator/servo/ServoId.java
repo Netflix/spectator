@@ -45,15 +45,15 @@ final class ServoId implements Id {
     return () -> new Iterator<Tag>() {
       private final Iterator<com.netflix.servo.tag.Tag> iter = config.getTags().iterator();
 
-      public boolean hasNext() {
+      @Override public boolean hasNext() {
         return iter.hasNext();
       }
 
-      public Tag next() {
+      @Override public Tag next() {
         return new ServoTag(iter.next());
       }
 
-      public void remove() {
+      @Override public void remove() {
         iter.remove();
       }
     };

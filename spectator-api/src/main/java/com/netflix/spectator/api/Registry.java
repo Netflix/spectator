@@ -147,7 +147,7 @@ public interface Registry extends Iterable<Meter> {
   Meter get(Id id);
 
   /** Iterator for traversing the set of meters in the registry. */
-  Iterator<Meter> iterator();
+  @Override Iterator<Meter> iterator();
 
   /////////////////////////////////////////////////////////////////
   // Additional helper methods below

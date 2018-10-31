@@ -41,11 +41,11 @@ public interface Clock {
    * Default clock implementation based on corresponding calls in {@link java.lang.System}.
    */
   Clock SYSTEM = new Clock() {
-    public long wallTime() {
+    @Override public long wallTime() {
       return System.currentTimeMillis();
     }
 
-    public long monotonicTime() {
+    @Override public long monotonicTime() {
       return System.nanoTime();
     }
   };

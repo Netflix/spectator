@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers;
 
 import com.netflix.spectator.api.Counter;
@@ -68,7 +67,7 @@ public class MetricsController {
   @Value("${spectator.webEndpoint.prototypeFilter.path:}")
   private String prototypeFilterPath;
 
-  private Map<Id, String> knownMeterKinds = new HashMap<Id, String>();
+  private final Map<Id, String> knownMeterKinds = new HashMap<>();
   private Predicate<Measurement> defaultMeasurementFilter = null;
 
   /**
@@ -126,9 +125,9 @@ public class MetricsController {
    */
   Map<String, MetricValues> encodeRegistry(
         Registry sourceRegistry, Predicate<Measurement> filter) {
-    Map<String, MetricValues> metricMap = new HashMap<String, MetricValues>();
+    Map<String, MetricValues> metricMap = new HashMap<>();
 
-    /**
+    /*
      * Flatten the meter measurements into a map of measurements keyed by
      * the name and mapped to the different tag variants.
      */
