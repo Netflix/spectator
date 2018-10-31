@@ -29,7 +29,7 @@ final class DefaultId implements Id {
   private final ArrayTagSet tags;
 
   /** Create a new instance. */
-  public DefaultId(String name) {
+  DefaultId(String name) {
     this(name, ArrayTagSet.EMPTY);
   }
 

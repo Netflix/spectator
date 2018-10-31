@@ -196,21 +196,21 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     private final String name;
     private final Function<Object, String> tagExtractor;
 
-    public TagField(Field field) {
+    TagField(Field field) {
       this(field, Object::toString);
     }
 
-    public TagField(Field field, Function<Object, String> tagExtractor) {
+    TagField(Field field, Function<Object, String> tagExtractor) {
       this.field = field;
       this.tagExtractor = tagExtractor;
       this.name = Introspector.decapitalize(field.name());
     }
 
-    public String getName() {
+    String getName() {
       return name;
     }
 
-    public Optional<String> getValue(AWSRequestMetrics metrics) {
+    Optional<String> getValue(AWSRequestMetrics metrics) {
       return firstValue(metrics.getProperty(field), tagExtractor);
     }
   }

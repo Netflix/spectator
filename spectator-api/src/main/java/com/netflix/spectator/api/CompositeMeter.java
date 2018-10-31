@@ -39,7 +39,7 @@ class CompositeMeter<T extends Meter> implements Meter {
    * @param meters
    *     Set of meters that make up the composite.
    */
-  public CompositeMeter(Id id, Collection<T> meters) {
+  CompositeMeter(Id id, Collection<T> meters) {
     this.id = id;
     this.meters = meters;
   }

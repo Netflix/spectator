@@ -169,20 +169,17 @@
         </module>
         <module name="UpperEll"/>
 
-        <module name="FileContentsHolder"/> <!-- Required by comment suppression filters -->
-
-    </module>
-
-    <!-- Enable suppression comments -->
-    <module name="SuppressionCommentFilter">
-      <property name="offCommentFormat" value="CHECKSTYLE IGNORE\s+(\S+)"/>
-      <property name="onCommentFormat" value="CHECKSTYLE END IGNORE\s+(\S+)"/>
-      <property name="checkFormat" value="$1"/>
-    </module>
-    <module name="SuppressWithNearbyCommentFilter">
-      <!-- Syntax is "SUPPRESS CHECKSTYLE name" -->
-      <property name="commentFormat" value="SUPPRESS CHECKSTYLE (\w+)"/>
-      <property name="checkFormat" value="$1"/>
-      <property name="influenceFormat" value="1"/>
+      <!-- Enable suppression comments -->
+      <module name="SuppressionCommentFilter">
+        <property name="offCommentFormat" value="CHECKSTYLE IGNORE\s+(\S+)"/>
+        <property name="onCommentFormat" value="CHECKSTYLE END IGNORE\s+(\S+)"/>
+        <property name="checkFormat" value="$1"/>
+      </module>
+      <module name="SuppressWithNearbyCommentFilter">
+        <!-- Syntax is "SUPPRESS CHECKSTYLE name" -->
+        <property name="commentFormat" value="SUPPRESS CHECKSTYLE (\w+)"/>
+        <property name="checkFormat" value="$1"/>
+        <property name="influenceFormat" value="1"/>
+      </module>
     </module>
 </module>

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ final class ServoId implements Id {
   private final MonitorConfig config;
 
   /** Create a new instance. */
-  public ServoId(MonitorConfig config) {
+  ServoId(MonitorConfig config) {
     this.config = config;
   }
 
