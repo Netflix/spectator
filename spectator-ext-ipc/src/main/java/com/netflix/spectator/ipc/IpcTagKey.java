@@ -165,12 +165,10 @@ public enum IpcTagKey {
   serverPort("ipc.server.port"),
 
   /**
-   * HTTP status code.
-   *
-   * @deprecated Use {@link #statusDetail} instead. This value will be removed in
-   * January of 2019.
+   * HTTP status code. In most cases it is preferred to use {@link #statusDetail} instead.
+   * This tag key is optionally used to include the HTTP status code when the status detail
+   * is overridden with application specific values.
    */
-  @Deprecated
   httpStatus("http.status"),
 
   /**
