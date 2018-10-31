@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 package com.netflix.spectator.controllers.filter;
-import com.netflix.spectator.controllers.model.TestMeter;
+
 import com.netflix.spectator.controllers.model.TestId;
 
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Measurement;
 
-import java.util.Arrays;
 import java.util.function.Predicate;
 
 import org.junit.Assert;

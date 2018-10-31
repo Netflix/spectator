@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers.model;
 
 import com.netflix.spectator.api.Measurement;
@@ -55,7 +54,7 @@ public class MetricValues {
    */
   public MetricValues(String kind, Measurement measurement) {
     this.kind = kind;
-    dataPoints = new ArrayList<TaggedDataPoints>();
+    dataPoints = new ArrayList<>();
     dataPoints.add(new TaggedDataPoints(measurement));
   }
 
@@ -64,12 +63,12 @@ public class MetricValues {
    */
   public MetricValues(String kind, List<TaggedDataPoints> dataPoints) {
     this.kind = kind;
-    this.dataPoints = new ArrayList<TaggedDataPoints>(dataPoints);
+    this.dataPoints = new ArrayList<>(dataPoints);
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof MetricValues)) return false;
+    if (!(obj instanceof MetricValues)) return false;
     MetricValues other = (MetricValues) obj;
 
     // Ignore the kind because spectator internally transforms it
@@ -87,6 +86,6 @@ public class MetricValues {
     return String.format("%s: %s", kind, dataPoints);
   }
 
-  private String kind;
-  private List<TaggedDataPoints> dataPoints;
+  private final String kind;
+  private final List<TaggedDataPoints> dataPoints;
 }

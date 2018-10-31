@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers.model;
 
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 import java.util.Objects;
 
-
-
 /**
  * An ApplicationRegistry is the encoding of the metrics from a particular application.
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
+@SuppressWarnings("PMD.DataClass")
 public class ApplicationRegistry {
-  private static long startTime = ManagementFactory.getRuntimeMXBean().getStartTime();
+  private static final long START_TIME = ManagementFactory.getRuntimeMXBean().getStartTime();
   private String applicationName;
   private String applicationVersion;
   private Map<String, MetricValues> metrics;
@@ -65,7 +63,7 @@ public class ApplicationRegistry {
    * The JVM start time (millis).
    */
   public long getStartTime() {
-    return startTime;
+    return START_TIME;
   }
 
   /**
@@ -86,7 +84,7 @@ public class ApplicationRegistry {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof ApplicationRegistry)) return false;
+    if (!(obj instanceof ApplicationRegistry)) return false;
     ApplicationRegistry other = (ApplicationRegistry) obj;
     return applicationName.equals(other.applicationName) && metrics.equals(other.metrics);
   }

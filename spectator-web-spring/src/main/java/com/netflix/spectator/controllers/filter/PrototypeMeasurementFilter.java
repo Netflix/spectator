@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers.filter;
 
 import com.netflix.spectator.api.Measurement;
@@ -80,7 +79,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof TagFilterPattern)) return false;
+      if (!(obj instanceof TagFilterPattern)) return false;
       TagFilterPattern other = (TagFilterPattern) obj;
       return key.pattern().equals(other.key.pattern()) && value.pattern().equals(other.value.pattern());
     }
@@ -109,7 +108,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
      * Pattern for matching the Spectator tag value.
      */
     private Pattern value;
-  };
+  }
 
 
   /**
@@ -132,7 +131,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof ValueFilterPattern)) return false;
+      if (!(obj instanceof ValueFilterPattern)) return false;
       ValueFilterPattern other = (ValueFilterPattern) obj;
       return tags.equals(other.tags);
     }
@@ -175,8 +174,8 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     public List<TagFilterPattern> getTags() {
       return tags;
     }
-    private final List<TagFilterPattern> tags = new ArrayList<TagFilterPattern>();
-  };
+    private final List<TagFilterPattern> tags = new ArrayList<>();
+  }
 
 
   /**
@@ -204,7 +203,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof MeterFilterPattern)) return false;
+      if (!(obj instanceof MeterFilterPattern)) return false;
       MeterFilterPattern other = (MeterFilterPattern) obj;
       return namePattern.equals(other.namePattern) && values.equals(other.values);
     }
@@ -226,8 +225,8 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     public List<ValueFilterPattern> getValues() {
       return values;
     }
-    private final List<ValueFilterPattern> values = new ArrayList<ValueFilterPattern>();
-  };
+    private final List<ValueFilterPattern> values = new ArrayList<>();
+  }
 
 
   /**
@@ -240,7 +239,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     public List<ValueFilterPattern> getInclude() {
       return include;
     }
-    private List<ValueFilterPattern> include = new ArrayList<ValueFilterPattern>();
+    private final List<ValueFilterPattern> include = new ArrayList<>();
 
     /**
      * The value patterns that cannot be satisifed to include.
@@ -249,7 +248,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     public List<ValueFilterPattern> getExclude() {
       return exclude;
     }
-    private List<ValueFilterPattern> exclude = new ArrayList<ValueFilterPattern>();
+    private final List<ValueFilterPattern> exclude = new ArrayList<>();
 
 
     /**
@@ -270,7 +269,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof IncludeExcludePatterns)) {
+      if (!(obj instanceof IncludeExcludePatterns)) {
         return false;
       }
       IncludeExcludePatterns other = (IncludeExcludePatterns) obj;
@@ -304,7 +303,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
       }
       return ok;
     }
-  };
+  }
 
   /**
    * Constructor.
@@ -324,7 +323,7 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
    * Implements the MeasurementFilter interface.
    */
   @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
-  public boolean test(Measurement measurement) {
+  @Override public boolean test(Measurement measurement) {
     IncludeExcludePatterns patterns = metricToPatterns(measurement.id().name());
     return patterns != null && patterns.test(measurement);
   }
@@ -371,12 +370,12 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
   /**
    * All the meter filter patterns that can be satisfied.
    */
-  private final List<MeterFilterPattern> includePatterns = new ArrayList<MeterFilterPattern>();
+  private final List<MeterFilterPattern> includePatterns = new ArrayList<>();
 
   /**
    * All the meter filter patterns that cannot be satisfied.
    */
-  private final List<MeterFilterPattern> excludePatterns = new ArrayList<MeterFilterPattern>();
+  private final List<MeterFilterPattern> excludePatterns = new ArrayList<>();
 
   /**
    * A cache of previously computed includeExcludePatterns.
@@ -384,6 +383,6 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
    * we'll cache previous results for the next time we apply the filter.
    */
   private final Map<String, IncludeExcludePatterns> metricNameToPatterns
-      = new HashMap<String, IncludeExcludePatterns>();
-};
+      = new HashMap<>();
+}
 

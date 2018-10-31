@@ -227,7 +227,7 @@ public final class GcLogger {
   }
 
   private class GcNotificationListener implements NotificationListener {
-    public void handleNotification(Notification notification, Object ref) {
+    @Override public void handleNotification(Notification notification, Object ref) {
       final String type = notification.getType();
       if (type.equals(GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION)) {
         CompositeData cd = (CompositeData) notification.getUserData();

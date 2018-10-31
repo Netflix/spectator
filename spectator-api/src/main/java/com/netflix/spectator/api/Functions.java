@@ -62,7 +62,7 @@ public final class Functions {
    */
   public static DoubleFunction<AtomicLong> age(final Clock clock) {
     return new DoubleFunction<AtomicLong>() {
-      public double apply(double t) {
+      @Override public double apply(double t) {
         return (clock.wallTime() - t) / 1000.0;
       }
     };
