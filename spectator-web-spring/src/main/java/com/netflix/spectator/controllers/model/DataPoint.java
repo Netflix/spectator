@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.controllers.model;
 
 import com.netflix.spectator.api.Measurement;
@@ -28,6 +27,7 @@ import java.util.Objects;
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
+@SuppressWarnings("PMD.DataClass")
 public class DataPoint {
   /**
    * Factory method to create a DataPoint from a Measurement.
@@ -65,7 +65,7 @@ public class DataPoint {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof DataPoint)) return false;
+    if (!(obj instanceof DataPoint)) return false;
     DataPoint other = (DataPoint) obj;
     return timestamp == other.timestamp && (Math.abs(value - other.value) < 0.001);
   }
@@ -75,7 +75,7 @@ public class DataPoint {
     return Objects.hash(timestamp, value);
   }
 
-  private long timestamp;
-  private double value;
-};
+  private final long timestamp;
+  private final double value;
+}
 

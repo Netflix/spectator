@@ -110,8 +110,8 @@ public final class PercentileBuckets {
         "pcts is not the same size as results array");
 
     long total = 0L;
-    for (int i = 0; i < counts.length; ++i) {
-      total += counts[i];
+    for (long c : counts) {
+      total += c;
     }
 
     int pctIdx = 0;

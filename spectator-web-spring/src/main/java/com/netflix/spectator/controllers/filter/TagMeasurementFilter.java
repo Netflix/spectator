@@ -56,7 +56,7 @@ public class TagMeasurementFilter implements Predicate<Measurement> {
    * Implements MeasurementFilter interface.
    */
   @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
-  public boolean test(Measurement measurement) {
+  @Override public boolean test(Measurement measurement) {
     Id id = measurement.id();
     if (!stringMatches(id.name(), meterNamePattern)) {
         return false;
@@ -75,4 +75,4 @@ public class TagMeasurementFilter implements Predicate<Measurement> {
 
     return true;
   }
-};
+}

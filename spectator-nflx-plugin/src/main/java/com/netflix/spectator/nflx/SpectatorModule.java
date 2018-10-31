@@ -176,7 +176,7 @@ public final class SpectatorModule extends AbstractModule {
       SpectatorContext.setRegistry(registry);
     }
 
-    public void close() {
+    @Override public void close() {
       registry.stop();
     }
 

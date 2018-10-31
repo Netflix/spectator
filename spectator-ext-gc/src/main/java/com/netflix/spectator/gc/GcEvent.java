@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Date;
 /**
  * Metadata about a garbage collection event.
  */
+@SuppressWarnings("PMD.DataClass")
 public class GcEvent {
 
   private static final long ONE_KIBIBYTE = 1 << 10;
