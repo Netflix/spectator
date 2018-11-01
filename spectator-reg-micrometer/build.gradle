@@ -1,0 +1,12 @@
+dependencies {
+  compileApi project(':spectator-api')
+  compile 'io.micrometer:micrometer-core:1.1.0'
+}
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.micrometer"
+    )
+  }
+}
