@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,5 +128,15 @@ public interface Id {
       tmp = tmp.withTag(entry.getKey(), entry.getValue());
     }
     return tmp;
+  }
+
+  /**
+   * Create an immutable Id with the provided name. In many cases it is preferable to use
+   * {@link Registry#createId(String)} instead so that the overhead for instrumentation can
+   * be mostly removed when choosing to use a NoopRegistry. Using this method directly the Id
+   * will always be created.
+   */
+  static Id create(String name) {
+    return new DefaultId(name);
   }
 }
