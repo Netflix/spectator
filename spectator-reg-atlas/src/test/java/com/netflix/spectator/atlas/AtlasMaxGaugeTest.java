@@ -93,4 +93,14 @@ public class AtlasMaxGaugeTest {
     gauge.set(1);
     Assert.assertFalse(gauge.hasExpired());
   }
+
+  @Test
+  public void measureTimestamp() {
+    long start = clock.wallTime();
+
+    clock.setWallTime(start + step);
+    Assert.assertEquals(start + step, gauge.measure().iterator().next().timestamp());
+    clock.setWallTime(start + step * 2);
+    Assert.assertEquals(start + step * 2, gauge.measure().iterator().next().timestamp());
+  }
 }
