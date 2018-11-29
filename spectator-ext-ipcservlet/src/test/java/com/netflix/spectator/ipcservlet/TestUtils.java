@@ -64,8 +64,8 @@ final class TestUtils {
   }
 
   static void checkStatus(Id id, String expected) {
-    String endpoint = Utils.getTagValue(id, IpcTagKey.statusDetail.key());
-    Assert.assertEquals("HTTP_" + expected, endpoint);
+    String endpoint = Utils.getTagValue(id, IpcTagKey.httpStatus.key());
+    Assert.assertEquals(expected, endpoint);
   }
 
   static void checkClientStatus(Registry registry, String expected) {
