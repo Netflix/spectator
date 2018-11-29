@@ -458,19 +458,22 @@ public final class IpcLogEntry {
   }
 
   /**
-   * Set the HTTP status code for this request. For the metrics this will be used to populate
-   * the {@link #withErrorReason(String)}.
+   * Set the HTTP status code for this request. If not already set, then this will set an
+   * appropriate value for {@link #withStatus(IpcStatus)} and {@link #withResult(IpcResult)}
+   * based on the status code.
    */
   public IpcLogEntry withHttpStatus(int httpStatus) {
-    this.httpStatus = httpStatus;
-    if (statusDetail == null && httpStatus >= 100 & httpStatus < 600) {
-      statusDetail = "HTTP_" + httpStatus;
-    }
-    if (status == null) {
-      status = IpcStatus.forHttpStatus(httpStatus);
-    }
-    if (result == null) {
-      result = status.result();
+    if (httpStatus >= 100 && httpStatus < 600) {
+      this.httpStatus = httpStatus;
+      if (status == null) {
+        status = IpcStatus.forHttpStatus(httpStatus);
+      }
+      if (result == null) {
+        result = status.result();
+      }
+    } else {
+      // If an invalid HTTP status code is passed in
+      this.httpStatus = -1;
     }
     return this;
   }
@@ -653,6 +656,7 @@ public final class IpcLogEntry {
     putTag(tags, IpcTagKey.vip.key(), vip);
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);
+    putTag(tags, IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
     putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
 
     return registry.createId(name, tags);

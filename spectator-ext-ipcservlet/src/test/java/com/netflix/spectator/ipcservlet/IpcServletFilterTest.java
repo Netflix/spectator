@@ -106,7 +106,7 @@ public class IpcServletFilterTest {
   public void validateIdBadRequest() throws Exception {
     client.post(baseUri.resolve("/bad/12345")).send();
     checkResult(registry, "failure");
-    checkErrorReason(registry, "HTTP_400");
+    checkErrorReason(registry, null);
     checkStatus(registry, "400");
     checkMethod(registry, "POST");
     checkEndpoint(registry, "/bad");
@@ -117,7 +117,7 @@ public class IpcServletFilterTest {
   public void validateIdThrow() throws Exception {
     client.get(baseUri.resolve("/throw/12345")).send();
     checkResult(registry, "failure");
-    checkClientErrorReason(registry, "HTTP_500");
+    checkClientErrorReason(registry, null);
     checkServerErrorReason(registry, "RuntimeException");
     checkMethod(registry, "GET");
     checkClientEndpoint(registry, null);
