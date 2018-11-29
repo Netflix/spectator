@@ -21,6 +21,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Utils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -679,5 +680,21 @@ public class IpcLogEntryTest {
         .log();
 
     IpcMetric.validate(registry);
+  }
+
+  @Test
+  public void endpointUnknownIfNotSet() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .markStart()
+        .markEnd()
+        .log();
+
+    registry.counters().forEach(c -> {
+      Assert.assertEquals("unknown", Utils.getTagValue(c.id(), "ipc.endpoint"));
+    });
   }
 }

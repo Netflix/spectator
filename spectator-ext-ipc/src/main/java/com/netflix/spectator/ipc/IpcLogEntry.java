@@ -610,6 +610,10 @@ public final class IpcLogEntry {
     return attemptFinal;
   }
 
+  private String getEndpoint() {
+    return (endpoint == null) ? "unknown" : endpoint;
+  }
+
   private boolean isClient() {
     return marker != null && "ipc-client".equals(marker.getName());
   }
@@ -649,7 +653,7 @@ public final class IpcLogEntry {
     }
 
     // Optional for both client and server
-    putTag(tags, IpcTagKey.endpoint.key(), endpoint);
+    putTag(tags, IpcTagKey.endpoint.key(), getEndpoint());
     putTag(tags, IpcTagKey.vip.key(), vip);
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);

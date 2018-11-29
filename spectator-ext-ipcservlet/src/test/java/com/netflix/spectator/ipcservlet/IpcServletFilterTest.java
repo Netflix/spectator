@@ -120,7 +120,7 @@ public class IpcServletFilterTest {
     checkClientErrorReason(registry, "HTTP_500");
     checkServerErrorReason(registry, "RuntimeException");
     checkMethod(registry, "GET");
-    checkClientEndpoint(registry, null);
+    checkClientEndpoint(registry, "unknown");
     checkServerEndpoint(registry, "/throw");
     IpcMetric.validate(registry);
   }
