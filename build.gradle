@@ -13,7 +13,7 @@ buildscript {
 }
 
 plugins {
-  id 'me.champeau.gradle.jmh' version '0.4.5'
+  id 'me.champeau.gradle.jmh' version '0.4.7'
   id "com.github.spotbugs" version "1.6.3" apply false
 }
 
@@ -76,15 +76,15 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.19'
-    warmupIterations = 10
+    jmhVersion = '1.21'
+    warmupIterations = 5
     iterations = 10
     fork = 1
     threads = 1
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = 'warn'
-    include = ['.*DefaultConfig.*']
+    include = ['.*PatternMatching.*']
   }
 
   jacoco {
