@@ -104,6 +104,13 @@ public class AsciiSetTest {
     Assert.assertFalse(s.contains('-'));
   }
 
+  @Test
+  public void tab() {
+    AsciiSet s = AsciiSet.fromPattern("\t");
+    Assert.assertTrue(s.contains('\t'));
+    Assert.assertFalse(s.contains(' '));
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void badReplacement() {
     AsciiSet s = AsciiSet.fromPattern("0-2A-C");
