@@ -34,15 +34,18 @@ E	[a-z&&[^m-p]]	a
 E	[a-z&&[^m-p]]	m
 E	[a-z&&[^m-p]]	q
 E	[^c[a]]	c
-E	[^c[a]]	a
+# JDK8 a matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+U	[^c[a]]	a
 E	[^a-d[m-p]]	a
 E	[^a-d[m-p]]	e
-E	[^a-d[m-p]]	n
+# JDK8 n matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+U	[^a-d[m-p]]	n
 E	[a-d[^m-p]]	a
 E	[a-d[^m-p]]	e
 E	[a-d[^m-p]]	n
-E	[^a-d[^m-p]]	a
-E	[^a-d[^m-p]]	e
+# JDK8 a and e matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+U	[^a-d[^m-p]]	a
+U	[^a-d[^m-p]]	e
 E	[^a-d[^m-p]]	n
 E	[a-c&&g-i&&m-p]	b
 E	[a-c&&g-i&&m-p]	g
