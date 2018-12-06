@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Netflix, Inc.
+ * Copyright 2014-2018 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.aws;
 
 import com.amazonaws.metrics.MetricCollector;
@@ -27,6 +26,7 @@ import com.netflix.spectator.impl.Preconditions;
  */
 public class SpectatorMetricCollector extends MetricCollector {
     private final RequestMetricCollector requestMetricCollector;
+    private final ServiceMetricCollector serviceMetricCollector;
 
     /**
      * Constructs a new instance.
@@ -36,6 +36,7 @@ public class SpectatorMetricCollector extends MetricCollector {
         Preconditions.checkNotNull(registry, "registry");
 
         this.requestMetricCollector = new SpectatorRequestMetricCollector(registry);
+        this.serviceMetricCollector = new SpectatorServiceMetricCollector(registry);
     }
 
     @Override public boolean start() {
@@ -55,6 +56,6 @@ public class SpectatorMetricCollector extends MetricCollector {
     }
 
     @Override public ServiceMetricCollector getServiceMetricCollector() {
-        return ServiceMetricCollector.NONE;
+        return serviceMetricCollector;
     }
 }
