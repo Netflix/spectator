@@ -35,6 +35,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.zip.Deflater;
 
 /**
@@ -205,6 +206,15 @@ public class HttpRequestBuilder {
   public HttpRequestBuilder withSSLSocketFactory(SSLSocketFactory factory) {
     requireHttps("ssl cannot be used with http, use https");
     this.sslFactory = factory;
+    return this;
+  }
+
+  /**
+   * Provides access to the {@link IpcLogEntry} object to make adjustments if needed. For
+   * most common usage the default should be fine.
+   */
+  public HttpRequestBuilder customizeLogging(Consumer<IpcLogEntry> f) {
+    f.accept(entry);
     return this;
   }
 
