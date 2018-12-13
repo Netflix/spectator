@@ -154,6 +154,16 @@ public class BucketFunctionsTest {
   }
 
   @Test
+  public void bytes2M() {
+    LongFunction<String> f = BucketFunctions.bytes(2 * 1024 * 1024);
+    Assert.assertEquals("negative", f.apply(-1L));
+    Assert.assertEquals("0256_KiB", f.apply(761));
+    Assert.assertEquals("0512_KiB", f.apply(400_000));
+    Assert.assertEquals("1024_KiB", f.apply(512 * 1024 + 1));
+    Assert.assertEquals("large", f.apply(2 * 1024 * 1024 + 1));
+  }
+
+  @Test
   public void bytesMaxValue() {
     LongFunction<String> f = BucketFunctions.bytes(Long.MAX_VALUE);
     Assert.assertEquals("negative", f.apply(-1L));
@@ -171,6 +181,16 @@ public class BucketFunctionsTest {
     Assert.assertEquals("05_k", f.apply(4567));
     Assert.assertEquals("20_k", f.apply(15761));
     Assert.assertEquals("large", f.apply(20001));
+  }
+
+  @Test
+  public void decimal2M() {
+    LongFunction<String> f = BucketFunctions.decimal(2_000_000);
+    Assert.assertEquals("negative", f.apply(-1L));
+    Assert.assertEquals("0250_k", f.apply(761));
+    Assert.assertEquals("0500_k", f.apply(456_000));
+    Assert.assertEquals("1000_k", f.apply(576_100));
+    Assert.assertEquals("large", f.apply(2_000_001));
   }
 
   @Test

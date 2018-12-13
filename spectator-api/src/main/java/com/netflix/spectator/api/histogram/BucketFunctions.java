@@ -85,9 +85,10 @@ public final class BucketFunctions {
     final String[] decimalUnits = {"", "_k", "_M", "_G", "_T", "_P"};
     for (int i = 0; i < decimalUnits.length; ++i) {
       final int pow = i * 3;
-      DECIMAL_FORMATTERS.add(dec(10,   pow, 1, decimalUnits[i]));
-      DECIMAL_FORMATTERS.add(dec(100,  pow, 2, decimalUnits[i]));
-      DECIMAL_FORMATTERS.add(dec(1000, pow, 3, decimalUnits[i]));
+      DECIMAL_FORMATTERS.add(dec(10,    pow, 1, decimalUnits[i]));
+      DECIMAL_FORMATTERS.add(dec(100,   pow, 2, decimalUnits[i]));
+      DECIMAL_FORMATTERS.add(dec(1000,  pow, 3, decimalUnits[i]));
+      DECIMAL_FORMATTERS.add(dec(10000, pow, 4, decimalUnits[i]));
     }
     DECIMAL_FORMATTERS.add(new ValueFormatter(Long.MAX_VALUE, 1, "_E", v -> v / pow10(1, 18)));
   }

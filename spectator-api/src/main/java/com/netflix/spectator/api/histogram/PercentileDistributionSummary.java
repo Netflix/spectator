@@ -59,8 +59,8 @@ public class PercentileDistributionSummary implements DistributionSummary {
 
   /**
    * Creates a distribution summary object that can be used for estimating percentiles.
-   * <b>Percentile timers are expensive compared to basic distribution summaries from the
-   * registry.</b> Be diligent with ensuring that any additional dimensions have a small
+   * <b>Percentile distribution summaries are expensive compared to basic distribution summaries
+   * from the registry.</b> Be diligent with ensuring that any additional dimensions have a small
    * bounded cardinality. It is also highly recommended to explicitly set the threshold
    * (see {@link Builder#withRange(long, long)}) whenever possible.
    *
@@ -174,7 +174,7 @@ public class PercentileDistributionSummary implements DistributionSummary {
 
   // Lazily load the counter for a given bucket. This avoids the allocation for
   // creating the id and the map lookup after the first time a given bucket is
-  // accessed for a timer.
+  // accessed for a distribution summary.
   private Counter counterFor(int i) {
     Counter c = counters.get(i);
     if (c == null) {
