@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import java.util.zip.Deflater;
 
 /**
  * Registry for reporting deltas to an aggregation service. This registry is intended for
@@ -119,6 +120,7 @@ public final class StatelessRegistry extends AbstractRegistry {
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
             .withContent("application/json", payload)
+            .compress(Deflater.BEST_SPEED)
             .send();
         if (res.status() != 200) {
           logger.warn("failed to send metrics, status {}: {}", res.status(), res.entityAsString());
