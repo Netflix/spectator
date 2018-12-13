@@ -229,13 +229,18 @@ public abstract class AbstractRegistry implements Registry {
    * The SwapMeter types that are returned will lookup a new copy on the next access.
    */
   protected void removeExpiredMeters() {
+    int total = 0;
+    int expired = 0;
     Iterator<Map.Entry<Id, Meter>> it = meters.entrySet().iterator();
     while (it.hasNext()) {
+      ++total;
       Map.Entry<Id, Meter> entry = it.next();
       Meter m = entry.getValue();
       if (m.hasExpired()) {
+        ++expired;
         it.remove();
       }
     }
+    logger.debug("removed {} expired meters out of {} total", expired, total);
   }
 }

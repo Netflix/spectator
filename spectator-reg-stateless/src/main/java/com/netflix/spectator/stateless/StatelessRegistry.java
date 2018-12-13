@@ -126,6 +126,7 @@ public final class StatelessRegistry extends AbstractRegistry {
           logger.warn("failed to send metrics, status {}: {}", res.status(), res.entityAsString());
         }
       }
+      removeExpiredMeters();
     } catch (Exception e) {
       logger.warn("failed to send metrics", e);
     }
