@@ -25,7 +25,7 @@ import com.netflix.spectator.impl.AtomicDouble;
 import java.util.Collections;
 
 /**
- * Counter that reports a rate per second to Atlas.
+ * Meter that reports a single value to Atlas.
  */
 class AtlasGauge extends AtlasMeter implements Gauge {
 
