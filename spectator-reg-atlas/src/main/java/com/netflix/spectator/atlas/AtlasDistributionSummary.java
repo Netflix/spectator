@@ -33,12 +33,12 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <ul>
  *   <li><b>count:</b> counter incremented each time record is called</li>
- *   <li><b>totalTime:</b> counter incremented by the recorded amount</li>
+ *   <li><b>totalAmount:</b> counter incremented by the recorded amount</li>
  *   <li><b>totalOfSquares:</b> counter incremented by the recorded amount<sup>2</sup></li>
  *   <li><b>max:</b> maximum recorded amount</li>
  * </ul>
  *
- * <p>Having an explicit {@code totalTime} and {@code count} on the backend
+ * <p>Having an explicit {@code totalAmount} and {@code count} on the backend
  * can be used to calculate an accurate average for an arbitrary grouping. The
  * {@code totalOfSquares} is used for computing a standard deviation.</p>
  *
