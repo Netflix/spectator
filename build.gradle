@@ -26,10 +26,6 @@ allprojects {
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
   apply plugin: 'nebula.netflixoss'
-
-  task wrapper(type: Wrapper) {
-    gradleVersion = '4.9'
-  }
 }
 
 subprojects {
