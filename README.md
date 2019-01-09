@@ -11,7 +11,7 @@ Simple library for instrumenting code to record dimensional time series.
 ## Documentation
 
 * [Wiki](http://netflix.github.io/spectator/en/latest/)
-* [Javadoc](http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/)
+* [Javadoc](https://www.javadoc.io/doc/com.netflix.spectator/spectator-api/)
 * [![Build Status](https://travis-ci.org/Netflix/spectator.svg)](https://travis-ci.org/Netflix/spectator/builds)
 
 ## Dependencies
