@@ -32,7 +32,6 @@ subprojects {
   apply plugin: 'nebula.compile-api'
   apply plugin: 'java'
   apply plugin: 'build-dashboard'
-  apply plugin: 'jacoco'
   apply plugin: 'com.github.spotbugs'
   apply plugin: 'checkstyle'
   apply plugin: 'pmd'
@@ -87,19 +86,6 @@ subprojects {
     include = ['.*PatternMatching.*']
   }
 
-  jacoco {
-    toolVersion = "0.8.2"
-  }
-
-  jacocoTestReport {
-    additionalSourceDirs = files(sourceSets.main.allJava.srcDirs)
-    reports {
-      xml.enabled false
-      csv.enabled false
-      html.destination file("${buildDir}/reports/jacoco")
-    }
-  }
-  
   checkstyle {
     toolVersion = '8.14'
     ignoreFailures = false 
