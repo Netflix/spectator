@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,8 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.management.ObjectName;
 import java.util.ArrayList;
@@ -34,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class CassandraTest {
 
   private final Config config = ConfigFactory.load("cassandra");
@@ -95,16 +92,16 @@ public class CassandraTest {
 
     JmxData data = timer("keyspace=test,name=ReadLatency,scope=foo,type=ColumnFamily", 0);
     List<Measurement> ms = measure(r, configs, data);
-    Assert.assertEquals(7, ms.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(7, ms.size());
+    Assertions.assertEquals(
         50.0e-4,
         Utils.first(ms, "statistic", "percentile_50").value(),
         1e-12);
 
     data = timer("keyspace=test,name=ReadLatency,scope=foo,type=ColumnFamily", 1);
     ms = measure(r, configs, data);
-    Assert.assertEquals(7, ms.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(7, ms.size());
+    Assertions.assertEquals(
         50.01e-4,
         Utils.first(ms, "statistic", "percentile_50").value(),
         1e-12);
@@ -118,24 +115,24 @@ public class CassandraTest {
 
     JmxData data = timer("keyspace=test,name=ReadLatency,scope=foo,type=ColumnFamily", 0);
     List<Measurement> ms = measure(r, configs, data);
-    Assert.assertEquals(7, ms.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(7, ms.size());
+    Assertions.assertEquals(
         50.0e-4,
         Utils.first(ms, "statistic", "percentile_50").value(),
         1e-12);
 
     data = timer("keyspace=test,name=ReadLatency,scope=foo,type=ColumnFamily", 0);
     ms = measure(r, configs, data);
-    Assert.assertEquals(7, ms.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(7, ms.size());
+    Assertions.assertEquals(
         0.0,
         Utils.first(ms, "statistic", "percentile_50").value(),
         1e-12);
 
     data = timer("keyspace=test,name=ReadLatency,scope=foo,type=ColumnFamily", 1);
     ms = measure(r, configs, data);
-    Assert.assertEquals(7, ms.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(7, ms.size());
+    Assertions.assertEquals(
         50.01e-4,
         Utils.first(ms, "statistic", "percentile_50").value(),
         1e-12);

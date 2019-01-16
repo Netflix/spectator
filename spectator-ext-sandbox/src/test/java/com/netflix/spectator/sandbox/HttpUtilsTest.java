@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,14 @@
  */
 package com.netflix.spectator.sandbox;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.Deflater;
 
-@RunWith(JUnit4.class)
 public class HttpUtilsTest {
 
   private String extract(String u) {
@@ -34,30 +31,30 @@ public class HttpUtilsTest {
 
   @Test
   public void relativeUri() {
-    Assert.assertEquals("default", extract("/foo"));
+    Assertions.assertEquals("default", extract("/foo"));
   }
 
   @Test
   public void dashFirst() {
-    Assert.assertEquals("ec2", extract("http://ec2-127-0-0-1.compute-1.amazonaws.com/foo"));
+    Assertions.assertEquals("ec2", extract("http://ec2-127-0-0-1.compute-1.amazonaws.com/foo"));
   }
 
   @Test
   public void dotFirst() {
-    Assert.assertEquals("foo", extract("http://foo.test.netflix.com/foo"));
+    Assertions.assertEquals("foo", extract("http://foo.test.netflix.com/foo"));
   }
 
   @Test
   public void gzip() throws IOException {
     byte[] data = "foo bar baz".getBytes(StandardCharsets.UTF_8);
     String result = new String(HttpUtils.gunzip(HttpUtils.gzip(data)), StandardCharsets.UTF_8);
-    Assert.assertEquals("foo bar baz", result);
+    Assertions.assertEquals("foo bar baz", result);
   }
 
   @Test
   public void gzipWithLevel() throws IOException {
     byte[] data = "foo bar baz".getBytes(StandardCharsets.UTF_8);
     String result = new String(HttpUtils.gunzip(HttpUtils.gzip(data, Deflater.BEST_SPEED)), StandardCharsets.UTF_8);
-    Assert.assertEquals("foo bar baz", result);
+    Assertions.assertEquals("foo bar baz", result);
   }
 }

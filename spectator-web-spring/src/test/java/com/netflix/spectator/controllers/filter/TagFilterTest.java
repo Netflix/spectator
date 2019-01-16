@@ -22,13 +22,10 @@ import com.netflix.spectator.api.Measurement;
 
 import java.util.function.Predicate;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class TagFilterTest {
   Id idA = new TestId("idA");
   Id idB = new TestId("idB");
@@ -45,21 +42,21 @@ public class TagFilterTest {
   @Test
   public void testFilteredName() {
     Predicate<Measurement> filter = new TagMeasurementFilter("idA", null, null);
-    Assert.assertTrue(filter.test(measureAXY));
-    Assert.assertFalse(filter.test(measureBXY));
+    Assertions.assertTrue(filter.test(measureAXY));
+    Assertions.assertFalse(filter.test(measureBXY));
   }
 
   @Test
   public void collectFilteredTagName() {
     Predicate<Measurement> filter = new TagMeasurementFilter(null, "tagZ", null);
-    Assert.assertTrue(filter.test(measureAXZ));
-    Assert.assertFalse(filter.test(measureAXY));
+    Assertions.assertTrue(filter.test(measureAXZ));
+    Assertions.assertFalse(filter.test(measureAXY));
   }
 
   @Test
   public void collectFilteredTagValue() {
     Predicate<Measurement> filter = new TagMeasurementFilter(null, null, "Z");
-    Assert.assertTrue(filter.test(measureAXZ));
-    Assert.assertFalse(filter.test(measureAXY));
+    Assertions.assertTrue(filter.test(measureAXZ));
+    Assertions.assertFalse(filter.test(measureAXY));
   }
 }

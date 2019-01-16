@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ public abstract class AbstractPatternMatcherTest {
   private void intercept(Class<? extends Throwable> cls, String message, Runnable task) {
     try {
       task.run();
-      Assert.fail("expected " + cls.getName() + " but no exception was thrown");
+      Assertions.fail("expected " + cls.getName() + " but no exception was thrown");
     } catch (Throwable t) {
       if (!cls.isAssignableFrom(t.getClass())) {
         String error = "expected " + cls.getName() + " but received " + t.getClass().getName();
@@ -41,7 +41,7 @@ public abstract class AbstractPatternMatcherTest {
       if (message != null) {
         // Ignore context of the message
         String actual = t.getMessage().split("\n")[0];
-        Assert.assertEquals(message, actual);
+        Assertions.assertEquals(message, actual);
       }
     }
   }
@@ -57,12 +57,12 @@ public abstract class AbstractPatternMatcherTest {
 
   @Test
   public void prefix() {
-    Assert.assertEquals("abc", PatternMatcher.compile("^abc").prefix());
-    Assert.assertNull(PatternMatcher.compile("abc").prefix());
-    Assert.assertEquals("abc", PatternMatcher.compile("^(abc)").prefix());
-    Assert.assertEquals("abc", PatternMatcher.compile("^(abc|abcdef)").prefix());
-    Assert.assertEquals("abc", PatternMatcher.compile("^[a][b][c]").prefix());
-    Assert.assertEquals("abc", PatternMatcher.compile("^[a][b][c]+").prefix());
+    Assertions.assertEquals("abc", PatternMatcher.compile("^abc").prefix());
+    Assertions.assertNull(PatternMatcher.compile("abc").prefix());
+    Assertions.assertEquals("abc", PatternMatcher.compile("^(abc)").prefix());
+    Assertions.assertEquals("abc", PatternMatcher.compile("^(abc|abcdef)").prefix());
+    Assertions.assertEquals("abc", PatternMatcher.compile("^[a][b][c]").prefix());
+    Assertions.assertEquals("abc", PatternMatcher.compile("^[a][b][c]+").prefix());
   }
 
   @Test
@@ -74,11 +74,11 @@ public abstract class AbstractPatternMatcherTest {
 
   @Test
   public void isStartAnchored() {
-    Assert.assertTrue(PatternMatcher.compile("^abc").isStartAnchored());
-    Assert.assertTrue(PatternMatcher.compile("^[a-z]").isStartAnchored());
-    Assert.assertTrue(PatternMatcher.compile("(^a|^b)").isStartAnchored());
-    Assert.assertFalse(PatternMatcher.compile("(^a|b)").isStartAnchored());
-    Assert.assertFalse(PatternMatcher.compile("abc").isStartAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("^abc").isStartAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("^[a-z]").isStartAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("(^a|^b)").isStartAnchored());
+    Assertions.assertFalse(PatternMatcher.compile("(^a|b)").isStartAnchored());
+    Assertions.assertFalse(PatternMatcher.compile("abc").isStartAnchored());
   }
 
   @Test
@@ -89,25 +89,25 @@ public abstract class AbstractPatternMatcherTest {
 
   @Test
   public void isEndAnchored() {
-    Assert.assertTrue(PatternMatcher.compile("abc$").isEndAnchored());
-    Assert.assertTrue(PatternMatcher.compile("[a-z]$").isEndAnchored());
-    Assert.assertTrue(PatternMatcher.compile("(a|b)$").isEndAnchored());
-    Assert.assertFalse(PatternMatcher.compile("(a$|b)").isEndAnchored());
-    Assert.assertFalse(PatternMatcher.compile("abc").isEndAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("abc$").isEndAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("[a-z]$").isEndAnchored());
+    Assertions.assertTrue(PatternMatcher.compile("(a|b)$").isEndAnchored());
+    Assertions.assertFalse(PatternMatcher.compile("(a$|b)").isEndAnchored());
+    Assertions.assertFalse(PatternMatcher.compile("abc").isEndAnchored());
   }
 
   @Test
   public void alwaysMatches() {
-    Assert.assertTrue(PatternMatcher.compile(".*").alwaysMatches());
-    Assert.assertFalse(PatternMatcher.compile(".?").alwaysMatches());
-    Assert.assertFalse(PatternMatcher.compile("$.").alwaysMatches());
+    Assertions.assertTrue(PatternMatcher.compile(".*").alwaysMatches());
+    Assertions.assertFalse(PatternMatcher.compile(".?").alwaysMatches());
+    Assertions.assertFalse(PatternMatcher.compile("$.").alwaysMatches());
   }
 
   @Test
   public void neverMatches() {
-    Assert.assertFalse(PatternMatcher.compile(".*").neverMatches());
-    Assert.assertFalse(PatternMatcher.compile(".?").neverMatches());
-    Assert.assertTrue(PatternMatcher.compile("$.").neverMatches());
+    Assertions.assertFalse(PatternMatcher.compile(".*").neverMatches());
+    Assertions.assertFalse(PatternMatcher.compile(".?").neverMatches());
+    Assertions.assertTrue(PatternMatcher.compile("$.").neverMatches());
   }
 
   @Test
@@ -300,34 +300,40 @@ public abstract class AbstractPatternMatcherTest {
     testRE("(?<foo>abc)", "abc");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void unclosedNamedCapturingGroup() {
-    PatternMatcher.compile("(?<foo)");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile("(?<foo)"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void unbalancedOpeningParen() {
-    PatternMatcher.compile("((abc)");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile("((abc)"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void unbalancedClosingParen() {
-    PatternMatcher.compile("(abc))");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile("(abc))"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void unknownQuantifier() {
-    PatternMatcher.compile(".+*");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile(".+*"));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void controlEscape() {
-    PatternMatcher.compile("\\cM");
+    Assertions.assertThrows(UnsupportedOperationException.class,
+        () -> PatternMatcher.compile("\\cM"));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void inlineFlags() {
-    PatternMatcher.compile("(?u)abc");
+    Assertions.assertThrows(UnsupportedOperationException.class,
+        () -> PatternMatcher.compile("(?u)abc"));
   }
 
   private List<String[]> loadTestFile(String name) throws Exception {

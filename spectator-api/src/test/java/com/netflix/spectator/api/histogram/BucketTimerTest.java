@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,11 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Functions;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class BucketTimerTest {
 
   private long sum(Registry r, String name) {
@@ -40,16 +37,16 @@ public class BucketTimerTest {
         r, r.createId("test"), BucketFunctions.latency(4, TimeUnit.SECONDS));
 
     t.record(3750, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(1, r.timers().count());
-    Assert.assertEquals(1, sum(r, "test"));
+    Assertions.assertEquals(1, r.timers().count());
+    Assertions.assertEquals(1, sum(r, "test"));
 
     t.record(4221, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(2, r.timers().count());
-    Assert.assertEquals(2, sum(r, "test"));
+    Assertions.assertEquals(2, r.timers().count());
+    Assertions.assertEquals(2, sum(r, "test"));
 
     t.record(4221, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(2, r.timers().count());
-    Assert.assertEquals(3, sum(r, "test"));
+    Assertions.assertEquals(2, r.timers().count());
+    Assertions.assertEquals(3, sum(r, "test"));
   }
 
 }

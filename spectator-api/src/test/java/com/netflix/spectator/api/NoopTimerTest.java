@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,25 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@RunWith(JUnit4.class)
 public class NoopTimerTest {
   @Test
   public void testId() {
-    Assert.assertEquals(NoopTimer.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertFalse(NoopTimer.INSTANCE.hasExpired());
+    Assertions.assertEquals(NoopTimer.INSTANCE.id(), NoopId.INSTANCE);
+    Assertions.assertFalse(NoopTimer.INSTANCE.hasExpired());
   }
 
   @Test
   public void testRecord() {
     NoopTimer t = NoopTimer.INSTANCE;
     t.record(42, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(t.count(), 0L);
-    Assert.assertEquals(t.totalTime(), 0L);
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalTime(), 0L);
   }
 
   @Test
@@ -50,7 +47,7 @@ public class NoopTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
+    Assertions.assertTrue(seen);
   }
 
   @Test
@@ -59,14 +56,14 @@ public class NoopTimerTest {
     AtomicBoolean run = new AtomicBoolean();
 
     t.record(() -> run.set(true));
-    Assert.assertTrue(run.get());
+    Assertions.assertTrue(run.get());
   }
 
   @Test
   public void testMeasure() {
     NoopTimer t = NoopTimer.INSTANCE;
     t.record(42, TimeUnit.MILLISECONDS);
-    Assert.assertFalse(t.measure().iterator().hasNext());
+    Assertions.assertFalse(t.measure().iterator().hasNext());
   }
 
 }

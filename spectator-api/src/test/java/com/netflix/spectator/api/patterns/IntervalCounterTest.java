@@ -1,5 +1,5 @@
-/**
- * Copyright 2017 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,22 +23,19 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Utils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(JUnit4.class)
 public class IntervalCounterTest {
 
   private final ManualClock clock = new ManualClock();
   private static final double EPSILON = 1e-12;
 
-  @Before
+  @BeforeEach
   public void before() {
     clock.setWallTime(0L);
     clock.setMonotonicTime(0L);
@@ -50,8 +47,8 @@ public class IntervalCounterTest {
     clock.setWallTime(42 * 1000L);
     Id id = r.createId("test");
     IntervalCounter c = IntervalCounter.get(r, id);
-    Assert.assertEquals(0L, c.count());
-    Assert.assertEquals(42.0, c.secondsSinceLastUpdate(), EPSILON);
+    Assertions.assertEquals(0L, c.count());
+    Assertions.assertEquals(42.0, c.secondsSinceLastUpdate(), EPSILON);
   }
 
   @Test
@@ -59,11 +56,11 @@ public class IntervalCounterTest {
     Registry r = new DefaultRegistry(clock);
     Id id = r.createId("test");
     IntervalCounter c = IntervalCounter.get(r, id);
-    Assert.assertEquals(c.secondsSinceLastUpdate(), 0.0, EPSILON);
+    Assertions.assertEquals(c.secondsSinceLastUpdate(), 0.0, EPSILON);
     clock.setWallTime(1000);
-    Assert.assertEquals(c.secondsSinceLastUpdate(), 1.0, EPSILON);
+    Assertions.assertEquals(c.secondsSinceLastUpdate(), 1.0, EPSILON);
     c.increment();
-    Assert.assertEquals(c.secondsSinceLastUpdate(), 0.0, EPSILON);
+    Assertions.assertEquals(c.secondsSinceLastUpdate(), 0.0, EPSILON);
   }
 
   @Test
@@ -71,11 +68,11 @@ public class IntervalCounterTest {
     Registry r = new DefaultRegistry(clock);
     Id id = r.createId("test");
     Counter c = IntervalCounter.get(r, id);
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     c.increment();
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
     c.increment(41);
-    Assert.assertEquals(42, c.count());
+    Assertions.assertEquals(42, c.count());
   }
 
   private static List<Measurement> getAllMeasurements(Registry registry) {
@@ -97,23 +94,23 @@ public class IntervalCounterTest {
     // all meters should have the correct timestamp
     r.stream().forEach(meter -> {
       for (Measurement m : meter.measure()) {
-        Assert.assertEquals(m.timestamp(), 61000L);
+        Assertions.assertEquals(m.timestamp(), 61000L);
       }
     });
 
     final List<Measurement> measurements = getAllMeasurements(r);
     final double initAge = Utils.first(measurements, Statistic.duration).value();
     final double initCount = Utils.first(measurements, Statistic.count).value();
-    Assert.assertEquals(61.0, initAge, EPSILON);
-    Assert.assertEquals(0.0, initCount, EPSILON);
+    Assertions.assertEquals(61.0, initAge, EPSILON);
+    Assertions.assertEquals(0.0, initCount, EPSILON);
 
     clock.setWallTime(120000L);
     c.increment();
     final List<Measurement> afterMeasurements = getAllMeasurements(r);
     final double afterAge = Utils.first(afterMeasurements, Statistic.duration).value();
     final double afterCount = Utils.first(afterMeasurements, Statistic.count).value();
-    Assert.assertEquals(0.0, afterAge, EPSILON);
-    Assert.assertEquals(1.0, afterCount, EPSILON);
+    Assertions.assertEquals(0.0, afterAge, EPSILON);
+    Assertions.assertEquals(1.0, afterCount, EPSILON);
   }
 
   @Test
@@ -122,6 +119,6 @@ public class IntervalCounterTest {
     Id id = r.createId("test");
     Counter c1 = IntervalCounter.get(r, id);
     Counter c2 = IntervalCounter.get(r, id);
-    Assert.assertSame(c1, c2);
+    Assertions.assertSame(c1, c2);
   }
 }

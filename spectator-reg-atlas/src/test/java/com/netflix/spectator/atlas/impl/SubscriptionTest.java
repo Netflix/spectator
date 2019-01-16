@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,10 @@ package com.netflix.spectator.atlas.impl;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class SubscriptionTest {
 
   @Test
@@ -36,11 +33,12 @@ public class SubscriptionTest {
   @Test
   public void dataExpr() {
     Subscription sub = new Subscription().withExpression(":true,:sum");
-    Assert.assertEquals(new DataExpr.Sum(Query.TRUE), sub.dataExpr());
+    Assertions.assertEquals(new DataExpr.Sum(Query.TRUE), sub.dataExpr());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void dataExprInvalid() {
-    new Subscription().withExpression(":true");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> new Subscription().withExpression(":true"));
   }
 }

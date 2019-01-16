@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,37 @@
 package com.netflix.spectator.agent;
 
 import com.typesafe.config.Config;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(JUnit4.class)
 public class AgentTest {
 
   @Test
   public void loadConfigA() {
     Config config = Agent.loadConfig("a");
-    Assert.assertEquals("a", config.getString("option"));
-    Assert.assertTrue(config.getBoolean("a"));
+    Assertions.assertEquals("a", config.getString("option"));
+    Assertions.assertTrue(config.getBoolean("a"));
   }
 
   @Test
   public void loadConfigAB() {
     Config config = Agent.loadConfig("a,b");
-    Assert.assertEquals("b", config.getString("option"));
-    Assert.assertTrue(config.getBoolean("a"));
-    Assert.assertTrue(config.getBoolean("b"));
+    Assertions.assertEquals("b", config.getString("option"));
+    Assertions.assertTrue(config.getBoolean("a"));
+    Assertions.assertTrue(config.getBoolean("b"));
   }
 
   @Test
   public void loadConfigABC() {
     Config config = Agent.loadConfig("a\tb, \nc");
-    Assert.assertEquals("c", config.getString("option"));
-    Assert.assertTrue(config.getBoolean("a"));
-    Assert.assertTrue(config.getBoolean("b"));
-    Assert.assertTrue(config.getBoolean("c"));
+    Assertions.assertEquals("c", config.getString("option"));
+    Assertions.assertTrue(config.getBoolean("a"));
+    Assertions.assertTrue(config.getBoolean("b"));
+    Assertions.assertTrue(config.getBoolean("c"));
   }
 
   @Test
@@ -63,6 +60,6 @@ public class AgentTest {
     expected.add("b");
     expected.add("c");
 
-    Assert.assertEquals(expected, items);
+    Assertions.assertEquals(expected, items);
   }
 }

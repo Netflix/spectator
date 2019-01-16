@@ -1,5 +1,5 @@
-/**
- * Copyright 2016 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,12 @@ package com.netflix.spectator.gc;
 
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 
-@RunWith(JUnit4.class)
 public class GcEventTest {
 
   @Test
@@ -45,16 +42,16 @@ public class GcEventTest {
         GcEvent event = new GcEvent(info, 0L);
 
         final String eventStr = event.toString();
-        Assert.assertTrue(eventStr.contains("cause=[Allocation Failure]"));
+        Assertions.assertTrue(eventStr.contains("cause=[Allocation Failure]"));
 
         // TODO: need to find a better way to create a fake GcInfo object for tests
         final long max = HelperFunctions.getTotalMaxUsage(gcInfo.getMemoryUsageAfterGc());
         if (max > (1L << 30)) {
-          Assert.assertTrue(eventStr.contains("GiB"));
+          Assertions.assertTrue(eventStr.contains("GiB"));
         } else if (max > (1L << 20)) {
-          Assert.assertTrue(eventStr.contains("MiB"));
+          Assertions.assertTrue(eventStr.contains("MiB"));
         } else {
-          Assert.assertTrue(eventStr.contains("KiB"));
+          Assertions.assertTrue(eventStr.contains("KiB"));
         }
       }
     }

@@ -37,12 +37,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class MetricsControllerTest {
   private Clock clock = new ManualClock(12345L, 0L);
 
@@ -69,11 +66,11 @@ public class MetricsControllerTest {
   public void testMeterToKind() {
     DefaultRegistry r = new DefaultRegistry(clock);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Counter", MetricsController.meterToKind(r, r.counter(idAXY)));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Timer", MetricsController.meterToKind(r, r.timer(idBXY)));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "TestMeter", MetricsController.meterToKind(r, meterA));
   }
 
@@ -102,7 +99,7 @@ public class MetricsControllerTest {
     HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
     expect.put("idA", new MetricValues("Counter", expectedTaggedDataPointsA));
     expect.put("idB", new MetricValues("Counter", expectedTaggedDataPointsB));
-    Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
+    Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
 
   @Test
@@ -126,7 +123,7 @@ public class MetricsControllerTest {
     expect.put("idB", new MetricValues("Counter", expectedTaggedDataPoints));
 
     PolledMeter.update(registry);
-    Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
+    Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
 
   @Test
@@ -140,7 +137,7 @@ public class MetricsControllerTest {
 
     HashMap<String, MetricValues> expect = new HashMap<>();
     PolledMeter.update(registry);
-    Assert.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
+    Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
 
   @Test
@@ -173,7 +170,7 @@ public class MetricsControllerTest {
     expect.put("idA", new MetricValues("Counter", expected_tagged_data_points));
 
     PolledMeter.update(registry);
-    Assert.assertEquals(expect,
+    Assertions.assertEquals(expect,
                         controller.encodeRegistry(registry, allowAll));
   }
 };

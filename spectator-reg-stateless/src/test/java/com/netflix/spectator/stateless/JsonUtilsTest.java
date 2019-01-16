@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,8 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class JsonUtilsTest {
 
   private static final JsonFactory FACTORY = new JsonFactory();
@@ -63,9 +60,9 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(42.0, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(1, values.size());
+    Assertions.assertEquals(1, values.size());
     ms.forEach(m -> {
-      Assert.assertEquals(42.0, values.get(m.id()).value, 1e-12);
+      Assertions.assertEquals(42.0, values.get(m.id()).value, 1e-12);
     });
   }
 
@@ -77,10 +74,10 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(42.0, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(commonTags, ms));
-    Assert.assertEquals(1, values.size());
+    Assertions.assertEquals(1, values.size());
     ms.forEach(m -> {
       Id id = m.id().withTags(commonTags);
-      Assert.assertEquals(42.0, values.get(id).value, 1e-12);
+      Assertions.assertEquals(42.0, values.get(id).value, 1e-12);
     });
   }
 
@@ -89,7 +86,7 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(Double.NaN, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(0, values.size());
+    Assertions.assertEquals(0, values.size());
   }
 
   @Test
@@ -97,7 +94,7 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(0, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(0, values.size());
+    Assertions.assertEquals(0, values.size());
   }
 
   @Test
@@ -105,10 +102,10 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(max(0, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(1, values.size());
+    Assertions.assertEquals(1, values.size());
     ms.forEach(m -> {
       Id id = m.id();
-      Assert.assertEquals(0.0, values.get(id).value, 1e-12);
+      Assertions.assertEquals(0.0, values.get(id).value, 1e-12);
     });
   }
 
@@ -117,7 +114,7 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(42, "test", "statistic", "foo"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(0, values.size());
+    Assertions.assertEquals(0, values.size());
   }
 
   @Test
@@ -125,7 +122,7 @@ public class JsonUtilsTest {
     List<Measurement> ms = new ArrayList<>();
     ms.add(unknown(42, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assert.assertEquals(0, values.size());
+    Assertions.assertEquals(0, values.size());
   }
 
   @Test
@@ -134,10 +131,10 @@ public class JsonUtilsTest {
       List<Measurement> ms = new ArrayList<>();
       ms.add(count(42, "test", "statistic", stat.value()));
       Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-      Assert.assertEquals(1, values.size());
+      Assertions.assertEquals(1, values.size());
       ms.forEach(m -> {
         Id id = m.id();
-        Assert.assertEquals(42.0, values.get(id).value, 1e-12);
+        Assertions.assertEquals(42.0, values.get(id).value, 1e-12);
       });
     }
   }
@@ -149,7 +146,7 @@ public class JsonUtilsTest {
     JsonParser parser = FACTORY.createParser(json);
 
     // Array start
-    Assert.assertEquals(JsonToken.START_ARRAY, parser.nextToken());
+    Assertions.assertEquals(JsonToken.START_ARRAY, parser.nextToken());
 
     // String table
     String[] strings = new String[parser.nextIntValue(-1)];

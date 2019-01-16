@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.ipc;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLException;
 import java.io.IOException;
@@ -28,121 +26,120 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeoutException;
 
-@RunWith(JUnit4.class)
 public class IpcStatusTest {
 
   @Test
   public void forHttpStatusNegative() {
-    Assert.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(-1));
+    Assertions.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(-1));
   }
 
   @Test
   public void forHttpStatus1xx() {
-    Assert.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(100));
+    Assertions.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(100));
   }
 
   @Test
   public void forHttpStatus2xx() {
-    Assert.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(200));
+    Assertions.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(200));
   }
 
   @Test
   public void forHttpStatus3xx() {
-    Assert.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(304));
+    Assertions.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(304));
   }
 
   @Test
   public void forHttpStatus404() {
-    Assert.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(404));
+    Assertions.assertEquals(IpcStatus.success, IpcStatus.forHttpStatus(404));
   }
 
   @Test
   public void forHttpStatus403() {
-    Assert.assertEquals(IpcStatus.access_denied, IpcStatus.forHttpStatus(403));
+    Assertions.assertEquals(IpcStatus.access_denied, IpcStatus.forHttpStatus(403));
   }
 
   @Test
   public void forHttpStatus429() {
-    Assert.assertEquals(IpcStatus.throttled, IpcStatus.forHttpStatus(429));
+    Assertions.assertEquals(IpcStatus.throttled, IpcStatus.forHttpStatus(429));
   }
 
   @Test
   public void forHttpStatus4xx() {
-    Assert.assertEquals(IpcStatus.bad_request, IpcStatus.forHttpStatus(487));
+    Assertions.assertEquals(IpcStatus.bad_request, IpcStatus.forHttpStatus(487));
   }
 
   @Test
   public void forHttpStatus503() {
-    Assert.assertEquals(IpcStatus.unavailable, IpcStatus.forHttpStatus(503));
+    Assertions.assertEquals(IpcStatus.unavailable, IpcStatus.forHttpStatus(503));
   }
 
   @Test
   public void forHttpStatus5xx() {
-    Assert.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(587));
+    Assertions.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(587));
   }
 
   @Test
   public void forHttpStatusTooBig() {
-    Assert.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(123456));
+    Assertions.assertEquals(IpcStatus.unexpected_error, IpcStatus.forHttpStatus(123456));
   }
 
   @Test
   public void forExceptionIO() {
     Throwable t = new IOException();
-    Assert.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionSocket() {
     Throwable t = new SocketException();
-    Assert.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionUnknownHost() {
     Throwable t = new UnknownHostException();
-    Assert.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionConnect() {
     Throwable t = new ConnectException();
-    Assert.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.connection_error, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionTimeout() {
     Throwable t = new TimeoutException();
-    Assert.assertEquals(IpcStatus.timeout, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.timeout, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionSocketTimeout() {
     Throwable t = new SocketTimeoutException();
-    Assert.assertEquals(IpcStatus.timeout, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.timeout, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionIllegalArgument() {
     Throwable t = new IllegalArgumentException();
-    Assert.assertEquals(IpcStatus.bad_request, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.bad_request, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionIllegalState() {
     Throwable t = new IllegalStateException();
-    Assert.assertEquals(IpcStatus.bad_request, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.bad_request, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionRuntime() {
     Throwable t = new RuntimeException();
-    Assert.assertEquals(IpcStatus.unexpected_error, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.unexpected_error, IpcStatus.forException(t));
   }
 
   @Test
   public void forExceptionSSL() {
     Throwable t = new SSLException("test");
-    Assert.assertEquals(IpcStatus.access_denied, IpcStatus.forException(t));
+    Assertions.assertEquals(IpcStatus.access_denied, IpcStatus.forException(t));
   }
 }

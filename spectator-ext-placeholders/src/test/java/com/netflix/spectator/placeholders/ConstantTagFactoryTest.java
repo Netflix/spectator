@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,26 +19,25 @@ import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Tag;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class ConstantTagFactoryTest {
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullTag() {
-    new ConstantTagFactory(null);
+    Assertions.assertThrows(NullPointerException.class, () -> new ConstantTagFactory(null));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullKey() {
-    new ConstantTagFactory(null, "value");
+    Assertions.assertThrows(NullPointerException.class,
+        () -> new ConstantTagFactory(null, "value"));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullValue() {
-    new ConstantTagFactory("key", null);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> new ConstantTagFactory("key", null));
   }
 
   @Test
@@ -47,7 +46,7 @@ public class ConstantTagFactoryTest {
     Tag tag = new BasicTag(expected, "unused");
     TagFactory factory = new ConstantTagFactory(tag);
 
-    Assert.assertEquals(expected, factory.name());
+    Assertions.assertEquals(expected, factory.name());
   }
 
   @Test
@@ -55,7 +54,7 @@ public class ConstantTagFactoryTest {
     String expected = "factoryName";
     TagFactory factory = new ConstantTagFactory(expected, "unused");
 
-    Assert.assertEquals(expected, factory.name());
+    Assertions.assertEquals(expected, factory.name());
   }
 
   @Test
@@ -64,7 +63,7 @@ public class ConstantTagFactoryTest {
     TagFactory factory = new ConstantTagFactory(expected);
     Tag actual = factory.createTag();
 
-    Assert.assertSame(expected, actual);
+    Assertions.assertSame(expected, actual);
   }
 
   @Test
@@ -74,8 +73,8 @@ public class ConstantTagFactoryTest {
     TagFactory factory = new ConstantTagFactory(expectedKey, expectedValue);
     Tag actual = factory.createTag();
 
-    Assert.assertEquals(expectedKey, actual.key());
-    Assert.assertEquals(expectedValue, actual.value());
+    Assertions.assertEquals(expectedKey, actual.key());
+    Assertions.assertEquals(expectedValue, actual.value());
   }
 
   @Test

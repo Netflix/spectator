@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@
 package com.netflix.spectator.log4j;
 
 import org.apache.log4j.Level;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class LevelTagTest {
 
   @Test
@@ -37,7 +34,7 @@ public class LevelTagTest {
         Level.ALL
     };
     for (Level level : levels) {
-      Assert.assertEquals(level, LevelTag.get(level).standardLevel());
+      Assertions.assertEquals(level, LevelTag.get(level).standardLevel());
     }
   }
 
@@ -45,7 +42,7 @@ public class LevelTagTest {
   public void values() {
     for (LevelTag tag : LevelTag.values()) {
       String v = tag.ordinal() + "_" + tag.name();
-      Assert.assertEquals(v, tag.value());
+      Assertions.assertEquals(v, tag.value());
     }
   }
 

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,8 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * Unit tests for the DefaultPlaceholderTimer class.
  */
-@RunWith(JUnit4.class)
 public class DefaultPlaceholderTimerTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -42,8 +39,8 @@ public class DefaultPlaceholderTimerTest {
   public void testInit() {
     Timer timer = new DefaultPlaceholderTimer(new DefaultPlaceholderId("testInit", registry), registry);
 
-    Assert.assertEquals(0L, timer.count());
-    Assert.assertEquals(0L, timer.totalTime());
+    Assertions.assertEquals(0L, timer.count());
+    Assertions.assertEquals(0L, timer.totalTime());
   }
 
   @Test
@@ -53,30 +50,30 @@ public class DefaultPlaceholderTimerTest {
             Collections.singleton(new TestTagFactory(tagValue))));
 
     timer.record(42, TimeUnit.MILLISECONDS);
-    Assert.assertEquals("testRecord:tag=default", timer.id().toString());
-    Assert.assertEquals(timer.count(), 1L);
-    Assert.assertEquals(42000000L, timer.totalTime());
+    Assertions.assertEquals("testRecord:tag=default", timer.id().toString());
+    Assertions.assertEquals(timer.count(), 1L);
+    Assertions.assertEquals(42000000L, timer.totalTime());
 
     tagValue[0] = "value2";
-    Assert.assertEquals("testRecord:tag=value2", timer.id().toString());
-    Assert.assertEquals(0L, timer.count());
-    Assert.assertEquals(0L, timer.totalTime());
+    Assertions.assertEquals("testRecord:tag=value2", timer.id().toString());
+    Assertions.assertEquals(0L, timer.count());
+    Assertions.assertEquals(0L, timer.totalTime());
   }
 
   @Test
   public void testRecordNegative() {
     Timer timer = factory.timer(factory.createId("testRecordNegative"));
     timer.record(-42, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(timer.count(), 0L);
-    Assert.assertEquals(0L, timer.totalTime());
+    Assertions.assertEquals(timer.count(), 0L);
+    Assertions.assertEquals(0L, timer.totalTime());
   }
 
   @Test
   public void testRecordZero() {
     Timer timer = factory.timer(factory.createId("testRecordZero"));
     timer.record(0, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(1L, timer.count(), 1L);
-    Assert.assertEquals(0L, timer.totalTime());
+    Assertions.assertEquals(1L, timer.count(), 1L);
+    Assertions.assertEquals(0L, timer.totalTime());
   }
 
   @Test
@@ -88,9 +85,9 @@ public class DefaultPlaceholderTimerTest {
       clock.setMonotonicTime(500L);
       return expected;
     });
-    Assert.assertEquals(expected, actual);
-    Assert.assertEquals(1L, timer.count());
-    Assert.assertEquals(400L, timer.totalTime());
+    Assertions.assertEquals(expected, actual);
+    Assertions.assertEquals(1L, timer.count());
+    Assertions.assertEquals(400L, timer.totalTime());
   }
 
   @Test
@@ -106,9 +103,9 @@ public class DefaultPlaceholderTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
-    Assert.assertEquals(1L, timer.count());
-    Assert.assertEquals(400L, timer.totalTime());
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(1L, timer.count());
+    Assertions.assertEquals(400L, timer.totalTime());
   }
 
   @Test
@@ -116,8 +113,8 @@ public class DefaultPlaceholderTimerTest {
     Timer timer = factory.timer(factory.createId("testRecordRunnable"));
     clock.setMonotonicTime(100L);
     timer.record(() -> clock.setMonotonicTime(500L));
-    Assert.assertEquals(1L, timer.count());
-    Assert.assertEquals(timer.totalTime(), 400L);
+    Assertions.assertEquals(1L, timer.count());
+    Assertions.assertEquals(timer.totalTime(), 400L);
   }
 
   @Test
@@ -134,9 +131,9 @@ public class DefaultPlaceholderTimerTest {
     } catch (Exception e) {
       actualExc = e;
     }
-    Assert.assertSame(expectedExc, actualExc);
-    Assert.assertEquals(1L, timer.count());
-    Assert.assertEquals(timer.totalTime(), 400L);
+    Assertions.assertSame(expectedExc, actualExc);
+    Assertions.assertEquals(1L, timer.count());
+    Assertions.assertEquals(timer.totalTime(), 400L);
   }
 
   @Test
@@ -145,13 +142,13 @@ public class DefaultPlaceholderTimerTest {
     timer.record(42, TimeUnit.MILLISECONDS);
     clock.setWallTime(3712345L);
     for (Measurement m : timer.measure()) {
-      Assert.assertEquals(m.timestamp(), 3712345L);
+      Assertions.assertEquals(m.timestamp(), 3712345L);
       if (m.id().equals(timer.id().withTag(Statistic.count))) {
-        Assert.assertEquals(1.0, m.value(), 0.1e-12);
+        Assertions.assertEquals(1.0, m.value(), 0.1e-12);
       } else if (m.id().equals(timer.id().withTag(Statistic.totalTime))) {
-        Assert.assertEquals(42e6, m.value(), 0.1e-12);
+        Assertions.assertEquals(42e6, m.value(), 0.1e-12);
       } else {
-        Assert.fail("unexpected id: " + m.id());
+        Assertions.fail("unexpected id: " + m.id());
       }
     }
   }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2016 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,18 @@ package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Tag;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
 /**
  * Unit tests for the MdcTagFactory class.
  */
-@RunWith(JUnit4.class)
 public class MdcTagFactoryTest {
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullName() {
-    new MdcTagFactory(null);
+    Assertions.assertThrows(NullPointerException.class, () -> new MdcTagFactory(null));
   }
 
   @Test
@@ -39,14 +36,14 @@ public class MdcTagFactoryTest {
     String expected = "factoryName";
     TagFactory factory = new MdcTagFactory(expected);
 
-    Assert.assertEquals(expected, factory.name());
+    Assertions.assertEquals(expected, factory.name());
   }
 
   @Test
   public void testNoValueInMdc() {
     TagFactory factory = new MdcTagFactory("unused");
 
-    Assert.assertNull(factory.createTag());
+    Assertions.assertNull(factory.createTag());
   }
 
   @Test
@@ -59,10 +56,10 @@ public class MdcTagFactoryTest {
     try (MDC.MDCCloseable closeable = MDC.putCloseable(mdcName, expectedValue)) {
       Tag actualTag = factory.createTag();
 
-      Assert.assertEquals(expectedTag, actualTag);
+      Assertions.assertEquals(expectedTag, actualTag);
     }
 
     // Make sure that the factory returns null after the MDC has been cleaned up.
-    Assert.assertNull(factory.createTag());
+    Assertions.assertNull(factory.createTag());
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,9 @@ import com.netflix.servo.monitor.Monitor;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -31,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class ServoGaugeTest {
 
   private final ManualClock clock = new ManualClock();
@@ -41,7 +38,7 @@ public class ServoGaugeTest {
     return r.newGauge(r.createId(name));
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     clock.setWallTime(0L);
     clock.setMonotonicTime(0L);
@@ -50,9 +47,9 @@ public class ServoGaugeTest {
   @Test
   public void testInit() {
     Gauge g = newGauge("foo");
-    Assert.assertEquals(g.value(), Double.NaN, 1e-12);
+    Assertions.assertEquals(g.value(), Double.NaN, 1e-12);
     g.set(1.0);
-    Assert.assertEquals(g.value(), 1.0, 1e-12);
+    Assertions.assertEquals(g.value(), 1.0, 1e-12);
   }
 
   @Test
@@ -61,8 +58,8 @@ public class ServoGaugeTest {
     Gauge g = r.gauge(r.createId("foo"));
     g.set(1.0);
 
-    Assert.assertEquals(1, r.getMonitors().size());
-    Assert.assertEquals(1.0, (Double) r.getMonitors().get(0).getValue(0), 1e-12);
+    Assertions.assertEquals(1, r.getMonitors().size());
+    Assertions.assertEquals(1.0, (Double) r.getMonitors().get(0).getValue(0), 1e-12);
   }
 
   @Test
@@ -73,24 +70,24 @@ public class ServoGaugeTest {
     // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Gauge g = newGauge("foo");
-    Assert.assertFalse(g.hasExpired());
+    Assertions.assertFalse(g.hasExpired());
     g.set(42.0);
-    Assert.assertFalse(g.hasExpired());
-    Assert.assertEquals(g.value(), 42.0, 1e-12);
+    Assertions.assertFalse(g.hasExpired());
+    Assertions.assertEquals(g.value(), 42.0, 1e-12);
 
     // Expires with inactivity
     clock.setWallTime(initTime + fifteenMinutes);
-    Assert.assertFalse(g.hasExpired());
+    Assertions.assertFalse(g.hasExpired());
 
     // Expires with inactivity
     clock.setWallTime(initTime + fifteenMinutes + 1);
-    Assert.assertEquals(g.value(), Double.NaN, 1e-12);
-    Assert.assertTrue(g.hasExpired());
+    Assertions.assertEquals(g.value(), Double.NaN, 1e-12);
+    Assertions.assertTrue(g.hasExpired());
 
     // Activity brings it back
     g.set(1.0);
-    Assert.assertEquals(g.value(), 1.0, 1e-12);
-    Assert.assertFalse(g.hasExpired());
+    Assertions.assertEquals(g.value(), 1.0, 1e-12);
+    Assertions.assertFalse(g.hasExpired());
   }
 
   @Test
@@ -100,7 +97,7 @@ public class ServoGaugeTest {
     g.set(1.0);
 
     Map<String, String> tags = r.getMonitors().get(0).getConfig().getTags().asMap();
-    Assert.assertEquals("GAUGE", tags.get("type"));
+    Assertions.assertEquals("GAUGE", tags.get("type"));
   }
 
   @Test
@@ -110,11 +107,11 @@ public class ServoGaugeTest {
     g.set(1.0);
 
     Iterator<Measurement> ms = g.measure().iterator();
-    Assert.assertTrue(ms.hasNext());
+    Assertions.assertTrue(ms.hasNext());
     Measurement m = ms.next();
-    Assert.assertFalse(ms.hasNext());
-    Assert.assertEquals("foo", m.id().name());
-    Assert.assertEquals(1.0, 1.0, 1e-12);
+    Assertions.assertFalse(ms.hasNext());
+    Assertions.assertEquals("foo", m.id().name());
+    Assertions.assertEquals(1.0, 1.0, 1e-12);
   }
 
   @Test
@@ -123,8 +120,8 @@ public class ServoGaugeTest {
     List<Monitor<?>> ms = new ArrayList<>();
     Gauge g = newGauge("foo");
     ((ServoGauge) g).addMonitors(ms);
-    Assert.assertEquals(1, ms.size());
-    Assert.assertEquals("gauge", ms.get(0).getConfig().getTags().getValue("statistic"));
+    Assertions.assertEquals(1, ms.size());
+    Assertions.assertEquals("gauge", ms.get(0).getConfig().getTags().getValue("statistic"));
   }
 
 }

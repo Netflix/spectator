@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class SwapMeterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry();
@@ -44,11 +41,11 @@ public class SwapMeterTest {
     Counter c = new DefaultCounter(clock, counterId);
     SwapCounter sc1 = new SwapCounter(registry, counterId, c);
     SwapCounter sc2 = new SwapCounter(registry, counterId, sc1);
-    Assert.assertFalse(sc2.hasExpired());
+    Assertions.assertFalse(sc2.hasExpired());
     sc2.increment();
-    Assert.assertEquals(1, c.count());
-    Assert.assertEquals(1, sc1.count());
-    Assert.assertEquals(1, sc2.count());
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, sc1.count());
+    Assertions.assertEquals(1, sc2.count());
   }
 
   @Test
@@ -58,8 +55,8 @@ public class SwapMeterTest {
     clock.setWallTime(60000 * 30);
     SwapCounter s1 = new SwapCounter(registry, counterId, c);
     s1.increment();
-    Assert.assertEquals(1, c.count());
-    Assert.assertEquals(1, s1.count());
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, s1.count());
   }
 
   @Test
@@ -69,8 +66,8 @@ public class SwapMeterTest {
     clock.setWallTime(60000 * 30);
     SwapTimer s1 = new SwapTimer(registry, timerId, t);
     s1.record(42, TimeUnit.NANOSECONDS);
-    Assert.assertEquals(1, t.count());
-    Assert.assertEquals(1, s1.count());
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals(1, s1.count());
   }
 
   @Test
@@ -80,8 +77,8 @@ public class SwapMeterTest {
     clock.setWallTime(60000 * 30);
     SwapGauge s1 = new SwapGauge(registry, gaugeId, c);
     s1.set(1.0);
-    Assert.assertEquals(1.0, c.value(), 1e-12);
-    Assert.assertEquals(1.0, s1.value(), 1e-12);
+    Assertions.assertEquals(1.0, c.value(), 1e-12);
+    Assertions.assertEquals(1.0, s1.value(), 1e-12);
   }
 
   @Test
@@ -91,7 +88,7 @@ public class SwapMeterTest {
     clock.setWallTime(60000 * 30);
     SwapDistributionSummary s1 = new SwapDistributionSummary(registry, distSummaryId, c);
     s1.record(1);
-    Assert.assertEquals(1, c.count());
-    Assert.assertEquals(1, s1.count());
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, s1.count());
   }
 }

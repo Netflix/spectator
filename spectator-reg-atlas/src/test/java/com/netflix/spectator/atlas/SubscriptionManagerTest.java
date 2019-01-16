@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,8 @@ import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.ipc.http.HttpClient;
 import com.netflix.spectator.ipc.http.HttpRequestBuilder;
 import com.netflix.spectator.ipc.http.HttpResponse;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -43,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-@RunWith(JUnit4.class)
 public class SubscriptionManagerTest {
 
   private SimpleModule module = new SimpleModule()
@@ -89,7 +86,7 @@ public class SubscriptionManagerTest {
     byte[] data = "{\"expressions\":[]}".getBytes(StandardCharsets.UTF_8);
     SubscriptionManager mgr = newInstance(clock, ok(data));
     mgr.refresh();
-    Assert.assertTrue(mgr.subscriptions().isEmpty());
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
   }
 
   @Test
@@ -98,7 +95,7 @@ public class SubscriptionManagerTest {
     byte[] data = json(sub(1));
     SubscriptionManager mgr = newInstance(clock, ok(data));
     mgr.refresh();
-    Assert.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
   }
 
   @Test
@@ -111,16 +108,16 @@ public class SubscriptionManagerTest {
     SubscriptionManager mgr = newInstance(clock, ok(data1), ok(data2), ok(data2));
 
     mgr.refresh();
-    Assert.assertEquals(set(sub(1), sub(2)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1), sub(2)), new HashSet<>(mgr.subscriptions()));
 
     // Should still contain 1 because it hasn't expired
     mgr.refresh();
-    Assert.assertEquals(set(sub(1), sub(2)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1), sub(2)), new HashSet<>(mgr.subscriptions()));
 
     // Should have removed 1 because it has expired
     clock.setWallTime(Duration.ofMinutes(20).toMillis());
     mgr.refresh();
-    Assert.assertEquals(set(sub(2)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(2)), new HashSet<>(mgr.subscriptions()));
   }
 
   @Test
@@ -133,12 +130,12 @@ public class SubscriptionManagerTest {
 
     SubscriptionManager mgr = newInstance(clock, ok, error);
     mgr.refresh();
-    Assert.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
 
     // Double check it is not expired
     clock.setWallTime(Duration.ofMinutes(20).toMillis());
     mgr.refresh();
-    Assert.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
   }
 
   @Test
@@ -150,12 +147,12 @@ public class SubscriptionManagerTest {
 
     SubscriptionManager mgr = newInstance(clock, error, error);
     mgr.refresh();
-    Assert.assertTrue(mgr.subscriptions().isEmpty());
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
 
     // Double check it is not expired
     clock.setWallTime(Duration.ofMinutes(20).toMillis());
     mgr.refresh();
-    Assert.assertTrue(mgr.subscriptions().isEmpty());
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
   }
 
   @Test
@@ -170,12 +167,12 @@ public class SubscriptionManagerTest {
 
     SubscriptionManager mgr = newInstance(clock, ok, notModified);
     mgr.refresh();
-    Assert.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
 
     // Double check it is not expired
     clock.setWallTime(Duration.ofMinutes(20).toMillis());
     mgr.refresh();
-    Assert.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
   }
 
   @Test
@@ -184,6 +181,6 @@ public class SubscriptionManagerTest {
     byte[] data = "[]".getBytes(StandardCharsets.UTF_8);
     SubscriptionManager mgr = newInstance(clock, ok(data));
     mgr.refresh();
-    Assert.assertTrue(mgr.subscriptions().isEmpty());
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,14 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for the BasicTag class.
  * 
  * Created on 10/1/15.
  */
-@RunWith(JUnit4.class)
 public class BasicTagTest {
 
   @Test
@@ -33,14 +30,14 @@ public class BasicTagTest {
     // NOTE: EqualsVerifier doesn't work with cached hash code
     final BasicTag tag1 = new BasicTag("k1", "v1");
     BasicTag tag2 = new BasicTag("k2", "v2");
-    Assert.assertEquals(tag1, tag1);
-    Assert.assertEquals(tag2, tag2);
-    Assert.assertNotEquals(tag1, tag2);
-    Assert.assertNotEquals(tag1, null);
-    Assert.assertNotEquals(tag1, new Object());
-    Assert.assertNotEquals(tag1, new BasicTag("k1", "v2"));
-    Assert.assertNotEquals(tag1, new BasicTag("k2", "v1"));
-    Assert.assertNotEquals(tag1, new Tag() {
+    Assertions.assertEquals(tag1, tag1);
+    Assertions.assertEquals(tag2, tag2);
+    Assertions.assertNotEquals(tag1, tag2);
+    Assertions.assertNotEquals(tag1, null);
+    Assertions.assertNotEquals(tag1, new Object());
+    Assertions.assertNotEquals(tag1, new BasicTag("k1", "v2"));
+    Assertions.assertNotEquals(tag1, new BasicTag("k2", "v1"));
+    Assertions.assertNotEquals(tag1, new Tag() {
       @Override
       public String key() {
         return tag1.key();
@@ -57,30 +54,30 @@ public class BasicTagTest {
   public void testHashCode() {
     BasicTag tag = new BasicTag("k1", "v1");
 
-    Assert.assertEquals(tag.hashCode(), new BasicTag(tag.key(), tag.value()).hashCode());
+    Assertions.assertEquals(tag.hashCode(), new BasicTag(tag.key(), tag.value()).hashCode());
   }
 
   @Test
   public void testToString() {
     BasicTag tag = new BasicTag("k1", "v1");
 
-    Assert.assertEquals("k1=v1", tag.toString());
+    Assertions.assertEquals("k1=v1", tag.toString());
   }
 
   @Test
   public void testAccessors() {
     BasicTag tag = new BasicTag("k", "v");
-    Assert.assertEquals(tag.key(), "k");
-    Assert.assertEquals(tag.value(), "v");
+    Assertions.assertEquals(tag.key(), "k");
+    Assertions.assertEquals(tag.value(), "v");
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullKey() {
-    new BasicTag(null, "v");
+    Assertions.assertThrows(NullPointerException.class, () -> new BasicTag(null, "v"));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullValue() {
-    new BasicTag("k", null);
+    Assertions.assertThrows(NullPointerException.class, () -> new BasicTag("k", null));
   }
 }

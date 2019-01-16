@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,10 @@ import com.netflix.spectator.ipc.IpcMetric;
 import com.netflix.spectator.ipc.http.HttpClient;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.http.HttpServlet;
@@ -40,13 +38,12 @@ import java.util.EnumSet;
 
 import static com.netflix.spectator.ipcservlet.TestUtils.*;
 
-@RunWith(JUnit4.class)
 public class IpcServletFilterTest {
 
   private static Server server;
   private static URI baseUri;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     server = new Server(new InetSocketAddress("localhost", 0));
     ServletHandler handler = new ServletHandler();
@@ -62,7 +59,7 @@ public class IpcServletFilterTest {
     baseUri = server.getURI();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     server.stop();
   }
@@ -70,7 +67,7 @@ public class IpcServletFilterTest {
   private Registry registry;
   private HttpClient client;
 
-  @Before
+  @BeforeEach
   public void before() {
     registry = new DefaultRegistry();
     client = HttpClient.create(new IpcLogger(registry));

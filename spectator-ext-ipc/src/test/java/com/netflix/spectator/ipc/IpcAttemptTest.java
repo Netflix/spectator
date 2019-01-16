@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,43 +15,40 @@
  */
 package com.netflix.spectator.ipc;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class IpcAttemptTest {
 
   @Test
   public void forAttemptNegative() {
-    Assert.assertEquals(IpcAttempt.unknown, IpcAttempt.forAttemptNumber(-1));
+    Assertions.assertEquals(IpcAttempt.unknown, IpcAttempt.forAttemptNumber(-1));
   }
 
   @Test
   public void forAttemptZero() {
-    Assert.assertEquals(IpcAttempt.unknown, IpcAttempt.forAttemptNumber(0));
+    Assertions.assertEquals(IpcAttempt.unknown, IpcAttempt.forAttemptNumber(0));
   }
 
   @Test
   public void forAttemptOne() {
-    Assert.assertEquals(IpcAttempt.initial, IpcAttempt.forAttemptNumber(1));
+    Assertions.assertEquals(IpcAttempt.initial, IpcAttempt.forAttemptNumber(1));
   }
 
   @Test
   public void forAttemptTwo() {
-    Assert.assertEquals(IpcAttempt.second, IpcAttempt.forAttemptNumber(2));
+    Assertions.assertEquals(IpcAttempt.second, IpcAttempt.forAttemptNumber(2));
   }
 
   @Test
   public void forAttemptThree() {
-    Assert.assertEquals(IpcAttempt.third_up, IpcAttempt.forAttemptNumber(3));
+    Assertions.assertEquals(IpcAttempt.third_up, IpcAttempt.forAttemptNumber(3));
   }
 
   @Test
   public void forAttemptGreaterThanThree() {
     for (int i = 4; i < 1000; ++i) {
-      Assert.assertEquals(IpcAttempt.third_up, IpcAttempt.forAttemptNumber(i));
+      Assertions.assertEquals(IpcAttempt.third_up, IpcAttempt.forAttemptNumber(i));
     }
   }
 }

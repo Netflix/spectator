@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,15 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RunWith(JUnit4.class)
 public class CompositeDistributionSummaryTest {
 
   private final ManualClock clock = new ManualClock();
@@ -42,20 +39,20 @@ public class CompositeDistributionSummaryTest {
   }
 
   private void assertCountEquals(DistributionSummary t, long expected) {
-    Assert.assertEquals(t.count(), expected);
+    Assertions.assertEquals(t.count(), expected);
     for (Registry r : registries) {
-      Assert.assertEquals(r.distributionSummary(id).count(), expected);
+      Assertions.assertEquals(r.distributionSummary(id).count(), expected);
     }
   }
 
   private void assertTotalEquals(DistributionSummary t, long expected) {
-    Assert.assertEquals(t.totalAmount(), expected);
+    Assertions.assertEquals(t.totalAmount(), expected);
     for (Registry r : registries) {
-      Assert.assertEquals(r.distributionSummary(id).totalAmount(), expected);
+      Assertions.assertEquals(r.distributionSummary(id).totalAmount(), expected);
     }
   }
 
-  @Before
+  @BeforeEach
   public void init() {
     registries = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
@@ -95,13 +92,13 @@ public class CompositeDistributionSummaryTest {
     t.record(42);
     clock.setWallTime(3712345L);
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), 3712345L);
+      Assertions.assertEquals(m.timestamp(), 3712345L);
       if (m.id().equals(t.id().withTag(Statistic.count))) {
-        Assert.assertEquals(m.value(), 1.0, 0.1e-12);
+        Assertions.assertEquals(m.value(), 1.0, 0.1e-12);
       } else if (m.id().equals(t.id().withTag(Statistic.totalAmount))) {
-        Assert.assertEquals(m.value(), 42, 0.1e-12);
+        Assertions.assertEquals(m.value(), 42, 0.1e-12);
       } else {
-        Assert.fail("unexpected id: " + m.id());
+        Assertions.fail("unexpected id: " + m.id());
       }
     }
   }

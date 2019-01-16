@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.PatternMatcher;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class OptimizerTest {
 
   @Test
@@ -36,7 +33,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         AnyMatcher.INSTANCE
     );
-    Assert.assertEquals(expected, Optimizer.removeTrueInSequence(input));
+    Assertions.assertEquals(expected, Optimizer.removeTrueInSequence(input));
   }
 
   @Test
@@ -47,7 +44,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE
     );
     Matcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.sequenceWithFalseIsFalse(input));
+    Assertions.assertEquals(expected, Optimizer.sequenceWithFalseIsFalse(input));
   }
 
   @Test
@@ -58,35 +55,35 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE
     );
     Matcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.sequenceWithStuffAfterEndIsFalse(input));
+    Assertions.assertEquals(expected, Optimizer.sequenceWithStuffAfterEndIsFalse(input));
   }
 
   @Test
   public void zeroOrMoreFalse_Repeated() {
     Matcher input = new ZeroOrMoreMatcher(FalseMatcher.INSTANCE, AnyMatcher.INSTANCE);
     Matcher expected = AnyMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
   }
 
   @Test
   public void zeroOrMoreFalse_Next() {
     Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, FalseMatcher.INSTANCE);
     Matcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
   }
 
   @Test
   public void convertEmptyCharClassToFalse() {
     Matcher input = new CharClassMatcher(AsciiSet.none());
     Matcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.convertEmptyCharClassToFalse(input));
+    Assertions.assertEquals(expected, Optimizer.convertEmptyCharClassToFalse(input));
   }
 
   @Test
   public void convertSingleCharClassToSeq() {
     Matcher input = new CharClassMatcher(AsciiSet.fromPattern("a"));
     Matcher expected = new CharSeqMatcher('a');
-    Assert.assertEquals(expected, Optimizer.convertSingleCharClassToSeq(input));
+    Assertions.assertEquals(expected, Optimizer.convertSingleCharClassToSeq(input));
   }
 
   @Test
@@ -96,7 +93,7 @@ public class OptimizerTest {
         new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE)
     );
     Matcher expected = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
   }
 
   @Test
@@ -106,7 +103,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE
     ));
     Matcher expected = SeqMatcher.create(StartMatcher.INSTANCE, AnyMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.removeMatchAnyFollowedByStart(input));
+    Assertions.assertEquals(expected, Optimizer.removeMatchAnyFollowedByStart(input));
   }
 
   @Test
@@ -115,14 +112,14 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         new IndexOfMatcher("foo", TrueMatcher.INSTANCE));
     Matcher expected = new IndexOfMatcher("foo", TrueMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.removeMatchAnyFollowedByIndexOf(input));
+    Assertions.assertEquals(expected, Optimizer.removeMatchAnyFollowedByIndexOf(input));
   }
 
   @Test
   public void removeTrailingMatchAny() {
     Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, EndMatcher.INSTANCE);
     Matcher expected = TrueMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.removeTrailingMatchAny(input));
+    Assertions.assertEquals(expected, Optimizer.removeTrailingMatchAny(input));
   }
 
   @Test
@@ -132,7 +129,7 @@ public class OptimizerTest {
         new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE)
     );
     Matcher expected = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.removeSequentialMatchAny(input));
+    Assertions.assertEquals(expected, Optimizer.removeSequentialMatchAny(input));
   }
 
   @Test
@@ -148,7 +145,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         AnyMatcher.INSTANCE
     );
-    Assert.assertEquals(expected, Optimizer.flattenNestedSequences(input));
+    Assertions.assertEquals(expected, Optimizer.flattenNestedSequences(input));
   }
 
   @Test
@@ -165,7 +162,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         AnyMatcher.INSTANCE
     );
-    Assert.assertEquals(expected, Optimizer.flattenNestedOr(input));
+    Assertions.assertEquals(expected, Optimizer.flattenNestedOr(input));
   }
 
   @Test
@@ -179,7 +176,7 @@ public class OptimizerTest {
         new CharSeqMatcher("a"),
         new CharSeqMatcher("b")
     );
-    Assert.assertEquals(expected, Optimizer.dedupOr(input));
+    Assertions.assertEquals(expected, Optimizer.dedupOr(input));
   }
 
   @Test
@@ -193,7 +190,7 @@ public class OptimizerTest {
         new CharSeqMatcher("a"),
         new CharSeqMatcher("b")
     );
-    Assert.assertEquals(expected, Optimizer.removeFalseBranchesFromOr(input));
+    Assertions.assertEquals(expected, Optimizer.removeFalseBranchesFromOr(input));
   }
 
   @Test
@@ -209,7 +206,7 @@ public class OptimizerTest {
       new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE),
       OrMatcher.create(AnyMatcher.INSTANCE, a, b)
     );
-    Assert.assertEquals(expected, Optimizer.extractPrefixFromOr(input));
+    Assertions.assertEquals(expected, Optimizer.extractPrefixFromOr(input));
   }
 
   @Test
@@ -224,7 +221,7 @@ public class OptimizerTest {
         new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, a),
         new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, b)
     );
-    Assert.assertEquals(expected, Optimizer.inlineMatchAnyPrecedingOr(input));
+    Assertions.assertEquals(expected, Optimizer.inlineMatchAnyPrecedingOr(input));
   }
 
   @Test
@@ -238,7 +235,7 @@ public class OptimizerTest {
         new StartsWithMatcher("ab"),
         AnyMatcher.INSTANCE
     );
-    Assert.assertEquals(expected, Optimizer.startsWithCharSeq(input));
+    Assertions.assertEquals(expected, Optimizer.startsWithCharSeq(input));
   }
 
   @Test
@@ -252,14 +249,14 @@ public class OptimizerTest {
         new StartsWithMatcher("ab"),
         AnyMatcher.INSTANCE
     );
-    Assert.assertEquals(expected, Optimizer.combineCharSeqAfterStartsWith(input));
+    Assertions.assertEquals(expected, Optimizer.combineCharSeqAfterStartsWith(input));
   }
 
   @Test
   public void combineCharSeqAfterIndexOf() {
     Matcher input = new IndexOfMatcher("ab", new CharSeqMatcher("cd"));
     Matcher expected = new IndexOfMatcher("abcd", TrueMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.combineCharSeqAfterIndexOf(input));
+    Assertions.assertEquals(expected, Optimizer.combineCharSeqAfterIndexOf(input));
   }
 
   @Test
@@ -276,7 +273,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         new CharSeqMatcher("cd")
     );
-    Assert.assertEquals(expected, Optimizer.combineAdjacentCharSeqs(input));
+    Assertions.assertEquals(expected, Optimizer.combineAdjacentCharSeqs(input));
   }
 
   @Test
@@ -292,7 +289,7 @@ public class OptimizerTest {
             AnyMatcher.INSTANCE,
             SeqMatcher.create(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE))
     );
-    Assert.assertEquals(expected, Optimizer.mergeNext(input));
+    Assertions.assertEquals(expected, Optimizer.mergeNext(input));
   }
 
   @Test
@@ -306,14 +303,14 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE,
         (new OrMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE)).mergeNext(AnyMatcher.INSTANCE)
     );
-    Assert.assertEquals(expected, Optimizer.mergeNext(input));
+    Assertions.assertEquals(expected, Optimizer.mergeNext(input));
   }
 
   @Test
   public void removeRepeatedStart() {
     Matcher input = new ZeroOrMoreMatcher(StartMatcher.INSTANCE, AnyMatcher.INSTANCE);
     Matcher expected = AnyMatcher.INSTANCE;
-    Assert.assertEquals(expected, Optimizer.removeRepeatedStart(input));
+    Assertions.assertEquals(expected, Optimizer.removeRepeatedStart(input));
   }
 
   @Test
@@ -326,7 +323,7 @@ public class OptimizerTest {
         AnyMatcher.INSTANCE
     );
     Matcher expected = SeqMatcher.create(StartMatcher.INSTANCE, AnyMatcher.INSTANCE);
-    Assert.assertEquals(expected, Optimizer.combineAdjacentStart(input));
+    Assertions.assertEquals(expected, Optimizer.combineAdjacentStart(input));
   }
 
   @Test
@@ -347,28 +344,28 @@ public class OptimizerTest {
             ))
         )
     );
-    Assert.assertEquals(expected, Optimizer.convertRepeatedAnyCharSeqToIndexOf(input));
+    Assertions.assertEquals(expected, Optimizer.convertRepeatedAnyCharSeqToIndexOf(input));
   }
 
   @Test
   public void optimizeStartsWith() {
     PatternMatcher actual = PatternMatcher.compile("^foo");
     PatternMatcher expected = new StartsWithMatcher("foo");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void optimizeEndStart() {
     PatternMatcher actual = PatternMatcher.compile("$^");
     PatternMatcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void optimizeEndsWith() {
     PatternMatcher actual = PatternMatcher.compile(".*foo$");
     PatternMatcher expected = new IndexOfMatcher("foo", EndMatcher.INSTANCE);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -382,7 +379,7 @@ public class OptimizerTest {
             EndMatcher.INSTANCE
         )
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -392,7 +389,7 @@ public class OptimizerTest {
         "abc",
         new IndexOfMatcher("def", TrueMatcher.INSTANCE)
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -402,14 +399,14 @@ public class OptimizerTest {
         "abc",
         new IndexOfMatcher("def", TrueMatcher.INSTANCE)
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void optimizeDuplicateOr() {
     PatternMatcher actual = PatternMatcher.compile("^(abc|a(bc)|((a)(b))c)");
     PatternMatcher expected = new StartsWithMatcher("abc");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -419,7 +416,7 @@ public class OptimizerTest {
         new StartsWithMatcher("a"),
         OrMatcher.create(new CharSeqMatcher("a"), TrueMatcher.INSTANCE)
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -430,7 +427,7 @@ public class OptimizerTest {
         new IndexOfMatcher("def", TrueMatcher.INSTANCE),
         new IndexOfMatcher("ghi", TrueMatcher.INSTANCE)
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -444,7 +441,7 @@ public class OptimizerTest {
             new ZeroOrMoreMatcher(new CharSeqMatcher("i"), AnyMatcher.INSTANCE)
         )
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -454,7 +451,7 @@ public class OptimizerTest {
         new StartsWithMatcher("abc"),
         new OrMatcher(new CharSeqMatcher("123"), new CharSeqMatcher("456"))
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -468,21 +465,21 @@ public class OptimizerTest {
             new IndexOfMatcher("baz", EndMatcher.INSTANCE)
         )
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void optimizeOrFalse() {
     PatternMatcher actual = PatternMatcher.compile("abc|$foo|$bar");
     PatternMatcher expected = new IndexOfMatcher("abc", TrueMatcher.INSTANCE);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void optimizeOrFalseEmpty() {
     PatternMatcher actual = PatternMatcher.compile("$foo|$bar");
     PatternMatcher expected = FalseMatcher.INSTANCE;
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -497,6 +494,6 @@ public class OptimizerTest {
             OrMatcher.create(new CharSeqMatcher("000"), new CharSeqMatcher("500"))
         ))
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

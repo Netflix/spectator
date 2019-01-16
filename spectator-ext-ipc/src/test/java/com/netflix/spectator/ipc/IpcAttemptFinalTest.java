@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,18 @@
  */
 package com.netflix.spectator.ipc;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class IpcAttemptFinalTest {
 
   @Test
   public void forValueTrue() {
-    Assert.assertEquals(IpcAttemptFinal.is_true, IpcAttemptFinal.forValue(true));
+    Assertions.assertEquals(IpcAttemptFinal.is_true, IpcAttemptFinal.forValue(true));
   }
 
   @Test
   public void forValueFalse() {
-    Assert.assertEquals(IpcAttemptFinal.is_false, IpcAttemptFinal.forValue(false));
+    Assertions.assertEquals(IpcAttemptFinal.is_false, IpcAttemptFinal.forValue(false));
   }
 }

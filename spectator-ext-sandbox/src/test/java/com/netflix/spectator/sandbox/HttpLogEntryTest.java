@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,26 +15,25 @@
  */
 package com.netflix.spectator.sandbox;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 
-@RunWith(JUnit4.class)
 public class HttpLogEntryTest {
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void npeIfMethodIsNotSet() {
-    HttpLogEntry entry = new HttpLogEntry()
-        .withClientName("test")
-        .withRequestUri(URI.create("http://test.com/foo"));
-    try {
-      HttpLogEntry.logClientRequest(entry);
-    } catch (NullPointerException e) {
-      Assert.assertEquals("parameter 'method' cannot be null", e.getMessage());
-      throw e;
-    }
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      HttpLogEntry entry = new HttpLogEntry()
+          .withClientName("test")
+          .withRequestUri(URI.create("http://test.com/foo"));
+      try {
+        HttpLogEntry.logClientRequest(entry);
+      } catch (NullPointerException e) {
+        Assertions.assertEquals("parameter 'method' cannot be null", e.getMessage());
+        throw e;
+      }
+    });
   }
 }

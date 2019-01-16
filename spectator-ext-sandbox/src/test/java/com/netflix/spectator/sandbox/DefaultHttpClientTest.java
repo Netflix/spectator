@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@ package com.netflix.spectator.sandbox;
 
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpServer;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +30,6 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.concurrent.Executors;
 
-@RunWith(JUnit4.class)
 public class DefaultHttpClientTest {
 
   private static HttpServer server;
@@ -50,7 +47,7 @@ public class DefaultHttpClientTest {
     return (v == null) ? dflt : Integer.parseInt(v);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void startServer() throws Exception {
     server = HttpServer.create(new InetSocketAddress(0), 100);
     server.setExecutor(Executors.newFixedThreadPool(10, r -> new Thread(r, "HttpServer")));
@@ -89,7 +86,7 @@ public class DefaultHttpClientTest {
     server.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopServer() {
     server.stop(0);
   }
@@ -105,7 +102,7 @@ public class DefaultHttpClientTest {
         .addHeader("X-Status", "200")
         .addHeader("X-Length", "-1")
         .send();
-    Assert.assertEquals(200, res.status());
+    Assertions.assertEquals(200, res.status());
   }
 
   @Test
@@ -115,7 +112,7 @@ public class DefaultHttpClientTest {
         .addHeader("X-Status", "200")
         .addHeader("X-Length", "0")
         .send();
-    Assert.assertEquals(200, res.status());
+    Assertions.assertEquals(200, res.status());
   }
 
   @Test
@@ -125,7 +122,7 @@ public class DefaultHttpClientTest {
         .addHeader("X-Status", "503")
         .addHeader("X-Length", "-1")
         .send();
-    Assert.assertEquals(503, res.status());
+    Assertions.assertEquals(503, res.status());
   }
 
   @Test
@@ -135,7 +132,7 @@ public class DefaultHttpClientTest {
         .addHeader("X-Status", "503")
         .addHeader("X-Length", "0")
         .send();
-    Assert.assertEquals(503, res.status());
+    Assertions.assertEquals(503, res.status());
   }
 
   @Test
@@ -145,8 +142,8 @@ public class DefaultHttpClientTest {
         .addHeader("X-Status", "200")
         .withContent("text/plain", "foo")
         .send();
-    Assert.assertEquals(200, res.status());
-    Assert.assertEquals("foo", res.entityAsString());
+    Assertions.assertEquals(200, res.status());
+    Assertions.assertEquals("foo", res.entityAsString());
   }
 
   @Test
@@ -159,7 +156,7 @@ public class DefaultHttpClientTest {
         .compress()
         .send()
         .decompress();
-    Assert.assertEquals(200, res.status());
-    Assert.assertEquals("foo", res.entityAsString());
+    Assertions.assertEquals(200, res.status());
+    Assertions.assertEquals("foo", res.entityAsString());
   }
 }

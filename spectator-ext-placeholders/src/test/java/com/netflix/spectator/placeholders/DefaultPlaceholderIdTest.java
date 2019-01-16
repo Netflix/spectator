@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,8 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,22 +32,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(JUnit4.class)
 public class DefaultPlaceholderIdTest {
 
   private static final Registry REGISTRY = new DefaultRegistry();
   private static final Id ID_1 = REGISTRY.createId("foo", "k1", "v1");
   private static final Id ID_2 = REGISTRY.createId("foo", "k1", "v1", "k2", "v2");
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullName() {
-    new DefaultPlaceholderId(null, REGISTRY);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> new DefaultPlaceholderId(null, REGISTRY));
   }
 
   @Test
   public void testName() {
     PlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY);
-    Assert.assertEquals(id.name(), "foo");
+    Assertions.assertEquals(id.name(), "foo");
   }
 
   @Test
@@ -64,13 +62,13 @@ public class DefaultPlaceholderIdTest {
   @Test
   public void testToString() {
     DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTag("k1", "v1").withTag("k2", "v2");
-    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
+    Assertions.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
   public void testToStringNameOnly() {
     DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY);
-    Assert.assertEquals(id.toString(), "foo");
+    Assertions.assertEquals(id.toString(), "foo");
   }
 
   @Test
@@ -79,8 +77,8 @@ public class DefaultPlaceholderIdTest {
     DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTag(expected);
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertTrue("tags empty", tags.hasNext());
-    Assert.assertEquals(expected, tags.next());
+    Assertions.assertTrue(tags.hasNext(), "tags empty");
+    Assertions.assertEquals(expected, tags.next());
   }
 
   @Test
@@ -89,7 +87,7 @@ public class DefaultPlaceholderIdTest {
     tags.add(new BasicTag("k1", "v1"));
     tags.add(new BasicTag("k2", "v2"));
     DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTags(tags);
-    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
+    Assertions.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
@@ -98,7 +96,7 @@ public class DefaultPlaceholderIdTest {
     map.put("k1", "v1");
     map.put("k2", "v2");
     DefaultPlaceholderId id = (new DefaultPlaceholderId("foo", REGISTRY)).withTags(map);
-    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
+    Assertions.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
@@ -117,7 +115,7 @@ public class DefaultPlaceholderIdTest {
     });
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertFalse("tags not empty", tags.hasNext());
+    Assertions.assertFalse(tags.hasNext(), "tags not empty");
   }
 
   @Test
@@ -126,8 +124,8 @@ public class DefaultPlaceholderIdTest {
     DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTagFactory(new ConstantTagFactory(expected));
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertTrue("tags empty", tags.hasNext());
-    Assert.assertEquals(expected, tags.next());
+    Assertions.assertTrue(tags.hasNext(), "tags empty");
+    Assertions.assertEquals(expected, tags.next());
   }
 
   @Test
@@ -138,9 +136,9 @@ public class DefaultPlaceholderIdTest {
     DefaultPlaceholderId id = new DefaultPlaceholderId("foo", REGISTRY).withTagFactories(factories);
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertTrue("tags empty", tags.hasNext());
-    Assert.assertEquals(tags1, tags.next());
-    Assert.assertEquals(tags2, tags.next());
+    Assertions.assertTrue(tags.hasNext(), "tags empty");
+    Assertions.assertEquals(tags1, tags.next());
+    Assertions.assertEquals(tags2, tags.next());
   }
 
   @Test
@@ -148,7 +146,7 @@ public class DefaultPlaceholderIdTest {
     Tag tag = new BasicTag("key", "value");
     Id expected = REGISTRY.createId("foo").withTag(tag);
     PlaceholderId placeholderId = new DefaultPlaceholderId("foo", REGISTRY).withTag(tag);
-    Assert.assertEquals(expected, placeholderId.resolveToId());
+    Assertions.assertEquals(expected, placeholderId.resolveToId());
   }
 
   @Test
@@ -159,10 +157,10 @@ public class DefaultPlaceholderIdTest {
     DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", factories, REGISTRY);
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertEquals("foo", id.name());
-    Assert.assertTrue("tags empty", tags.hasNext());
-    Assert.assertEquals(tags1, tags.next());
-    Assert.assertEquals(tags2, tags.next());
+    Assertions.assertEquals("foo", id.name());
+    Assertions.assertTrue(tags.hasNext(), "tags empty");
+    Assertions.assertEquals(tags1, tags.next());
+    Assertions.assertEquals(tags2, tags.next());
   }
 
   @Test
@@ -170,7 +168,7 @@ public class DefaultPlaceholderIdTest {
     DefaultPlaceholderId id = DefaultPlaceholderId.createWithFactories("foo", null, REGISTRY);
     Iterator<Tag> tags = id.resolveToId().tags().iterator();
 
-    Assert.assertEquals("foo", id.name());
-    Assert.assertFalse("tags not empty", tags.hasNext());
+    Assertions.assertEquals("foo", id.name());
+    Assertions.assertFalse(tags.hasNext(), "tags not empty");
   }
 }

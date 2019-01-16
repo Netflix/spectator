@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,14 @@ package com.netflix.spectator.atlas.impl;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class SubscriptionsTest {
 
   @Test
@@ -60,7 +57,7 @@ public class SubscriptionsTest {
     Subscription b = newSub("b", ":true,:sum", 60L);
     newSubs(a, b).update(subs, 0L, 15L);
 
-    Assert.assertEquals(map(15L, a, b), subs);
+    Assertions.assertEquals(map(15L, a, b), subs);
   }
 
   @Test
@@ -70,7 +67,7 @@ public class SubscriptionsTest {
     Map<Subscription, Long> subs = map(15L, a, b);
     newSubs(a, b).update(subs, 10L, 30L);
 
-    Assert.assertEquals(map(30L, a, b), subs);
+    Assertions.assertEquals(map(30L, a, b), subs);
   }
 
   @Test
@@ -82,7 +79,7 @@ public class SubscriptionsTest {
 
     Map<Subscription, Long> expected = map(15L, a, b);
     expected.put(b, 30L);
-    Assert.assertEquals(expected, subs);
+    Assertions.assertEquals(expected, subs);
   }
 
   @Test
@@ -93,6 +90,6 @@ public class SubscriptionsTest {
     newSubs(b).update(subs, 16L, 30L);
 
     Map<Subscription, Long> expected = map(30L, b);
-    Assert.assertEquals(expected, subs);
+    Assertions.assertEquals(expected, subs);
   }
 }

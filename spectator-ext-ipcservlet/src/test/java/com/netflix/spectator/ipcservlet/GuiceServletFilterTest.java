@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,8 @@ import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.http.HttpClient;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
 
 import javax.inject.Singleton;
 import javax.servlet.DispatcherType;
@@ -46,7 +42,6 @@ import java.util.EnumSet;
 
 import static com.netflix.spectator.ipcservlet.TestUtils.*;
 
-@RunWith(JUnit4.class)
 public class GuiceServletFilterTest {
 
   // https://github.com/google/guice/issues/807
@@ -54,7 +49,7 @@ public class GuiceServletFilterTest {
   private static Server server;
   private static URI baseUri;
 
-  @BeforeClass
+  @BeforeAll
   public static void init() throws Exception {
     server = new Server(new InetSocketAddress("localhost", 0));
     ServletContextHandler handler = new ServletContextHandler(server, "/");
@@ -65,7 +60,7 @@ public class GuiceServletFilterTest {
     baseUri = server.getURI();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdown() throws Exception {
     server.stop();
   }
@@ -73,7 +68,7 @@ public class GuiceServletFilterTest {
   private Registry registry;
   private HttpClient client;
 
-  @Before
+  @BeforeEach
   public void before() {
     registry = new DefaultRegistry();
     client = HttpClient.create(new IpcLogger(registry));

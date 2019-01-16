@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,12 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RunWith(JUnit4.class)
 public class TagsBuilderTest {
 
   private static final Registry REGISTRY = new DefaultRegistry();
@@ -62,7 +59,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTag("k", "v")
         .build();
-    Assert.assertEquals(newId("k", "v"), id);
+    Assertions.assertEquals(newId("k", "v"), id);
   }
 
   @Test
@@ -70,7 +67,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTag("k", true)
         .build();
-    Assert.assertEquals(newId("k", "true"), id);
+    Assertions.assertEquals(newId("k", "true"), id);
   }
 
   @Test
@@ -78,7 +75,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTag("k", false)
         .build();
-    Assert.assertEquals(newId("k", "false"), id);
+    Assertions.assertEquals(newId("k", "false"), id);
   }
 
   @Test
@@ -87,7 +84,7 @@ public class TagsBuilderTest {
         .withTag("k1", Level.info)
         .withTag("k2", Level.error)
         .build();
-    Assert.assertEquals(newId("k1", "info", "k2", "error"), id);
+    Assertions.assertEquals(newId("k1", "info", "k2", "error"), id);
   }
 
   @Test
@@ -95,7 +92,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTag(new BasicTag("k", "v"))
         .build();
-    Assert.assertEquals(newId("k", "v"), id);
+    Assertions.assertEquals(newId("k", "v"), id);
   }
 
   @Test
@@ -103,7 +100,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTags("k1", "v1", "k2", "v2")
         .build();
-    Assert.assertEquals(newId("k1", "v1", "k2", "v2"), id);
+    Assertions.assertEquals(newId("k1", "v1", "k2", "v2"), id);
   }
 
   @Test
@@ -111,7 +108,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTags(new BasicTag("k1", "v1"), new BasicTag("k2", "v2"))
         .build();
-    Assert.assertEquals(newId("k1", "v1", "k2", "v2"), id);
+    Assertions.assertEquals(newId("k1", "v1", "k2", "v2"), id);
   }
 
   @Test
@@ -119,7 +116,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTags(newId("k1", "v1", "k2", "v2").tags())
         .build();
-    Assert.assertEquals(newId("k1", "v1", "k2", "v2"), id);
+    Assertions.assertEquals(newId("k1", "v1", "k2", "v2"), id);
   }
 
   @Test
@@ -130,7 +127,7 @@ public class TagsBuilderTest {
     Id id = new Builder()
         .withTags(tags)
         .build();
-    Assert.assertEquals(newId("k1", "v1", "k2", "v2"), id);
+    Assertions.assertEquals(newId("k1", "v1", "k2", "v2"), id);
   }
 
   @Test
@@ -139,6 +136,6 @@ public class TagsBuilderTest {
         .withTag("k", "v1")
         .withTag("k", "v2")
         .build();
-    Assert.assertEquals(newId("k", "v1", "k", "v2"), id);
+    Assertions.assertEquals(newId("k", "v1", "k", "v2"), id);
   }
 }

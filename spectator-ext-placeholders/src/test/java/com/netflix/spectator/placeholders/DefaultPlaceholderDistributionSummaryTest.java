@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,14 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
 /**
  * Unit tests for the DefaultPlaceholderDistributionSummary class.
  */
-@RunWith(JUnit4.class)
 public class DefaultPlaceholderDistributionSummaryTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -39,8 +36,8 @@ public class DefaultPlaceholderDistributionSummaryTest {
   public void testInit() {
     DistributionSummary summary = new DefaultPlaceholderDistributionSummary(new DefaultPlaceholderId("testInit", registry), registry);
 
-    Assert.assertEquals(0L, summary.count());
-    Assert.assertEquals(0L, summary.totalAmount());
+    Assertions.assertEquals(0L, summary.count());
+    Assertions.assertEquals(0L, summary.totalAmount());
   }
 
   @Test
@@ -50,14 +47,14 @@ public class DefaultPlaceholderDistributionSummaryTest {
             Collections.singleton(new TestTagFactory(tagValue))));
 
     summary.record(42L);
-    Assert.assertEquals("testRecord:tag=default", summary.id().toString());
-    Assert.assertEquals(summary.count(), 1L);
-    Assert.assertEquals(42L, summary.totalAmount());
+    Assertions.assertEquals("testRecord:tag=default", summary.id().toString());
+    Assertions.assertEquals(summary.count(), 1L);
+    Assertions.assertEquals(42L, summary.totalAmount());
 
     tagValue[0] = "value2";
-    Assert.assertEquals("testRecord:tag=value2", summary.id().toString());
-    Assert.assertEquals(0L, summary.count());
-    Assert.assertEquals(0L, summary.totalAmount());
+    Assertions.assertEquals("testRecord:tag=value2", summary.id().toString());
+    Assertions.assertEquals(0L, summary.count());
+    Assertions.assertEquals(0L, summary.totalAmount());
   }
 
   @Test
@@ -65,8 +62,8 @@ public class DefaultPlaceholderDistributionSummaryTest {
     DistributionSummary summary = factory.distributionSummary(factory.createId("testRecordNegative"));
 
     summary.record(-42L);
-    Assert.assertEquals(summary.count(), 0L);
-    Assert.assertEquals(0L, summary.totalAmount());
+    Assertions.assertEquals(summary.count(), 0L);
+    Assertions.assertEquals(0L, summary.totalAmount());
   }
 
   @Test
@@ -74,7 +71,7 @@ public class DefaultPlaceholderDistributionSummaryTest {
     DistributionSummary summary = factory.distributionSummary(factory.createId("testRecordNegative"));
 
     summary.record(0);
-    Assert.assertEquals(summary.count(), 1L);
-    Assert.assertEquals(summary.totalAmount(), 0L);
+    Assertions.assertEquals(summary.count(), 1L);
+    Assertions.assertEquals(summary.totalAmount(), 0L);
   }
 }

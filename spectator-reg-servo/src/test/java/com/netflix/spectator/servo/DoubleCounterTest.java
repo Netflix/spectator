@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,9 @@ package com.netflix.spectator.servo;
 import com.netflix.servo.annotations.DataSourceType;
 import com.netflix.servo.monitor.MonitorConfig;
 import com.netflix.servo.util.ManualClock;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-@RunWith(JUnit4.class)
 public class DoubleCounterTest {
 
   private static final double DELTA = 1e-06;
@@ -43,19 +38,19 @@ public class DoubleCounterTest {
   public void testSimpleTransition() {
     clock.set(time(1));
     DoubleCounter c = newInstance("c");
-    assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
 
     clock.set(time(3));
     c.increment(1);
-    assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
 
     clock.set(time(9));
     c.increment(1);
-    assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
 
     clock.set(time(12));
     c.increment(1);
-    assertEquals(2.0 / 10.0, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(2.0 / 10.0, c.getValue(1).doubleValue(), DELTA);
   }
 
 
@@ -63,12 +58,12 @@ public class DoubleCounterTest {
   public void testInitialPollIsZero() {
     clock.set(time(1));
     DoubleCounter c = newInstance("foo");
-    assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.0, c.getValue(1).doubleValue(), DELTA);
   }
 
   @Test
   public void testHasRightType() throws Exception {
-    assertEquals(newInstance("foo").getConfig().getTags().getValue(DataSourceType.KEY),
+    Assertions.assertEquals(newInstance("foo").getConfig().getTags().getValue(DataSourceType.KEY),
         "NORMALIZED");
   }
 
@@ -91,7 +86,7 @@ public class DoubleCounterTest {
     c.increment(1);
 
     // Check counts
-    assertEquals(0.3, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.3, c.getValue(1).doubleValue(), DELTA);
   }
 
   @Test
@@ -101,7 +96,7 @@ public class DoubleCounterTest {
     for (int i = 1; i <= 100000; ++i) {
       c.increment(1);
       clock.set(time(i * 10 + 1));
-      assertEquals(0.1, c.getValue(1).doubleValue(), DELTA);
+      Assertions.assertEquals(0.1, c.getValue(1).doubleValue(), DELTA);
     }
   }
 
@@ -123,7 +118,7 @@ public class DoubleCounterTest {
     c.increment(1);
 
     // Check counts
-    assertTrue(Double.isNaN(c.getValue(1).doubleValue()));
+    Assertions.assertTrue(Double.isNaN(c.getValue(1).doubleValue()));
   }
 
   @Test
@@ -144,7 +139,7 @@ public class DoubleCounterTest {
     c.increment(1);
 
     // Check rate for previous interval
-    assertEquals(0.2, c.getValue(1).doubleValue(), DELTA);
+    Assertions.assertEquals(0.2, c.getValue(1).doubleValue(), DELTA);
   }
 
   @Test
@@ -157,7 +152,7 @@ public class DoubleCounterTest {
       manualClock.set(i * 60000L);
       c.increment(1);
       c.getValue(0);
-      assertEquals(1 / 60.0, c.getValue(0).doubleValue(), DELTA);
+      Assertions.assertEquals(1 / 60.0, c.getValue(0).doubleValue(), DELTA);
     }
   }
 }

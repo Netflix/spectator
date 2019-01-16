@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package com.netflix.spectator.aws2;
 
 import com.netflix.spectator.api.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.DefaultRequest;
 import software.amazon.awssdk.Request;
 import software.amazon.awssdk.metrics.spi.AwsRequestMetrics;
@@ -35,14 +35,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SpectatorRequestMetricCollectorTest {
 
   Registry registry;
   SpectatorRequestMetricCollector collector;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     registry = new DefaultRegistry();
     collector = new SpectatorRequestMetricCollector(registry);

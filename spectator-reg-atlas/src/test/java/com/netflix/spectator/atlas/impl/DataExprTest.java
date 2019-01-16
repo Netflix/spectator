@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,8 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,14 +36,13 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 
-@RunWith(JUnit4.class)
 public class DataExprTest {
 
   private final Registry registry = new DefaultRegistry();
 
   private DataExpr parse(String expr) {
     DataExpr de = Parser.parseDataExpr(expr);
-    Assert.assertEquals(expr, de.toString());
+    Assertions.assertEquals(expr, de.toString());
     return de;
   }
 
@@ -79,25 +76,25 @@ public class DataExprTest {
   @Test
   public void sumEmpty() {
     DataExpr expr = parse(":true,:sum");
-    Assert.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
+    Assertions.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
   }
 
   @Test
   public void minEmpty() {
     DataExpr expr = parse(":true,:min");
-    Assert.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
+    Assertions.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
   }
 
   @Test
   public void maxEmpty() {
     DataExpr expr = parse(":true,:max");
-    Assert.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
+    Assertions.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
   }
 
   @Test
   public void countEmpty() {
     DataExpr expr = parse(":true,:count");
-    Assert.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
+    Assertions.assertFalse(expr.eval(Collections.emptyList()).iterator().hasNext());
   }
 
   private void aggrData(String aggr, double expected, boolean shouldCheckQuery) {
@@ -112,10 +109,10 @@ public class DataExprTest {
     int count = 0;
     for (TagsValuePair v : vs) {
       ++count;
-      Assert.assertEquals(expectedTags, v.tags());
-      Assert.assertEquals(expected, v.value(), 1e-12);
+      Assertions.assertEquals(expectedTags, v.tags());
+      Assertions.assertEquals(expected, v.value(), 1e-12);
     }
-    Assert.assertEquals(1, count);
+    Assertions.assertEquals(1, count);
   }
 
   private void aggrData(String aggr, double expected) {
@@ -190,14 +187,14 @@ public class DataExprTest {
     int count = 0;
     for (TagsValuePair v : vs) {
       ++count;
-      Assert.assertEquals(2, v.tags().size());
+      Assertions.assertEquals(2, v.tags().size());
       if (shouldCheckQuery) {
-        Assert.assertEquals("foo", v.tags().get("name"));
+        Assertions.assertEquals("foo", v.tags().get("name"));
       }
       double tv = Double.parseDouble(v.tags().get("v"));
-      Assert.assertEquals((tv < 2.0) ? 2.0 : tv, v.value(), 1e-12);
+      Assertions.assertEquals((tv < 2.0) ? 2.0 : tv, v.value(), 1e-12);
     }
-    Assert.assertEquals(shouldCheckQuery ? 3 : 4, count);
+    Assertions.assertEquals(shouldCheckQuery ? 3 : 4, count);
   }
 
   @Test
@@ -217,7 +214,7 @@ public class DataExprTest {
     ms.addAll(data("bar", 42.0));
 
     Iterable<TagsValuePair> vs = expr.eval(ms);
-    Assert.assertFalse(vs.iterator().hasNext());
+    Assertions.assertFalse(vs.iterator().hasNext());
   }
 
   @Test
@@ -252,7 +249,7 @@ public class DataExprTest {
     ms.addAll(data("bar", 42.0));
 
     Iterable<TagsValuePair> vs = expr.eval(ms);
-    Assert.assertEquals(4, StreamSupport.stream(vs.spliterator(), false).count());
+    Assertions.assertEquals(4, StreamSupport.stream(vs.spliterator(), false).count());
   }
 
   @Test
@@ -262,7 +259,7 @@ public class DataExprTest {
     ms.addAll(data("bar", 42.0));
 
     Iterable<TagsValuePair> vs = evalNoCheck(expr, ms);
-    Assert.assertEquals(5, StreamSupport.stream(vs.spliterator(), false).count());
+    Assertions.assertEquals(5, StreamSupport.stream(vs.spliterator(), false).count());
   }
 
   @Test
@@ -272,7 +269,7 @@ public class DataExprTest {
     ms.addAll(data("bar", 42.0));
 
     Iterable<TagsValuePair> vs = expr.eval(ms);
-    Assert.assertEquals(1, StreamSupport.stream(vs.spliterator(), false).count());
+    Assertions.assertEquals(1, StreamSupport.stream(vs.spliterator(), false).count());
   }
 
   @Test
@@ -292,7 +289,7 @@ public class DataExprTest {
     values.add(":in");
     DataExpr expected = new DataExpr.Sum(new Query.In("key", values));
     DataExpr actual = Parser.parseDataExpr("key,(,key,(,a,b,),:in,),:in,:sum");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -301,17 +298,19 @@ public class DataExprTest {
         Arrays.asList("key,(,a,(,b,(,c,),),(,),),:in".split(",")));
     DataExpr expected = new DataExpr.Sum(new Query.In("key", values));
     DataExpr actual = Parser.parseDataExpr("key,(,key,(,a,(,b,(,c,),),(,),),:in,),:in,:sum");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void mismatchedOpenParen() {
-    Parser.parseDataExpr("key,(,key,(,),:in,:sum");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> Parser.parseDataExpr("key,(,key,(,),:in,:sum"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void mismatchedClosingParen() {
-    Parser.parseDataExpr("key,(,key,),),:in,:sum");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> Parser.parseDataExpr("key,(,key,),),:in,:sum"));
   }
 
   @Test
