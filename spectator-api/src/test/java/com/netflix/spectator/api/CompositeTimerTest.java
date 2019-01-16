@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,7 +26,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@RunWith(JUnit4.class)
 public class CompositeTimerTest {
 
   private final ManualClock clock = new ManualClock();
@@ -44,20 +41,20 @@ public class CompositeTimerTest {
   }
 
   private void assertCountEquals(Timer t, long expected) {
-    Assert.assertEquals(t.count(), expected);
+    Assertions.assertEquals(t.count(), expected);
     for (Registry r : registries) {
-      Assert.assertEquals(r.timer(id).count(), expected);
+      Assertions.assertEquals(r.timer(id).count(), expected);
     }
   }
 
   private void assertTotalEquals(Timer t, long expected) {
-    Assert.assertEquals(t.totalTime(), expected);
+    Assertions.assertEquals(t.totalTime(), expected);
     for (Registry r : registries) {
-      Assert.assertEquals(r.timer(id).totalTime(), expected);
+      Assertions.assertEquals(r.timer(id).totalTime(), expected);
     }
   }
 
-  @Before
+  @BeforeEach
   public void init() {
     registries = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
@@ -98,7 +95,7 @@ public class CompositeTimerTest {
       clock.setMonotonicTime(500L);
       return 42;
     });
-    Assert.assertEquals(v, 42);
+    Assertions.assertEquals(v, 42);
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 400L);
   }
@@ -116,7 +113,7 @@ public class CompositeTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
+    Assertions.assertTrue(seen);
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 400L);
   }
@@ -143,7 +140,7 @@ public class CompositeTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
+    Assertions.assertTrue(seen);
     assertCountEquals(t, 1L);
     assertTotalEquals(t, 400L);
   }
@@ -154,13 +151,13 @@ public class CompositeTimerTest {
     t.record(42, TimeUnit.MILLISECONDS);
     clock.setWallTime(3712345L);
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), 3712345L);
+      Assertions.assertEquals(m.timestamp(), 3712345L);
       if (m.id().equals(t.id().withTag(Statistic.count))) {
-        Assert.assertEquals(m.value(), 1.0, 0.1e-12);
+        Assertions.assertEquals(m.value(), 1.0, 0.1e-12);
       } else if (m.id().equals(t.id().withTag(Statistic.totalTime))) {
-        Assert.assertEquals(m.value(), 42e6, 0.1e-12);
+        Assertions.assertEquals(m.value(), 42e6, 0.1e-12);
       } else {
-        Assert.fail("unexpected id: " + m.id());
+        Assertions.fail("unexpected id: " + m.id());
       }
     }
   }

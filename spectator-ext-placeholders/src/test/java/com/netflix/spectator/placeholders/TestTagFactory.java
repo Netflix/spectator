@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@ package com.netflix.spectator.placeholders;
 
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Tag;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 
 /**
  * Helper class for testing dynamic metrics.
  */
-@Ignore
+@Disabled
 class TestTagFactory implements TagFactory {
   private final String name;
   private final String[] valueHolder;

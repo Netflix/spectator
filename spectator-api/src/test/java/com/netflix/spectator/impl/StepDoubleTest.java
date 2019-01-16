@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@
 package com.netflix.spectator.impl;
 
 import com.netflix.spectator.api.ManualClock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class StepDoubleTest {
 
   private final ManualClock clock = new ManualClock();
 
-  @Before
+  @BeforeEach
   public void init() {
     clock.setWallTime(0L);
   }
@@ -35,16 +32,16 @@ public class StepDoubleTest {
   @Test
   public void empty() {
     StepDouble v = new StepDouble(0.0, clock, 10L);
-    Assert.assertEquals(0.0, v.getCurrent().get(), 1e-12);
-    Assert.assertEquals(0.0, v.poll(), 1e-12);
+    Assertions.assertEquals(0.0, v.getCurrent().get(), 1e-12);
+    Assertions.assertEquals(0.0, v.poll(), 1e-12);
   }
 
   @Test
   public void increment() {
     StepDouble v = new StepDouble(0.0, clock, 10L);
     v.getCurrent().addAndGet(1.0);
-    Assert.assertEquals(1.0, v.getCurrent().get(), 1e-12);
-    Assert.assertEquals(0.0, v.poll(), 1e-12);
+    Assertions.assertEquals(1.0, v.getCurrent().get(), 1e-12);
+    Assertions.assertEquals(0.0, v.poll(), 1e-12);
   }
 
   @Test
@@ -52,8 +49,8 @@ public class StepDoubleTest {
     StepDouble v = new StepDouble(0.0, clock, 10L);
     v.getCurrent().addAndGet(1.0);
     clock.setWallTime(10L);
-    Assert.assertEquals(0.0, v.getCurrent().get(), 1e-12);
-    Assert.assertEquals(1.0, v.poll(), 1e-12);
+    Assertions.assertEquals(0.0, v.getCurrent().get(), 1e-12);
+    Assertions.assertEquals(1.0, v.poll(), 1e-12);
   }
 
   @Test
@@ -61,7 +58,7 @@ public class StepDoubleTest {
     StepDouble v = new StepDouble(0.0, clock, 10L);
     v.getCurrent().addAndGet(1.0);
     clock.setWallTime(20L);
-    Assert.assertEquals(0.0, v.getCurrent().get(), 1e-12);
-    Assert.assertEquals(0.0, v.poll(), 1e-12);
+    Assertions.assertEquals(0.0, v.getCurrent().get(), 1e-12);
+    Assertions.assertEquals(0.0, v.poll(), 1e-12);
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,12 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(JUnit4.class)
 public class UtilsTest {
 
   private List<Measurement> newList(int size) {
@@ -39,15 +36,15 @@ public class UtilsTest {
   public void getTagValueIdNoTags() {
     Registry r = new DefaultRegistry();
     Id id = r.createId("foo");
-    Assert.assertEquals(null, Utils.getTagValue(id, "abc"));
+    Assertions.assertEquals(null, Utils.getTagValue(id, "abc"));
   }
 
   @Test
   public void getTagValueId() {
     Registry r = new DefaultRegistry();
     Id id = r.createId("foo", "bar", "baz", "abc", "def");
-    Assert.assertEquals("def", Utils.getTagValue(id, "abc"));
-    Assert.assertEquals("baz", Utils.getTagValue(id, "bar"));
+    Assertions.assertEquals("def", Utils.getTagValue(id, "abc"));
+    Assertions.assertEquals("baz", Utils.getTagValue(id, "bar"));
   }
 
   @Test
@@ -55,7 +52,7 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, t);
-    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
@@ -63,7 +60,7 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, "i", "7");
-    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
@@ -71,14 +68,14 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     Measurement m = Utils.first(ms, v -> v.value() == 7.0);
-    Assert.assertEquals(m.id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(m.id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void firstPredicateEmpty() {
     List<Measurement> ms = newList(10);
     Measurement m = Utils.first(ms, v -> false);
-    Assert.assertEquals(null, m);
+    Assertions.assertEquals(null, m);
   }
 
   @Test
@@ -86,8 +83,8 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, t));
-    Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(1, out.size());
+    Assertions.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
@@ -95,8 +92,8 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, "i", "7"));
-    Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(1, out.size());
+    Assertions.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
@@ -104,14 +101,14 @@ public class UtilsTest {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
     List<Measurement> out = Utils.toList(Utils.filter(ms, v -> v.value() == 7.0));
-    Assert.assertEquals(1, out.size());
-    Assert.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
+    Assertions.assertEquals(1, out.size());
+    Assertions.assertEquals(out.get(0).id().tags(), ArrayTagSet.create(t));
   }
 
   @Test
   public void filterPredicateEmpty() {
     List<Measurement> ms = newList(10);
     List<Measurement> out = Utils.toList(Utils.filter(ms, v -> false));
-    Assert.assertEquals(0, out.size());
+    Assertions.assertEquals(0, out.size());
   }
 }

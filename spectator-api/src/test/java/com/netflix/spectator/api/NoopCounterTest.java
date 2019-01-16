@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,38 +15,35 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class NoopCounterTest {
   @Test
   public void testId() {
-    Assert.assertEquals(NoopCounter.INSTANCE.id(), NoopId.INSTANCE);
-    Assert.assertFalse(NoopCounter.INSTANCE.hasExpired());
+    Assertions.assertEquals(NoopCounter.INSTANCE.id(), NoopId.INSTANCE);
+    Assertions.assertFalse(NoopCounter.INSTANCE.hasExpired());
   }
 
   @Test
   public void testIncrement() {
     NoopCounter c = NoopCounter.INSTANCE;
     c.increment();
-    Assert.assertEquals(c.count(), 0L);
+    Assertions.assertEquals(c.count(), 0L);
   }
 
   @Test
   public void testIncrementAmount() {
     NoopCounter c = NoopCounter.INSTANCE;
     c.increment(42);
-    Assert.assertEquals(c.count(), 0L);
+    Assertions.assertEquals(c.count(), 0L);
   }
 
   @Test
   public void testMeasure() {
     NoopCounter c = NoopCounter.INSTANCE;
     c.increment(42);
-    Assert.assertFalse(c.measure().iterator().hasNext());
+    Assertions.assertFalse(c.measure().iterator().hasNext());
   }
 
 }

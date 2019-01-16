@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,11 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Function;
 
-@RunWith(JUnit4.class)
 public class ServoRegistryTest {
 
   @Test
@@ -45,16 +42,16 @@ public class ServoRegistryTest {
     MonitorRegistry mr = DefaultMonitorRegistry.getInstance();
 
     ServoRegistry r1 = new ServoRegistry();
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r1));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
 
     ServoRegistry r2 = new ServoRegistry();
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r1));
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r2));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r2));
 
     ServoRegistry r3 = new ServoRegistry();
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r1));
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r2));
-    Assert.assertTrue(mr.getRegisteredMonitors().contains(r3));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r2));
+    Assertions.assertTrue(mr.getRegisteredMonitors().contains(r3));
   }
 
   @Test
@@ -66,7 +63,7 @@ public class ServoRegistryTest {
     for (Meter m : dflt) {
       found = m.id().equals(counter.id());
     }
-    Assert.assertTrue("id could not be found in iterator", found);
+    Assertions.assertTrue(found, "id could not be found in iterator");
   }
 
   // Reproduces: https://github.com/Netflix/spectator/issues/530
@@ -81,7 +78,7 @@ public class ServoRegistryTest {
     for (Meter m : global) {
       found |= m.id().equals(expected);
     }
-    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+    Assertions.assertTrue(found, "id for sub-registry could not be found in global iterator");
   }
 
   @Test
@@ -109,8 +106,8 @@ public class ServoRegistryTest {
     ManualClock clock = new ManualClock();
     ServoRegistry registry = new ServoRegistry(clock);
     registry.counter("test").increment();
-    Assert.assertEquals(1, registry.getMonitors().size());
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.getMonitors().size());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -119,8 +116,8 @@ public class ServoRegistryTest {
     ServoRegistry registry = new ServoRegistry(clock);
     registry.counter("test").increment();
     clock.setWallTime(60000 * 30);
-    Assert.assertEquals(0, registry.getMonitors().size());
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.getMonitors().size());
+    Assertions.assertEquals(0, registry.counters().count());
   }
 
   @Test
@@ -132,20 +129,20 @@ public class ServoRegistryTest {
     clock.setWallTime(60000 * 30);
     registry.getMonitors();
 
-    Assert.assertTrue(c.hasExpired());
+    Assertions.assertTrue(c.hasExpired());
 
     c.increment();
-    Assert.assertEquals(1, c.count());
-    Assert.assertEquals(1, registry.counter("test").count());
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, registry.counter("test").count());
 
     clock.setWallTime(60000 * 60);
     registry.getMonitors();
 
-    Assert.assertTrue(c.hasExpired());
+    Assertions.assertTrue(c.hasExpired());
 
     c.increment();
-    Assert.assertEquals(1, c.count());
-    Assert.assertEquals(1, registry.counter("test").count());
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, registry.counter("test").count());
   }
 
 }

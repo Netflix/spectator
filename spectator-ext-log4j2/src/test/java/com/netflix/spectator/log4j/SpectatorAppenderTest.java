@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,10 @@ import com.netflix.spectator.api.Registry;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class SpectatorAppenderTest {
 
   private Registry registry;
@@ -50,7 +47,7 @@ public class SpectatorAppenderTest {
         .build();
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     registry = new DefaultRegistry();
     appender = new SpectatorAppender(registry, "foo", null, null, false);
@@ -60,17 +57,17 @@ public class SpectatorAppenderTest {
   @Test
   public void numMessagesERROR() {
     Counter c = registry.counter("log4j.numMessages", "appender", "foo", "loglevel", "2_ERROR");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     appender.append(newEvent(Level.ERROR, null));
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
   public void numMessagesDEBUG() {
     Counter c = registry.counter("log4j.numMessages", "appender", "foo", "loglevel", "5_DEBUG");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     appender.append(newEvent(Level.DEBUG, null));
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
@@ -80,9 +77,9 @@ public class SpectatorAppenderTest {
         "loglevel", "5_DEBUG",
         "exception", "IllegalArgumentException",
         "file", "SpectatorAppenderTest.java");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     appender.append(newEvent(Level.DEBUG, new IllegalArgumentException("foo")));
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
@@ -92,9 +89,9 @@ public class SpectatorAppenderTest {
         "loglevel", "5_DEBUG",
         "exception", "IllegalArgumentException",
         "file", "unknown");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     appender.append(newEvent(Level.DEBUG, new IllegalArgumentException("foo"), false));
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
@@ -106,9 +103,9 @@ public class SpectatorAppenderTest {
         "loglevel", "5_DEBUG",
         "exception", "IllegalArgumentException",
         "file", "SpectatorAppenderTest.java");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     appender.append(newEvent(Level.DEBUG, new IllegalArgumentException("foo")));
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
   }
 
 }

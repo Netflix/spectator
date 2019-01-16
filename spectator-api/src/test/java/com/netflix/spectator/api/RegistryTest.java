@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,8 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.SwapMeter;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.DoubleSummaryStatistics;
 import java.util.LinkedHashMap;
@@ -33,7 +31,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
-@RunWith(JUnit4.class)
 public class RegistryTest {
 
   private final ManualClock clock = new ManualClock();
@@ -47,13 +44,15 @@ public class RegistryTest {
     Registry r = newRegistry(true, 10000);
     Id id1 = r.createId("foo", "bar", "baz", "k", "v");
     Id id2 = r.createId("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
-    Assert.assertEquals(id1, id2);
+    Assertions.assertEquals(id1, id2);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateIdArrayOdd() {
-    Registry r = newRegistry(true, 10000);
-    r.createId("foo", "bar", "baz", "k");
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      Registry r = newRegistry(true, 10000);
+      r.createId("foo", "bar", "baz", "k");
+    });
   }
 
   @Test
@@ -64,7 +63,7 @@ public class RegistryTest {
     Registry r = newRegistry(true, 10000);
     Id id1 = r.createId("foo", map);
     Id id2 = r.createId("foo", "k1", "v1", "k2", "v2");
-    Assert.assertEquals(id1, id2);
+    Assertions.assertEquals(id1, id2);
   }
 
   private Object unwrap(Object obj) {
@@ -80,8 +79,8 @@ public class RegistryTest {
     Counter c1 = r.counter("foo", "bar", "baz", "k", "v");
     Counter c2 = r.counter("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Counter c3 = r.counter("foo");
-    Assert.assertSame(unwrap(c1), unwrap(c2));
-    Assert.assertNotSame(unwrap(c1), unwrap(c3));
+    Assertions.assertSame(unwrap(c1), unwrap(c2));
+    Assertions.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   @Test
@@ -91,8 +90,8 @@ public class RegistryTest {
     DistributionSummary c2 = r.distributionSummary("foo",
         ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     DistributionSummary c3 = r.distributionSummary("foo");
-    Assert.assertSame(unwrap(c1), unwrap(c2));
-    Assert.assertNotSame(unwrap(c1), unwrap(c3));
+    Assertions.assertSame(unwrap(c1), unwrap(c2));
+    Assertions.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   @Test
@@ -101,20 +100,20 @@ public class RegistryTest {
     Timer c1 = r.timer("foo", "bar", "baz", "k", "v");
     Timer c2 = r.timer("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
     Timer c3 = r.timer("foo");
-    Assert.assertSame(unwrap(c1), unwrap(c2));
-    Assert.assertNotSame(unwrap(c1), unwrap(c3));
+    Assertions.assertSame(unwrap(c1), unwrap(c2));
+    Assertions.assertNotSame(unwrap(c1), unwrap(c3));
   }
 
   private void assertLongTaskTimer(Registry r, Id id, long timestamp, int activeTasks, double duration) {
     PolledMeter.update(r);
 
     Gauge g = r.gauge(id.withTag(Statistic.activeTasks));
-    Assert.assertEquals(timestamp, g.measure().iterator().next().timestamp());
-    Assert.assertEquals(activeTasks, g.value(), 1.0e-12);
+    Assertions.assertEquals(timestamp, g.measure().iterator().next().timestamp());
+    Assertions.assertEquals(activeTasks, g.value(), 1.0e-12);
 
     g = r.gauge(id.withTag(Statistic.duration));
-    Assert.assertEquals(timestamp, g.measure().iterator().next().timestamp());
-    Assert.assertEquals(duration, g.value(), 1.0e-12);
+    Assertions.assertEquals(timestamp, g.measure().iterator().next().timestamp());
+    Assertions.assertEquals(duration, g.value(), 1.0e-12);
   }
 
   @Test
@@ -125,7 +124,7 @@ public class RegistryTest {
     assertLongTaskTimer(r, c1.id(), 0L, 0, 0L);
 
     LongTaskTimer c2 = r.longTaskTimer("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")));
-    Assert.assertEquals(c1.id(), c2.id());
+    Assertions.assertEquals(c1.id(), c2.id());
 
     long t1 = c1.start();
     long t2 = c2.start();
@@ -142,7 +141,7 @@ public class RegistryTest {
 
   private void assertGaugeValue(Registry r, Id id, double expected) {
     PolledMeter.update(r);
-    Assert.assertEquals(expected, r.gauge(id).value(), 1e-12);
+    Assertions.assertEquals(expected, r.gauge(id).value(), 1e-12);
   }
 
   @Test
@@ -154,9 +153,9 @@ public class RegistryTest {
     AtomicLong v1 = r.gauge(r.createId("foo", "bar", "baz", "k", "v"), al1);
     AtomicLong v2 = r.gauge("foo", ArrayTagSet.create("k", "v").add(new BasicTag("bar", "baz")), al2);
     AtomicLong v3 = r.gauge("foo", al4);
-    Assert.assertSame(v1, al1);
-    Assert.assertSame(v2, al2);
-    Assert.assertSame(v3, al4);
+    Assertions.assertSame(v1, al1);
+    Assertions.assertSame(v2, al2);
+    Assertions.assertSame(v3, al4);
     Id id1 = r.createId("foo", "bar", "baz", "k", "v");
     Id id2 = r.createId("foo");
     assertGaugeValue(r, id1, 3.0);
@@ -169,7 +168,7 @@ public class RegistryTest {
     Registry r = new DefaultRegistry(new ManualClock(40, 0));
     DoubleFunction<AtomicLong> f = Functions.age(r.clock());
     AtomicLong v1 = r.gauge("foo", al1, f);
-    Assert.assertSame(v1, al1);
+    Assertions.assertSame(v1, al1);
     Id id1 = r.createId("foo");
     assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
@@ -185,7 +184,7 @@ public class RegistryTest {
       }
     };
     AtomicLong v1 = r.gauge("foo", al1, f);
-    Assert.assertSame(v1, al1);
+    Assertions.assertSame(v1, al1);
     Id id1 = r.createId("foo");
     assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
@@ -197,7 +196,7 @@ public class RegistryTest {
     ToDoubleFunction<AtomicLong> f = (obj) -> (r.clock().wallTime() - obj.doubleValue()) / 1000.0;
 
     AtomicLong v1 = r.gauge("foo", al1, f);
-    Assert.assertSame(v1, al1);
+    Assertions.assertSame(v1, al1);
     Id id1 = r.createId("foo");
     assertGaugeValue(r, id1, 39.0 / 1000.0);
   }
@@ -207,7 +206,7 @@ public class RegistryTest {
     Registry r = newRegistry(true, 10000);
     LinkedBlockingDeque<String> q1 = new LinkedBlockingDeque<>();
     LinkedBlockingDeque<String> q2 = r.collectionSize("queueSize", q1);
-    Assert.assertSame(q1, q2);
+    Assertions.assertSame(q1, q2);
     Id id = r.createId("queueSize");
     assertGaugeValue(r, id, 0.0);
     q2.push("foo");
@@ -219,7 +218,7 @@ public class RegistryTest {
     Registry r = newRegistry(true, 10000);
     ConcurrentHashMap<String, String> q1 = new ConcurrentHashMap<>();
     ConcurrentHashMap<String, String> q2 = r.mapSize("mapSize", q1);
-    Assert.assertSame(q1, q2);
+    Assertions.assertSame(q1, q2);
     Id id = r.createId("mapSize");
     assertGaugeValue(r, id, 0.0);
     q2.put("foo", "bar");
@@ -237,30 +236,34 @@ public class RegistryTest {
     assertGaugeValue(r, id, 1.0);
   }
 
-  @Test(expected = ClassCastException.class)
+  @Test
   public void methodValueBadReturnType() {
-    Registry r = newRegistry(true, 10000);
-    r.methodValue("queueSize", this, "toString");
+    Assertions.assertThrows(ClassCastException.class, () -> {
+      Registry r = newRegistry(true, 10000);
+      r.methodValue("queueSize", this, "toString");
+    });
   }
 
   @Test
   public void methodValueBadReturnTypeNoPropagate() {
     Registry r = newRegistry(false, 10000);
     r.methodValue("queueSize", this, "toString");
-    Assert.assertNull(r.get(r.createId("queueSize")));
+    Assertions.assertNull(r.get(r.createId("queueSize")));
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void methodValueUnknown() {
-    Registry r = newRegistry(true, 10000);
-    r.methodValue("queueSize", this, "unknownMethod");
+    Assertions.assertThrows(RuntimeException.class, () -> {
+      Registry r = newRegistry(true, 10000);
+      r.methodValue("queueSize", this, "unknownMethod");
+    });
   }
 
   @Test
   public void methodValueUnknownNoPropagate() {
     Registry r = newRegistry(false, 10000);
     r.methodValue("queueSize", this, "unknownMethod");
-    Assert.assertNull(r.get(r.createId("queueSize")));
+    Assertions.assertNull(r.get(r.createId("queueSize")));
   }
 
   @Test
@@ -291,13 +294,13 @@ public class RegistryTest {
     r.counter("foo", "a", "1", "b", "2").increment();
     r.counter("bar", "a", "1", "b", "2").increment();
 
-    Assert.assertEquals(4, r.counters().count());
+    Assertions.assertEquals(4, r.counters().count());
     final LongSummaryStatistics summary = r.counters()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingLong(Counter::count));
-    Assert.assertEquals(3L, summary.getCount());
-    Assert.assertEquals(16L, summary.getSum());
-    Assert.assertEquals(13L, summary.getMax());
+    Assertions.assertEquals(3L, summary.getCount());
+    Assertions.assertEquals(16L, summary.getSum());
+    Assertions.assertEquals(13L, summary.getMax());
   }
 
   @Test
@@ -309,21 +312,21 @@ public class RegistryTest {
     r.timer("foo", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
     r.timer("bar", "a", "1", "b", "2").record(1L, TimeUnit.NANOSECONDS);
 
-    Assert.assertEquals(4, r.timers().count());
+    Assertions.assertEquals(4, r.timers().count());
 
     final LongSummaryStatistics countSummary = r.timers()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingLong(Timer::count));
-    Assert.assertEquals(3L, countSummary.getCount());
-    Assert.assertEquals(4L, countSummary.getSum());
-    Assert.assertEquals(2L, countSummary.getMax());
+    Assertions.assertEquals(3L, countSummary.getCount());
+    Assertions.assertEquals(4L, countSummary.getSum());
+    Assertions.assertEquals(2L, countSummary.getMax());
 
     final LongSummaryStatistics totalSummary = r.timers()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingLong(Timer::totalTime));
-    Assert.assertEquals(3L, totalSummary.getCount());
-    Assert.assertEquals(16L, totalSummary.getSum());
-    Assert.assertEquals(13L, totalSummary.getMax());
+    Assertions.assertEquals(3L, totalSummary.getCount());
+    Assertions.assertEquals(16L, totalSummary.getSum());
+    Assertions.assertEquals(13L, totalSummary.getMax());
   }
 
   @Test
@@ -335,21 +338,21 @@ public class RegistryTest {
     r.distributionSummary("foo", "a", "1", "b", "2").record(1L);
     r.distributionSummary("bar", "a", "1", "b", "2").record(1L);
 
-    Assert.assertEquals(4, r.distributionSummaries().count());
+    Assertions.assertEquals(4, r.distributionSummaries().count());
 
     final LongSummaryStatistics countSummary = r.distributionSummaries()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingLong(DistributionSummary::count));
-    Assert.assertEquals(3L, countSummary.getCount());
-    Assert.assertEquals(4L, countSummary.getSum());
-    Assert.assertEquals(2L, countSummary.getMax());
+    Assertions.assertEquals(3L, countSummary.getCount());
+    Assertions.assertEquals(4L, countSummary.getSum());
+    Assertions.assertEquals(2L, countSummary.getMax());
 
     final LongSummaryStatistics totalSummary = r.distributionSummaries()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingLong(DistributionSummary::totalAmount));
-    Assert.assertEquals(3L, totalSummary.getCount());
-    Assert.assertEquals(16L, totalSummary.getSum());
-    Assert.assertEquals(13L, totalSummary.getMax());
+    Assertions.assertEquals(3L, totalSummary.getCount());
+    Assertions.assertEquals(16L, totalSummary.getSum());
+    Assertions.assertEquals(13L, totalSummary.getMax());
   }
 
   @Test
@@ -359,14 +362,14 @@ public class RegistryTest {
     r.gauge(r.createId("foo", "a", "2")).set(2.0);
     r.gauge(r.createId("bar")).set(7.0);
 
-    Assert.assertEquals(3, r.gauges().count());
+    Assertions.assertEquals(3, r.gauges().count());
 
     final DoubleSummaryStatistics valueSummary = r.gauges()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingDouble(Gauge::value));
-    Assert.assertEquals(2, valueSummary.getCount());
-    Assert.assertEquals(3.0, valueSummary.getSum(), 1e-12);
-    Assert.assertEquals(1.5, valueSummary.getAverage(), 1e-12);
+    Assertions.assertEquals(2, valueSummary.getCount());
+    Assertions.assertEquals(3.0, valueSummary.getSum(), 1e-12);
+    Assertions.assertEquals(1.5, valueSummary.getAverage(), 1e-12);
   }
 
   @Test
@@ -379,8 +382,8 @@ public class RegistryTest {
     final DoubleSummaryStatistics valueSummary = r.gauges()
         .filter(Functions.nameEquals("foo"))
         .collect(Collectors.summarizingDouble(Gauge::value));
-    Assert.assertEquals(1, valueSummary.getCount());
-    Assert.assertEquals(3.0, valueSummary.getSum(), 1e-12);
+    Assertions.assertEquals(1, valueSummary.getCount());
+    Assertions.assertEquals(3.0, valueSummary.getSum(), 1e-12);
   }
 
   @Test
@@ -397,11 +400,13 @@ public class RegistryTest {
     r.propagate("foo", new RuntimeException("test"));
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void propagateWarningsTrue() {
-    RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
-    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
-    r.propagate("foo", new RuntimeException("test"));
+    Assertions.assertThrows(RuntimeException.class, () -> {
+      RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
+      Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+      r.propagate("foo", new RuntimeException("test"));
+    });
   }
 
   @Test
@@ -411,7 +416,7 @@ public class RegistryTest {
 
     registry.counter("test").increment();
     registry.removeExpiredMeters();
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -422,7 +427,7 @@ public class RegistryTest {
     registry.counter("test").increment();
     clock.setWallTime(1);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.counters().count());
   }
 
   @Test
@@ -436,10 +441,10 @@ public class RegistryTest {
     cr.counter("test").increment();
     clock.setWallTime(60000 * 30);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.counters().count());
 
     cr.counter("test").increment();
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -451,10 +456,10 @@ public class RegistryTest {
     c.increment();
     clock.setWallTime(60000 * 30);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.counters().count());
 
     c.increment();
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -465,10 +470,10 @@ public class RegistryTest {
 
     clock.setWallTime(60000 * 30);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.counters().count());
 
     c.increment();
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -479,10 +484,10 @@ public class RegistryTest {
 
     clock.setWallTime(60000 * 30);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.timers().count());
+    Assertions.assertEquals(0, registry.timers().count());
 
     t.record(42, TimeUnit.NANOSECONDS);
-    Assert.assertEquals(1, registry.timers().count());
+    Assertions.assertEquals(1, registry.timers().count());
   }
 
   @Test
@@ -497,10 +502,10 @@ public class RegistryTest {
     c.increment();
     clock.setWallTime(60000 * 30);
     registry.removeExpiredMeters();
-    Assert.assertEquals(0, registry.counters().count());
+    Assertions.assertEquals(0, registry.counters().count());
 
     c.increment();
-    Assert.assertEquals(1, registry.counters().count());
+    Assertions.assertEquals(1, registry.counters().count());
   }
 
   @Test
@@ -513,10 +518,10 @@ public class RegistryTest {
       // Force expiration in the body of the lambda
       clock.setWallTime(60000 * 30);
       registry.removeExpiredMeters();
-      Assert.assertEquals(0, registry.timers().count());
+      Assertions.assertEquals(0, registry.timers().count());
     });
 
-    Assert.assertEquals(1, registry.timers().count());
+    Assertions.assertEquals(1, registry.timers().count());
   }
 
   @Test
@@ -528,19 +533,21 @@ public class RegistryTest {
       clock.setWallTime(60000 * 30 * i);
       registry.removeExpiredMeters();
       c.increment();
-      Assert.assertEquals(1, c.count());
-      Assert.assertEquals(1, registry.counter("test").count());
+      Assertions.assertEquals(1, c.count());
+      Assertions.assertEquals(1, registry.counter("test").count());
     }
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void uncaughtExceptionFromGaugeFunction() {
-    Registry registry = new DefaultRegistry();
-    PolledMeter.using(registry)
-        .withName("test")
-        .monitorValue(new RuntimeException("failure"), value -> {
-          throw value;
-        });
-    PolledMeter.update(registry);
+    Assertions.assertThrows(RuntimeException.class, () -> {
+      Registry registry = new DefaultRegistry();
+      PolledMeter.using(registry)
+          .withName("test")
+          .monitorValue(new RuntimeException("failure"), value -> {
+            throw value;
+          });
+      PolledMeter.update(registry);
+    });
   }
 }

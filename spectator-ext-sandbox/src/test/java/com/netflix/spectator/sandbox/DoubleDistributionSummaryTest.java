@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,10 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class DoubleDistributionSummaryTest {
 
   private final ManualClock clock = new ManualClock();
@@ -51,16 +48,16 @@ public class DoubleDistributionSummaryTest {
   @Test
   public void testInit() {
     DoubleDistributionSummary t = newInstance();
-    Assert.assertEquals(t.count(), 0L);
-    Assert.assertEquals(t.totalAmount(), 0.0, 1e-12);
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalAmount(), 0.0, 1e-12);
   }
 
   @Test
   public void testRecord() {
     DoubleDistributionSummary t = newInstance();
     t.record(42.0);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalAmount(), 42.0, 1e-12);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalAmount(), 42.0, 1e-12);
   }
 
   @Test
@@ -68,17 +65,17 @@ public class DoubleDistributionSummaryTest {
     clock.setWallTime(0L);
     DoubleDistributionSummary t = newInstance();
 
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
     t.record(42.0);
 
     clock.setWallTime(15L * 60000L);
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
 
     clock.setWallTime(15L * 60000L + 1);
-    Assert.assertTrue(t.hasExpired());
+    Assertions.assertTrue(t.hasExpired());
 
     t.record(42.0);
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
   }
 
   @Test
@@ -90,7 +87,7 @@ public class DoubleDistributionSummaryTest {
     for (Measurement m : t.measure()) {
       ++c;
     }
-    Assert.assertEquals(0L, c);
+    Assertions.assertEquals(0L, c);
   }
 
   @Test
@@ -99,22 +96,22 @@ public class DoubleDistributionSummaryTest {
     t.record(42.0);
     clock.setWallTime(65000L);
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), 65000L);
+      Assertions.assertEquals(m.timestamp(), 65000L);
       switch (get(m.id(), "statistic")) {
         case "count":
-          Assert.assertEquals(m.value(), 1.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 1.0 / 65.0, 1e-12);
           break;
         case "totalAmount":
-          Assert.assertEquals(m.value(), 42.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0 / 65.0, 1e-12);
           break;
         case "totalOfSquares":
-          Assert.assertEquals(m.value(), 42.0 * 42.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0 * 42.0 / 65.0, 1e-12);
           break;
         case "max":
-          Assert.assertEquals(m.value(), 42.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0, 1e-12);
           break;
         default:
-          Assert.fail("unexpected id: " + m.id());
+          Assertions.fail("unexpected id: " + m.id());
           break;
       }
     }
@@ -152,49 +149,49 @@ public class DoubleDistributionSummaryTest {
         case "totalOfSquares": t2 = m.value();  break;
         case "max":            max = m.value(); break;
         default:
-          Assert.fail("unexpected id: " + m.id());
+          Assertions.fail("unexpected id: " + m.id());
           break;
       }
     }
 
-    Assert.assertEquals(1.0, max, 1e-12);
-    Assert.assertEquals(stddev(values), Math.sqrt((n * t2 - t * t) / (n * n)), 1e-12);
+    Assertions.assertEquals(1.0, max, 1e-12);
+    Assertions.assertEquals(stddev(values), Math.sqrt((n * t2 - t * t) / (n * n)), 1e-12);
   }
 
-  @Ignore
+  @Disabled
   public void testRegister() {
     DoubleDistributionSummary t = newInstance();
     registry.register(t);
     t.record(42.0);
     clock.setWallTime(65000L);
     for (Measurement m : registry.get(t.id()).measure()) {
-      Assert.assertEquals(m.timestamp(), 65000L);
+      Assertions.assertEquals(m.timestamp(), 65000L);
       switch (get(m.id(), "statistic")) {
         case "count":
-          Assert.assertEquals(m.value(), 1.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 1.0 / 65.0, 1e-12);
           break;
         case "totalAmount":
-          Assert.assertEquals(m.value(), 42.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0 / 65.0, 1e-12);
           break;
         case "totalOfSquares":
-          Assert.assertEquals(m.value(), 42.0 * 42.0 / 65.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0 * 42.0 / 65.0, 1e-12);
           break;
         case "max":
-          Assert.assertEquals(m.value(), 42.0, 1e-12);
+          Assertions.assertEquals(m.value(), 42.0, 1e-12);
           break;
         default:
-          Assert.fail("unexpected id: " + m.id());
+          Assertions.fail("unexpected id: " + m.id());
           break;
       }
     }
   }
 
-  @Ignore
+  @Disabled
   public void staticGet() {
     Id id = registry.createId("foo");
     DoubleDistributionSummary t = DoubleDistributionSummary.get(registry, id);
-    Assert.assertSame(t, DoubleDistributionSummary.get(registry, id));
-    Assert.assertNotNull(registry.get(id));
+    Assertions.assertSame(t, DoubleDistributionSummary.get(registry, id));
+    Assertions.assertNotNull(registry.get(id));
   }
 
 }

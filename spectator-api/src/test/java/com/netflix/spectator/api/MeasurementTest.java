@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@ package com.netflix.spectator.api;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class MeasurementTest {
 
   @Test
@@ -37,6 +34,6 @@ public class MeasurementTest {
   public void testToString() {
     Id id = new DefaultId("foo");
     Measurement m = new Measurement(id, 42L, 42.0);
-    Assert.assertEquals(m.toString(), "Measurement(foo,42,42.0)");
+    Assertions.assertEquals(m.toString(), "Measurement(foo,42,42.0)");
   }
 }

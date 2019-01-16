@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
-import org.junit.Assert;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.regex.Pattern;
 
-@RunWith(JUnit4.class)
 public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTest {
 
   @Override
@@ -35,14 +32,14 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
       Pattern pattern = Pattern.compile("^.*(" + regex + ")", flags);
       PatternMatcher matcher = PatternMatcher.compile(regex).ignoreCase();
       if (pattern.matcher(value).find()) {
-        Assert.assertTrue(regex + " should match " + value, matcher.matches(value));
+        Assertions.assertTrue(matcher.matches(value), regex + " should match " + value);
       } else {
-        Assert.assertFalse(regex + " shouldn't match " + value, matcher.matches(value));
+        Assertions.assertFalse(matcher.matches(value), regex + " shouldn't match " + value);
       }
 
       // Check pattern can be recreated from toString
       PatternMatcher actual = PatternMatcher.compile(matcher.toString());
-      Assert.assertEquals(matcher, actual);
+      Assertions.assertEquals(matcher, actual);
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,14 @@ package com.netflix.spectator.servo;
 import com.netflix.servo.monitor.Monitor;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.ManualClock;
-import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class ServoCounterTest {
 
   private final ManualClock clock = new ManualClock();
@@ -39,7 +35,7 @@ public class ServoCounterTest {
     return r.newCounter(r.createId(name));
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     clock.setWallTime(0L);
     clock.setMonotonicTime(0L);
@@ -48,9 +44,9 @@ public class ServoCounterTest {
   @Test
   public void testInit() {
     Counter c = newCounter("foo");
-    Assert.assertEquals(c.count(), 0L);
+    Assertions.assertEquals(c.count(), 0L);
     c.increment();
-    Assert.assertEquals(c.count(), 1L);
+    Assertions.assertEquals(c.count(), 1L);
   }
 
   @Test
@@ -61,23 +57,23 @@ public class ServoCounterTest {
     // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Counter c = newCounter("foo");
-    Assert.assertFalse(c.hasExpired());
+    Assertions.assertFalse(c.hasExpired());
     c.increment(42);
-    Assert.assertFalse(c.hasExpired());
+    Assertions.assertFalse(c.hasExpired());
 
     // Expires with inactivity, total count in memory is maintained
     clock.setWallTime(initTime + fifteenMinutes);
-    Assert.assertFalse(c.hasExpired());
+    Assertions.assertFalse(c.hasExpired());
 
     // Expires with inactivity, total count in memory is maintained
     clock.setWallTime(initTime + fifteenMinutes + 1);
-    Assert.assertEquals(c.count(), 42);
-    Assert.assertTrue(c.hasExpired());
+    Assertions.assertEquals(c.count(), 42);
+    Assertions.assertTrue(c.hasExpired());
 
     // Activity brings it back
     c.increment();
-    Assert.assertEquals(c.count(), 43);
-    Assert.assertFalse(c.hasExpired());
+    Assertions.assertEquals(c.count(), 43);
+    Assertions.assertFalse(c.hasExpired());
   }
 
   @Test
@@ -85,8 +81,8 @@ public class ServoCounterTest {
     List<Monitor<?>> ms = new ArrayList<>();
     Counter c = newCounter("foo");
     ((ServoCounter) c).addMonitors(ms);
-    Assert.assertEquals(1, ms.size());
-    Assert.assertEquals("count", ms.get(0).getConfig().getTags().getValue("statistic"));
+    Assertions.assertEquals(1, ms.size());
+    Assertions.assertEquals("count", ms.get(0).getConfig().getTags().getValue("statistic"));
   }
 
 }

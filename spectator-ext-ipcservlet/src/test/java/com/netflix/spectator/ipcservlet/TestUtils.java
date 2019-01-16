@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.ipc.IpcTagKey;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.stream.Stream;
 
@@ -45,16 +45,16 @@ final class TestUtils {
 
   static void checkEndpoint(Id id, String expected) {
     String endpoint = Utils.getTagValue(id, IpcTagKey.endpoint.key());
-    Assert.assertEquals(expected, endpoint);
+    Assertions.assertEquals(expected, endpoint);
   }
 
   static void checkClientEndpoint(Registry registry, String expected) {
-    Assert.assertTrue(clientCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(clientCallMetrics(registry).count() > 0);
     clientCallMetrics(registry).forEach(id -> checkEndpoint(id, expected));
   }
 
   static void checkServerEndpoint(Registry registry, String expected) {
-    Assert.assertTrue(serverCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(serverCallMetrics(registry).count() > 0);
     serverCallMetrics(registry).forEach(id -> checkEndpoint(id, expected));
   }
 
@@ -65,16 +65,16 @@ final class TestUtils {
 
   static void checkStatus(Id id, String expected) {
     String endpoint = Utils.getTagValue(id, IpcTagKey.httpStatus.key());
-    Assert.assertEquals(expected, endpoint);
+    Assertions.assertEquals(expected, endpoint);
   }
 
   static void checkClientStatus(Registry registry, String expected) {
-    Assert.assertTrue(clientCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(clientCallMetrics(registry).count() > 0);
     clientCallMetrics(registry).forEach(id -> checkStatus(id, expected));
   }
 
   static void checkServerStatus(Registry registry, String expected) {
-    Assert.assertTrue(serverCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(serverCallMetrics(registry).count() > 0);
     serverCallMetrics(registry).forEach(id -> checkStatus(id, expected));
   }
 
@@ -85,16 +85,16 @@ final class TestUtils {
 
   static void checkMethod(Id id, String expected) {
     String endpoint = Utils.getTagValue(id, IpcTagKey.httpMethod.key());
-    Assert.assertEquals(expected, endpoint);
+    Assertions.assertEquals(expected, endpoint);
   }
 
   static void checkClientMethod(Registry registry, String expected) {
-    Assert.assertTrue(clientCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(clientCallMetrics(registry).count() > 0);
     clientCallMetrics(registry).forEach(id -> checkMethod(id, expected));
   }
 
   static void checkServerMethod(Registry registry, String expected) {
-    Assert.assertTrue(serverCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(serverCallMetrics(registry).count() > 0);
     serverCallMetrics(registry).forEach(id -> checkMethod(id, expected));
   }
 
@@ -105,16 +105,16 @@ final class TestUtils {
 
   static void checkErrorReason(Id id, String expected) {
     String endpoint = Utils.getTagValue(id, IpcTagKey.statusDetail.key());
-    Assert.assertEquals(expected, endpoint);
+    Assertions.assertEquals(expected, endpoint);
   }
 
   static void checkClientErrorReason(Registry registry, String expected) {
-    Assert.assertTrue(clientCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(clientCallMetrics(registry).count() > 0);
     clientCallMetrics(registry).forEach(id -> checkErrorReason(id, expected));
   }
 
   static void checkServerErrorReason(Registry registry, String expected) {
-    Assert.assertTrue(serverCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(serverCallMetrics(registry).count() > 0);
     serverCallMetrics(registry).forEach(id -> checkErrorReason(id, expected));
   }
 
@@ -125,16 +125,16 @@ final class TestUtils {
 
   static void checkResult(Id id, String expected) {
     String endpoint = Utils.getTagValue(id, IpcTagKey.result.key());
-    Assert.assertEquals(expected, endpoint);
+    Assertions.assertEquals(expected, endpoint);
   }
 
   static void checkClientResult(Registry registry, String expected) {
-    Assert.assertTrue(clientCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(clientCallMetrics(registry).count() > 0);
     clientCallMetrics(registry).forEach(id -> checkResult(id, expected));
   }
 
   static void checkServerResult(Registry registry, String expected) {
-    Assert.assertTrue(serverCallMetrics(registry).count() > 0);
+    Assertions.assertTrue(serverCallMetrics(registry).count() > 0);
     serverCallMetrics(registry).forEach(id -> checkResult(id, expected));
   }
 

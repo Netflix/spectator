@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-@RunWith(JUnit4.class)
 public class ObjectGaugeTest {
 
   private final ManualClock clock = new ManualClock();
@@ -32,15 +29,15 @@ public class ObjectGaugeTest {
     ObjectGauge<AtomicLong> g = new ObjectGauge<>(
       clock, NoopId.INSTANCE, new AtomicLong(42L), Number::doubleValue);
     for (Measurement m : g.measure()) {
-      Assert.assertEquals(m.value(), 42.0, 1e-12);
+      Assertions.assertEquals(m.value(), 42.0, 1e-12);
     }
 
     // Verify we get NaN after gc, this is quite possibly flakey and can be commented out
     // if needed
     System.gc();
-    Assert.assertTrue(g.hasExpired());
+    Assertions.assertTrue(g.hasExpired());
     for (Measurement m : g.measure()) {
-      Assert.assertEquals(m.value(), Double.NaN, 1e-12);
+      Assertions.assertEquals(m.value(), Double.NaN, 1e-12);
     }
   }
 }

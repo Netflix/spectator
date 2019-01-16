@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.patterns.PolledMeter;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,7 +29,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@RunWith(JUnit4.class)
 public class MetricsRegistryTest {
 
   private final ManualClock clock = new ManualClock();
@@ -41,7 +38,7 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     r.counter("foo", "id", "bar", "a", "b", "a", "c").increment();
-    Assert.assertTrue(codaRegistry.getMeters().containsKey("foo.a-c.id-bar"));
+    Assertions.assertTrue(codaRegistry.getMeters().containsKey("foo.a-c.id-bar"));
   }
 
   @Test
@@ -49,9 +46,9 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     r.counter("foo").increment();
-    Assert.assertEquals(1, codaRegistry.getMeters().get("foo").getCount());
+    Assertions.assertEquals(1, codaRegistry.getMeters().get("foo").getCount());
     r.counter("foo").increment(15);
-    Assert.assertEquals(16, codaRegistry.getMeters().get("foo").getCount());
+    Assertions.assertEquals(16, codaRegistry.getMeters().get("foo").getCount());
   }
 
   @Test
@@ -59,7 +56,7 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     r.timer("foo").record(1, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(1, codaRegistry.getTimers().get("foo").getCount());
+    Assertions.assertEquals(1, codaRegistry.getTimers().get("foo").getCount());
   }
 
   @Test
@@ -67,13 +64,13 @@ public class MetricsRegistryTest {
     MetricRegistry codaRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, codaRegistry);
     r.distributionSummary("foo").record(1);
-    Assert.assertEquals(1, codaRegistry.getHistograms().get("foo").getCount());
+    Assertions.assertEquals(1, codaRegistry.getHistograms().get("foo").getCount());
   }
 
   private void assertGaugeValue(
       MetricsRegistry r, MetricRegistry codaRegistry, String name, double expected) {
     PolledMeter.update(r);
-    Assert.assertEquals(expected, (Double) codaRegistry.getGauges().get(name).getValue(), 1e-12);
+    Assertions.assertEquals(expected, (Double) codaRegistry.getGauges().get(name).getValue(), 1e-12);
   }
 
   @Test
@@ -123,9 +120,9 @@ public class MetricsRegistryTest {
     AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
 
     // Should be registered with the coda
-    Assert.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
+    Assertions.assertEquals(42.0, (Double) codaRegistry.getGauges().get("foo").getValue(), 1e-12);
 
     // Should not be registered with spectator
-    Assert.assertNull(r.get(r.createId("foo")));
+    Assertions.assertNull(r.get(r.createId("foo")));
   }
 }

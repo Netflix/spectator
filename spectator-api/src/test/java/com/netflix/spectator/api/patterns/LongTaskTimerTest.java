@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.*;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class LongTaskTimerTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -30,8 +27,8 @@ public class LongTaskTimerTest {
   @Test
   public void testInit() {
     com.netflix.spectator.api.LongTaskTimer t = LongTaskTimer.get(registry, id);
-    Assert.assertEquals(t.duration(), 0L);
-    Assert.assertEquals(t.activeTasks(), 0L);
+    Assertions.assertEquals(t.duration(), 0L);
+    Assertions.assertEquals(t.activeTasks(), 0L);
   }
 
   @Test
@@ -41,9 +38,9 @@ public class LongTaskTimerTest {
     long task1 = t.start();
     long task2 = t.start();
 
-    Assert.assertFalse(task1 == task2);
-    Assert.assertEquals(t.activeTasks(), 2);
-    Assert.assertEquals(t.duration(), 0L);
+    Assertions.assertFalse(task1 == task2);
+    Assertions.assertEquals(t.activeTasks(), 2);
+    Assertions.assertEquals(t.duration(), 0L);
   }
 
   @Test
@@ -53,41 +50,41 @@ public class LongTaskTimerTest {
     long task1 = t.start();
     long task2 = t.start();
 
-    Assert.assertEquals(t.activeTasks(), 2);
+    Assertions.assertEquals(t.activeTasks(), 2);
     clock.setMonotonicTime(5L);
-    Assert.assertEquals(t.duration(), 10L);
+    Assertions.assertEquals(t.duration(), 10L);
 
     long elapsed1 = t.stop(task1);
 
-    Assert.assertEquals(-1L, t.stop(task1));  // second call to stop should return an error
-    Assert.assertEquals(elapsed1, 5L);
-    Assert.assertEquals(t.duration(task2), 5L);
-    Assert.assertEquals(t.duration(task1), -1L); // task is gone, should return default
-    Assert.assertEquals(t.duration(), 5L);
+    Assertions.assertEquals(-1L, t.stop(task1));  // second call to stop should return an error
+    Assertions.assertEquals(elapsed1, 5L);
+    Assertions.assertEquals(t.duration(task2), 5L);
+    Assertions.assertEquals(t.duration(task1), -1L); // task is gone, should return default
+    Assertions.assertEquals(t.duration(), 5L);
   }
 
   @Test
   public void stateIsPreservedAcrossGets() {
     long t1 = LongTaskTimer.get(registry, id).start();
     long t2 = LongTaskTimer.get(registry, id).start();
-    Assert.assertFalse(t1 == t2);
+    Assertions.assertFalse(t1 == t2);
 
-    Assert.assertEquals(LongTaskTimer.get(registry, id).activeTasks(), 2);
+    Assertions.assertEquals(LongTaskTimer.get(registry, id).activeTasks(), 2);
     clock.setMonotonicTime(5L);
-    Assert.assertEquals(LongTaskTimer.get(registry, id).duration(), 10L);
+    Assertions.assertEquals(LongTaskTimer.get(registry, id).duration(), 10L);
     LongTaskTimer.get(registry, id).stop(t1);
-    Assert.assertEquals(LongTaskTimer.get(registry, id).duration(), 5L);
+    Assertions.assertEquals(LongTaskTimer.get(registry, id).duration(), 5L);
   }
 
   private void assertLongTaskTimer(Meter t, long timestamp, int activeTasks, double duration) {
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), timestamp);
+      Assertions.assertEquals(m.timestamp(), timestamp);
       if (m.id().equals(t.id().withTag(Statistic.activeTasks))) {
-        Assert.assertEquals(m.value(), activeTasks, 1.0e-12);
+        Assertions.assertEquals(m.value(), activeTasks, 1.0e-12);
       } else if (m.id().equals(t.id().withTag(Statistic.duration))) {
-        Assert.assertEquals(m.value(), duration, 1.0e-12);
+        Assertions.assertEquals(m.value(), duration, 1.0e-12);
       } else {
-        Assert.fail("unexpected id: " + m.id());
+        Assertions.fail("unexpected id: " + m.id());
       }
     }
   }

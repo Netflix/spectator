@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.MockClock;
 import io.micrometer.core.instrument.simple.SimpleConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,14 +42,13 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 
-@RunWith(JUnit4.class)
 public class MicrometerRegistryTest {
 
   private MockClock clock;
   private MeterRegistry meterRegistry;
   private MicrometerRegistry registry;
 
-  @Before
+  @BeforeEach
   public void before() {
     clock = new MockClock();
     meterRegistry = new SimpleMeterRegistry(SimpleConfig.DEFAULT, clock);
@@ -61,44 +58,44 @@ public class MicrometerRegistryTest {
   @Test
   public void createIdName() {
     Id id = registry.createId("foo");
-    Assert.assertEquals("foo", id.name());
-    Assert.assertFalse(id.tags().iterator().hasNext());
+    Assertions.assertEquals("foo", id.name());
+    Assertions.assertFalse(id.tags().iterator().hasNext());
   }
 
   @Test
   public void createIdNameAndTags() {
     Id id = registry.createId("foo", "a", "1", "b", "2");
-    Assert.assertEquals("foo", id.name());
+    Assertions.assertEquals("foo", id.name());
 
     Map<String, String> tags = new HashMap<>();
     tags.put("a", "1");
     tags.put("b", "2");
 
     for (Tag t : id.tags()) {
-      Assert.assertEquals(tags.remove(t.key()), t.value());
+      Assertions.assertEquals(tags.remove(t.key()), t.value());
     }
-    Assert.assertTrue(tags.isEmpty());
+    Assertions.assertTrue(tags.isEmpty());
   }
 
   @Test
   public void notPresentGet() {
-    Assert.assertNull(registry.get(registry.createId("foo")));
+    Assertions.assertNull(registry.get(registry.createId("foo")));
   }
 
   @Test
   public void counterIncrement() {
     Counter c = registry.counter("foo");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
     c.increment();
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
   public void counterAdd() {
     Counter c = registry.counter("foo");
-    Assert.assertEquals(0.0, c.actualCount(), 1e-12);
+    Assertions.assertEquals(0.0, c.actualCount(), 1e-12);
     c.add(1.5);
-    Assert.assertEquals(1.5, c.actualCount(), 1e-12);
+    Assertions.assertEquals(1.5, c.actualCount(), 1e-12);
   }
 
   @Test
@@ -108,10 +105,10 @@ public class MicrometerRegistryTest {
     int i = 0;
     for (Measurement m : c.measure()) {
       ++i;
-      Assert.assertEquals("foo", m.id().name());
-      Assert.assertEquals(1.0, m.value(), 1e-12);
+      Assertions.assertEquals("foo", m.id().name());
+      Assertions.assertEquals(1.0, m.value(), 1e-12);
     }
-    Assert.assertEquals(1, i);
+    Assertions.assertEquals(1, i);
   }
 
   @Test
@@ -120,7 +117,7 @@ public class MicrometerRegistryTest {
     c1.increment();
 
     Counter c2 = registry.counter(registry.createId("foo", "a", "1", "b", "2"));
-    Assert.assertEquals(1, c2.count());
+    Assertions.assertEquals(1, c2.count());
   }
 
   @Test
@@ -129,33 +126,33 @@ public class MicrometerRegistryTest {
     c1.increment();
 
     Counter c2 = (Counter) registry.get(registry.createId("foo"));
-    Assert.assertEquals(1, c2.count());
+    Assertions.assertEquals(1, c2.count());
   }
 
   @Test
   public void timerRecord() {
     Timer t = registry.timer("foo");
-    Assert.assertEquals(0, t.count());
-    Assert.assertEquals(0, t.totalTime());
+    Assertions.assertEquals(0, t.count());
+    Assertions.assertEquals(0, t.totalTime());
     t.record(42, TimeUnit.SECONDS);
-    Assert.assertEquals(1, t.count());
-    Assert.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
   }
 
   @Test
   public void timerRecordRunnable() {
     Timer t = registry.timer("foo");
     t.record((Runnable) () -> clock.add(42, TimeUnit.SECONDS));
-    Assert.assertEquals(1, t.count());
-    Assert.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
   }
 
   @Test
   public void timerRecordCallable() throws Exception {
     Timer t = registry.timer("foo");
     t.record(() -> clock.add(42, TimeUnit.SECONDS));
-    Assert.assertEquals(1, t.count());
-    Assert.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
   }
 
   @Test
@@ -165,22 +162,22 @@ public class MicrometerRegistryTest {
     int i = 0;
     for (Measurement m : t.measure()) {
       ++i;
-      Assert.assertEquals("foo", m.id().name());
+      Assertions.assertEquals("foo", m.id().name());
       switch (Utils.getTagValue(m.id(), "statistic")) {
         case "count":
-          Assert.assertEquals(1.0, m.value(), 1e-12);
+          Assertions.assertEquals(1.0, m.value(), 1e-12);
           break;
         case "total":
-          Assert.assertEquals(42.0, m.value(), 1e-12);
+          Assertions.assertEquals(42.0, m.value(), 1e-12);
           break;
         case "max":
-          Assert.assertEquals(42.0, m.value(), 1e-12);
+          Assertions.assertEquals(42.0, m.value(), 1e-12);
           break;
         default:
-          Assert.fail("invalid statistic for measurment: " + m);
+          Assertions.fail("invalid statistic for measurment: " + m);
       }
     }
-    Assert.assertEquals(3, i);
+    Assertions.assertEquals(3, i);
   }
 
   @Test
@@ -189,17 +186,17 @@ public class MicrometerRegistryTest {
     t1.record(1, TimeUnit.SECONDS);
 
     Timer t2 = (Timer) registry.get(registry.createId("foo"));
-    Assert.assertEquals(1, t2.count());
+    Assertions.assertEquals(1, t2.count());
   }
 
   @Test
   public void summaryRecord() {
     DistributionSummary s = registry.distributionSummary("foo");
-    Assert.assertEquals(0, s.count());
-    Assert.assertEquals(0, s.totalAmount());
+    Assertions.assertEquals(0, s.count());
+    Assertions.assertEquals(0, s.totalAmount());
     s.record(42);
-    Assert.assertEquals(1, s.count());
-    Assert.assertEquals(42, s.totalAmount());
+    Assertions.assertEquals(1, s.count());
+    Assertions.assertEquals(42, s.totalAmount());
   }
 
   @Test
@@ -209,22 +206,22 @@ public class MicrometerRegistryTest {
     int i = 0;
     for (Measurement m : s.measure()) {
       ++i;
-      Assert.assertEquals("foo", m.id().name());
+      Assertions.assertEquals("foo", m.id().name());
       switch (Utils.getTagValue(m.id(), "statistic")) {
         case "count":
-          Assert.assertEquals(1.0, m.value(), 1e-12);
+          Assertions.assertEquals(1.0, m.value(), 1e-12);
           break;
         case "total":
-          Assert.assertEquals(42.0, m.value(), 1e-12);
+          Assertions.assertEquals(42.0, m.value(), 1e-12);
           break;
         case "max":
-          Assert.assertEquals(42.0, m.value(), 1e-12);
+          Assertions.assertEquals(42.0, m.value(), 1e-12);
           break;
         default:
-          Assert.fail("invalid statistic for measurment: " + m);
+          Assertions.fail("invalid statistic for measurment: " + m);
       }
     }
-    Assert.assertEquals(3, i);
+    Assertions.assertEquals(3, i);
   }
 
   @Test
@@ -233,17 +230,17 @@ public class MicrometerRegistryTest {
     s1.record(1);
 
     DistributionSummary s2 = (DistributionSummary) registry.get(registry.createId("foo"));
-    Assert.assertEquals(1, s2.count());
+    Assertions.assertEquals(1, s2.count());
   }
 
   @Test
   public void gaugeSet() {
     Gauge g = registry.gauge("foo");
-    Assert.assertTrue(Double.isNaN(g.value()));
+    Assertions.assertTrue(Double.isNaN(g.value()));
     g.set(42.0);
-    Assert.assertEquals(42.0, g.value(), 1e-12);
+    Assertions.assertEquals(42.0, g.value(), 1e-12);
     g.set(20.0);
-    Assert.assertEquals(20.0, g.value(), 1e-12);
+    Assertions.assertEquals(20.0, g.value(), 1e-12);
   }
 
   @Test
@@ -253,10 +250,10 @@ public class MicrometerRegistryTest {
     int i = 0;
     for (Measurement m : g.measure()) {
       ++i;
-      Assert.assertEquals("foo", m.id().name());
-      Assert.assertEquals(42.0, m.value(), 1e-12);
+      Assertions.assertEquals("foo", m.id().name());
+      Assertions.assertEquals(42.0, m.value(), 1e-12);
     }
-    Assert.assertEquals(1, i);
+    Assertions.assertEquals(1, i);
   }
 
   @Test
@@ -265,23 +262,23 @@ public class MicrometerRegistryTest {
     g1.set(1.0);
 
     Gauge g2 = (Gauge) registry.get(registry.createId("foo"));
-    Assert.assertEquals(1.0, g2.value(), 1e-12);
+    Assertions.assertEquals(1.0, g2.value(), 1e-12);
   }
 
   @Test
   public void maxGaugeSet() {
     Gauge g = registry.maxGauge("foo");
-    Assert.assertTrue(Double.isNaN(g.value()));
+    Assertions.assertTrue(Double.isNaN(g.value()));
     g.set(42.0);
     g.set(20.0);
     clock.addSeconds(60);
-    Assert.assertEquals(42.0, g.value(), 1e-12);
+    Assertions.assertEquals(42.0, g.value(), 1e-12);
   }
 
   @Test
   public void unknownGet() {
     meterRegistry.more().longTaskTimer("foo").record(() -> clock.addSeconds(60));
-    Assert.assertNull(registry.get(registry.createId("foo")));
+    Assertions.assertNull(registry.get(registry.createId("foo")));
   }
 
   @Test
@@ -293,7 +290,7 @@ public class MicrometerRegistryTest {
 
     Set<String> actual = new HashSet<>();
     for (Meter m : registry) {
-      Assert.assertFalse(m.hasExpired());
+      Assertions.assertFalse(m.hasExpired());
       actual.add(m.id().name());
     }
 
@@ -302,7 +299,7 @@ public class MicrometerRegistryTest {
     expected.add("t");
     expected.add("s");
     expected.add("g");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -313,10 +310,10 @@ public class MicrometerRegistryTest {
     PolledMeter.update(registry);
 
     Gauge g = registry.gauge(registry.createId("foo").withTag(Statistic.duration));
-    Assert.assertEquals(60.0, g.value(), 1e-12);
+    Assertions.assertEquals(60.0, g.value(), 1e-12);
 
     t.stop(tid);
     PolledMeter.update(registry);
-    Assert.assertEquals(0.0, g.value(), 1e-12);
+    Assertions.assertEquals(0.0, g.value(), 1e-12);
   }
 }

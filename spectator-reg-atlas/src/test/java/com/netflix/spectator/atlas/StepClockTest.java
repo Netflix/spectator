@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,10 @@
 package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.ManualClock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class StepClockTest {
 
   @Test
@@ -31,13 +28,13 @@ public class StepClockTest {
     StepClock sc = new StepClock(mc, 10000);
 
     mc.setWallTime(5000);
-    Assert.assertEquals(0L, sc.wallTime());
+    Assertions.assertEquals(0L, sc.wallTime());
 
     mc.setWallTime(10000);
-    Assert.assertEquals(10000L, sc.wallTime());
+    Assertions.assertEquals(10000L, sc.wallTime());
 
     mc.setWallTime(20212);
-    Assert.assertEquals(20000L, sc.wallTime());
+    Assertions.assertEquals(20000L, sc.wallTime());
   }
 
   @Test
@@ -46,12 +43,12 @@ public class StepClockTest {
     StepClock sc = new StepClock(mc, 10000);
 
     mc.setMonotonicTime(5000);
-    Assert.assertEquals(5000L, sc.monotonicTime());
+    Assertions.assertEquals(5000L, sc.monotonicTime());
 
     mc.setMonotonicTime(10000);
-    Assert.assertEquals(10000L, sc.monotonicTime());
+    Assertions.assertEquals(10000L, sc.monotonicTime());
 
     mc.setMonotonicTime(20212);
-    Assert.assertEquals(20212L, sc.monotonicTime());
+    Assertions.assertEquals(20212L, sc.monotonicTime());
   }
 }

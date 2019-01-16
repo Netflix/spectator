@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,10 @@ import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class TestModuleTest {
 
   public static class Foo {
@@ -46,7 +43,7 @@ public class TestModuleTest {
 
   private Injector injector;
 
-  @Before
+  @BeforeEach
   public void setup() {
     injector = Guice.createInjector(new TestModule());
   }
@@ -55,17 +52,17 @@ public class TestModuleTest {
   public void checkCount() {
     Registry r = injector.getInstance(Registry.class);
     Counter c = r.counter("foo.doSomething");
-    Assert.assertEquals(0, c.count());
+    Assertions.assertEquals(0, c.count());
 
     Foo f = injector.getInstance(Foo.class);
     f.doSomething();
-    Assert.assertEquals(1, c.count());
+    Assertions.assertEquals(1, c.count());
   }
 
   @Test
   public void notGlobal() {
     Registry r = injector.getInstance(Registry.class);
-    Assert.assertNotSame(Spectator.globalRegistry(), r);
+    Assertions.assertNotSame(Spectator.globalRegistry(), r);
   }
 
   @Test
@@ -73,10 +70,10 @@ public class TestModuleTest {
     Registry r = Guice
         .createInjector(new SpectatorModule(), new TestModule())
         .getInstance(Registry.class);
-    Assert.assertTrue(r instanceof DefaultRegistry); // SpectatorModule installs ServoRegistry
+    Assertions.assertTrue(r instanceof DefaultRegistry); // SpectatorModule installs ServoRegistry
 
     // Sanity checking global behavior, SpectatorModule will add it to the global
     // registry which is not normally done for TestModule because it is all static.
-    Assert.assertSame(Spectator.globalRegistry().underlying(DefaultRegistry.class), r);
+    Assertions.assertSame(Spectator.globalRegistry().underlying(DefaultRegistry.class), r);
   }
 }

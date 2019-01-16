@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,8 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
@@ -29,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
-@RunWith(JUnit4.class)
 public class AtlasRegistryTest {
 
   private ManualClock clock = new ManualClock();
@@ -49,48 +46,48 @@ public class AtlasRegistryTest {
 
   @Test
   public void measurementsEmpty() {
-    Assert.assertEquals(0, getMeasurements().size());
+    Assertions.assertEquals(0, getMeasurements().size());
   }
 
   @Test
   public void measurementsWithCounter() {
     registry.counter("test").increment();
-    Assert.assertEquals(1, getMeasurements().size());
+    Assertions.assertEquals(1, getMeasurements().size());
   }
 
   @Test
   public void measurementsWithTimer() {
     registry.timer("test").record(42, TimeUnit.NANOSECONDS);
-    Assert.assertEquals(4, getMeasurements().size());
+    Assertions.assertEquals(4, getMeasurements().size());
   }
 
   @Test
   public void measurementsWithDistributionSummary() {
     registry.distributionSummary("test").record(42);
-    Assert.assertEquals(4, getMeasurements().size());
+    Assertions.assertEquals(4, getMeasurements().size());
   }
 
   @Test
   public void measurementsWithGauge() {
     registry.gauge("test").set(4.0);
-    Assert.assertEquals(1, getMeasurements().size());
+    Assertions.assertEquals(1, getMeasurements().size());
   }
 
   @Test
   public void measurementsIgnoresNaN() {
     registry.gauge("test").set(Double.NaN);
-    Assert.assertEquals(0, getMeasurements().size());
+    Assertions.assertEquals(0, getMeasurements().size());
   }
 
   @Test
   public void measurementsWithMaxGauge() {
     registry.maxGauge(registry.createId("test")).set(4.0);
-    Assert.assertEquals(1, getMeasurements().size());
+    Assertions.assertEquals(1, getMeasurements().size());
   }
 
   @Test
   public void batchesEmpty() {
-    Assert.assertEquals(0, registry.getBatches().size());
+    Assertions.assertEquals(0, registry.getBatches().size());
   }
 
   @Test
@@ -98,9 +95,9 @@ public class AtlasRegistryTest {
     for (int i = 0; i < 9; ++i) {
       registry.counter("" + i).increment();
     }
-    Assert.assertEquals(3, registry.getBatches().size());
+    Assertions.assertEquals(3, registry.getBatches().size());
     for (List<Measurement> batch : registry.getBatches()) {
-      Assert.assertEquals(3, batch.size());
+      Assertions.assertEquals(3, batch.size());
     }
   }
 
@@ -110,30 +107,30 @@ public class AtlasRegistryTest {
       registry.counter("" + i).increment();
     }
     List<List<Measurement>> batches = registry.getBatches();
-    Assert.assertEquals(3, batches.size());
+    Assertions.assertEquals(3, batches.size());
     for (int i = 0; i < batches.size(); ++i) {
-      Assert.assertEquals((i < 2) ? 3 : 1, batches.get(i).size());
+      Assertions.assertEquals((i < 2) ? 3 : 1, batches.get(i).size());
     }
   }
 
   @Test
   public void initialDelayTooCloseToStart() {
     long d = registry.getInitialDelay(10000);
-    Assert.assertEquals(1000, d);
+    Assertions.assertEquals(1000, d);
   }
 
   @Test
   public void initialDelayTooCloseToEnd() {
     clock.setWallTime(19123);
     long d = registry.getInitialDelay(10000);
-    Assert.assertEquals(9000, d);
+    Assertions.assertEquals(9000, d);
   }
 
   @Test
   public void initialDelayOk() {
     clock.setWallTime(12123);
     long d = registry.getInitialDelay(10000);
-    Assert.assertEquals(2123, d);
+    Assertions.assertEquals(2123, d);
   }
 
   @Test
@@ -141,13 +138,13 @@ public class AtlasRegistryTest {
     for (int i = 0; i < 9; ++i) {
       registry.counter("" + i).increment();
     }
-    Assert.assertEquals(3, registry.getBatches().size());
+    Assertions.assertEquals(3, registry.getBatches().size());
     for (List<Measurement> batch : registry.getBatches()) {
-      Assert.assertEquals(3, batch.size());
+      Assertions.assertEquals(3, batch.size());
     }
 
     clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
-    Assert.assertEquals(0, registry.getBatches().size());
+    Assertions.assertEquals(0, registry.getBatches().size());
   }
 
   @Test
@@ -156,7 +153,7 @@ public class AtlasRegistryTest {
       registry.counter("" + i).increment();
     }
     registry.collectData();
-    Assert.assertEquals(3, registry.getBatches().size());
+    Assertions.assertEquals(3, registry.getBatches().size());
   }
 
   @Test
@@ -166,6 +163,6 @@ public class AtlasRegistryTest {
     }
     clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
     registry.collectData();
-    Assert.assertEquals(0, registry.getBatches().size());
+    Assertions.assertEquals(0, registry.getBatches().size());
   }
 }

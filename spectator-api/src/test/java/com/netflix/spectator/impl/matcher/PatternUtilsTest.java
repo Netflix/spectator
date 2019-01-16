@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,52 +15,50 @@
  */
 package com.netflix.spectator.impl.matcher;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class PatternUtilsTest {
 
   @Test
   public void expandTab() {
-    Assert.assertEquals("\t", PatternUtils.expandEscapedChars("\\t"));
+    Assertions.assertEquals("\t", PatternUtils.expandEscapedChars("\\t"));
   }
 
   @Test
   public void expandNewLine() {
-    Assert.assertEquals("\n", PatternUtils.expandEscapedChars("\\n"));
+    Assertions.assertEquals("\n", PatternUtils.expandEscapedChars("\\n"));
   }
 
   @Test
   public void expandCarriageReturn() {
-    Assert.assertEquals("\r", PatternUtils.expandEscapedChars("\\r"));
+    Assertions.assertEquals("\r", PatternUtils.expandEscapedChars("\\r"));
   }
 
   @Test
   public void expandFormFeed() {
-    Assert.assertEquals("\f", PatternUtils.expandEscapedChars("\\f"));
+    Assertions.assertEquals("\f", PatternUtils.expandEscapedChars("\\f"));
   }
 
   @Test
   public void expandAlert() {
-    Assert.assertEquals("\u0007", PatternUtils.expandEscapedChars("\\a"));
+    Assertions.assertEquals("\u0007", PatternUtils.expandEscapedChars("\\a"));
   }
 
   @Test
   public void expandEscape() {
-    Assert.assertEquals("\u001B", PatternUtils.expandEscapedChars("\\e"));
+    Assertions.assertEquals("\u001B", PatternUtils.expandEscapedChars("\\e"));
   }
 
   @Test
   public void expandSlash() {
-    Assert.assertEquals("\\\\", PatternUtils.expandEscapedChars("\\\\"));
+    Assertions.assertEquals("\\\\", PatternUtils.expandEscapedChars("\\\\"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandOctalEmpty() {
-    PatternUtils.expandEscapedChars("\\0");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\0"));
   }
 
   @Test
@@ -68,13 +66,14 @@ public class PatternUtilsTest {
     for (int i = 0; i < 128; ++i) {
       String expected = Character.toString((char) i);
       String str = "\\0" + Integer.toString(i, 8);
-      Assert.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandOctalInvalid() {
-    PatternUtils.expandEscapedChars("\\0AAA");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\0AAA"));
   }
 
   @Test
@@ -82,7 +81,7 @@ public class PatternUtilsTest {
     for (int i = 0; i < 0xFF; ++i) {
       String expected = Character.toString((char) i);
       String str = String.format("\\x%02x", i);
-      Assert.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
   }
 
@@ -91,18 +90,20 @@ public class PatternUtilsTest {
     for (int i = 0; i < 0xFF; ++i) {
       String expected = Character.toString((char) i);
       String str = String.format("\\x%02X", i);
-      Assert.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandHexPartial() {
-    PatternUtils.expandEscapedChars("\\xF");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\xF"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandHexInvalid() {
-    PatternUtils.expandEscapedChars("\\xZZ");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\xZZ"));
   }
 
   @Test
@@ -110,40 +111,43 @@ public class PatternUtilsTest {
     for (int i = 0; i < 0xFFFF; ++i) {
       String expected = Character.toString((char) i);
       String str = String.format("\\u%04x", i);
-      Assert.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandUnicodePartial() {
-    PatternUtils.expandEscapedChars("\\u00A");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\u00A"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void expandUnicodeInvalid() {
-    PatternUtils.expandEscapedChars("\\uZZZZ");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\uZZZZ"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void danglingEscape() {
-    PatternUtils.expandEscapedChars("\\");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\"));
   }
 
   @Test
   public void other() {
-    Assert.assertEquals("\\[", PatternUtils.expandEscapedChars("\\["));
+    Assertions.assertEquals("\\[", PatternUtils.expandEscapedChars("\\["));
   }
 
   @Test
   public void nonEscapedData() {
-    Assert.assertEquals("abc", PatternUtils.expandEscapedChars("abc"));
+    Assertions.assertEquals("abc", PatternUtils.expandEscapedChars("abc"));
   }
 
   @Test
   public void escapeSpecial() {
     String input = "\t\n\r\f\\^$.?*+[](){}";
     String expected = "\\t\\n\\r\\f\\\\\\^\\$\\.\\?\\*\\+\\[\\]\\(\\)\\{\\}";
-    Assert.assertEquals(expected, PatternUtils.escape(input));
+    Assertions.assertEquals(expected, PatternUtils.escape(input));
   }
 
   @Test
@@ -154,7 +158,7 @@ public class PatternUtilsTest {
         continue;
       }
       String expected = Character.toString(i);
-      Assert.assertEquals(expected, PatternUtils.escape(expected));
+      Assertions.assertEquals(expected, PatternUtils.escape(expected));
     }
   }
 
@@ -167,12 +171,12 @@ public class PatternUtilsTest {
       }
       String input = Character.toString((char) i);
       String expected = String.format("\\u%04x", i);
-      Assert.assertEquals(expected, PatternUtils.escape(input));
+      Assertions.assertEquals(expected, PatternUtils.escape(input));
     }
   }
 
   @Test
   public void escapeDelete() {
-    Assert.assertEquals("\\u007f", PatternUtils.escape("\u007f"));
+    Assertions.assertEquals("\\u007f", PatternUtils.escape("\u007f"));
   }
 }

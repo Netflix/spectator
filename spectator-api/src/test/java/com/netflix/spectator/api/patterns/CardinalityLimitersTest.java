@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,50 +16,46 @@
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.ManualClock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
-@RunWith(JUnit4.class)
 public class CardinalityLimitersTest {
 
   @Test
   public void first2() {
     Function<String, String> f = CardinalityLimiters.first(2);
-    Assert.assertEquals("a", f.apply("a"));
-    Assert.assertEquals("b", f.apply("b"));
-    Assert.assertEquals(CardinalityLimiters.OTHERS, f.apply("c"));
-    Assert.assertEquals("a", f.apply("a"));
+    Assertions.assertEquals("a", f.apply("a"));
+    Assertions.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, f.apply("c"));
+    Assertions.assertEquals("a", f.apply("a"));
   }
 
   @Test
   public void firstToStringEmpty() {
     Function<String, String> f = CardinalityLimiters.first(2);
-    Assert.assertEquals("FirstLimiter()", f.toString());
+    Assertions.assertEquals("FirstLimiter()", f.toString());
   }
 
   @Test
   public void firstToStringPartial() {
     Function<String, String> f = CardinalityLimiters.first(2);
-    Assert.assertEquals("b", f.apply("b"));
-    Assert.assertEquals("FirstLimiter(b)", f.toString());
+    Assertions.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals("FirstLimiter(b)", f.toString());
   }
 
   @Test
   public void firstToStringFull() {
     Function<String, String> f = CardinalityLimiters.first(2);
-    Assert.assertEquals("a", f.apply("a"));
-    Assert.assertEquals("b", f.apply("b"));
-    Assert.assertEquals("FirstLimiter(a,b)", f.toString());
+    Assertions.assertEquals("a", f.apply("a"));
+    Assertions.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals("FirstLimiter(a,b)", f.toString());
   }
 
   private void updateN(Function<String, String> f, int n, String s) {
@@ -80,7 +76,7 @@ public class CardinalityLimitersTest {
     Function<String, String> f = CardinalityLimiters.mostFrequent(n, clock);
     for (int t = 0; t < 1000; ++t) {
       for (int i = 0; i < n; ++i) {
-        Assert.assertEquals("" + i, f.apply("" + i));
+        Assertions.assertEquals("" + i, f.apply("" + i));
       }
       clock.setWallTime(t * 1000);
     }
@@ -99,20 +95,20 @@ public class CardinalityLimitersTest {
 
     // Refresh cutoff, should be 3 for the top 2
     advanceClock(clock);
-    Assert.assertEquals("a", f.apply("a"));
+    Assertions.assertEquals("a", f.apply("a"));
 
     // If the values are close then bias towards the names that come first alphabetically
-    Assert.assertEquals(CardinalityLimiters.OTHERS, f.apply("c"));
-    Assert.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, f.apply("c"));
+    Assertions.assertEquals("b", f.apply("b"));
 
     // Until the cutoff is updated, "d" won't show up no matter how frequent
-    Assert.assertEquals(CardinalityLimiters.OTHERS, f.apply("d"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, f.apply("d"));
     updateN(f, 42, "d");
-    Assert.assertEquals(CardinalityLimiters.OTHERS, f.apply("d"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, f.apply("d"));
 
     // Now "d" is most frequent
     advanceClock(clock);
-    Assert.assertEquals("d", f.apply("d"));
+    Assertions.assertEquals("d", f.apply("d"));
   }
 
   @Test
@@ -127,8 +123,8 @@ public class CardinalityLimitersTest {
       clock.setWallTime(i * 1000);
     }
     // The values less than equal 9616 should have been cleaned up based on the clock
-    Assert.assertFalse(f.toString().contains("9616"));
-    Assert.assertEquals(3, values.size());
+    Assertions.assertFalse(f.toString().contains("9616"));
+    Assertions.assertEquals(3, values.size());
   }
 
   @Test
@@ -154,7 +150,7 @@ public class CardinalityLimitersTest {
       clock.setWallTime(i * 1000);
     }
 
-    Assert.assertTrue(values.contains("app-a-v002"));
+    Assertions.assertTrue(values.contains("app-a-v002"));
   }
 
   @Test
@@ -176,8 +172,8 @@ public class CardinalityLimitersTest {
       }
       clock.setWallTime(t * 60000);
     }
-    Assert.assertEquals(6, values.size());
-    Assert.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals(6, values.size());
+    Assertions.assertEquals("b", f.apply("b"));
   }
 
   @Test
@@ -217,7 +213,7 @@ public class CardinalityLimitersTest {
     }
 
     // Should be proportional to the cluster size, not the number of input values
-    Assert.assertTrue(values.size() < 2 * clusterSize * cardinalityLimit);
+    Assertions.assertTrue(values.size() < 2 * clusterSize * cardinalityLimit);
 
     values.clear();
     for (; t < finalEnd; ++t) {
@@ -226,7 +222,7 @@ public class CardinalityLimitersTest {
     }
 
     // Should only have the others value
-    Assert.assertEquals(1, values.size());
+    Assertions.assertEquals(1, values.size());
   }
 
   @Test
@@ -278,7 +274,7 @@ public class CardinalityLimitersTest {
     }
 
     // Should be proportional to the cluster size, not the number of input values
-    Assert.assertTrue(values.size() < 2 * clusterSize * cardinalityLimit);
+    Assertions.assertTrue(values.size() < 2 * clusterSize * cardinalityLimit);
 
     // Stable phase, general trend is established and only higher frequency values should
     // be reported with agreement for the most part across nodes
@@ -290,6 +286,6 @@ public class CardinalityLimitersTest {
 
     // It should have started converging on the frequent set and dropping the values with
     // too much churn even though this restricts it below the specified limit.
-    Assert.assertTrue(values.size() < 2 * numFrequentValues);
+    Assertions.assertTrue(values.size() < 2 * numFrequentValues);
   }
 }

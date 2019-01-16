@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,13 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class SpectatorTest {
   @Test
   public void testRegistry() {
-    Assert.assertNotNull(Spectator.registry());
+    Assertions.assertNotNull(Spectator.registry());
   }
 
   @Test
@@ -39,7 +36,7 @@ public class SpectatorTest {
     for (Meter m : global) {
       found |= m.id().equals(counter.id());
     }
-    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+    Assertions.assertTrue(found, "id for sub-registry could not be found in global iterator");
   }
 
   @Test
@@ -56,6 +53,6 @@ public class SpectatorTest {
     for (Meter m : global) {
       found |= m.id().equals(counter.id());
     }
-    Assert.assertTrue("id for sub-registry could not be found in global iterator", found);
+    Assertions.assertTrue(found, "id for sub-registry could not be found in global iterator");
   }
 }

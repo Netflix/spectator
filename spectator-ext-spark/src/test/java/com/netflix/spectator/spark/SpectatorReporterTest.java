@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,11 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.regex.Pattern;
 
-@RunWith(JUnit4.class)
 public class SpectatorReporterTest {
 
   private final MetricRegistry metricsRegistry = new MetricRegistry();
@@ -48,13 +45,13 @@ public class SpectatorReporterTest {
     gaugeCounter.inc();
     reporter.report();
     long after = registry.counter("gaugeCounter").count();
-    Assert.assertEquals(before + 1, after);
+    Assertions.assertEquals(before + 1, after);
 
     metricsCounter.dec();
     reporter.report();
     before = after;
     after = getValue("gaugeCounter");
-    Assert.assertEquals(before, after);
+    Assertions.assertEquals(before, after);
   }
 
   private long getValue(String name) {
@@ -75,12 +72,12 @@ public class SpectatorReporterTest {
     metricsCounter.inc();
     reporter.report();
     long after = getValue("metricsCounter");
-    Assert.assertEquals(before + 1, after);
+    Assertions.assertEquals(before + 1, after);
 
     metricsCounter.dec();
     reporter.report();
     before = after;
     after = getValue("metricsCounter");
-    Assert.assertEquals(before - 1, after);
+    Assertions.assertEquals(before - 1, after);
   }
 }
