@@ -1,6 +1,6 @@
 dependencies {
   compileApi project(':spectator-api')
-  compile 'io.micrometer:micrometer-core:1.1.0'
+  compile 'io.micrometer:micrometer-core'
 }
 
 jar {

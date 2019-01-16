@@ -4,7 +4,6 @@ dependencies {
   compile project(':spectator-ext-jvm')
   compile project(':spectator-reg-atlas')
   compile 'javax.inject:javax.inject'
-  compile 'commons-configuration:commons-configuration'
   compile "com.google.inject:guice"
   compile "com.google.inject.extensions:guice-multibindings"
   compile "com.netflix.archaius:archaius2-core"
