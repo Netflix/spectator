@@ -92,9 +92,6 @@ subprojects {
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
-  tasks.withType(Checkstyle) {
-    exclude '**/tdunning/**'
-  }
   
   spotbugs {
     toolVersion = '3.1.10'
@@ -115,9 +112,6 @@ subprojects {
     sourceSets = [sourceSets.main]
     ruleSets = []
     ruleSetFiles = rootProject.files("codequality/pmd.xml")
-  }
-  tasks.withType(Pmd) {
-    exclude '**/tdunning/**'
   }
 }
 
