@@ -3,7 +3,7 @@ buildscript {
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:6.1.1'
-    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:7.0.0'
+    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:7.1.0'
 
     // This is a workaround for getting the shadow plugin to work correctly
     // for some sub-projects. For more details see:
