@@ -30,7 +30,6 @@ nav:
 - Registries:
   - Metrics3: registry/metrics3.md
   - Servo: registry/servo.md
-- 'Build Reports': reports.md
 theme: material
 extra_css:
 - css/custom.css
