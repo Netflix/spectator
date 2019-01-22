@@ -16,6 +16,8 @@
 package com.netflix.spectator.aws2;
 
 import com.netflix.spectator.api.*;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.DefaultRequest;
@@ -145,5 +147,24 @@ public class SpectatorRequestMetricCollectorTest {
     assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.emptyList(), Object::toString));
     assertEquals(Optional.of("1"), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(1L), Object::toString));
     assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(null), Object::toString));
+  }
+
+  @Test
+  public void testCustomTags() {
+    Map<String, String> customTags = new HashMap<>();
+    customTags.put("tagname", "tagvalue");
+    collector = new SpectatorRequestMetricCollector(registry, customTags);
+    execRequest("http://monitoring", 503);
+    assertEquals(set("tagvalue"), valueSet("tagname"));
+  }
+
+  @Test
+  public void testCustomTags_overrideDefault() {
+    Map<String, String> customTags = new HashMap<>();
+    customTags.put("error", "true");
+    // enable warning propagation
+    RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
+    assertThrows(IllegalArgumentException.class, () ->
+        new SpectatorRequestMetricCollector(new DefaultRegistry(Clock.SYSTEM, config), customTags));
   }
 }
