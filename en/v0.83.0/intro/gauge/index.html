@@ -1,0 +1,1033 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      
+      
+        <link rel="canonical" href="http://netflix.github.io/spectator/intro/gauge/">
+      
+      
+      
+        <meta name="lang:clipboard.copy" content="Copy to clipboard">
+      
+        <meta name="lang:clipboard.copied" content="Copied to clipboard">
+      
+        <meta name="lang:search.language" content="en">
+      
+        <meta name="lang:search.pipeline.stopwords" content="True">
+      
+        <meta name="lang:search.pipeline.trimmer" content="True">
+      
+        <meta name="lang:search.result.none" content="No matching documents">
+      
+        <meta name="lang:search.result.one" content="1 matching document">
+      
+        <meta name="lang:search.result.other" content="# matching documents">
+      
+        <meta name="lang:search.tokenizer" content="[\s\-]+">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.0, mkdocs-material-3.0.3">
+    
+    
+      
+        <title>Gauges - Spectator Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/application.451f80e5.css">
+      
+      
+    
+    
+      <script src="../../assets/javascripts/modernizr.1aa3b519.js"></script>
+    
+    
+      <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+      
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono">
+        <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
+      
+    
+    <link rel="stylesheet" href="../../assets/fonts/material-icons.css">
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    
+  </head>
+  
+    <body dir="ltr">
+  
+    <svg class="md-svg">
+      <defs>
+        
+        
+          <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448"
+    viewBox="0 0 416 448" id="__github">
+  <path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19-18.125
+        8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19 18.125-8.5
+        18.125 8.5 10.75 19 3.125 20.5zM320 304q0 10-3.125 20.5t-10.75
+        19-18.125 8.5-18.125-8.5-10.75-19-3.125-20.5 3.125-20.5 10.75-19
+        18.125-8.5 18.125 8.5 10.75 19 3.125 20.5zM360
+        304q0-30-17.25-51t-46.75-21q-10.25 0-48.75 5.25-17.75 2.75-39.25
+        2.75t-39.25-2.75q-38-5.25-48.75-5.25-29.5 0-46.75 21t-17.25 51q0 22 8
+        38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0
+        37.25-1.75t35-7.375 30.5-15 20.25-25.75 8-38.375zM416 260q0 51.75-15.25
+        82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5-41.75
+        1.125q-19.5 0-35.5-0.75t-36.875-3.125-38.125-7.5-34.25-12.875-30.25-20.25-21.5-28.75q-15.5-30.75-15.5-82.75
+        0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25
+        30.875q36.75-8.75 77.25-8.75 37 0 70 8 26.25-20.5
+        46.75-30.25t47.25-9.75q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34
+        99.5z" />
+</svg>
+        
+      </defs>
+    </svg>
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
+    
+      <a href="../../#gauges" tabindex="1" class="md-skip">
+        Skip to content
+      </a>
+    
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <a href="http://netflix.github.io/spectator" title="Spectator Docs" class="md-header-nav__button md-logo">
+          
+            <i class="md-icon"></i>
+          
+        </a>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+          
+            
+              <span class="md-header-nav__topic">
+                Spectator Docs
+              </span>
+              <span class="md-header-nav__topic">
+                Gauges
+              </span>
+            
+          
+        </div>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        
+          
+            <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+            
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="query" data-md-state="active">
+      <label class="md-icon md-search__icon" for="__search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">
+        &#xE5CD;
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result">
+          <div class="md-search-result__meta">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+          
+        
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            
+
+
+  
+
+
+  <a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+          </div>
+        </div>
+      
+    </div>
+  </nav>
+</header>
+    
+    <div class="md-container">
+      
+        
+      
+      
+      <main class="md-main">
+        <div class="md-main__inner md-grid" data-md-component="container">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="__drawer">
+    <a href="http://netflix.github.io/spectator" title="Spectator Docs" class="md-nav__button md-logo">
+      
+        <i class="md-icon"></i>
+      
+    </a>
+    Spectator Docs
+  </label>
+  
+    <div class="md-nav__source">
+      
+
+
+  
+
+
+  <a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source" data-md-source="github">
+    
+      <div class="md-source__icon">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <use xlink:href="#__github" width="24" height="24"></use>
+        </svg>
+      </div>
+    
+    <div class="md-source__repository">
+      GitHub
+    </div>
+  </a>
+
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../.." title="Home" class="md-nav__link">
+      Home
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
+    
+    <label class="md-nav__link" for="nav-2">
+      Getting Started
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-2">
+        Getting Started
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../registry/" title="Registry" class="md-nav__link">
+      Registry
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2" checked>
+    
+    <label class="md-nav__link" for="nav-2-2">
+      Meter Types
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-2-2">
+        Meter Types
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../counter/" title="Counters" class="md-nav__link">
+      Counters
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../timer/" title="Timers" class="md-nav__link">
+      Timers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        Gauges
+      </label>
+    
+    <a href="./" title="Gauges" class="md-nav__link md-nav__link--active">
+      Gauges
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#polled-gauges" title="Polled Gauges" class="md-nav__link">
+    Polled Gauges
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-number" title="Using Number" class="md-nav__link">
+    Using Number
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-lambda" title="Using Lambda" class="md-nav__link">
+    Using Lambda
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collection-sizes" title="Collection Sizes" class="md-nav__link">
+    Collection Sizes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monotonic-counters" title="Monotonic Counters" class="md-nav__link">
+    Monotonic Counters
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#active-gauges" title="Active Gauges" class="md-nav__link">
+    Active Gauges
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../dist-summary/" title="Distribution Summaries" class="md-nav__link">
+      Distribution Summaries
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../clock/" title="Clock" class="md-nav__link">
+      Clock
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../conventions/" title="Naming Conventions" class="md-nav__link">
+      Naming Conventions
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../testing/" title="Testing" class="md-nav__link">
+      Testing
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../netflix/" title="Netflix Integration" class="md-nav__link">
+      Netflix Integration
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../servo-comparison/" title="Servo Comparison" class="md-nav__link">
+      Servo Comparison
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
+    
+    <label class="md-nav__link" for="nav-3">
+      Extensions
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        Extensions
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-3-1" type="checkbox" id="nav-3-1">
+    
+    <label class="md-nav__link" for="nav-3-1">
+      JVM Stats
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="2">
+      <label class="md-nav__title" for="nav-3-1">
+        JVM Stats
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/jvm-buffer-pools/" title="Buffer Pools" class="md-nav__link">
+      Buffer Pools
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/jvm-gc/" title="Garbage Collection" class="md-nav__link">
+      Garbage Collection
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/jvm-gc-causes/" title="GC Causes" class="md-nav__link">
+      GC Causes
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/jvm-memory-pools/" title="Memory Pools" class="md-nav__link">
+      Memory Pools
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/thread-pools/" title="Thread Pools" class="md-nav__link">
+      Thread Pools
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/log4j2/" title="Log4j2 Appender" class="md-nav__link">
+      Log4j2 Appender
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/log4j1/" title="Log4j1 Appender" class="md-nav__link">
+      Log4j1 Appender
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../ext/placeholders/" title="Placeholders" class="md-nav__link">
+      Placeholders
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4">
+    
+    <label class="md-nav__link" for="nav-4">
+      Registries
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-4">
+        Registries
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../registry/metrics3/" title="Metrics3" class="md-nav__link">
+      Metrics3
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../registry/servo/" title="Servo" class="md-nav__link">
+      Servo
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../../reports/" title="Build Reports" class="md-nav__link">
+      Build Reports
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#polled-gauges" title="Polled Gauges" class="md-nav__link">
+    Polled Gauges
+  </a>
+  
+    <nav class="md-nav">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-number" title="Using Number" class="md-nav__link">
+    Using Number
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-lambda" title="Using Lambda" class="md-nav__link">
+    Using Lambda
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#collection-sizes" title="Collection Sizes" class="md-nav__link">
+    Collection Sizes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monotonic-counters" title="Monotonic Counters" class="md-nav__link">
+    Monotonic Counters
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#active-gauges" title="Active Gauges" class="md-nav__link">
+    Active Gauges
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/Netflix/spectator/edit/master/docs/intro/gauge.md" title="Edit this page" class="md-icon md-content__icon">&#xE3C9;</a>
+                
+                
+                <h1 id="gauges">Gauges<a class="headerlink" href="#gauges" title="Permanent link">&para;</a></h1>
+<p>A gauge is a value that is sampled at some point in time. Typical examples
+for gauges would be the size of a queue or number of threads in the running
+state. Since gauges are not updated inline when a state change occurs, there is
+no information about what might have occurred between samples.</p>
+<p>Consider monitoring the behavior of a queue of tasks. If the data is being
+collected once a minute, then a gauge for the size will show the size when
+it was sampled. The size may have been much higher or lower at some point
+during interval, but that is not known.</p>
+<h2 id="polled-gauges">Polled Gauges<a class="headerlink" href="#polled-gauges" title="Permanent link">&para;</a></h2>
+<p>The most common use of gauges is by registering a hook with Spectator so that
+it will poll the values in the background. This is done by using the <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/patterns/PolledMeter.html">PolledMeter</a>
+helper class.</p>
+<p>A polled gauge is registered by passing in an id, a reference to the object, and
+a function to get or compute a numeric value based on the object. Note that
+a gauge should only be registered once, not on each update. Consider this
+example of a web server tracking the number of connections:</p>
+<div class="codehilite"><pre><span></span><span class="kd">class</span> <span class="nc">HttpServer</span> <span class="o">{</span>
+  <span class="c1">// Tracks the number of current connections to the server</span>
+  <span class="kd">private</span> <span class="n">AtomicInteger</span> <span class="n">numConnections</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="nf">HttpServer</span><span class="o">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">numConnections</span> <span class="o">=</span> <span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+      <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;server.numConnections&quot;</span><span class="o">)</span>
+      <span class="o">.</span><span class="na">monitorValue</span><span class="o">(</span><span class="k">new</span> <span class="n">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">));</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onConnectionCreated</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">numConnections</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">();</span>
+    <span class="o">...</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onConnectionClosed</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">numConnections</span><span class="o">.</span><span class="na">decrementAndGet</span><span class="o">();</span>
+    <span class="o">...</span>
+  <span class="o">}</span>
+
+  <span class="o">...</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<p>The spectator registry will keep a weak reference to the object. If the object is
+garbage collected, then it will automatically drop the registration. In the example
+above, the registry will have a weak reference to <code>numConnections</code> and the server
+instance will have a strong reference to <code>numConnections</code>. If the server instance
+goes away, then the gauge will as well.</p>
+<p>When multiple gauges are registered with the same id the reported value will
+be the sum of the matches. For example, if multiple instances of the <code>HttpServer</code>
+class were created on different ports, then the value <code>server.numConnections</code>
+would be the total number of connections across all server instances. If a different
+behavior is desired, then ensure your usage does not perform multiple registrations.</p>
+<p>There are several different ways to register a gauge:</p>
+<h3 id="using-number">Using Number<a class="headerlink" href="#using-number" title="Permanent link">&para;</a></h3>
+<p>A gauge can also be created based on an implementation of Number. Note the number
+implementation should be thread safe. For example:</p>
+<div class="codehilite"><pre><span></span><span class="n">AtomicInteger</span> <span class="n">size</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicInteger</span><span class="o">();</span>
+<span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;queue.size&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorValue</span><span class="o">(</span><span class="n">size</span><span class="o">);</span>
+</pre></div>
+
+
+<p>The call will return the Number so the registration can be inline on the
+assignment:</p>
+<div class="codehilite"><pre><span></span><span class="n">AtomicInteger</span> <span class="n">size</span> <span class="o">=</span> <span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;queue.size&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorValue</span><span class="o">(</span><span class="k">new</span> <span class="n">AtomicInteger</span><span class="o">());</span>
+</pre></div>
+
+
+<p>Updates to the value are preformed by updating the number instance directly.</p>
+<h3 id="using-lambda">Using Lambda<a class="headerlink" href="#using-lambda" title="Permanent link">&para;</a></h3>
+<p>Specify a lambda that takes the object as parameter.</p>
+<div class="codehilite"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Queue</span> <span class="o">{</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Queue</span><span class="o">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+      <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;queue.size&quot;</span><span class="o">)</span>
+      <span class="o">.</span><span class="na">monitorValue</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">Queue</span><span class="o">::</span><span class="n">size</span><span class="o">);</span>
+  <span class="o">}</span>
+
+  <span class="o">...</span>
+<span class="o">}</span>
+</pre></div>
+
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Be careful to avoid creating a reference to the object in the
+lambda. It will prevent garbage collection and can lead to a memory leak
+in the application. For example, by calling size without using the passed
+in object there will be a reference to <code>this</code>:</p>
+<p><code>PolledMeter.using(registry).withName("queue.size").monitorValue(this, obj -&gt; size());</code></p>
+</div>
+<h3 id="collection-sizes">Collection Sizes<a class="headerlink" href="#collection-sizes" title="Permanent link">&para;</a></h3>
+<p>For classes that implement <code>Collection</code> or <code>Map</code> there are helpers:</p>
+<div class="codehilite"><pre><span></span><span class="n">Queue</span> <span class="n">queue</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LinkedBlockingQueue</span><span class="o">();</span>
+<span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;queue.size&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorSize</span><span class="o">(</span><span class="n">queue</span><span class="o">);</span>
+
+<span class="n">Map</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span> <span class="n">String</span><span class="o">&gt;</span> <span class="n">cache</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ConcurrentMap</span><span class="o">&lt;&gt;();</span>
+<span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;cache.size&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorSize</span><span class="o">(</span><span class="n">cache</span><span class="o">);</span>
+</pre></div>
+
+
+<h3 id="monotonic-counters">Monotonic Counters<a class="headerlink" href="#monotonic-counters" title="Permanent link">&para;</a></h3>
+<p>A common technique used by some libraries is to expose a monotonically increasing
+counter that represents the number of events since the system was initialized. An
+example of that in the JDK is <a href="https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ThreadPoolExecutor.html#getCompletedTaskCount--">ThreadPoolExecutor.getCompletedTaskCount()</a> which
+returns the number of completed tasks on the thread pool.</p>
+<p>For sources like this the <code>monitorMonotonicCounter</code> method can be used:</p>
+<div class="codehilite"><pre><span></span><span class="c1">// For an implementation of Number</span>
+<span class="n">LongAdder</span> <span class="n">tasks</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LongAdder</span><span class="o">();</span>
+<span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;pool.completedTasks&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorMonotonicCounter</span><span class="o">(</span><span class="n">tasks</span><span class="o">);</span>
+
+<span class="c1">// Or using a lambda</span>
+<span class="n">ThreadPoolExecutor</span> <span class="n">executor</span> <span class="o">=</span> <span class="o">...</span>
+<span class="n">PolledMeter</span><span class="o">.</span><span class="na">using</span><span class="o">(</span><span class="n">registry</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">withName</span><span class="o">(</span><span class="s">&quot;pool.completedTasks&quot;</span><span class="o">)</span>
+  <span class="o">.</span><span class="na">monitorMonotonicCounter</span><span class="o">(</span><span class="n">executor</span><span class="o">,</span> <span class="n">ThreadPoolExecutor</span><span class="o">::</span><span class="n">getCompletedTaskCount</span><span class="o">);</span>
+</pre></div>
+
+
+<p>For thread pools specifically, there are better options for getting standard metrics.
+See the docs for the <a href="../../ext/thread-pools/">Thread Pools extension</a> for more
+information.</p>
+<h2 id="active-gauges">Active Gauges<a class="headerlink" href="#active-gauges" title="Permanent link">&para;</a></h2>
+<p>Gauges can also be set directly by the user. In this mode the user is responsible for
+regularly updating the value of the gauge by calling set. Looking at the HttpServer
+example, with an active gauge it would look like:</p>
+<div class="codehilite"><pre><span></span><span class="kd">class</span> <span class="nc">HttpServer</span> <span class="o">{</span>
+  <span class="c1">// Tracks the number of current connections to the server</span>
+  <span class="kd">private</span> <span class="n">AtomicInteger</span> <span class="n">numConnections</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Gauge</span> <span class="n">gauge</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="nf">HttpServer</span><span class="o">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">numConnections</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicInteger</span><span class="o">();</span>
+    <span class="n">gauge</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="na">gauge</span><span class="o">(</span><span class="s">&quot;server.numConnections&quot;</span><span class="o">);</span>
+    <span class="n">gauge</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">numConnections</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onConnectionCreated</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">numConnections</span><span class="o">.</span><span class="na">incrementAndGet</span><span class="o">();</span>
+    <span class="n">gauge</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">numConnections</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+    <span class="o">...</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">onConnectionClosed</span><span class="o">()</span> <span class="o">{</span>
+    <span class="n">numConnections</span><span class="o">.</span><span class="na">decrementAndGet</span><span class="o">();</span>
+    <span class="n">gauge</span><span class="o">.</span><span class="na">set</span><span class="o">(</span><span class="n">numConnections</span><span class="o">.</span><span class="na">get</span><span class="o">());</span>
+    <span class="o">...</span>
+  <span class="o">}</span>
+
+  <span class="o">...</span>
+<span class="o">}</span>
+</pre></div>
+                
+                  
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+        
+          <a href="../timer/" title="Timers" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
+            </div>
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Timers
+              </span>
+            </div>
+          </a>
+        
+        
+          <a href="../dist-summary/" title="Distribution Summaries" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Distribution Summaries
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        powered by
+        <a href="https://www.mkdocs.org">MkDocs</a>
+        and
+        <a href="https://squidfunk.github.io/mkdocs-material/">
+          Material for MkDocs</a>
+      </div>
+      
+        
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/application.583bbe55.js"></script>
+      
+      <script>app.initialize({version:"1.0",url:{base:"../.."}})</script>
+      
+    
+    
+      
+        <script>!function(e,a,t,n,o,c,i){e.GoogleAnalyticsObject=o,e.ga=e.ga||function(){(e.ga.q=e.ga.q||[]).push(arguments)},e.ga.l=1*new Date,c=a.createElement(t),i=a.getElementsByTagName(t)[0],c.async=1,c.src="https://www.google-analytics.com/analytics.js",i.parentNode.insertBefore(c,i)}(window,document,"script",0,"ga"),ga("create","UA-82153845-2","auto"),ga("set","anonymizeIp",!0),ga("send","pageview");var links=document.getElementsByTagName("a");if(Array.prototype.map.call(links,function(e){e.host!=document.location.host&&e.addEventListener("click",function(){var a=e.getAttribute("data-md-action")||"follow";ga("send","event","outbound",a,e.href)})}),document.forms.search){var query=document.forms.search.query;query.addEventListener("blur",function(){if(this.value){var e=document.location.pathname;ga("send","pageview",e+"?q="+this.value)}})}</script>
+      
+    
+  </body>
+</html>
