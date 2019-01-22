@@ -13,7 +13,7 @@ are to support:
 To use the placeholders support add a dependency on:
 
 ```
-com.netflix.spectator:spectator-ext-placeholders:0.80.0
+com.netflix.spectator:spectator-ext-placeholders:0.83.0
 ```
 
 ## Usage
