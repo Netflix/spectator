@@ -201,6 +201,9 @@ public final class AtlasRegistry extends AbstractRegistry {
       try {
         for (List<Measurement> batch : getBatches()) {
           PublishPayload p = new PublishPayload(commonTags, batch);
+          if (logger.isTraceEnabled()) {
+            logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
+          }
           HttpResponse res = client.post(uri)
               .withConnectTimeout(connectTimeout)
               .withReadTimeout(readTimeout)
@@ -210,7 +213,7 @@ public final class AtlasRegistry extends AbstractRegistry {
           recordClockSkew((date == null) ? 0L : date.toEpochMilli());
         }
       } catch (Exception e) {
-        logger.warn("failed to send metrics", e);
+        logger.warn("failed to send metrics (uri={})", uri, e);
       }
     } else {
       logger.debug("publishing is disabled, skipping collection");
@@ -241,6 +244,9 @@ public final class AtlasRegistry extends AbstractRegistry {
       EvalPayload payload = evaluator.eval("local", stepClock.wallTime(), ms);
       try {
         String json = jsonMapper.writeValueAsString(payload);
+        if (logger.isTraceEnabled()) {
+          logger.trace("eval payload: {}", json);
+        }
         client.post(evalUri)
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
@@ -248,7 +254,7 @@ public final class AtlasRegistry extends AbstractRegistry {
             .send()
             .decompress();
       } catch (Exception e) {
-        logger.warn("failed to send metrics for subscriptions", e);
+        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
     }
   }

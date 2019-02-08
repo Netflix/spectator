@@ -89,7 +89,7 @@ class SubscriptionManager {
         payload = filterByStep(mapper.readValue(res.entity(), Subscriptions.class));
       }
     } catch (Exception e) {
-      LOGGER.warn("failed to update subscriptions", e);
+      LOGGER.warn("failed to update subscriptions (uri={})", uri, e);
     }
 
     // Update with the current payload, it will be null if there hasn't been a single
