@@ -288,4 +288,27 @@ public class CardinalityLimitersTest {
     // too much churn even though this restricts it below the specified limit.
     Assertions.assertTrue(values.size() < 2 * numFrequentValues);
   }
+
+  @Test
+  public void rollupNegative() {
+    Function<String, String> f = CardinalityLimiters.rollup(-2);
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("a"));
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("b"));
+  }
+
+  @Test
+  public void rollupZero() {
+    Function<String, String> f = CardinalityLimiters.rollup(0);
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("a"));
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("b"));
+  }
+
+  @Test
+  public void rollup2() {
+    Function<String, String> f = CardinalityLimiters.rollup(2);
+    Assertions.assertEquals("a", f.apply("a"));
+    Assertions.assertEquals("b", f.apply("b"));
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("c"));
+    Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("a"));
+  }
 }
