@@ -15,10 +15,13 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /** Matcher that checks for a sequence of characters. */
-final class CharSeqMatcher implements Matcher {
+final class CharSeqMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final String pattern;
   private final boolean ignoreCase;

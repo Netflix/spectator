@@ -15,12 +15,15 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Matcher that checks if the string starts with a given character sequence.
  */
-final class StartsWithMatcher implements Matcher {
+final class StartsWithMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final String pattern;
   private final boolean ignoreCase;

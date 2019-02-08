@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -22,7 +23,9 @@ import java.util.function.Function;
  * Matcher that does a negative lookahead. If the sub-matcher matches, then it will return
  * no match, otherwise it will return the starting the position.
  */
-final class NegativeLookaheadMatcher implements Matcher {
+final class NegativeLookaheadMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final Matcher matcher;
 

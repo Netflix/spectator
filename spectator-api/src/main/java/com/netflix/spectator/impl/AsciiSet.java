@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl;
 
+import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
@@ -30,7 +31,9 @@ import java.util.Optional;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
-public final class AsciiSet {
+public final class AsciiSet implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private static boolean isJava8() {
     String version = System.getProperty("java.version", "1.8");

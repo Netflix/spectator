@@ -15,11 +15,14 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Function;
 
 /** Matcher that looks for a fixed number of repetitions. */
-final class RepeatMatcher implements Matcher {
+final class RepeatMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final Matcher repeated;
   private final int min;

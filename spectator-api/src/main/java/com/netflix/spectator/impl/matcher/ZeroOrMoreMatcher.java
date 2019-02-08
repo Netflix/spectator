@@ -17,13 +17,16 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.Preconditions;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * Matcher that looks for a pattern zero or more times followed by another pattern.
  */
-final class ZeroOrMoreMatcher implements GreedyMatcher {
+final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final Matcher repeated;
   private final Matcher next;
