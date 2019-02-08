@@ -35,5 +35,8 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     // Check pattern can be recreated from toString
     PatternMatcher actual = PatternMatcher.compile(matcher.toString());
     Assertions.assertEquals(matcher, actual);
+
+    // Check we can serialize and deserialize the matchers
+    MatcherSerializationTest.checkSerde(matcher);
   }
 }

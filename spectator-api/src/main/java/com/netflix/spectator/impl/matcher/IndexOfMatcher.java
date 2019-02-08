@@ -15,13 +15,16 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Function;
 
 /**
  * Matcher that looks for a given substring within the string being matched.
  */
-final class IndexOfMatcher implements GreedyMatcher {
+final class IndexOfMatcher implements GreedyMatcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final String pattern;
   private final Matcher next;

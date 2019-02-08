@@ -17,10 +17,13 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.AsciiSet;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /** Matcher that matches any character from a specified set. */
-final class CharClassMatcher implements Matcher {
+final class CharClassMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final AsciiSet set;
   private final boolean ignoreCase;

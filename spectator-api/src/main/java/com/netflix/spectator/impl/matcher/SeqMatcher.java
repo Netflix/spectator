@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,7 +27,9 @@ import java.util.function.Function;
 /**
  * Matcher that checks a sequence of sub-matchers.
  */
-final class SeqMatcher implements Matcher {
+final class SeqMatcher implements Matcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   /** Create a new instance. */
   static Matcher create(List<Matcher> matchers) {

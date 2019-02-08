@@ -17,10 +17,13 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /** Matcher that ignores the case when checking against the input string. */
-final class IgnoreCaseMatcher implements PatternMatcher {
+final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final PatternMatcher matcher;
 

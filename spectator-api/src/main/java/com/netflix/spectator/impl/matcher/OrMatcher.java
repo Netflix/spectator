@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,7 +25,9 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /** Matcher that checks if any of the sub-matchers matchers the string. */
-final class OrMatcher implements GreedyMatcher {
+final class OrMatcher implements GreedyMatcher, Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   /** Create a new instance. */
   static Matcher create(List<Matcher> matchers) {
