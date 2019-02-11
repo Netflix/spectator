@@ -127,11 +127,4 @@ public class PercentileBucketsTest {
       Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pcts[i]), threshold);
     }
   }
-
-  @Test
-  public void foo() {
-    int start = PercentileBuckets.indexOf(TimeUnit.MILLISECONDS.toNanos(10));
-    int end = PercentileBuckets.indexOf(TimeUnit.SECONDS.toNanos(60));
-    System.out.println("start = " + start + ", end = " + end + ", delta = " + (end - start + 1));
-  }
 }
