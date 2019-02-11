@@ -21,6 +21,7 @@ import com.netflix.spectator.api.Utils;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -76,6 +77,9 @@ public final class CardinalityLimiters {
 
   /** Replacement value that is used if the number of values exceeds the limit. */
   public static final String OTHERS = "--others--";
+
+  /** Replacement value that is used if the values are rolled up. */
+  public static final String AUTO_ROLLUP = "--auto-rollup--";
 
   /**
    * Order in descending order based on the count and then alphabetically based on the
@@ -133,6 +137,21 @@ public final class CardinalityLimiters {
    */
   static Function<String, String> mostFrequent(int n, Clock clock) {
     return new MostFrequentLimiter(Math.min(n, MAX_LIMIT), clock);
+  }
+
+  /**
+   * Rollup the values if the cardinality exceeds {@code n}. This limiter will leave the
+   * values alone as long as the cardinality stays within the limit. After that all values
+   * will get mapped to {@link #AUTO_ROLLUP}.
+   *
+   * @param n
+   *     Maximum number of distinct values allowed for the lifetime of the limiter.
+   * @return
+   *     The input value if it is within the bounds or is selected. Otherwise map to
+   *     {@link #AUTO_ROLLUP}.
+   */
+  public static Function<String, String> rollup(int n) {
+    return new RollupLimiter(n);
   }
 
   private static class FirstLimiter implements Function<String, String> {
@@ -294,5 +313,35 @@ public final class CardinalityLimiters {
       return "MostFrequentLimiter(" + cutoff + "," + limiter + ",values=[" + vs + "])";
     }
 
+  }
+
+  private static class RollupLimiter implements Function<String, String> {
+
+    private final int n;
+    private final Set<String> values;
+    private final AtomicInteger count;
+
+    private volatile boolean rollup;
+
+    RollupLimiter(int n) {
+      this.n = n;
+      this.values = ConcurrentHashMap.newKeySet();
+      this.count = new AtomicInteger();
+      this.rollup = false;
+    }
+
+    @Override public String apply(String s) {
+      if (rollup) {
+        return AUTO_ROLLUP;
+      }
+
+      if (values.add(s) && count.incrementAndGet() > n) {
+        rollup = true;
+        values.clear();
+        return AUTO_ROLLUP;
+      } else {
+        return s;
+      }
+    }
   }
 }
