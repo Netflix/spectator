@@ -84,7 +84,7 @@ public class IpcLogger {
    * backend from a metrics explosion if some dimensions have a high cardinality.
    */
   Function<String, String> limiterForKey(String key) {
-    return Utils.computeIfAbsent(limiters, key, k -> CardinalityLimiters.mostFrequent(10));
+    return Utils.computeIfAbsent(limiters, key, k -> CardinalityLimiters.rollup(25));
   }
 
   private IpcLogEntry newEntry() {
