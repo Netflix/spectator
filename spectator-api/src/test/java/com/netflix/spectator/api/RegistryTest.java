@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
@@ -549,5 +550,28 @@ public class RegistryTest {
           });
       PolledMeter.update(registry);
     });
+  }
+
+  @Test
+  public void defaultResetRemovesMeters() {
+    DefaultRegistry r = newRegistry(true, 10000);
+    r.counter("test").increment();
+    Assertions.assertEquals(1, r.stream().count());
+    r.reset();
+    Assertions.assertEquals(0, r.stream().count());
+  }
+
+  @Test
+  public void defaultResetRemovesState() {
+    DefaultRegistry r = newRegistry(true, 10000);
+    AtomicInteger v = new AtomicInteger();
+    PolledMeter.using(r).withName("test").monitorValue(v);
+    PolledMeter.update(r);
+    Assertions.assertEquals(1, r.stream().count());
+    Assertions.assertEquals(1, r.state().size());
+    r.reset();
+    PolledMeter.update(r);
+    Assertions.assertEquals(0, r.stream().count());
+    Assertions.assertEquals(0, r.state().size());
   }
 }
