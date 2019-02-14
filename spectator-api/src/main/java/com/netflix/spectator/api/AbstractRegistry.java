@@ -243,4 +243,14 @@ public abstract class AbstractRegistry implements Registry {
     }
     logger.debug("removed {} expired meters out of {} total", expired, total);
   }
+
+  /**
+   * This can be called be sub-classes to reset all state for the registry. Typically this
+   * should only be exposed for test registries as most users should not be able to reset the
+   * state and interrupt metrics collection for the overall system.
+   */
+  protected void reset() {
+    meters.clear();
+    state.clear();
+  }
 }
