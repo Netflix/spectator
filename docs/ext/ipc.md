@@ -62,7 +62,7 @@ implementations.
 
 This is a [percentile timer] that is recorded for each inbound message to a server.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.result`
@@ -81,7 +81,7 @@ This is a [percentile timer] that is recorded for each inbound message to a serv
 
 This is a [distribution summary] of the size in bytes of inbound messages received by a server.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.vip`
@@ -98,7 +98,7 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 
 This is a [distribution summary] of the size in bytes of outbound messages sent from a server.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.vip`
@@ -116,7 +116,7 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 This is a [distribution summary] that shows the number of inbound IPC messages currently being
 processed in a server.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.endpoint`
@@ -131,7 +131,7 @@ processed in a server.
 
 This is a [percentile timer] that is recorded for each outbound message from a client.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.result`
@@ -151,7 +151,7 @@ This is a [percentile timer] that is recorded for each outbound message from a c
 
 This is a [distribution summary] of the size in bytes of inbound messages received by a client.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.vip`
@@ -165,7 +165,7 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 
 This is a [distribution summary] of the size in bytes of outbound messages sent from a client.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.vip`
@@ -183,7 +183,7 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 This is a [distribution summary] that shows the number of currently outstanding outbound
 IPC messages from a client.
 
-#### Dimensions
+**Dimensions:**
 
 * `ipc.protocol`
 * `ipc.vip`
