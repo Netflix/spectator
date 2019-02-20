@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,24 +25,21 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.atlas.AtlasRegistry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class SpectatorModuleTest {
 
   @Test
   public void atlasRegistryIsBound() {
     Injector injector = Guice.createInjector(new SpectatorModule());
-    Assert.assertTrue(injector.getInstance(Registry.class) instanceof AtlasRegistry);
+    Assertions.assertTrue(injector.getInstance(Registry.class) instanceof AtlasRegistry);
   }
 
   @Test
   public void extendedRegistryIsBound() {
     Injector injector = Guice.createInjector(new SpectatorModule());
-    Assert.assertNotNull(injector.getInstance(ExtendedRegistry.class));
+    Assertions.assertNotNull(injector.getInstance(ExtendedRegistry.class));
   }
 
   @Test
@@ -58,24 +55,24 @@ public class SpectatorModuleTest {
     Registry registry = injector.getInstance(Registry.class);
     Spectator.globalRegistry().counter("test").increment();
     clock.setWallTime(60000);
-    Assert.assertEquals(1, registry.counter("test").count());
+    Assertions.assertEquals(1, registry.counter("test").count());
   }
 
   @Test
   public void equals() {
-    Assert.assertEquals(new SpectatorModule(), new SpectatorModule());
+    Assertions.assertEquals(new SpectatorModule(), new SpectatorModule());
   }
 
   @Test
   public void hashCodeTest() {
-    Assert.assertEquals(new SpectatorModule().hashCode(), new SpectatorModule().hashCode());
+    Assertions.assertEquals(new SpectatorModule().hashCode(), new SpectatorModule().hashCode());
   }
 
   @Test
   public void optionalInjectWorksWithOptionalBinder() {
     Injector injector = Guice.createInjector(new SpectatorModule());
     OptionalInject obj = injector.getInstance(OptionalInject.class);
-    Assert.assertNotNull(obj.registry);
+    Assertions.assertNotNull(obj.registry);
   }
 
   private static class OptionalInject {

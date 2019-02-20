@@ -11,7 +11,7 @@ Simple library for instrumenting code to record dimensional time series.
 ## Documentation
 
 * [Wiki](http://netflix.github.io/spectator/en/latest/)
-* [Javadoc](http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/)
+* [Javadoc](https://www.javadoc.io/doc/com.netflix.spectator/spectator-api/)
 * [![Build Status](https://travis-ci.org/Netflix/spectator.svg)](https://travis-ci.org/Netflix/spectator/builds)
 
 ## Dependencies
@@ -20,7 +20,7 @@ To instrument your code you need to depend on the api library. This provides the
 for you to code against and build test cases. The only dependency is slf4j.
 
 ```
-com.netflix.spectator:spectator-api:0.69.0
+com.netflix.spectator:spectator-api:0.83.0
 ```
 
 If running at Netflix with the standard platform, see the

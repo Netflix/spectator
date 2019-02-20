@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +33,38 @@ public enum IpcTagKey {
   result("ipc.result"),
 
   /**
+   * Dimension indicating a high level status for the request. These values are the same
+   * for all implementations to make it easier to query across services. See {@link IpcStatus}
+   * for permitted values.
+   */
+  status("ipc.status"),
+
+  /**
+   * Optional dimension indicating a more detailed status. The values for this are
+   * implementation specific. For example with HTTP, the status code would be a likely
+   * value used here.
+   */
+  statusDetail("ipc.status.detail"),
+
+  /**
    * Dimension indicating a high level cause for the request failure. These groups
    * are the same for all implementations to make it easier to query across all
    * services and client implementations. See {@link IpcErrorGroup} for permitted
    * values.
+   *
+   * @deprecated Use {@link #status} instead. This value will be removed in
+   * January of 2019.
    */
+  @Deprecated
   errorGroup("ipc.error.group"),
 
   /**
    * Implementation specific error code.
+   *
+   * @deprecated Use {@link #statusDetail} instead. This value will be removed in
+   * January of 2019.
    */
+  @Deprecated
   errorReason("ipc.error.reason"),
 
   /**
@@ -143,7 +165,9 @@ public enum IpcTagKey {
   serverPort("ipc.server.port"),
 
   /**
-   * HTTP status code.
+   * HTTP status code. In most cases it is preferred to use {@link #statusDetail} instead.
+   * This tag key is optionally used to include the HTTP status code when the status detail
+   * is overridden with application specific values.
    */
   httpStatus("http.status"),
 

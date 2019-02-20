@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,8 +53,8 @@ public final class IpcLogEntry {
 
   private String protocol;
 
-  private IpcErrorGroup errorGroup;
-  private String errorReason;
+  private IpcStatus status;
+  private String statusDetail;
   private Throwable exception;
 
   private IpcAttempt attempt;
@@ -203,11 +203,33 @@ public final class IpcLogEntry {
   }
 
   /**
-   * Set the high level cause for a request failure. See {@link IpcErrorGroup} for more
+   * Set the high level status for the request. See {@link IpcStatus} for more
    * information.
    */
+  public IpcLogEntry withStatus(IpcStatus status) {
+    this.status = status;
+    return this;
+  }
+
+  /**
+   * Set the detailed implementation specific status for the request. In most cases it
+   * is preferable to use {@link #withException(Throwable)} or {@link #withHttpStatus(int)}
+   * instead of calling this directly.
+   */
+  public IpcLogEntry withStatusDetail(String statusDetail) {
+    this.statusDetail = statusDetail;
+    return this;
+  }
+
+  /**
+   * Set the high level cause for a request failure. See {@link IpcErrorGroup} for more
+   * information.
+   *
+   * @deprecated Use {@link #withStatus(IpcStatus)} instead. This method will be removed in
+   * January of 2019.
+   */
+  @Deprecated
   public IpcLogEntry withErrorGroup(IpcErrorGroup errorGroup) {
-    this.errorGroup = errorGroup;
     return this;
   }
 
@@ -215,9 +237,12 @@ public final class IpcLogEntry {
    * Set the implementation specific reason for the request failure. In most cases it
    * is preferable to use {@link #withException(Throwable)} or {@link #withHttpStatus(int)}
    * instead of calling this directly.
+   *
+   * @deprecated Use {@link #withStatusDetail(String)} instead. This method will be removed in
+   * January of 2019.
    */
+  @Deprecated
   public IpcLogEntry withErrorReason(String errorReason) {
-    this.errorReason = errorReason;
     return this;
   }
 
@@ -227,8 +252,11 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withException(Throwable exception) {
     this.exception = exception;
-    if (errorReason == null) {
-      errorReason = exception.getClass().getSimpleName();
+    if (statusDetail == null) {
+      statusDetail = exception.getClass().getSimpleName();
+    }
+    if (status == null) {
+      status = IpcStatus.forException(exception);
     }
     return this;
   }
@@ -430,33 +458,22 @@ public final class IpcLogEntry {
   }
 
   /**
-   * Set the HTTP status code for this request. For the metrics this will be used to populate
-   * the {@link #withErrorReason(String)}.
+   * Set the HTTP status code for this request. If not already set, then this will set an
+   * appropriate value for {@link #withStatus(IpcStatus)} and {@link #withResult(IpcResult)}
+   * based on the status code.
    */
-  public IpcLogEntry withHttpStatus(int status) {
-    this.httpStatus = status;
-    if (result == null) {
-      withResult((status < 400) ? IpcResult.success : IpcResult.failure);
-    }
-    if (errorReason == null && status >= 400 & status < 600) {
-      errorReason = "HTTP_" + status;
-    }
-    if (errorGroup == null) {
-      switch (status) {
-        case 429:
-          errorGroup = IpcErrorGroup.client_throttled;
-          break;
-        case 503:
-          errorGroup = IpcErrorGroup.server_throttled;
-          break;
-        default:
-          if (status >= 400 && status < 500) {
-            errorGroup = IpcErrorGroup.client_error;
-          } else if (status >= 500) {
-            errorGroup = IpcErrorGroup.server_error;
-          }
-          break;
+  public IpcLogEntry withHttpStatus(int httpStatus) {
+    if (httpStatus >= 100 && httpStatus < 600) {
+      this.httpStatus = httpStatus;
+      if (status == null) {
+        status = IpcStatus.forHttpStatus(httpStatus);
       }
+      if (result == null) {
+        result = status.result();
+      }
+    } else {
+      // If an invalid HTTP status code is passed in
+      this.httpStatus = -1;
     }
     return this;
   }
@@ -570,9 +587,16 @@ public final class IpcLogEntry {
 
   private IpcResult getResult() {
     if (result == null) {
-      result = errorGroup == null ? IpcResult.success : IpcResult.failure;
+      result = status == null ? IpcResult.success : status.result();
     }
     return result;
+  }
+
+  private IpcStatus getStatus() {
+    if (status == null) {
+      status = (result == IpcResult.success) ? IpcStatus.success : IpcStatus.unexpected_error;
+    }
+    return status;
   }
 
   private IpcAttempt getAttempt() {
@@ -587,6 +611,10 @@ public final class IpcLogEntry {
       attemptFinal = IpcAttemptFinal.is_true;
     }
     return attemptFinal;
+  }
+
+  private String getEndpoint() {
+    return (endpoint == null) ? "unknown" : endpoint;
   }
 
   private boolean isClient() {
@@ -605,7 +633,7 @@ public final class IpcLogEntry {
     // Required for both client and server
     putTag(tags, IpcTagKey.owner.key(), owner);
     putTag(tags, getResult());
-    putTag(tags, errorGroup);
+    putTag(tags, getStatus());
 
     if (isClient()) {
       // Required for client, should be null on server
@@ -628,14 +656,12 @@ public final class IpcLogEntry {
     }
 
     // Optional for both client and server
-    putTag(tags, IpcTagKey.endpoint.key(), endpoint);
+    putTag(tags, IpcTagKey.endpoint.key(), getEndpoint());
     putTag(tags, IpcTagKey.vip.key(), vip);
     putTag(tags, IpcTagKey.protocol.key(), protocol);
-    putTag(tags, IpcTagKey.errorReason.key(), errorReason);
+    putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);
+    putTag(tags, IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
     putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
-    if (httpStatus >= 100 && httpStatus < 600) {
-      putTag(tags, IpcTagKey.httpStatus.key(), "" + httpStatus);
-    }
 
     return registry.createId(name, tags);
   }
@@ -783,8 +809,8 @@ public final class IpcLogEntry {
         .addField("attempt", attempt)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
-        .addField("errorGroup", errorGroup)
-        .addField("errorReason", errorReason)
+        .addField("status", status)
+        .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
         .addField("exceptionMessage", getExceptionMessage())
         .addField("httpMethod", httpMethod)
@@ -809,8 +835,8 @@ public final class IpcLogEntry {
     owner = null;
     result = null;
     protocol = null;
-    errorGroup = null;
-    errorReason = null;
+    status = null;
+    statusDetail = null;
     exception = null;
     attempt = null;
     attemptFinal = null;
@@ -850,8 +876,8 @@ public final class IpcLogEntry {
     startNanos = -1L;
     latency = -1L;
     result = null;
-    errorGroup = null;
-    errorReason = null;
+    status = null;
+    statusDetail = null;
     exception = null;
     attempt = null;
     attemptFinal = null;

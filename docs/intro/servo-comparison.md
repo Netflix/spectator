@@ -8,7 +8,7 @@ project to avoid breaking backwards compatibility for servo.
 From a user perspective, both will be supported for a long time, but most
 of our efforts for future improvement will go to spectator. For new code it
 is recommended to use the spectator API. If running
-[at Netflix](Netflix Integration) the correct bindings will be in place
+[at Netflix](netflix.md) the correct bindings will be in place
 for both servo and spectator.
 
 ## Differences
@@ -66,7 +66,7 @@ that were heavily static.
 While spectator does have a static registry that can be used, the recommended
 way is to create a registry and inject it either manually or via a framework
 into the classes that need it. This also makes it much easier to
-[test in isolation](testing).
+[test in isolation](testing.md).
 
 ## Migration
 

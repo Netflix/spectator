@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,5 +51,17 @@ public final class DefaultRegistry extends AbstractRegistry {
 
   @Override protected Gauge newMaxGauge(Id id) {
     return new DefaultMaxGauge(clock(), id);
+  }
+
+  /**
+   * Reset the state of this registry. All meters and other associated state will be lost.
+   * Though it is typically recommended to use a new instance for each test, if that is not
+   * possible for some reason, this method can be used to reset the state before a given
+   * unit test.
+   */
+  @SuppressWarnings("PMD.UselessOverridingMethod")
+  @Override public void reset() {
+    // Overridden to increase visibility from protected in base class to public
+    super.reset();
   }
 }

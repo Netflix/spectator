@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,14 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.atlas.impl.MeasurementSerializer;
-import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.impl.AsciiSet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class MeasurementSerializerTest {
 
   private AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
@@ -51,7 +46,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"bar\":\"baz\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -61,7 +56,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"atlas.dstype\":\"rate\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -71,7 +66,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"f__\",\"bar\":\"baz\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -81,7 +76,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -91,7 +86,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"b__\":\"baz\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -101,7 +96,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"bar\":\"b__\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -111,7 +106,7 @@ public class MeasurementSerializerTest {
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"bar\":\"abc__def\",\"cluster\":\"abc^~def\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -119,7 +114,7 @@ public class MeasurementSerializerTest {
     PublishPayload p = new PublishPayload(Collections.emptyMap(), Collections.emptyList());
     String json = mapper.writeValueAsString(p);
     String expected = "{\"tags\":{},\"metrics\":[]}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -131,7 +126,7 @@ public class MeasurementSerializerTest {
     String tags = "{\"name\":\"foo\",\"atlas.dstype\":\"gauge\"}";
     String mjson = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     String expected = "{\"tags\":{},\"metrics\":[" + mjson + "]}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 
   @Test
@@ -143,6 +138,6 @@ public class MeasurementSerializerTest {
     String tags = "{\"name\":\"foo\",\"atlas.dstype\":\"gauge\"}";
     String mjson = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     String expected = "{\"tags\":{\"a\":\"b\"},\"metrics\":[" + mjson + "]}";
-    Assert.assertEquals(expected, json);
+    Assertions.assertEquals(expected, json);
   }
 }

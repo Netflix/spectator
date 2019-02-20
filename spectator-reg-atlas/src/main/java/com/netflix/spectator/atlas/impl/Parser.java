@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 /**
  * Parses an Atlas data or query expression.
@@ -155,7 +154,7 @@ public final class Parser {
         case ":reic":
           v = (String) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.Regex(k, v, Pattern.CASE_INSENSITIVE, ":reic"));
+          stack.push(new Query.Regex(k, v, true, ":reic"));
           break;
         case ":all":
           q = (Query) stack.pop();

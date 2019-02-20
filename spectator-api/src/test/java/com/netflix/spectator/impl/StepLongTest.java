@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@
 package com.netflix.spectator.impl;
 
 import com.netflix.spectator.api.ManualClock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class StepLongTest {
 
   private final ManualClock clock = new ManualClock();
 
-  @Before
+  @BeforeEach
   public void init() {
     clock.setWallTime(0L);
   }
@@ -35,16 +32,16 @@ public class StepLongTest {
   @Test
   public void empty() {
     StepLong v = new StepLong(0L, clock, 10L);
-    Assert.assertEquals(0L, v.getCurrent().get());
-    Assert.assertEquals(0L, v.poll());
+    Assertions.assertEquals(0L, v.getCurrent().get());
+    Assertions.assertEquals(0L, v.poll());
   }
 
   @Test
   public void increment() {
     StepLong v = new StepLong(0L, clock, 10L);
     v.getCurrent().incrementAndGet();
-    Assert.assertEquals(1L, v.getCurrent().get());
-    Assert.assertEquals(0L, v.poll());
+    Assertions.assertEquals(1L, v.getCurrent().get());
+    Assertions.assertEquals(0L, v.poll());
   }
 
   @Test
@@ -52,8 +49,8 @@ public class StepLongTest {
     StepLong v = new StepLong(0L, clock, 10L);
     v.getCurrent().incrementAndGet();
     clock.setWallTime(10L);
-    Assert.assertEquals(0L, v.getCurrent().get());
-    Assert.assertEquals(1L, v.poll());
+    Assertions.assertEquals(0L, v.getCurrent().get());
+    Assertions.assertEquals(1L, v.poll());
   }
 
   @Test
@@ -61,7 +58,7 @@ public class StepLongTest {
     StepLong v = new StepLong(0L, clock, 10L);
     v.getCurrent().incrementAndGet();
     clock.setWallTime(20L);
-    Assert.assertEquals(0L, v.getCurrent().get());
-    Assert.assertEquals(0L, v.poll());
+    Assertions.assertEquals(0L, v.getCurrent().get());
+    Assertions.assertEquals(0L, v.poll());
   }
 }

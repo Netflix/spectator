@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.jvm;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.management.ObjectName;
 import java.util.HashMap;
@@ -26,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class JmxDataTest {
 
   @Test
@@ -39,11 +36,11 @@ public class JmxDataTest {
     JmxBean.register(bean);
 
     List<JmxData> results = JmxData.query("CatalinaTest:type=ThreadPool,*");
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
 
     results.forEach(data -> {
-      Assert.assertEquals("nio", data.getStringAttrs().get("modelType"));
-      Assert.assertEquals("\"http-nio\"", data.getStringAttrs().get("name"));
+      Assertions.assertEquals("nio", data.getStringAttrs().get("modelType"));
+      Assertions.assertEquals("\"http-nio\"", data.getStringAttrs().get("name"));
     });
 
     JmxBean.unregister(bean);

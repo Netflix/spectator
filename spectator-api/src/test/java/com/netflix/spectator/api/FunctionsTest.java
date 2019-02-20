@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.ToDoubleFunction;
 
-@RunWith(JUnit4.class)
 public class FunctionsTest {
 
   private final ManualClock clock = new ManualClock();
@@ -32,7 +29,7 @@ public class FunctionsTest {
   public void ageFunction() {
     clock.setWallTime(5000L);
     final DoubleFunction f = Functions.age(clock);
-    Assert.assertEquals(f.apply(1000L), 4.0, 1e-12);
+    Assertions.assertEquals(f.apply(1000L), 4.0, 1e-12);
   }
 
   private byte byteMethod() {
@@ -42,7 +39,7 @@ public class FunctionsTest {
   @Test
   public void invokeMethodByte() throws Exception {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "byteMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), 1.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), 1.0, 1e-12);
   }
 
   private short shortMethod() {
@@ -52,7 +49,7 @@ public class FunctionsTest {
   @Test
   public void invokeMethodShort() throws Exception  {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "shortMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), 2.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), 2.0, 1e-12);
   }
 
   private int intMethod() {
@@ -62,7 +59,7 @@ public class FunctionsTest {
   @Test
   public void invokeMethodInt() throws Exception  {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "intMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), 3.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), 3.0, 1e-12);
   }
 
   private long longMethod() {
@@ -72,7 +69,7 @@ public class FunctionsTest {
   @Test
   public void invokeMethodLong() throws Exception  {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "longMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), 4.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), 4.0, 1e-12);
   }
 
   private Long wrapperLongMethod() {
@@ -83,7 +80,7 @@ public class FunctionsTest {
   public void invokeMethodWrapperLong() throws Exception  {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(
         Utils.getMethod(getClass(), "wrapperLongMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), 5.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), 5.0, 1e-12);
   }
 
   private Long throwsMethod() {
@@ -93,30 +90,31 @@ public class FunctionsTest {
   @Test
   public void invokeBadMethod() throws Exception  {
     final ToDoubleFunction<FunctionsTest> f = Functions.invokeMethod(Utils.getMethod(getClass(), "throwsMethod"));
-    Assert.assertEquals(f.applyAsDouble(this), Double.NaN, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(this), Double.NaN, 1e-12);
   }
 
-  @Test(expected = NoSuchMethodException.class)
+  @Test
   public void invokeNoSuchMethod() throws Exception  {
-    Functions.invokeMethod(Utils.getMethod(getClass(), "unknownMethod"));
+    Assertions.assertThrows(NoSuchMethodException.class,
+        () -> Functions.invokeMethod(Utils.getMethod(getClass(), "unknownMethod")));
   }
 
   @Test
   public void invokeOnSubclass() throws Exception  {
     final ToDoubleFunction<B> f = Functions.invokeMethod(Utils.getMethod(B.class, "two"));
-    Assert.assertEquals(f.applyAsDouble(new B()), 2.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(new B()), 2.0, 1e-12);
   }
 
   @Test
   public void invokeOneA() throws Exception  {
     final ToDoubleFunction<A> f = Functions.invokeMethod(Utils.getMethod(A.class, "one"));
-    Assert.assertEquals(f.applyAsDouble(new A()), 1.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(new A()), 1.0, 1e-12);
   }
 
   @Test
   public void invokeOneB() throws Exception  {
     final ToDoubleFunction<B> f = Functions.invokeMethod(Utils.getMethod(B.class, "one"));
-    Assert.assertEquals(f.applyAsDouble(new B()), -1.0, 1e-12);
+    Assertions.assertEquals(f.applyAsDouble(new B()), -1.0, 1e-12);
   }
 
   private static class A {

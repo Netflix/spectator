@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,10 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
@@ -38,11 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-@RunWith(JUnit4.class)
 public class ThreadPoolMonitorTest {
 
   private static final String THREAD_POOL_NAME = ThreadPoolMonitorTest.class.getSimpleName();
@@ -139,27 +133,29 @@ public class ThreadPoolMonitorTest {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     registry = new DefaultRegistry();
     latchedExecutor = new LatchedThreadPoolExecutor(new CountDownLatch(1));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     registry = null;
     latchedExecutor.shutdown();
     latchedExecutor = null;
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void monitorThrowsIfNullRegistry() throws Exception {
-    ThreadPoolMonitor.attach(null, latchedExecutor, THREAD_POOL_NAME);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> ThreadPoolMonitor.attach(null, latchedExecutor, THREAD_POOL_NAME));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void monitorThrowsIfNullThreadPool() throws Exception {
-    ThreadPoolMonitor.attach(registry, null, THREAD_POOL_NAME);
+    Assertions.assertThrows(NullPointerException.class,
+        () -> ThreadPoolMonitor.attach(registry, null, THREAD_POOL_NAME));
   }
 
   @Test
@@ -205,64 +201,64 @@ public class ThreadPoolMonitorTest {
   private void checkIdTagValue(Meter meter, String expectedIdValue) {
     final Iterable<Measurement> measurements = meter.measure();
     final Iterator<Measurement> measurementIterator = measurements.iterator();
-    assertTrue(measurementIterator.hasNext());
+    Assertions.assertTrue(measurementIterator.hasNext());
 
     final Iterator<Tag> tags = measurementIterator.next().id().tags().iterator();
-    assertTrue(tags.hasNext());
+    Assertions.assertTrue(tags.hasNext());
     Tag tag = tags.next();
-    assertEquals(ThreadPoolMonitor.ID_TAG_NAME, tag.key());
-    assertEquals(expectedIdValue, tag.value());
+    Assertions.assertEquals(ThreadPoolMonitor.ID_TAG_NAME, tag.key());
+    Assertions.assertEquals(expectedIdValue, tag.value());
   }
 
   @Test
   public void threadPoolMonitorHasTaskCountMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.TASK_COUNT));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.TASK_COUNT));
   }
 
   @Test
   public void threadPoolMonitorHasCompletedTaskCountMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.COMPLETED_TASK_COUNT));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.COMPLETED_TASK_COUNT));
   }
 
   @Test
   public void threadPoolMonitorHasCurrentThreadsBusyMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.CURRENT_THREADS_BUSY));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.CURRENT_THREADS_BUSY));
   }
 
   @Test
   public void threadPoolMonitorHasMaxThreadsMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.MAX_THREADS));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.MAX_THREADS));
   }
 
   @Test
   public void threadPoolMonitorHasPoolSizeMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.POOL_SIZE));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.POOL_SIZE));
   }
 
   @Test
   public void threadPoolMonitorHasCorePoolSizeMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.CORE_POOL_SIZE));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.CORE_POOL_SIZE));
   }
 
   @Test
   public void threadPoolMonitorHasQueueSizeMeter() {
-    assertNotNull(getMeter(ThreadPoolMonitor.QUEUE_SIZE));
+    Assertions.assertNotNull(getMeter(ThreadPoolMonitor.QUEUE_SIZE));
   }
 
   @Test
   public void maxThreadsUpdatesWhenRegistryIsUpdated() {
     final Gauge gauge = getGauge(ThreadPoolMonitor.MAX_THREADS);
-    assertEquals(10.0, gauge.value(), 0.0);
+    Assertions.assertEquals(10.0, gauge.value(), 1e-12);
 
     latchedExecutor.setMaximumPoolSize(42);
     PolledMeter.update(registry);
-    assertEquals(42.0, gauge.value(), 0.0);
+    Assertions.assertEquals(42.0, gauge.value(), 1e-12);
   }
 
   @Test
   public void corePoolSizeUpdatesWhenRegistryIsUpdated() {
     final Gauge gauge = getGauge(ThreadPoolMonitor.CORE_POOL_SIZE);
-    assertEquals(3.0, gauge.value(), 0.0);
+    Assertions.assertEquals(3.0, gauge.value(), 1e-12);
 
     // Must be <= 10 because that is the max pool size used in the test. Starting with
     // jdk9 the it will validate and fail if trying to set the pool size larger than
@@ -270,13 +266,13 @@ public class ThreadPoolMonitorTest {
     latchedExecutor.setCorePoolSize(7);
 
     PolledMeter.update(registry);
-    assertEquals(7.0, gauge.value(), 0.0);
+    Assertions.assertEquals(7.0, gauge.value(), 1e-12);
   }
 
   @Test
   public void taskCountUpdates() throws InterruptedException {
     final Counter counter = getCounter(ThreadPoolMonitor.TASK_COUNT);
-    assertEquals(0, counter.count());
+    Assertions.assertEquals(0, counter.count());
 
     final CountDownLatch synchronizer = new CountDownLatch(1);
     final CountDownLatch terminator = new CountDownLatch(1);
@@ -286,14 +282,14 @@ public class ThreadPoolMonitorTest {
 
     synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(1, counter.count(), 0.0);
+    Assertions.assertEquals(1, counter.count(), 1e-12);
     terminator.countDown();
   }
 
   @Test
   public void currentThreadsBusyCountUpdates() throws InterruptedException {
     final Gauge gauge = getGauge(ThreadPoolMonitor.CURRENT_THREADS_BUSY);
-    assertEquals(0.0, gauge.value(), 0.0);
+    Assertions.assertEquals(0.0, gauge.value(), 1e-12);
 
     final CountDownLatch synchronizer = new CountDownLatch(1);
     final CountDownLatch terminator = new CountDownLatch(1);
@@ -303,18 +299,18 @@ public class ThreadPoolMonitorTest {
 
     synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(1.0, gauge.value(), 0.0);
+    Assertions.assertEquals(1.0, gauge.value(), 1e-12);
 
     terminator.countDown();
     latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(0.0, gauge.value(), 0.0);
+    Assertions.assertEquals(0.0, gauge.value(), 1e-12);
   }
 
   @Test
   public void completedTaskCountUpdates() throws InterruptedException {
     final Counter counter = getCounter(ThreadPoolMonitor.COMPLETED_TASK_COUNT);
-    assertEquals(0, counter.count());
+    Assertions.assertEquals(0, counter.count());
 
     final CountDownLatch synchronizer = new CountDownLatch(2);
     final CountDownLatch terminator1 = new CountDownLatch(1);
@@ -327,24 +323,24 @@ public class ThreadPoolMonitorTest {
 
     synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(0, counter.count());
+    Assertions.assertEquals(0, counter.count());
 
     terminator1.countDown();
     latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(1, counter.count(), 0);
+    Assertions.assertEquals(1, counter.count(), 1e-12);
 
     latchedExecutor.setCompletedLatch(new CountDownLatch(1));
     terminator2.countDown();
     latchedExecutor.getCompletedLatch().await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(2, counter.count());
+    Assertions.assertEquals(2, counter.count());
   }
 
   @Test
   public void poolSizeUpdates() throws InterruptedException {
     final Gauge gauge = getGauge(ThreadPoolMonitor.POOL_SIZE);
-    assertEquals(0.0, gauge.value(), 0.0);
+    Assertions.assertEquals(0.0, gauge.value(), 1e-12);
 
     final CountDownLatch synchronizer = new CountDownLatch(2);
     final CountDownLatch terminator1 = new CountDownLatch(1);
@@ -357,7 +353,7 @@ public class ThreadPoolMonitorTest {
 
     synchronizer.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(2.0, gauge.value(), 0.0);
+    Assertions.assertEquals(2.0, gauge.value(), 1e-12);
 
     terminator1.countDown();
     terminator2.countDown();
@@ -368,7 +364,7 @@ public class ThreadPoolMonitorTest {
     latchedExecutor.setCorePoolSize(1);
     latchedExecutor.setMaximumPoolSize(1);
     final Gauge gauge = getGauge(ThreadPoolMonitor.QUEUE_SIZE);
-    assertEquals(0.0, gauge.value(), 0.0);
+    Assertions.assertEquals(0.0, gauge.value(), 1e-12);
 
     final CountDownLatch synchronizer1 = new CountDownLatch(1);
     final CountDownLatch synchronizer2 = new CountDownLatch(1);
@@ -392,7 +388,7 @@ public class ThreadPoolMonitorTest {
 
     synchronizer1.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(6.0, gauge.value(), 0.0);
+    Assertions.assertEquals(6.0, gauge.value(), 1e-12);
 
     latchedExecutor.setCompletedLatch(new CountDownLatch(3));
     terminator123.countDown();
@@ -400,7 +396,7 @@ public class ThreadPoolMonitorTest {
 
     synchronizer2.await(6, TimeUnit.SECONDS);
     PolledMeter.update(registry);
-    assertEquals(3.0, gauge.value(), 0.0);
+    Assertions.assertEquals(3.0, gauge.value(), 1e-12);
 
     terminator2.countDown();
   }

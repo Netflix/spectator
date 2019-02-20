@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,19 @@ public interface Id {
    */
   default Id withTag(String k, boolean v) {
     return withTag(k, Boolean.toString(v));
+  }
+
+  /**
+   * Return a new id with an additional tag value using {@link Enum#name()} to
+   * convert the Enum to a string representation. This is merely a convenience function
+   * for:
+   *
+   * <pre>
+   *   id.withTag("key", myEnum.name())
+   * </pre>
+   */
+  default <E extends Enum<E>> Id withTag(String k, Enum<E> v) {
+    return withTag(k, v.name());
   }
 
   /**
@@ -115,5 +128,15 @@ public interface Id {
       tmp = tmp.withTag(entry.getKey(), entry.getValue());
     }
     return tmp;
+  }
+
+  /**
+   * Create an immutable Id with the provided name. In many cases it is preferable to use
+   * {@link Registry#createId(String)} instead so that the overhead for instrumentation can
+   * be mostly removed when choosing to use a NoopRegistry. Using this method directly the Id
+   * will always be created.
+   */
+  static Id create(String name) {
+    return new DefaultId(name);
   }
 }

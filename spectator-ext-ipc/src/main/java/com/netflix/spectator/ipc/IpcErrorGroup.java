@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,11 @@ import com.netflix.spectator.api.Tag;
  * are the same for all implementations to make it easier to query across all
  * services and client implementations. An implementation specific failure can be
  * specified with {@link IpcTagKey#errorReason}.
+ *
+ * @deprecated Use {@link IpcStatus} instead. This value will be removed in
+ * January of 2019.
  */
+@Deprecated
 public enum IpcErrorGroup implements Tag {
 
   /** No error. */

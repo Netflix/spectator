@@ -1,6 +1,7 @@
 
 dependencies {
   testCompile files("$projectDir/src/test/lib/compatibility-0.68.0.jar")
+  jmh "com.google.re2j:re2j:1.2"
 }
 
 javadoc {

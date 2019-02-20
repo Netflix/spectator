@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -60,13 +61,13 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private final Clock stepClock;
 
-  private final boolean enabled;
+  private final AtlasConfig config;
+
   private final Duration step;
   private final long stepMillis;
   private final long meterTTL;
   private final URI uri;
 
-  private final boolean lwcEnabled;
   private final Duration configRefreshFrequency;
   private final URI evalUri;
 
@@ -91,15 +92,14 @@ public final class AtlasRegistry extends AbstractRegistry {
   /** Create a new instance. */
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     super(clock, config);
+    this.config = config;
     this.stepClock = new StepClock(clock, config.step().toMillis());
 
-    this.enabled = config.enabled();
     this.step = config.step();
     this.stepMillis = step.toMillis();
     this.meterTTL = config.meterTTL().toMillis();
     this.uri = URI.create(config.uri());
 
-    this.lwcEnabled = config.lwcEnabled();
     this.configRefreshFrequency = config.configRefreshFrequency();
     this.evalUri = URI.create(config.evalUri());
 
@@ -129,28 +129,20 @@ public final class AtlasRegistry extends AbstractRegistry {
   public void start() {
     if (scheduler == null) {
       // Setup main collection for publishing to Atlas
-      if (enabled || lwcEnabled) {
-        Scheduler.Options options = new Scheduler.Options()
-            .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
-            .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
-            .withStopOnFailure(false);
-        scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
-        scheduler.schedule(options, this::collectData);
-        logger.info("started collecting metrics every {} reporting to {}", step, uri);
-        logger.info("common tags: {}", commonTags);
-      } else {
-        logger.info("publishing is not enabled");
-      }
+      Scheduler.Options options = new Scheduler.Options()
+          .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
+          .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
+          .withStopOnFailure(false);
+      scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
+      scheduler.schedule(options, this::collectData);
+      logger.info("started collecting metrics every {} reporting to {}", step, uri);
+      logger.info("common tags: {}", commonTags);
 
       // Setup collection for subscriptions
-      if (lwcEnabled) {
-        Scheduler.Options options = new Scheduler.Options()
-            .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
-            .withStopOnFailure(false);
-        scheduler.schedule(options, this::fetchSubscriptions);
-      } else {
-        logger.info("subscriptions are not enabled");
-      }
+      Scheduler.Options subOptions = new Scheduler.Options()
+          .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
+          .withStopOnFailure(false);
+      scheduler.schedule(subOptions, this::fetchSubscriptions);
     } else {
       logger.warn("registry already started, ignoring duplicate request");
     }
@@ -194,19 +186,24 @@ public final class AtlasRegistry extends AbstractRegistry {
   /** Collect data and send to Atlas. */
   void collectData() {
     // Send data for any subscriptions
-    if (lwcEnabled) {
+    if (config.lwcEnabled()) {
       try {
         handleSubscriptions();
       } catch (Exception e) {
         logger.warn("failed to handle subscriptions", e);
       }
+    } else {
+      logger.debug("lwc is disabled, skipping subscriptions");
     }
 
     // Publish to Atlas
-    if (enabled) {
+    if (config.enabled()) {
       try {
         for (List<Measurement> batch : getBatches()) {
           PublishPayload p = new PublishPayload(commonTags, batch);
+          if (logger.isTraceEnabled()) {
+            logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
+          }
           HttpResponse res = client.post(uri)
               .withConnectTimeout(connectTimeout)
               .withReadTimeout(readTimeout)
@@ -216,8 +213,10 @@ public final class AtlasRegistry extends AbstractRegistry {
           recordClockSkew((date == null) ? 0L : date.toEpochMilli());
         }
       } catch (Exception e) {
-        logger.warn("failed to send metrics", e);
+        logger.warn("failed to send metrics (uri={})", uri, e);
       }
+    } else {
+      logger.debug("publishing is disabled, skipping collection");
     }
 
     // Clean up any expired meters
@@ -238,13 +237,16 @@ public final class AtlasRegistry extends AbstractRegistry {
   private void handleSubscriptions() {
     List<Subscription> subs = subManager.subscriptions();
     if (!subs.isEmpty()) {
-      List<TagsValuePair> ms = getMeasurements().stream()
+      List<TagsValuePair> ms = getMeasurements()
           .map(this::newTagsValuePair)
           .collect(Collectors.toList());
       Evaluator evaluator = new Evaluator().addGroupSubscriptions("local", subs);
       EvalPayload payload = evaluator.eval("local", stepClock.wallTime(), ms);
       try {
         String json = jsonMapper.writeValueAsString(payload);
+        if (logger.isTraceEnabled()) {
+          logger.trace("eval payload: {}", json);
+        }
         client.post(evalUri)
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
@@ -252,13 +254,17 @@ public final class AtlasRegistry extends AbstractRegistry {
             .send()
             .decompress();
       } catch (Exception e) {
-        logger.warn("failed to send metrics for subscriptions", e);
+        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
     }
   }
 
   private void fetchSubscriptions() {
-    subManager.refresh();
+    if (config.lwcEnabled()) {
+      subManager.refresh();
+    } else {
+      logger.debug("lwc is disabled, skipping subscription config refresh");
+    }
   }
 
   /**
@@ -310,17 +316,17 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   /** Get a list of all measurements from the registry. */
-  List<Measurement> getMeasurements() {
+  Stream<Measurement> getMeasurements() {
     return stream()
         .filter(m -> !m.hasExpired())
         .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
-        .collect(Collectors.toList());
+        .filter(m -> !Double.isNaN(m.value()));
   }
 
   /** Get a list of all measurements and break them into batches. */
   List<List<Measurement>> getBatches() {
     List<List<Measurement>> batches = new ArrayList<>();
-    List<Measurement> ms = getMeasurements();
+    List<Measurement> ms = getMeasurements().collect(Collectors.toList());
     for (int i = 0; i < ms.size(); i += batchSize) {
       List<Measurement> batch = ms.subList(i, Math.min(ms.size(), i + batchSize));
       batches.add(batch);

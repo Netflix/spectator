@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,21 @@
  */
 package com.netflix.spectator.atlas;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class AtlasConfigTest {
 
   @Test
   public void enabledByDefault() {
     Map<String, String> props = Collections.emptyMap();
     AtlasConfig config = props::get;
-    Assert.assertTrue(config.enabled());
+    Assertions.assertTrue(config.enabled());
   }
 
   @Test
@@ -40,7 +37,7 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.enabled", "true");
     AtlasConfig config = props::get;
-    Assert.assertTrue(config.enabled());
+    Assertions.assertTrue(config.enabled());
   }
 
   @Test
@@ -48,7 +45,7 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.enabled", "false");
     AtlasConfig config = props::get;
-    Assert.assertFalse(config.enabled());
+    Assertions.assertFalse(config.enabled());
   }
 
   @Test
@@ -56,14 +53,14 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.enabled", "abc");
     AtlasConfig config = props::get;
-    Assert.assertFalse(config.enabled());
+    Assertions.assertFalse(config.enabled());
   }
 
   @Test
   public void lwcDisabledByDefault() {
     Map<String, String> props = Collections.emptyMap();
     AtlasConfig config = props::get;
-    Assert.assertFalse(config.lwcEnabled());
+    Assertions.assertFalse(config.lwcEnabled());
   }
 
   @Test
@@ -71,7 +68,7 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.lwc.enabled", "true");
     AtlasConfig config = props::get;
-    Assert.assertTrue(config.lwcEnabled());
+    Assertions.assertTrue(config.lwcEnabled());
   }
 
   @Test
@@ -79,7 +76,7 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.lwc.enabled", "false");
     AtlasConfig config = props::get;
-    Assert.assertFalse(config.lwcEnabled());
+    Assertions.assertFalse(config.lwcEnabled());
   }
 
   @Test
@@ -87,6 +84,6 @@ public class AtlasConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("atlas.lwc.enabled", "abc");
     AtlasConfig config = props::get;
-    Assert.assertFalse(config.lwcEnabled());
+    Assertions.assertFalse(config.lwcEnabled());
   }
 }

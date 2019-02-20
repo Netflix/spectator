@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,9 @@ package com.netflix.spectator.api.histogram;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(JUnit4.class)
 public class PercentileDistributionSummaryTest {
 
   private Registry newRegistry() {
@@ -36,8 +33,8 @@ public class PercentileDistributionSummaryTest {
     }
     for (int i = start; i <= 100; ++i) {
       double expected = i * 1000.0;
-      double threshold = 0.15 * expected;
-      Assert.assertEquals(expected, t.percentile(i), threshold);
+      double threshold = 0.15 * expected + 1e-12;
+      Assertions.assertEquals(expected, t.percentile(i), threshold);
     }
   }
 

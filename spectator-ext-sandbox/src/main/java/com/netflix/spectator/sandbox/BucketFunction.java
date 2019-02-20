@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,5 +32,5 @@ public interface BucketFunction extends LongFunction<String> {
    * @return
    *     Bucket name to use for the amount.
    */
-  String apply(long amount);
+  @Override String apply(long amount);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.PatternMatcher;
 import com.netflix.spectator.impl.Preconditions;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -486,25 +486,29 @@ public interface Query {
   final class Regex implements Query {
     private final String k;
     private final String v;
-    private final Pattern pattern;
+    private final PatternMatcher pattern;
     private final String name;
 
     /** Create a new instance. */
     Regex(String k, String v) {
-      this(k, v, 0, ":re");
+      this(k, v, false, ":re");
     }
 
     /** Create a new instance. */
-    Regex(String k, String v, int flags, String name) {
+    Regex(String k, String v, boolean ignoreCase, String name) {
       this.k = Preconditions.checkNotNull(k, "k");
       this.v = Preconditions.checkNotNull(v, "v");
-      this.pattern = Pattern.compile("^" + v, flags);
+      if (ignoreCase) {
+        this.pattern = PatternMatcher.compile("^" + v).ignoreCase();
+      } else {
+        this.pattern = PatternMatcher.compile("^" + v);
+      }
       this.name = Preconditions.checkNotNull(name, "name");
     }
 
     @Override public boolean matches(Map<String, String> tags) {
       String s = tags.get(k);
-      return s != null && pattern.matcher(s).find();
+      return s != null && pattern.matches(s);
     }
 
     @Override public String toString() {
@@ -517,14 +521,14 @@ public interface Query {
       Regex other = (Regex) obj;
       return k.equals(other.k)
           && v.equals(other.v)
-          && pattern.flags() == other.pattern.flags()
+          && pattern.equals(other.pattern)
           && name.equals(other.name);
     }
 
     @Override public int hashCode() {
       int result = k.hashCode();
       result = 31 * result + v.hashCode();
-      result = 31 * result + pattern.flags();
+      result = 31 * result + pattern.hashCode();
       result = 31 * result + name.hashCode();
       return result;
     }

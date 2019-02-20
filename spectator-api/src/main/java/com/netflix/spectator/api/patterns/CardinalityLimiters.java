@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,10 @@ package com.netflix.spectator.api.patterns;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Utils;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -74,6 +78,21 @@ public final class CardinalityLimiters {
   /** Replacement value that is used if the number of values exceeds the limit. */
   public static final String OTHERS = "--others--";
 
+  /** Replacement value that is used if the values are rolled up. */
+  public static final String AUTO_ROLLUP = "--auto-rollup--";
+
+  /**
+   * Order in descending order based on the count and then alphabetically based on the
+   * key if there is a tie.
+   */
+  private static final Comparator<Map.Entry<String, AtomicLong>> FREQUENT_ENTRY_COMPARATOR =
+      (a, b) -> {
+        int countCmp = Long.compareUnsigned(b.getValue().get(), a.getValue().get());
+        return countCmp != 0
+            ? countCmp
+            : a.getKey().compareTo(b.getKey());
+      };
+
   private CardinalityLimiters() {
   }
 
@@ -118,6 +137,21 @@ public final class CardinalityLimiters {
    */
   static Function<String, String> mostFrequent(int n, Clock clock) {
     return new MostFrequentLimiter(Math.min(n, MAX_LIMIT), clock);
+  }
+
+  /**
+   * Rollup the values if the cardinality exceeds {@code n}. This limiter will leave the
+   * values alone as long as the cardinality stays within the limit. After that all values
+   * will get mapped to {@link #AUTO_ROLLUP}.
+   *
+   * @param n
+   *     Maximum number of distinct values allowed for the lifetime of the limiter.
+   * @return
+   *     The input value if it is within the bounds or is selected. Otherwise map to
+   *     {@link #AUTO_ROLLUP}.
+   */
+  public static Function<String, String> rollup(int n) {
+    return new RollupLimiter(n);
   }
 
   private static class FirstLimiter implements Function<String, String> {
@@ -167,6 +201,10 @@ public final class CardinalityLimiters {
   }
 
   private static class MostFrequentLimiter implements Function<String, String> {
+    // With a 10m refresh interval this is ~2h for it to return to normal if there
+    // is a temporary window with lots of churn
+    private static final int MAX_UPDATES = 12;
+
     private final ReentrantLock lock = new ReentrantLock();
     private final ConcurrentHashMap<String, AtomicLong> values = new ConcurrentHashMap<>();
     private final int n;
@@ -176,39 +214,75 @@ public final class CardinalityLimiters {
     private volatile long limiterTimestamp;
     private volatile long cutoff;
 
+    private int updatesWithHighChurn;
+
     MostFrequentLimiter(int n, Clock clock) {
       this.n = n;
       this.clock = clock;
       this.limiter = first(n);
       this.limiterTimestamp = clock.wallTime();
       this.cutoff = 0L;
+      this.updatesWithHighChurn = 0;
     }
 
-    private synchronized void updateCutoff() {
+    private void updateCutoff() {
       long now = clock.wallTime();
-      if (now - limiterTimestamp > REFRESH_INTERVAL) {
+      if (now - limiterTimestamp > REFRESH_INTERVAL && values.size() > n) {
         lock.lock();
         try {
           if (now - limiterTimestamp > REFRESH_INTERVAL) {
             limiterTimestamp = clock.wallTime();
-            long min = values.values()
+            List<Map.Entry<String, AtomicLong>> sorted = values.entrySet()
                 .stream()
-                .map(AtomicLong::get)
-                .sorted((a, b) -> Long.compareUnsigned(b, a))
-                .limit(n)
-                .min(Long::compareUnsigned)
-                .orElseGet(() -> 0L);
+                .sorted(FREQUENT_ENTRY_COMPARATOR)
+                .collect(Collectors.toList());
 
-            // Remove less frequent items from the map to avoid a memory leak if unique
-            // ids are used
-            long dropCutoff = Math.max(min / 2, 1);
-            values.entrySet().removeIf(e -> e.getValue().get() <= dropCutoff);
+            final long maxCount = sorted.get(0).getValue().get();
 
-            // Reset the counts so new items will have a chance to catch up, use 1 instead of 0 so
-            // older entries have a slight bias
-            values.values().forEach(v -> v.set(1L));
-            cutoff = 1L;
-            limiter = first(n);
+            Map.Entry<String, AtomicLong> min = sorted.get(Math.min(n - 1, sorted.size() - 1));
+            final String minKey = min.getKey();
+            final long minCount = min.getValue().get();
+            final long delta = Math.max(minCount / 2L, 1L);
+
+            final int numCloseToMin = (int) sorted.stream()
+                .map(e -> e.getValue().get())
+                .filter(v -> Math.abs(v - minCount) <= delta)
+                .count();
+
+
+            // Check for high churn
+            long previousCutoff = cutoff;
+            if (numCloseToMin > n) {
+              if (maxCount - minCount <= maxCount / 2L) {
+                // Max is close to min indicating more likelihood for churn with all values
+                cutoff = Math.max(previousCutoff, maxCount + delta);
+                updatesWithHighChurn = MAX_UPDATES;
+              } else {
+                // Try to cutoff the noisy tail without impacting higher frequency values
+                cutoff = Math.max(previousCutoff, minCount + delta);
+                updatesWithHighChurn += updatesWithHighChurn >= MAX_UPDATES ? 0 : 1;
+              }
+              sorted.stream().skip(10L * n).forEach(e -> values.remove(e.getKey()));
+
+              // Update the limiter and ensure highest frequency values are preserved
+              Function<String, String> newLimiter = first(n);
+              sorted.stream().limit(n).forEach(e -> newLimiter.apply(e.getKey()));
+              limiter = newLimiter;
+            } else {
+              cutoff = minCount - minCount / 10L;
+              values
+                  .entrySet()
+                  .removeIf(e -> e.getValue().get() <= minCount && e.getKey().compareTo(minKey) > 0);
+
+              // Decay the counts so new items will have a chance to catch up
+              values.values().forEach(v -> v.set(v.get() - v.get() / 10L));
+
+              // Replace the fallback limiter instance so new values will be allowed
+              updatesWithHighChurn -= updatesWithHighChurn > 0 ? 1 : 0;
+              if (updatesWithHighChurn == 0) {
+                limiter = first(n);
+              }
+            }
           }
         } finally {
           lock.unlock();
@@ -217,11 +291,13 @@ public final class CardinalityLimiters {
     }
 
     @Override public String apply(String s) {
-      AtomicLong count = Utils.computeIfAbsent(values, s, k -> new AtomicLong(0));
+      AtomicLong count = Utils.computeIfAbsent(values, s, k -> new AtomicLong(0L));
       long num = count.incrementAndGet();
       if (num >= cutoff) {
         updateCutoff();
-        return limiter.apply(s);
+        // cutoff may have been updated, double check it would still make the cut
+        String v = limiter.apply(s);
+        return num >= cutoff ? v : OTHERS;
       } else {
         return OTHERS;
       }
@@ -237,5 +313,35 @@ public final class CardinalityLimiters {
       return "MostFrequentLimiter(" + cutoff + "," + limiter + ",values=[" + vs + "])";
     }
 
+  }
+
+  private static class RollupLimiter implements Function<String, String> {
+
+    private final int n;
+    private final Set<String> values;
+    private final AtomicInteger count;
+
+    private volatile boolean rollup;
+
+    RollupLimiter(int n) {
+      this.n = n;
+      this.values = ConcurrentHashMap.newKeySet();
+      this.count = new AtomicInteger();
+      this.rollup = false;
+    }
+
+    @Override public String apply(String s) {
+      if (rollup) {
+        return AUTO_ROLLUP;
+      }
+
+      if (values.add(s) && count.incrementAndGet() > n) {
+        rollup = true;
+        values.clear();
+        return AUTO_ROLLUP;
+      } else {
+        return s;
+      }
+    }
   }
 }

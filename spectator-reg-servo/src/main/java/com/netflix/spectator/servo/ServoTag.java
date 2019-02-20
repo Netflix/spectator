@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ class ServoTag implements Tag {
   private final com.netflix.servo.tag.Tag tag;
 
   /** Create a new instance. */
-  public ServoTag(com.netflix.servo.tag.Tag tag) {
+  ServoTag(com.netflix.servo.tag.Tag tag) {
     this.tag = tag;
   }
 

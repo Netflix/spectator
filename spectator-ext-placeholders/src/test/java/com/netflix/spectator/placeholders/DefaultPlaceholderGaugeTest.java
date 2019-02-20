@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,12 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(JUnit4.class)
 public class DefaultPlaceholderGaugeTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -38,7 +35,7 @@ public class DefaultPlaceholderGaugeTest {
   @Test
   public void testInit() {
     Gauge g = new DefaultPlaceholderGauge(new DefaultPlaceholderId("unused", registry), registry);
-    Assert.assertEquals(g.value(), Double.NaN, 1e-12);
+    Assertions.assertEquals(g.value(), Double.NaN, 1e-12);
   }
 
   @Test
@@ -46,22 +43,22 @@ public class DefaultPlaceholderGaugeTest {
     String[] tagValue = new String[] { "default" };
     Gauge g = factory.gauge(factory.createId("testIncrement",
         Collections.singleton(new TestTagFactory(tagValue))));
-    Assert.assertEquals(Double.NaN, g.value(), 1e-12);
-    Assert.assertEquals("testIncrement:tag=default", g.id().toString());
+    Assertions.assertEquals(Double.NaN, g.value(), 1e-12);
+    Assertions.assertEquals("testIncrement:tag=default", g.id().toString());
     g.set(1);
-    Assert.assertEquals(1.0, g.value(), 1e-12);
+    Assertions.assertEquals(1.0, g.value(), 1e-12);
     g.set(3);
-    Assert.assertEquals(3.0, g.value(), 1e-12);
+    Assertions.assertEquals(3.0, g.value(), 1e-12);
 
     tagValue[0] = "value2";
-    Assert.assertEquals("testIncrement:tag=value2", g.id().toString());
+    Assertions.assertEquals("testIncrement:tag=value2", g.id().toString());
     g.set(1);
-    Assert.assertEquals(1.0, g.value(), 1e-12);
+    Assertions.assertEquals(1.0, g.value(), 1e-12);
 
     tagValue[0] = "default";
-    Assert.assertEquals("testIncrement:tag=default", g.id().toString());
+    Assertions.assertEquals("testIncrement:tag=default", g.id().toString());
     g.set(4);
-    Assert.assertEquals(4.0, g.value(), 1e-12);
+    Assertions.assertEquals(4.0, g.value(), 1e-12);
   }
 
   @Test
@@ -71,11 +68,11 @@ public class DefaultPlaceholderGaugeTest {
         Collections.singleton(new TestTagFactory(tagValue))));
 
     g.set(42);
-    Assert.assertEquals(42.0, g.value(), 1e-12);
+    Assertions.assertEquals(42.0, g.value(), 1e-12);
 
     tagValue[0] = "value2";
     g.set(54);
-    Assert.assertEquals(54.0, g.value(), 1e-12);
+    Assertions.assertEquals(54.0, g.value(), 1e-12);
   }
 
   @Test
@@ -94,12 +91,12 @@ public class DefaultPlaceholderGaugeTest {
     clock.setWallTime(expectedTime);
     List<Measurement> measurements = Utils.toList(g.measure());
 
-    Assert.assertEquals(1, measurements.size());
+    Assertions.assertEquals(1, measurements.size());
 
     Measurement m = measurements.get(0);
-    Assert.assertEquals(g.id(), m.id());
-    Assert.assertEquals(expectedTime, m.timestamp());
-    Assert.assertEquals(expectedValue, m.value(), 0.1e-12);
+    Assertions.assertEquals(g.id(), m.id());
+    Assertions.assertEquals(expectedTime, m.timestamp());
+    Assertions.assertEquals(expectedValue, m.value(), 0.1e-12);
   }
 
   @Test
@@ -108,6 +105,6 @@ public class DefaultPlaceholderGaugeTest {
     Gauge g = factory.gauge(factory.createId("testHasExpired",
         Collections.singleton(new TestTagFactory(tagValue))));
 
-    Assert.assertFalse(g.hasExpired());
+    Assertions.assertFalse(g.hasExpired());
   }
 }

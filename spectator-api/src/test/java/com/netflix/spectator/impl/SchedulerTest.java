@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,8 @@ import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOError;
 import java.time.Duration;
@@ -31,7 +29,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-@RunWith(JUnit4.class)
 public class SchedulerTest {
 
   @Test
@@ -45,18 +42,18 @@ public class SchedulerTest {
 
     clock.setWallTime(5437L);
     Scheduler.DelayedTask task = new Scheduler.DelayedTask(clock, options, () -> {});
-    Assert.assertEquals(5437L, task.getNextExecutionTime());
-    Assert.assertEquals(0L, skipped.count());
+    Assertions.assertEquals(5437L, task.getNextExecutionTime());
+    Assertions.assertEquals(0L, skipped.count());
 
     clock.setWallTime(12123L);
     task.updateNextExecutionTime(skipped);
-    Assert.assertEquals(22123L, task.getNextExecutionTime());
-    Assert.assertEquals(0L, skipped.count());
+    Assertions.assertEquals(22123L, task.getNextExecutionTime());
+    Assertions.assertEquals(0L, skipped.count());
 
     clock.setWallTime(27000L);
     task.updateNextExecutionTime(skipped);
-    Assert.assertEquals(37000L, task.getNextExecutionTime());
-    Assert.assertEquals(0L, skipped.count());
+    Assertions.assertEquals(37000L, task.getNextExecutionTime());
+    Assertions.assertEquals(0L, skipped.count());
   }
 
   @Test
@@ -70,23 +67,23 @@ public class SchedulerTest {
 
     clock.setWallTime(5437L);
     Scheduler.DelayedTask task = new Scheduler.DelayedTask(clock, options, () -> {});
-    Assert.assertEquals(5437L, task.getNextExecutionTime());
-    Assert.assertEquals(0L, skipped.count());
+    Assertions.assertEquals(5437L, task.getNextExecutionTime());
+    Assertions.assertEquals(0L, skipped.count());
 
     clock.setWallTime(12123L);
     task.updateNextExecutionTime(skipped);
-    Assert.assertEquals(15437L, task.getNextExecutionTime());
-    Assert.assertEquals(0L, skipped.count());
+    Assertions.assertEquals(15437L, task.getNextExecutionTime());
+    Assertions.assertEquals(0L, skipped.count());
 
     clock.setWallTime(27000L);
     task.updateNextExecutionTime(skipped);
-    Assert.assertEquals(35437L, task.getNextExecutionTime());
-    Assert.assertEquals(1L, skipped.count());
+    Assertions.assertEquals(35437L, task.getNextExecutionTime());
+    Assertions.assertEquals(1L, skipped.count());
 
     clock.setWallTime(57000L);
     task.updateNextExecutionTime(skipped);
-    Assert.assertEquals(65437L, task.getNextExecutionTime());
-    Assert.assertEquals(3L, skipped.count());
+    Assertions.assertEquals(65437L, task.getNextExecutionTime());
+    Assertions.assertEquals(3L, skipped.count());
   }
 
   private long numberOfThreads(String id) {
@@ -106,12 +103,12 @@ public class SchedulerTest {
         .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, Duration.ofMillis(10))
         .withStopOnFailure(false);
     ScheduledFuture<?> f = s.schedule(opts, () -> {});
-    Assert.assertEquals(1L, numberOfThreads("shutdown"));
+    Assertions.assertEquals(1L, numberOfThreads("shutdown"));
 
     // Shutdown and wait a bit, this gives the thread a chance to restart
     s.shutdown();
     Thread.sleep(300);
-    Assert.assertEquals(0L, numberOfThreads("shutdown"));
+    Assertions.assertEquals(0L, numberOfThreads("shutdown"));
   }
 
   @Test
@@ -128,8 +125,8 @@ public class SchedulerTest {
       throw new IOError(new RuntimeException("stop"));
     });
 
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-    Assert.assertFalse(f.isDone());
+    Assertions.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assertions.assertFalse(f.isDone());
     s.shutdown();
   }
 
@@ -147,8 +144,8 @@ public class SchedulerTest {
       throw new RuntimeException("stop");
     });
 
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-    Assert.assertFalse(f.isDone());
+    Assertions.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assertions.assertFalse(f.isDone());
     s.shutdown();
   }
 
@@ -166,7 +163,7 @@ public class SchedulerTest {
       throw new RuntimeException("stop");
     });
 
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(60, TimeUnit.SECONDS));
     while (!f.isDone()); // This will be an endless loop if broken
     s.shutdown();
   }
@@ -191,8 +188,8 @@ public class SchedulerTest {
       }
     }));
 
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
-    Assert.assertTrue(ref.get().isDone());
+    Assertions.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assertions.assertTrue(ref.get().isDone());
     s.shutdown();
   }
 
@@ -210,7 +207,7 @@ public class SchedulerTest {
       Thread.currentThread().interrupt();
     });
 
-    Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(60, TimeUnit.SECONDS));
     s.shutdown();
   }
 

@@ -2,8 +2,8 @@ site_name: Spectator Docs
 site_url: 'http://netflix.github.io/spectator'
 repo_url: 'https://github.com/Netflix/spectator'
 google_analytics: ['UA-82153845-2', 'auto']
-strict: False
-pages:
+strict: True
+nav:
 - Home: index.md
 - 'Getting Started':
   - Registry: intro/registry.md
@@ -31,7 +31,6 @@ pages:
 - Registries:
   - Metrics3: registry/metrics3.md
   - Servo: registry/servo.md
-- 'Build Reports': reports.md
 theme: material
 extra_css:
 - css/custom.css

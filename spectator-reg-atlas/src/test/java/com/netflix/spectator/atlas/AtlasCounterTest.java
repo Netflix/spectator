@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,10 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class AtlasCounterTest {
 
   private ManualClock clock = new ManualClock();
@@ -37,12 +34,12 @@ public class AtlasCounterTest {
   private void checkValue(double expected) {
     int count = 0;
     for (Measurement m : counter.measure()) {
-      Assert.assertEquals(counter.id().withTags(Statistic.count, DsType.rate), m.id());
-      Assert.assertEquals(expected / 10.0, m.value(), 1e-12);
-      Assert.assertEquals(expected, counter.actualCount(), 1e-12);
+      Assertions.assertEquals(counter.id().withTags(Statistic.count, DsType.rate), m.id());
+      Assertions.assertEquals(expected / 10.0, m.value(), 1e-12);
+      Assertions.assertEquals(expected, counter.actualCount(), 1e-12);
       ++count;
     }
-    Assert.assertEquals(1, count);
+    Assertions.assertEquals(1, count);
   }
 
   @Test
@@ -110,15 +107,15 @@ public class AtlasCounterTest {
   public void expiration() {
     long start = clock.wallTime();
     clock.setWallTime(start + step * 2);
-    Assert.assertTrue(counter.hasExpired());
+    Assertions.assertTrue(counter.hasExpired());
 
     counter.increment();
-    Assert.assertFalse(counter.hasExpired());
+    Assertions.assertFalse(counter.hasExpired());
 
     clock.setWallTime(start + step * 3 + 1);
-    Assert.assertTrue(counter.hasExpired());
+    Assertions.assertTrue(counter.hasExpired());
 
     counter.increment(42L);
-    Assert.assertFalse(counter.hasExpired());
+    Assertions.assertFalse(counter.hasExpired());
   }
 }

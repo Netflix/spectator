@@ -33,14 +33,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class PrototypeMeasurementFilterTest {
     private long millis = 12345L;
 
@@ -53,7 +50,7 @@ public class PrototypeMeasurementFilterTest {
     PrototypeMeasurementFilterSpecification.MeterFilterSpecification meterSpecC;
     PrototypeMeasurementFilterSpecification.MeterFilterSpecification meterSpecD;
 
-    @Before
+    @BeforeEach
     public void setup() {
         List<PrototypeMeasurementFilterSpecification.TagFilterSpecification> tagsAxBy = Arrays.asList(
             new PrototypeMeasurementFilterSpecification.TagFilterSpecification("tagA", "X"),
@@ -94,8 +91,8 @@ public class PrototypeMeasurementFilterTest {
         PrototypeMeasurementFilter.MeterFilterPattern meterPattern
             = new PrototypeMeasurementFilter.MeterFilterPattern("meterA", meterSpecA);
 
-        Assert.assertEquals(meterPattern.getValues().size(), 1);
-        Assert.assertEquals(meterPattern.getValues().get(0).getTags(), tagPatterns);
+        Assertions.assertEquals(meterPattern.getValues().size(), 1);
+        Assertions.assertEquals(meterPattern.getValues().get(0).getTags(), tagPatterns);
     }
 
     @Test
@@ -113,17 +110,17 @@ public class PrototypeMeasurementFilterTest {
 
         final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList = new ArrayList<>();
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             filter.metricToPatterns("meterA"), 
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     meterPatternA.getValues(), emptyList));
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             filter.metricToPatterns("meterBextra"),
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     emptyList, emptyList));
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
             filter.metricToPatterns("meterCthing"),
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     meterPatternC.getValues(), emptyList));
@@ -141,7 +138,7 @@ public class PrototypeMeasurementFilterTest {
         PrototypeMeasurementFilter.MeterFilterPattern meterPatternB
             = new PrototypeMeasurementFilter.MeterFilterPattern("ignored", meterSpecB);
         final List<PrototypeMeasurementFilter.ValueFilterPattern> emptyList = new ArrayList<>();
-        Assert.assertEquals(
+        Assertions.assertEquals(
             filter.metricToPatterns("meterB"), 
             new PrototypeMeasurementFilter.IncludeExcludePatterns(
                     meterPatternB.getValues(), emptyList));
@@ -153,7 +150,7 @@ public class PrototypeMeasurementFilterTest {
         PrototypeMeasurementFilter.IncludeExcludePatterns patterns
             = filter.metricToPatterns("meterA");
 
-        Assert.assertEquals(new HashSet<>(expect), new HashSet<>(patterns.getInclude()));
+        Assertions.assertEquals(new HashSet<>(expect), new HashSet<>(patterns.getInclude()));
     }
 
 
@@ -163,7 +160,7 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.TagFilterPattern(
                       new PrototypeMeasurementFilterSpecification.TagFilterSpecification("", ""));
         Tag tagA = new BasicTag("some_name_value", "some_value_string");
-        Assert.assertTrue(pattern.test(tagA));
+        Assertions.assertTrue(pattern.test(tagA));
     }
 
     @Test
@@ -172,7 +169,7 @@ public class PrototypeMeasurementFilterTest {
             = new PrototypeMeasurementFilter.TagFilterPattern(
                       Pattern.compile(".+_name_.+"), Pattern.compile(".+_value_.+"));
         Tag tagA = new BasicTag("some_name_value", "some_value_string");
-        Assert.assertTrue(pattern.test(tagA));
+        Assertions.assertTrue(pattern.test(tagA));
     }
 
     @Test
@@ -184,9 +181,9 @@ public class PrototypeMeasurementFilterTest {
         Tag tagOnlyValueOk = new BasicTag("some_value", "some_value_string");
         Tag tagNeitherOk = new BasicTag("some_value", "some_string");
 
-        Assert.assertFalse(pattern.test(tagOnlyNameOk));
-        Assert.assertFalse(pattern.test(tagOnlyValueOk));
-        Assert.assertFalse(pattern.test(tagNeitherOk));
+        Assertions.assertFalse(pattern.test(tagOnlyNameOk));
+        Assertions.assertFalse(pattern.test(tagOnlyValueOk));
+        Assertions.assertFalse(pattern.test(tagNeitherOk));
     }
 
     @Test
@@ -196,8 +193,8 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsAxBy = Arrays.asList(new BasicTag("tagA", "X"),
                                            new BasicTag("tagB", "Y"));
         List<Tag> tagsByAx = Arrays.asList(tagsAxBy.get(1), tagsAxBy.get(0));
-        Assert.assertTrue(pattern.test(tagsAxBy));
-        Assert.assertTrue(pattern.test(tagsByAx));
+        Assertions.assertTrue(pattern.test(tagsAxBy));
+        Assertions.assertTrue(pattern.test(tagsByAx));
     }
 
     @Test
@@ -211,8 +208,8 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsByAx
             = Arrays.asList(tagsAxBy.get(3), tagsAxBy.get(2),
                             tagsAxBy.get(1), tagsAxBy.get(0));
-        Assert.assertTrue(pattern.test(tagsAxBy));
-        Assert.assertTrue(pattern.test(tagsByAx));
+        Assertions.assertTrue(pattern.test(tagsAxBy));
+        Assertions.assertTrue(pattern.test(tagsByAx));
     }
 
     @Test
@@ -225,9 +222,9 @@ public class PrototypeMeasurementFilterTest {
         List<Tag> tagsAyBy = Arrays.asList(new BasicTag("tagA", "Y"),
                                            new BasicTag("tagB", "Y"));
 
-        Assert.assertFalse(pattern.test(tagsAx));
-        Assert.assertFalse(pattern.test(tagsAxZy));
-        Assert.assertFalse(pattern.test(tagsAyBy));
+        Assertions.assertFalse(pattern.test(tagsAx));
+        Assertions.assertFalse(pattern.test(tagsAxZy));
+        Assertions.assertFalse(pattern.test(tagsAyBy));
     }
 
     @Test
@@ -244,8 +241,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
         Id idBZY = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "Y");
 
-        Assert.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
-        Assert.assertTrue(filter.test(new Measurement(idBZY, 2, 2)));
+        Assertions.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
+        Assertions.assertTrue(filter.test(new Measurement(idBZY, 2, 2)));
     }
 
     @Test
@@ -262,8 +259,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
         Id idCYX = new TestId("counterC").withTag("tagA", "Y").withTag("tagB", "X");
 
-        Assert.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
-        Assert.assertFalse(filter.test(new Measurement(idCYX, 2, 2)));
+        Assertions.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
+        Assertions.assertFalse(filter.test(new Measurement(idCYX, 2, 2)));
     }
 
     @Test
@@ -280,8 +277,8 @@ public class PrototypeMeasurementFilterTest {
         Id idAXX = new TestId("counterA").withTag("tagA", "X").withTag("tagB", "X");
         Id idBZX = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "X");
 
-        Assert.assertFalse(filter.test(new Measurement(idAXX, 1, 1)));
-        Assert.assertFalse(filter.test(new Measurement(idBZX, 2, 2)));
+        Assertions.assertFalse(filter.test(new Measurement(idAXX, 1, 1)));
+        Assertions.assertFalse(filter.test(new Measurement(idBZX, 2, 2)));
     }
 
     @Test
@@ -309,6 +306,6 @@ public class PrototypeMeasurementFilterTest {
                new PrototypeMeasurementFilterSpecification.MeterFilterSpecification(
                       Collections.singletonList(valueSpecX)));
 
-        Assert.assertEquals(spec, specA);
+        Assertions.assertEquals(spec, specA);
     }
 }

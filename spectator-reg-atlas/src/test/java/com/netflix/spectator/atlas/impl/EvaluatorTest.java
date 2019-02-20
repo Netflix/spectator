@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,8 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,7 +31,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 
-@RunWith(JUnit4.class)
 public class EvaluatorTest {
 
   private final ManualClock clock = new ManualClock();
@@ -63,7 +60,7 @@ public class EvaluatorTest {
     Evaluator evaluator = new Evaluator();
     EvalPayload payload = evaluator.eval("test", 0L, Collections.emptyList());
     EvalPayload expected = new EvalPayload(0L, Collections.emptyList());
-    Assert.assertEquals(expected, payload);
+    Assertions.assertEquals(expected, payload);
   }
 
   @Test
@@ -79,7 +76,7 @@ public class EvaluatorTest {
     metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 6.0));
     metrics.add(new EvalPayload.Metric("max", Collections.emptyMap(), 3.0));
     EvalPayload expected = new EvalPayload(0L, metrics);
-    Assert.assertEquals(expected, payload);
+    Assertions.assertEquals(expected, payload);
   }
 
   @Test
@@ -93,7 +90,7 @@ public class EvaluatorTest {
     EvalPayload payload = evaluator.eval("test", 0L, Collections.emptyList());
 
     EvalPayload expected = new EvalPayload(0L, Collections.emptyList());
-    Assert.assertEquals(expected, payload);
+    Assertions.assertEquals(expected, payload);
   }
 
   @Test
@@ -107,7 +104,7 @@ public class EvaluatorTest {
     List<EvalPayload.Metric> metrics = new ArrayList<>();
     metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 6.0));
     EvalPayload expected = new EvalPayload(0L, metrics);
-    Assert.assertEquals(expected, payload);
+    Assertions.assertEquals(expected, payload);
 
     // Update to use max instead
     List<Subscription> maxSub = new ArrayList<>();
@@ -117,6 +114,6 @@ public class EvaluatorTest {
     metrics = new ArrayList<>();
     metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 3.0));
     expected = new EvalPayload(0L, metrics);
-    Assert.assertEquals(expected, payload);
+    Assertions.assertEquals(expected, payload);
   }
 }

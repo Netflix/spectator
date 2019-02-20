@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,11 @@ import com.amazonaws.util.AWSRequestMetrics;
 import com.amazonaws.util.AWSRequestMetricsFullSupport;
 import com.amazonaws.util.TimingInfo;
 import com.netflix.spectator.api.*;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.http.client.methods.HttpPost;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -38,14 +40,14 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SpectatorRequestMetricCollectorTest {
 
   Registry registry;
   SpectatorRequestMetricCollector collector;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     registry = new DefaultRegistry();
     collector = new SpectatorRequestMetricCollector(registry);
@@ -151,5 +153,24 @@ public class SpectatorRequestMetricCollectorTest {
     assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.emptyList(), Object::toString));
     assertEquals(Optional.of("1"), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(1L), Object::toString));
     assertEquals(Optional.empty(), SpectatorRequestMetricCollector.firstValue(Collections.singletonList(null), Object::toString));
+  }
+
+  @Test
+  public void testCustomTags() {
+    Map<String, String> customTags = new HashMap<>();
+    customTags.put("tagname", "tagvalue");
+    collector = new SpectatorRequestMetricCollector(registry, customTags);
+    execRequest("http://monitoring", 503);
+    assertEquals(set("tagvalue"), valueSet("tagname"));
+  }
+
+  @Test
+  public void testCustomTags_overrideDefault() {
+    Map<String, String> customTags = new HashMap<>();
+    customTags.put("error", "true");
+    // enable warning propagation
+    RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
+    assertThrows(IllegalArgumentException.class, () ->
+        new SpectatorRequestMetricCollector(new DefaultRegistry(Clock.SYSTEM, config), customTags));
   }
 }

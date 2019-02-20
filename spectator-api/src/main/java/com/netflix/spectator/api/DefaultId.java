@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ final class DefaultId implements Id {
   private final ArrayTagSet tags;
 
   /** Create a new instance. */
-  public DefaultId(String name) {
+  DefaultId(String name) {
     this(name, ArrayTagSet.EMPTY);
   }
 

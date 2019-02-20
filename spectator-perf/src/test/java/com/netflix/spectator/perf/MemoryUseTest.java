@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 package com.netflix.spectator.perf;
 
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.openjdk.jol.info.GraphLayout;
 
 public abstract class MemoryUseTest {
@@ -33,7 +33,7 @@ public abstract class MemoryUseTest {
     long size = graph.totalSize();
     String details = "memory use exceeds limit: " + size + " > " + limit + "\n\n" + graph.toFootprint();
     //System.out.println(details);
-    Assert.assertTrue(details, size <= limit);
+    Assertions.assertTrue(size <= limit, details);
   }
 
   @Test

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,14 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Utils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class ServoTimerTest {
 
   private final ManualClock clock = new ManualClock();
@@ -41,7 +38,7 @@ public class ServoTimerTest {
     return r.timer(r.createId(name));
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     clock.setWallTime(0L);
     clock.setMonotonicTime(0L);
@@ -50,32 +47,32 @@ public class ServoTimerTest {
   @Test
   public void testInit() {
     Timer t = newTimer("foo");
-    Assert.assertEquals(t.count(), 0L);
-    Assert.assertEquals(t.totalTime(), 0L);
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalTime(), 0L);
   }
 
   @Test
   public void testRecord() {
     Timer t = newTimer("foo");
     t.record(42, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 42000000L);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 42000000L);
   }
 
   @Test
   public void testRecordNegative() {
     Timer t = newTimer("foo");
     t.record(-42, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(t.count(), 0L);
-    Assert.assertEquals(t.totalTime(), 0L);
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalTime(), 0L);
   }
 
   @Test
   public void testRecordZero() {
     Timer t = newTimer("foo");
     t.record(0, TimeUnit.MILLISECONDS);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 0L);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 0L);
   }
 
   @Test
@@ -86,9 +83,9 @@ public class ServoTimerTest {
       clock.setMonotonicTime(500L);
       return 42;
     });
-    Assert.assertEquals(v, 42);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 400L);
+    Assertions.assertEquals(v, 42);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
   }
 
   @Test
@@ -104,9 +101,9 @@ public class ServoTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 400L);
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
   }
 
   @Test
@@ -114,8 +111,8 @@ public class ServoTimerTest {
     Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
     t.record(() -> clock.setMonotonicTime(500L));
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 400L);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
   }
 
   @Test
@@ -131,9 +128,9 @@ public class ServoTimerTest {
     } catch (Exception e) {
       seen = true;
     }
-    Assert.assertTrue(seen);
-    Assert.assertEquals(t.count(), 1L);
-    Assert.assertEquals(t.totalTime(), 400L);
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
   }
 
   @Test
@@ -142,11 +139,11 @@ public class ServoTimerTest {
     t.record(42, TimeUnit.MILLISECONDS);
     clock.setWallTime(61000L);
     for (Measurement m : t.measure()) {
-      Assert.assertEquals(m.timestamp(), 61000L);
+      Assertions.assertEquals(m.timestamp(), 61000L);
       final double count = Utils.first(t.measure(), Statistic.count).value();
       final double totalTime = Utils.first(t.measure(), Statistic.totalTime).value();
-      Assert.assertEquals(count, 1.0 / 60.0, 0.1e-12);
-      Assert.assertEquals(totalTime, 42e-3 / 60.0, 0.1e-12);
+      Assertions.assertEquals(count, 1.0 / 60.0, 0.1e-12);
+      Assertions.assertEquals(totalTime, 42e-3 / 60.0, 0.1e-12);
     }
   }
 
@@ -165,7 +162,7 @@ public class ServoTimerTest {
 
     final double factor = 1e9 * 1e9;
     final BigInteger perSec = s2.divide(BigInteger.valueOf(60));
-    Assert.assertEquals(perSec.doubleValue() / factor, v, 1e-12);
+    Assertions.assertEquals(perSec.doubleValue() / factor, v, 1e-12);
   }
 
   @Test
@@ -185,7 +182,7 @@ public class ServoTimerTest {
 
     final double factor = 1e9 * 1e9;
     sumOfSq = sumOfSq.divide(BigInteger.valueOf(60));
-    Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 1e-12);
+    Assertions.assertEquals(sumOfSq.doubleValue() / factor, v, 1e-12);
   }
 
   @Test
@@ -207,7 +204,7 @@ public class ServoTimerTest {
     // Actual   :3.3332833334999825E14
     final double factor = 1e9 * 1e9;
     sumOfSq = sumOfSq.divide(BigInteger.valueOf(60));
-    Assert.assertEquals(sumOfSq.doubleValue() / factor, v, 2.0);
+    Assertions.assertEquals(sumOfSq.doubleValue() / factor, v, 2.0);
   }
 
   @Test
@@ -218,17 +215,17 @@ public class ServoTimerTest {
     // Not expired on init, wait for activity to mark as active
     clock.setWallTime(initTime);
     Timer t = newTimer("foo");
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
     t.record(1, TimeUnit.SECONDS);
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
 
     // Expires with inactivity
     clock.setWallTime(initTime + fifteenMinutes + 1);
-    Assert.assertTrue(t.hasExpired());
+    Assertions.assertTrue(t.hasExpired());
 
     // Activity brings it back
     t.record(42, TimeUnit.SECONDS);
-    Assert.assertFalse(t.hasExpired());
+    Assertions.assertFalse(t.hasExpired());
   }
 
 }

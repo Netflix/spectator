@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,12 @@
  */
 package com.netflix.spectator.impl;
 
+import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Utility class for quickly checking if a string contains only characters contained within
@@ -29,7 +31,9 @@ import java.util.Arrays;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
-public final class AsciiSet {
+public final class AsciiSet implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private static boolean isJava8() {
     String version = System.getProperty("java.version", "1.8");
@@ -107,12 +111,37 @@ public final class AsciiSet {
     return new AsciiSet(members);
   }
 
+  /** Returns a set that matches no characters. */
+  public static AsciiSet none() {
+    final boolean[] members = new boolean[128];
+    return new AsciiSet(members);
+  }
+
+  /** Returns a set that matches all ascii characters. */
+  public static AsciiSet all() {
+    final boolean[] members = new boolean[128];
+    Arrays.fill(members, true);
+    return new AsciiSet(members);
+  }
+
+  /** Returns a set that matches ascii control characters. */
+  public static AsciiSet control() {
+    final boolean[] members = new boolean[128];
+    for (char c = 0; c < members.length; ++c) {
+      members[c] = Character.isISOControl(c);
+    }
+    return new AsciiSet(members);
+  }
+
   /**
    * Converts the members array to a pattern string. Used to provide a user friendly toString
    * implementation for the set.
    */
   private static String toPattern(boolean[] members) {
     StringBuilder buf = new StringBuilder();
+    if (members['-']) {
+      buf.append('-');
+    }
     boolean previous = false;
     char s = 0;
     for (int i = 0; i < members.length; ++i) {
@@ -133,7 +162,7 @@ public final class AsciiSet {
 
   private static void append(StringBuilder buf, char s, char e) {
     switch (e - s) {
-      case 0:  buf.append(s);                       break;
+      case 0:  if (s != '-') buf.append(s);         break;
       case 1:  buf.append(s).append(e);             break;
       default: buf.append(s).append('-').append(e); break;
     }
@@ -178,6 +207,53 @@ public final class AsciiSet {
     return containsAll(input) ? input : replaceNonMembersImpl(input, replacement);
   }
 
+  /**
+   * Returns a new set that will match characters either in the this set or in the
+   * set that is provided.
+   */
+  public AsciiSet union(AsciiSet set) {
+    final boolean[] unionMembers = new boolean[128];
+    for (int i = 0; i < unionMembers.length; ++i) {
+      unionMembers[i] = members[i] || set.members[i];
+    }
+    return new AsciiSet(unionMembers);
+  }
+
+  /**
+   * Returns a new set that will match characters iff they are included this set and in the
+   * set that is provided.
+   */
+  public AsciiSet intersection(AsciiSet set) {
+    final boolean[] intersectionMembers = new boolean[128];
+    for (int i = 0; i < intersectionMembers.length; ++i) {
+      intersectionMembers[i] = members[i] && set.members[i];
+    }
+    return new AsciiSet(intersectionMembers);
+  }
+
+  /**
+   * Returns a new set that will match characters iff they are included this set and not in the
+   * set that is provided.
+   */
+  public AsciiSet diff(AsciiSet set) {
+    final boolean[] diffMembers = new boolean[128];
+    for (int i = 0; i < diffMembers.length; ++i) {
+      diffMembers[i] = members[i] && !set.members[i];
+    }
+    return new AsciiSet(diffMembers);
+  }
+
+  /**
+   * Returns a new set that will match characters that are not included this set.
+   */
+  public AsciiSet invert() {
+    final boolean[] invertMembers = new boolean[128];
+    for (int i = 0; i < invertMembers.length; ++i) {
+      invertMembers[i] = !members[i];
+    }
+    return new AsciiSet(invertMembers);
+  }
+
   private String replaceNonMembersImpl(String input, char replacement) {
     final int n = input.length();
     final char[] buf = input.toCharArray();
@@ -188,6 +264,32 @@ public final class AsciiSet {
       }
     }
     return newString(buf);
+  }
+
+  /**
+   * If this set matches a single character, then return an optional with that character.
+   * Otherwise return an empty optional.
+   */
+  public Optional<Character> character() {
+    char c = 0;
+    int count = 0;
+    for (int i = 0; i < members.length; ++i) {
+      if (members[i]) {
+        c = (char) i;
+        ++count;
+      }
+    }
+    return (count == 1) ? Optional.of(c) : Optional.empty();
+  }
+
+  /** Returns true if this set is isEmpty. */
+  public boolean isEmpty() {
+    for (boolean b : members) {
+      if (b) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override public String toString() {

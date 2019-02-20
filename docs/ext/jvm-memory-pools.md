@@ -23,7 +23,7 @@ Jmx.registerStandardMXBeans(Spectator.registry());
 
 Gauge reporting the current amount of memory used. For the young and old gen pools this
 metric will typically have a sawtooth pattern. For alerting or detecting memory pressure
-the [live data size](https://github.com/Netflix/spectator/wiki/Garbage-Collection#jvmgclivedatasize)
+the [live data size](http://netflix.github.io/spectator/en/latest/ext/jvm-gc/#jvmgclivedatasize)
 is probably a better option.
 
 **Unit:** bytes

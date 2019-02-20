@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
-@RunWith(JUnit4.class)
 public class ArrayTagSetTest {
 
   @Test
@@ -37,15 +34,15 @@ public class ArrayTagSetTest {
     // NOTE: EqualsVerifier doesn't work with cached hash code
     ArrayTagSet ts1 = ArrayTagSet.create("k1", "v1");
     ArrayTagSet ts2 = ArrayTagSet.create("k2", "v2").addAll(ts1);
-    Assert.assertEquals(ts1, ts1);
-    Assert.assertEquals(ts2, ts2);
-    Assert.assertNotEquals(ts1, null);
-    Assert.assertNotEquals(ts1, new Object());
-    Assert.assertNotEquals(ts1, ArrayTagSet.create("k1", "v2"));
-    Assert.assertNotEquals(ts1, ArrayTagSet.create("k2", "v1"));
-    Assert.assertNotEquals(ts1, ArrayTagSet.create("k1", "v1").addAll(ts2));
-    Assert.assertEquals(ts2, ArrayTagSet.create("k2", "v2").addAll(ts1));
-    Assert.assertEquals(ts2, ArrayTagSet.create("k2", "v2").addAll(ArrayTagSet.create("k1", "v1")));
+    Assertions.assertEquals(ts1, ts1);
+    Assertions.assertEquals(ts2, ts2);
+    Assertions.assertNotEquals(ts1, null);
+    Assertions.assertNotEquals(ts1, new Object());
+    Assertions.assertNotEquals(ts1, ArrayTagSet.create("k1", "v2"));
+    Assertions.assertNotEquals(ts1, ArrayTagSet.create("k2", "v1"));
+    Assertions.assertNotEquals(ts1, ArrayTagSet.create("k1", "v1").addAll(ts2));
+    Assertions.assertEquals(ts2, ArrayTagSet.create("k2", "v2").addAll(ts1));
+    Assertions.assertEquals(ts2, ArrayTagSet.create("k2", "v2").addAll(ArrayTagSet.create("k1", "v1")));
   }
 
   @Test
@@ -54,44 +51,47 @@ public class ArrayTagSetTest {
     ArrayTagSet ts2 = ArrayTagSet.create("k2", "v2").addAll(ts1);
     ArrayTagSet ts3 = ArrayTagSet.create("k3", "v3").addAll(ts2);
 
-    Assert.assertEquals(":k1=v1", ts1.toString());
-    Assert.assertEquals(":k1=v1:k2=v2", ts2.toString());
-    Assert.assertEquals(":k1=v1:k2=v2:k3=v3", ts3.toString());
+    Assertions.assertEquals(":k1=v1", ts1.toString());
+    Assertions.assertEquals(":k1=v1:k2=v2", ts2.toString());
+    Assertions.assertEquals(":k1=v1:k2=v2:k3=v3", ts3.toString());
   }
 
   @Test
   public void testSingle() {
     ArrayTagSet ts = ArrayTagSet.create("k", "v");
     for (Tag t : ts) {
-      Assert.assertEquals(t.key(), "k");
-      Assert.assertEquals(t.value(), "v");
+      Assertions.assertEquals(t.key(), "k");
+      Assertions.assertEquals(t.value(), "v");
     }
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullKey() {
-    ArrayTagSet.create(null, "v");
+    Assertions.assertThrows(NullPointerException.class, () -> ArrayTagSet.create(null, "v"));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullValue() {
-    ArrayTagSet.create("k", null);
+    Assertions.assertThrows(NullPointerException.class, () -> ArrayTagSet.create("k", null));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testIteratorRemoveUnsupported() {
-    ArrayTagSet.create("k", "v").iterator().remove();
+    Assertions.assertThrows(UnsupportedOperationException.class,
+        () -> ArrayTagSet.create("k", "v").iterator().remove());
   }
 
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testIteratorNext() {
-    ArrayTagSet tag = ArrayTagSet.create("k", "v");
-    Iterator<Tag> iter = tag.iterator();
+    Assertions.assertThrows(NoSuchElementException.class, () -> {
+      ArrayTagSet tag = ArrayTagSet.create("k", "v");
+      Iterator<Tag> iter = tag.iterator();
 
-    Assert.assertTrue(iter.hasNext());
-    Assert.assertEquals(new BasicTag("k", "v"), iter.next());
-    Assert.assertFalse(iter.hasNext());
-    iter.next();
+      Assertions.assertTrue(iter.hasNext());
+      Assertions.assertEquals(new BasicTag("k", "v"), iter.next());
+      Assertions.assertFalse(iter.hasNext());
+      iter.next();
+    });
   }
 
   @Test
@@ -100,7 +100,7 @@ public class ArrayTagSetTest {
     m.put("k", "v");
     ArrayTagSet ts1 = ArrayTagSet.create(m);
     ArrayTagSet ts2 = ArrayTagSet.create("k", "v");
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
@@ -110,7 +110,7 @@ public class ArrayTagSetTest {
     m.put("k2", "v2");
     ArrayTagSet ts1 = ArrayTagSet.create(m);
     ArrayTagSet ts2 = ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2"));
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
@@ -118,7 +118,7 @@ public class ArrayTagSetTest {
     ArrayTagSet ts = ArrayTagSet.create("k", "v");
     ArrayTagSet ts1 = ArrayTagSet.create(ts);
     ArrayTagSet ts2 = ArrayTagSet.create("k", "v");
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
@@ -128,7 +128,7 @@ public class ArrayTagSetTest {
     m.put("k2", "v2");
     ArrayTagSet ts1 = ArrayTagSet.create(m);
     ArrayTagSet ts2 = ArrayTagSet.create("k1", "v1", "k2", "v2");
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
@@ -141,17 +141,18 @@ public class ArrayTagSetTest {
     m.put("e", "5");
     ArrayTagSet ts1 = ArrayTagSet.create(m);
     ArrayTagSet ts2 = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4", "e", "5");
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateFromVarargsOdd() {
-    ArrayTagSet.create("a", "1", "b");
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> ArrayTagSet.create("a", "1", "b"));
   }
 
   @Test
   public void testCreateFromEmptyIterable() {
-    Assert.assertEquals(ArrayTagSet.EMPTY, ArrayTagSet.create(Collections.emptyList()));
+    Assertions.assertEquals(ArrayTagSet.EMPTY, ArrayTagSet.create(Collections.emptyList()));
   }
 
   @Test
@@ -159,7 +160,7 @@ public class ArrayTagSetTest {
     Collection<Tag> coll = Collections.singleton(new BasicTag("k", "v"));
     ArrayTagSet ts1 = ArrayTagSet.create(coll);
     ArrayTagSet ts2 = ArrayTagSet.create("k", "v");
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
@@ -169,12 +170,12 @@ public class ArrayTagSetTest {
     coll.add(new BasicTag("k2", "v2"));
     ArrayTagSet ts1 = ArrayTagSet.create(coll);
     ArrayTagSet ts2 = ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2"));
-    Assert.assertEquals(ts1, ts2);
+    Assertions.assertEquals(ts1, ts2);
   }
 
   @Test
   public void testCreateFromEmptyMap() {
-    Assert.assertEquals(ArrayTagSet.EMPTY, ArrayTagSet.create(Collections.emptyMap()));
+    Assertions.assertEquals(ArrayTagSet.EMPTY, ArrayTagSet.create(Collections.emptyMap()));
   }
 
   @Test
@@ -182,7 +183,7 @@ public class ArrayTagSetTest {
     Map<String, String> tags = new HashMap<>();
 
     tags.put("k", "v");
-    Assert.assertEquals(ArrayTagSet.create("k", "v"), ArrayTagSet.create(tags));
+    Assertions.assertEquals(ArrayTagSet.create("k", "v"), ArrayTagSet.create(tags));
   }
 
   @Test
@@ -190,14 +191,16 @@ public class ArrayTagSetTest {
     Map<String, String> tags = new HashMap<>();
     tags.put("k1", "v1");
     tags.put("k2", "v2");
-    Assert.assertEquals(ArrayTagSet.create("k1", "v1")
+    Assertions.assertEquals(ArrayTagSet.create("k1", "v1")
         .addAll(ArrayTagSet.create("k2", "v2")), ArrayTagSet.create(tags));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testMergeNullTag() {
-    ArrayTagSet expected = ArrayTagSet.create("k", "v");
-    expected.add(null);
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      ArrayTagSet expected = ArrayTagSet.create("k", "v");
+      expected.add(null);
+    });
   }
 
   @Test
@@ -206,7 +209,7 @@ public class ArrayTagSetTest {
     ArrayTagSet update = ArrayTagSet.create("k1", "v1");
     ArrayTagSet expected = ArrayTagSet.create("k1", "v1").addAll(ArrayTagSet.create("k2", "v2"));
 
-    Assert.assertEquals(expected, initial.addAll(update));
+    Assertions.assertEquals(expected, initial.addAll(update));
   }
 
   @Test
@@ -215,21 +218,23 @@ public class ArrayTagSetTest {
     ArrayTagSet expected = ArrayTagSet.create("k1", "v2");
     ArrayTagSet actual = initial.addAll(expected);
 
-    Assert.assertNotSame(expected, actual);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertNotSame(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testMergeNullList() {
-    ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
-    expected.addAll((Iterable<Tag>) null);
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
+      expected.addAll((Iterable<Tag>) null);
+    });
   }
 
   @Test
   public void testMergeEmptyList() {
     ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
     ArrayTagSet actual = expected.addAll(new ArrayList<>());
-    Assert.assertSame(expected, actual);
+    Assertions.assertSame(expected, actual);
   }
 
   @Test
@@ -240,7 +245,7 @@ public class ArrayTagSetTest {
 
     prefix.add(new BasicTag("k1", "v1"));
     ArrayTagSet actual = initial.addAll(prefix);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -254,20 +259,22 @@ public class ArrayTagSetTest {
     prefix.add(new BasicTag("k1", "v1"));
     prefix.add(new BasicTag("k2", "v2"));
     ArrayTagSet actual = initial.addAll(prefix);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testMergeNullMap() {
-    ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
-    expected.addAll((Map<String, String>) null);
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
+      expected.addAll((Map<String, String>) null);
+    });
   }
 
   @Test
   public void testMergeEmptyMap() {
     ArrayTagSet expected = ArrayTagSet.create("k3", "v3");
     ArrayTagSet actual = expected.addAll(new HashMap<>());
-    Assert.assertSame(expected, actual);
+    Assertions.assertSame(expected, actual);
   }
 
   @Test
@@ -278,7 +285,7 @@ public class ArrayTagSetTest {
 
     extra.put("k1", "v1");
     ArrayTagSet actual = initial.addAll(extra);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -292,19 +299,19 @@ public class ArrayTagSetTest {
     extra.put("k1", "v1");
     extra.put("k2", "v2");
     ArrayTagSet actual = initial.addAll(extra);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void addAllTagArrayEmpty() {
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new Tag[0]);
-    Assert.assertSame(ArrayTagSet.EMPTY, ts);
+    Assertions.assertSame(ArrayTagSet.EMPTY, ts);
   }
 
   @Test
   public void addAllStringArrayEmpty() {
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new String[0]);
-    Assert.assertSame(ArrayTagSet.EMPTY, ts);
+    Assertions.assertSame(ArrayTagSet.EMPTY, ts);
   }
 
   @Test
@@ -312,13 +319,13 @@ public class ArrayTagSetTest {
     // Add an arbitrary iterable that isn't a collection or ArrayTagSet
     Collection<Tag> tags = Collections.singletonList(new BasicTag("app", "foo"));
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(tags::iterator);
-    Assert.assertEquals(ArrayTagSet.EMPTY.addAll(tags), ts);
+    Assertions.assertEquals(ArrayTagSet.EMPTY.addAll(tags), ts);
   }
 
   @Test
   public void addAllDedupEmpty() {
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new String[] {"a", "1", "a", "2", "a", "3"});
-    Assert.assertEquals(ArrayTagSet.EMPTY.add(new BasicTag("a", "3")), ts);
+    Assertions.assertEquals(ArrayTagSet.EMPTY.add(new BasicTag("a", "3")), ts);
   }
 
   @Test
@@ -329,6 +336,6 @@ public class ArrayTagSetTest {
     ArrayTagSet expected = ArrayTagSet.EMPTY
         .add(new BasicTag("a", "6"))
         .add(new BasicTag("b", "1"));
-    Assert.assertEquals(expected, ts);
+    Assertions.assertEquals(expected, ts);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-/** Registry that maps spectator types to servo. */
+/**
+ * Registry that maps spectator types to servo.
+ *
+ * @deprecated Servo is deprecated and we do not encourage new use of this implementation.
+ * Consider use of another implementation.
+ */
+@Deprecated
 public class ServoRegistry extends AbstractRegistry implements CompositeMonitor<Integer> {
 
 

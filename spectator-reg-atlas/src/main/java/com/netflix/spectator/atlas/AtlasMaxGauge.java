@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,11 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
   }
 
   @Override public Iterable<Measurement> measure() {
-    final Measurement m = new Measurement(stat, value.timestamp(), value());
+    // poll needs to be called before accessing the timestamp to ensure
+    // the counters have been rotated if there was no activity in the
+    // current interval.
+    double v = value.poll();
+    final Measurement m = new Measurement(stat, value.timestamp(), v);
     return Collections.singletonList(m);
   }
 

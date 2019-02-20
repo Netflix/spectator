@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public final class Functions {
    */
   public static DoubleFunction<AtomicLong> age(final Clock clock) {
     return new DoubleFunction<AtomicLong>() {
-      public double apply(double t) {
+      @Override public double apply(double t) {
         return (clock.wallTime() - t) / 1000.0;
       }
     };

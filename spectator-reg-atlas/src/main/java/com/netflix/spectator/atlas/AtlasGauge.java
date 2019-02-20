@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import com.netflix.spectator.impl.AtomicDouble;
 import java.util.Collections;
 
 /**
- * Counter that reports a rate per second to Atlas.
+ * Meter that reports a single value to Atlas.
  */
 class AtlasGauge extends AtlasMeter implements Gauge {
 

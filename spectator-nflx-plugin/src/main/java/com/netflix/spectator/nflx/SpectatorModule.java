@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import com.google.inject.Inject;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.archaius.api.Config;
-import com.netflix.archaius.config.EmptyConfig;
 import com.netflix.servo.SpectatorContext;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.atlas.AtlasConfig;
@@ -35,6 +34,8 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 /**
  * Guice module to configure the appropriate bindings for running an application. Note that this
@@ -110,15 +111,17 @@ public final class SpectatorModule extends AbstractModule {
     @Inject(optional = true)
     private Config config;
 
+    private Config atlasConfig;
+
     @Inject(optional = true)
     private Clock clock;
 
     Config config() {
-      if (config == null) {
-        LOGGER.warn("no archaius2 binding found, using empty configuration");
-        config = EmptyConfig.INSTANCE;
+      if (atlasConfig == null) {
+        atlasConfig = NetflixConfig.createConfig(config);
       }
-      return config;
+
+      return atlasConfig;
     }
 
     Clock clock() {
@@ -148,7 +151,9 @@ public final class SpectatorModule extends AbstractModule {
 
     @Inject
     RegistryProvider(OptionalInjections opts) {
-      Config config = opts.config();
+      final Config config = opts.config();
+      final Map<String, String> nflxCommonTags = NetflixConfig.commonTags();
+
       LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
       AtlasConfig cfg = new AtlasConfig() {
         @Override public String get(String k) {
@@ -160,13 +165,18 @@ public final class SpectatorModule extends AbstractModule {
           String v = get("atlas.enabled");
           return v != null && Boolean.valueOf(v);
         }
+
+        @Override
+        public Map<String, String> commonTags() {
+          return nflxCommonTags;
+        }
       };
       registry = new AtlasRegistry(opts.clock(), cfg);
       registry.start();
       SpectatorContext.setRegistry(registry);
     }
 
-    public void close() {
+    @Override public void close() {
       registry.stop();
     }
 

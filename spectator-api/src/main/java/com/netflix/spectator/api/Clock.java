@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,11 +41,11 @@ public interface Clock {
    * Default clock implementation based on corresponding calls in {@link java.lang.System}.
    */
   Clock SYSTEM = new Clock() {
-    public long wallTime() {
+    @Override public long wallTime() {
       return System.currentTimeMillis();
     }
 
-    public long monotonicTime() {
+    @Override public long monotonicTime() {
       return System.nanoTime();
     }
   };

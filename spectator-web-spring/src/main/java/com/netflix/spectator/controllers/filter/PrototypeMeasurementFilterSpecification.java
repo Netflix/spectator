@@ -36,8 +36,8 @@ public class PrototypeMeasurementFilterSpecification {
    * Specifies how to filter an individual tag (name and value).
    */
   public static class TagFilterSpecification {
-    private String key;   // regex
-    private String value; // regex
+    private final String key;   // regex
+    private final String value; // regex
 
     public String getKey() {
         return key;
@@ -64,7 +64,7 @@ public class PrototypeMeasurementFilterSpecification {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof TagFilterSpecification)) {
+      if (!(obj instanceof TagFilterSpecification)) {
         return false;
       }
       TagFilterSpecification other = (TagFilterSpecification) obj;
@@ -108,7 +108,7 @@ public class PrototypeMeasurementFilterSpecification {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof ValueFilterSpecification)) {
+      if (!(obj instanceof ValueFilterSpecification)) {
         return false;
       }
       ValueFilterSpecification other = (ValueFilterSpecification) obj;
@@ -137,8 +137,8 @@ public class PrototypeMeasurementFilterSpecification {
      * The minimal list of tag bindings that are covered by this specification.
      */
     private final List<TagFilterSpecification> tags
-        = new ArrayList<TagFilterSpecification>();
-  };
+        = new ArrayList<>();
+  }
 
   /**
    * A specification for filtering on a Spectator Meter.
@@ -162,7 +162,7 @@ public class PrototypeMeasurementFilterSpecification {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj == null || !(obj instanceof MeterFilterSpecification)) {
+      if (!(obj instanceof MeterFilterSpecification)) {
         return false;
       }
       MeterFilterSpecification other = (MeterFilterSpecification) obj;
@@ -192,8 +192,8 @@ public class PrototypeMeasurementFilterSpecification {
      * but not others.
      */
     private final List<ValueFilterSpecification> values
-        = new ArrayList<ValueFilterSpecification>();
-  };
+        = new ArrayList<>();
+  }
 
 
   /**
@@ -209,7 +209,7 @@ public class PrototypeMeasurementFilterSpecification {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == null || !(obj instanceof PrototypeMeasurementFilterSpecification)) {
+    if (!(obj instanceof PrototypeMeasurementFilterSpecification)) {
       return false;
     }
     PrototypeMeasurementFilterSpecification other
@@ -248,7 +248,7 @@ public class PrototypeMeasurementFilterSpecification {
    * traced back to a specification in this list.
    */
   private final Map<String, MeterFilterSpecification> include
-      = new HashMap<String, MeterFilterSpecification>();
+      = new HashMap<>();
 
   /**
    * Maps meter name patterns to the meter specification for that pattern.
@@ -256,5 +256,5 @@ public class PrototypeMeasurementFilterSpecification {
    * traced back to a specification in this list.
    */
   private final Map<String, MeterFilterSpecification> exclude
-      = new HashMap<String, MeterFilterSpecification>();
-};
+      = new HashMap<>();
+}

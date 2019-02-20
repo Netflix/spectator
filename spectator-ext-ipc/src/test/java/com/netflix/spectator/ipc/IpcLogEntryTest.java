@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import com.netflix.spectator.api.Utils;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -34,14 +33,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class IpcLogEntryTest {
 
   private final ManualClock clock = new ManualClock();
   private final ObjectMapper mapper = new ObjectMapper();
   private final IpcLogEntry entry = new IpcLogEntry(clock);
 
-  @Before
+  @BeforeEach
   public void before() {
     clock.setWallTime(0L);
     clock.setMonotonicTime(0L);
@@ -65,7 +63,7 @@ public class IpcLogEntryTest {
         .markStart()
         .convert(this::toMap)
         .get("start");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -78,7 +76,7 @@ public class IpcLogEntryTest {
     double actual = (double) entry
         .convert(this::toMap)
         .get("latency");
-    Assert.assertEquals(expected / 1000.0, actual, 1e-12);
+    Assertions.assertEquals(expected / 1000.0, actual, 1e-12);
   }
 
   @Test
@@ -88,7 +86,7 @@ public class IpcLogEntryTest {
         .withLatency(expected, TimeUnit.MILLISECONDS)
         .convert(this::toMap)
         .get("latency");
-    Assert.assertEquals(expected / 1000.0, actual, 1e-12);
+    Assertions.assertEquals(expected / 1000.0, actual, 1e-12);
   }
 
   @Test
@@ -102,7 +100,7 @@ public class IpcLogEntryTest {
         .withLatency(expected, TimeUnit.MILLISECONDS)
         .convert(this::toMap)
         .get("latency");
-    Assert.assertEquals(expected / 1000.0, actual, 1e-12);
+    Assertions.assertEquals(expected / 1000.0, actual, 1e-12);
   }
 
   @Test
@@ -112,7 +110,7 @@ public class IpcLogEntryTest {
         .withOwner(expected)
         .convert(this::toMap)
         .get("owner");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -122,7 +120,7 @@ public class IpcLogEntryTest {
         .withProtocol(IpcProtocol.http_2)
         .convert(this::toMap)
         .get("protocol");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -132,27 +130,27 @@ public class IpcLogEntryTest {
         .withProtocol(expected)
         .convert(this::toMap)
         .get("protocol");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
-  public void errorGroup() {
-    String expected = IpcErrorGroup.cancelled.value();
+  public void status() {
+    String expected = IpcStatus.cancelled.value();
     String actual = (String) entry
-        .withErrorGroup(IpcErrorGroup.cancelled)
+        .withStatus(IpcStatus.cancelled)
         .convert(this::toMap)
-        .get("errorGroup");
-    Assert.assertEquals(expected, actual);
+        .get("status");
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
-  public void errorReason() {
+  public void statusDetail() {
     String expected = "connection_failed";
     String actual = (String) entry
-        .withErrorReason(expected)
+        .withStatusDetail(expected)
         .convert(this::toMap)
-        .get("errorReason");
-    Assert.assertEquals(expected, actual);
+        .get("statusDetail");
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -163,7 +161,7 @@ public class IpcLogEntryTest {
         .withException(io)
         .convert(this::toMap)
         .get("exceptionClass");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -174,7 +172,7 @@ public class IpcLogEntryTest {
         .withException(io)
         .convert(this::toMap)
         .get("exceptionMessage");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -184,7 +182,7 @@ public class IpcLogEntryTest {
         .withAttempt(7)
         .convert(this::toMap)
         .get("attempt");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -194,7 +192,7 @@ public class IpcLogEntryTest {
         .withAttemptFinal(true)
         .convert(this::toMap)
         .get("attemptFinal");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -204,7 +202,7 @@ public class IpcLogEntryTest {
         .withVip(expected)
         .convert(this::toMap)
         .get("vip");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -214,7 +212,7 @@ public class IpcLogEntryTest {
         .withEndpoint(expected)
         .convert(this::toMap)
         .get("endpoint");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -224,7 +222,7 @@ public class IpcLogEntryTest {
         .withClientNode(expected)
         .convert(this::toMap)
         .get("clientNode");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -234,7 +232,7 @@ public class IpcLogEntryTest {
         .withServerNode(expected)
         .convert(this::toMap)
         .get("serverNode");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -242,8 +240,8 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addRequestHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-east-1", map.get("clientRegion"));
-    Assert.assertEquals("us-east-1e", map.get("clientZone"));
+    Assertions.assertEquals("us-east-1", map.get("clientRegion"));
+    Assertions.assertEquals("us-east-1e", map.get("clientZone"));
   }
 
   @Test
@@ -252,8 +250,8 @@ public class IpcLogEntryTest {
         .withClientRegion("us-west-1")
         .addRequestHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-west-1", map.get("clientRegion"));
-    Assert.assertEquals("us-east-1e", map.get("clientZone"));
+    Assertions.assertEquals("us-west-1", map.get("clientRegion"));
+    Assertions.assertEquals("us-east-1e", map.get("clientZone"));
   }
 
   @Test
@@ -262,8 +260,8 @@ public class IpcLogEntryTest {
         .withClientZone("us-west-1b")
         .addRequestHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-west-1", map.get("clientRegion"));
-    Assert.assertEquals("us-west-1b", map.get("clientZone"));
+    Assertions.assertEquals("us-west-1", map.get("clientRegion"));
+    Assertions.assertEquals("us-west-1b", map.get("clientZone"));
   }
 
   @Test
@@ -271,8 +269,8 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-east-1", map.get("serverRegion"));
-    Assert.assertEquals("us-east-1e", map.get("serverZone"));
+    Assertions.assertEquals("us-east-1", map.get("serverRegion"));
+    Assertions.assertEquals("us-east-1e", map.get("serverZone"));
   }
 
   @Test
@@ -281,8 +279,8 @@ public class IpcLogEntryTest {
         .withServerRegion("us-west-1")
         .addResponseHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-west-1", map.get("serverRegion"));
-    Assert.assertEquals("us-east-1e", map.get("serverZone"));
+    Assertions.assertEquals("us-west-1", map.get("serverRegion"));
+    Assertions.assertEquals("us-east-1e", map.get("serverZone"));
   }
 
   @Test
@@ -291,8 +289,8 @@ public class IpcLogEntryTest {
         .withServerZone("us-west-1b")
         .addResponseHeader(NetflixHeader.Zone.headerName(), "us-east-1e")
         .convert(this::toMap);
-    Assert.assertEquals("us-west-1", map.get("serverRegion"));
-    Assert.assertEquals("us-west-1b", map.get("serverZone"));
+    Assertions.assertEquals("us-west-1", map.get("serverRegion"));
+    Assertions.assertEquals("us-west-1b", map.get("serverZone"));
   }
 
   @Test
@@ -300,9 +298,9 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addRequestHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("clientApp"));
-    Assert.assertEquals("www-test", map.get("clientCluster"));
-    Assert.assertEquals("www-test-v011", map.get("clientAsg"));
+    Assertions.assertEquals("www", map.get("clientApp"));
+    Assertions.assertEquals("www-test", map.get("clientCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("clientAsg"));
   }
 
   @Test
@@ -310,9 +308,9 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addRequestHeader("netflix-asg", "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("clientApp"));
-    Assert.assertEquals("www-test", map.get("clientCluster"));
-    Assert.assertEquals("www-test-v011", map.get("clientAsg"));
+    Assertions.assertEquals("www", map.get("clientApp"));
+    Assertions.assertEquals("www-test", map.get("clientCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("clientAsg"));
   }
 
   @Test
@@ -321,9 +319,9 @@ public class IpcLogEntryTest {
         .withClientApp("foo")
         .addRequestHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("foo", map.get("clientApp"));
-    Assert.assertEquals("www-test", map.get("clientCluster"));
-    Assert.assertEquals("www-test-v011", map.get("clientAsg"));
+    Assertions.assertEquals("foo", map.get("clientApp"));
+    Assertions.assertEquals("www-test", map.get("clientCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("clientAsg"));
   }
 
   @Test
@@ -332,9 +330,9 @@ public class IpcLogEntryTest {
         .withClientCluster("foo")
         .addRequestHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("clientApp"));
-    Assert.assertEquals("foo", map.get("clientCluster"));
-    Assert.assertEquals("www-test-v011", map.get("clientAsg"));
+    Assertions.assertEquals("www", map.get("clientApp"));
+    Assertions.assertEquals("foo", map.get("clientCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("clientAsg"));
   }
 
   @Test
@@ -343,9 +341,9 @@ public class IpcLogEntryTest {
         .withClientAsg("foo")
         .addRequestHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("foo", map.get("clientApp"));
-    Assert.assertEquals("foo", map.get("clientCluster"));
-    Assert.assertEquals("foo", map.get("clientAsg"));
+    Assertions.assertEquals("foo", map.get("clientApp"));
+    Assertions.assertEquals("foo", map.get("clientCluster"));
+    Assertions.assertEquals("foo", map.get("clientAsg"));
   }
 
   @Test
@@ -353,9 +351,9 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("serverApp"));
-    Assert.assertEquals("www-test", map.get("serverCluster"));
-    Assert.assertEquals("www-test-v011", map.get("serverAsg"));
+    Assertions.assertEquals("www", map.get("serverApp"));
+    Assertions.assertEquals("www-test", map.get("serverCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("serverAsg"));
   }
 
   @Test
@@ -363,9 +361,9 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addResponseHeader("netflix-asg", "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("serverApp"));
-    Assert.assertEquals("www-test", map.get("serverCluster"));
-    Assert.assertEquals("www-test-v011", map.get("serverAsg"));
+    Assertions.assertEquals("www", map.get("serverApp"));
+    Assertions.assertEquals("www-test", map.get("serverCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("serverAsg"));
   }
 
   @Test
@@ -374,9 +372,9 @@ public class IpcLogEntryTest {
         .withServerApp("foo")
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("foo", map.get("serverApp"));
-    Assert.assertEquals("www-test", map.get("serverCluster"));
-    Assert.assertEquals("www-test-v011", map.get("serverAsg"));
+    Assertions.assertEquals("foo", map.get("serverApp"));
+    Assertions.assertEquals("www-test", map.get("serverCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("serverAsg"));
   }
 
   @Test
@@ -385,9 +383,9 @@ public class IpcLogEntryTest {
         .withServerCluster("foo")
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("www", map.get("serverApp"));
-    Assert.assertEquals("foo", map.get("serverCluster"));
-    Assert.assertEquals("www-test-v011", map.get("serverAsg"));
+    Assertions.assertEquals("www", map.get("serverApp"));
+    Assertions.assertEquals("foo", map.get("serverCluster"));
+    Assertions.assertEquals("www-test-v011", map.get("serverAsg"));
   }
 
   @Test
@@ -396,9 +394,9 @@ public class IpcLogEntryTest {
         .withServerAsg("foo")
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
         .convert(this::toMap);
-    Assert.assertEquals("foo", map.get("serverApp"));
-    Assert.assertEquals("foo", map.get("serverCluster"));
-    Assert.assertEquals("foo", map.get("serverAsg"));
+    Assertions.assertEquals("foo", map.get("serverApp"));
+    Assertions.assertEquals("foo", map.get("serverCluster"));
+    Assertions.assertEquals("foo", map.get("serverAsg"));
   }
 
   @Test
@@ -406,7 +404,7 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addRequestHeader(NetflixHeader.Node.headerName(), "i-12345")
         .convert(this::toMap);
-    Assert.assertEquals("i-12345", map.get("clientNode"));
+    Assertions.assertEquals("i-12345", map.get("clientNode"));
   }
 
   @Test
@@ -414,7 +412,7 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.Node.headerName(), "i-12345")
         .convert(this::toMap);
-    Assert.assertEquals("i-12345", map.get("serverNode"));
+    Assertions.assertEquals("i-12345", map.get("serverNode"));
   }
 
   @Test
@@ -422,7 +420,7 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addRequestHeader(NetflixHeader.Vip.headerName(), "www:7001")
         .convert(this::toMap);
-    Assert.assertEquals("www:7001", map.get("vip"));
+    Assertions.assertEquals("www:7001", map.get("vip"));
   }
 
   @Test
@@ -430,7 +428,7 @@ public class IpcLogEntryTest {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.Endpoint.headerName(), "/api/v1/test")
         .convert(this::toMap);
-    Assert.assertEquals("/api/v1/test", map.get("endpoint"));
+    Assertions.assertEquals("/api/v1/test", map.get("endpoint"));
   }
 
   @Test
@@ -439,7 +437,7 @@ public class IpcLogEntryTest {
         .withHttpStatus(200)
         .convert(this::toMap)
         .get("result");
-    Assert.assertEquals(IpcResult.success.value(), actual);
+    Assertions.assertEquals(IpcResult.success.value(), actual);
   }
 
   @Test
@@ -448,7 +446,7 @@ public class IpcLogEntryTest {
         .withHttpStatus(400)
         .convert(this::toMap)
         .get("result");
-    Assert.assertEquals(IpcResult.failure.value(), actual);
+    Assertions.assertEquals(IpcResult.failure.value(), actual);
   }
 
   @Test
@@ -458,7 +456,7 @@ public class IpcLogEntryTest {
         .withHttpStatus(200)
         .convert(this::toMap)
         .get("result");
-    Assert.assertEquals(IpcResult.failure.value(), actual);
+    Assertions.assertEquals(IpcResult.failure.value(), actual);
   }
 
   @Test
@@ -466,8 +464,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpStatus(429)
         .convert(this::toMap)
-        .get("errorGroup");
-    Assert.assertEquals(IpcErrorGroup.client_throttled.value(), actual);
+        .get("status");
+    Assertions.assertEquals(IpcStatus.throttled.value(), actual);
   }
 
   @Test
@@ -475,8 +473,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpStatus(503)
         .convert(this::toMap)
-        .get("errorGroup");
-    Assert.assertEquals(IpcErrorGroup.server_throttled.value(), actual);
+        .get("status");
+    Assertions.assertEquals(IpcStatus.unavailable.value(), actual);
   }
 
   @Test
@@ -486,7 +484,7 @@ public class IpcLogEntryTest {
         .withHttpMethod(expected)
         .convert(this::toMap)
         .get("httpMethod");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -496,7 +494,7 @@ public class IpcLogEntryTest {
         .withUri(URI.create(expected))
         .convert(this::toMap)
         .get("uri");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -506,7 +504,7 @@ public class IpcLogEntryTest {
         .withUri(URI.create(expected))
         .convert(this::toMap)
         .get("path");
-    Assert.assertEquals("/api/v1/test", actual);
+    Assertions.assertEquals("/api/v1/test", actual);
   }
 
   @Test
@@ -516,7 +514,7 @@ public class IpcLogEntryTest {
         .withRemoteAddress(expected)
         .convert(this::toMap)
         .get("remoteAddress");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -526,7 +524,7 @@ public class IpcLogEntryTest {
         .withRemotePort(expected)
         .convert(this::toMap)
         .get("remotePort");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @SuppressWarnings("unchecked")
@@ -537,9 +535,9 @@ public class IpcLogEntryTest {
         .addTag("k2", "v2")
         .convert(this::toMap)
         .get("additionalTags");
-    Assert.assertEquals(2, actual.size());
-    Assert.assertEquals("v1", actual.get("k1"));
-    Assert.assertEquals("v2", actual.get("k2"));
+    Assertions.assertEquals(2, actual.size());
+    Assertions.assertEquals("v1", actual.get("k1"));
+    Assertions.assertEquals("v2", actual.get("k2"));
   }
 
   @Test
@@ -549,7 +547,7 @@ public class IpcLogEntryTest {
         .withClientZone(expected + "e")
         .convert(this::toMap)
         .get("clientRegion");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -559,7 +557,7 @@ public class IpcLogEntryTest {
         .withClientZone(expected + "-e")
         .convert(this::toMap)
         .get("clientRegion");
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -569,7 +567,7 @@ public class IpcLogEntryTest {
         .withClientZone(expected)
         .convert(this::toMap)
         .get("clientRegion");
-    Assert.assertNull(actual);
+    Assertions.assertNull(actual);
   }
 
   @Test
@@ -579,7 +577,7 @@ public class IpcLogEntryTest {
         .withClientZone(expected)
         .convert(this::toMap)
         .get("clientRegion");
-    Assert.assertNull(actual);
+    Assertions.assertNull(actual);
   }
 
   @SuppressWarnings("unchecked")
@@ -591,21 +589,21 @@ public class IpcLogEntryTest {
         .addRequestHeader("abc", "def")
         .convert(this::toMap)
         .get("requestHeaders");
-    Assert.assertEquals(3, actual.size());
+    Assertions.assertEquals(3, actual.size());
   }
 
   @Test
   public void stringEscape() {
     for (char c = 0; c < 65535; ++c) {
       String actual = (String) entry
-          .withErrorReason("" + c)
+          .withStatusDetail("" + c)
           .convert(this::toMap)
-          .get("errorReason");
+          .get("statusDetail");
       if (actual.length() == 0) {
-        Assert.assertTrue(Character.isISOControl(c));
-        Assert.assertEquals("", actual);
+        Assertions.assertTrue(Character.isISOControl(c));
+        Assertions.assertEquals("", actual);
       } else {
-        Assert.assertEquals("" + c, actual);
+        Assertions.assertEquals("" + c, actual);
       }
       entry.reset();
     }
@@ -618,11 +616,11 @@ public class IpcLogEntryTest {
     IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
     IpcLogEntry logEntry = logger.createClientEntry();
 
-    Assert.assertEquals(0L, summary.totalAmount());
+    Assertions.assertEquals(0L, summary.totalAmount());
     logEntry.markStart();
-    Assert.assertEquals(1L, summary.totalAmount());
+    Assertions.assertEquals(1L, summary.totalAmount());
     logEntry.markEnd();
-    Assert.assertEquals(1L, summary.totalAmount());
+    Assertions.assertEquals(1L, summary.totalAmount());
   }
 
   @Test
@@ -634,8 +632,8 @@ public class IpcLogEntryTest {
     for (int i = 0; i < 10; ++i) {
       logger.createClientEntry().markStart().markEnd();
     }
-    Assert.assertEquals((10 * 11) / 2, summary.totalAmount());
-    Assert.assertEquals(10L, summary.count());
+    Assertions.assertEquals((10 * 11) / 2, summary.totalAmount());
+    Assertions.assertEquals(10L, summary.count());
   }
 
   @Test
@@ -679,5 +677,21 @@ public class IpcLogEntryTest {
         .log();
 
     IpcMetric.validate(registry);
+  }
+
+  @Test
+  public void endpointUnknownIfNotSet() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .markStart()
+        .markEnd()
+        .log();
+
+    registry.counters().forEach(c -> {
+      Assertions.assertEquals("unknown", Utils.getTagValue(c.id(), "ipc.endpoint"));
+    });
   }
 }

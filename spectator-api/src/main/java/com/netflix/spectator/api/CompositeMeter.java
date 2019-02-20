@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ class CompositeMeter<T extends Meter> implements Meter {
    * @param meters
    *     Set of meters that make up the composite.
    */
-  public CompositeMeter(Id id, Collection<T> meters) {
+  CompositeMeter(Id id, Collection<T> meters) {
     this.id = id;
     this.meters = meters;
   }

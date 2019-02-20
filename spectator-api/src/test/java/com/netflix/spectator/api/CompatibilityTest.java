@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.compat.Main;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +27,6 @@ import java.util.List;
  * version. It isn't automatically updated, but is simple and catches some of the more egregious
  * compatibility issues that were sometimes missed by the compatibility check task on the build.
  */
-@RunWith(JUnit4.class)
 public class CompatibilityTest {
 
   private static List<String> EXPECTED = new ArrayList<>();
@@ -216,7 +213,7 @@ public class CompatibilityTest {
     for (int i = 0; i < length; ++i) {
       String exp = (i < EXPECTED.size()) ? EXPECTED.get(i) : null;
       String found = (i < actual.size()) ? actual.get(i) : null;
-      Assert.assertEquals(exp, found);
+      Assertions.assertEquals(exp, found);
     }
   }
 }

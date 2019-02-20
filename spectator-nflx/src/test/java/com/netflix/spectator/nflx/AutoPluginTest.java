@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,12 @@ import com.netflix.archaius.api.Config;
 import com.netflix.archaius.config.MapConfig;
 import com.netflix.governator.guice.LifecycleInjector;
 import com.netflix.governator.lifecycle.LifecycleManager;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.management.ManagementFactory;
 
-@RunWith(JUnit4.class)
 public class AutoPluginTest {
 
   private static boolean isJava8() {
@@ -39,7 +36,7 @@ public class AutoPluginTest {
 
   @Test
   public void inject() throws Exception {
-    Assume.assumeTrue("requires java 8", isJava8());
+    Assumptions.assumeTrue(isJava8(), "requires java 8");
     // On JDK 9:
     // Caused by: java.lang.ClassNotFoundException: javax.annotation.Resource
     // at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:582)
@@ -60,7 +57,7 @@ public class AutoPluginTest {
         .createInjector();
     LifecycleManager lcMgr = injector.getInstance(LifecycleManager.class);
     lcMgr.start();
-    Assert.assertNotNull(injector.getInstance(Plugin.class));
+    Assertions.assertNotNull(injector.getInstance(Plugin.class));
     lcMgr.close();
   }
 

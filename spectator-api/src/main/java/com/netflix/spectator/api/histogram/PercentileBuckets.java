@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,8 +110,8 @@ public final class PercentileBuckets {
         "pcts is not the same size as results array");
 
     long total = 0L;
-    for (int i = 0; i < counts.length; ++i) {
-      total += counts[i];
+    for (long c : counts) {
+      total += c;
     }
 
     int pctIdx = 0;

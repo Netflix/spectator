@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,42 +17,40 @@ package com.netflix.spectator.api;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
+import java.nio.file.AccessMode;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-@RunWith(JUnit4.class)
 public class DefaultIdTest {
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullName() {
-    new DefaultId(null);
+    Assertions.assertThrows(NullPointerException.class, () -> new DefaultId(null));
   }
 
   @Test
   public void testName() {
     Id id = new DefaultId("foo");
-    Assert.assertEquals(id.name(), "foo");
+    Assertions.assertEquals(id.name(), "foo");
   }
 
   @Test
   public void testTags() {
     ArrayTagSet ts = ArrayTagSet.create("k1", "v1");
     Id id = new DefaultId("foo", ts);
-    Assert.assertEquals(id.name(), "foo");
-    Assert.assertEquals(id.tags(), ts);
+    Assertions.assertEquals(id.name(), "foo");
+    Assertions.assertEquals(id.tags(), ts);
   }
 
   @Test
   public void testTagsEmpty() {
     Id id = new DefaultId("foo");
-    Assert.assertFalse(id.tags().iterator().hasNext());
+    Assertions.assertFalse(id.tags().iterator().hasNext());
   }
 
   @Test
@@ -70,8 +68,8 @@ public class DefaultIdTest {
   public void testNormalize() {
     DefaultId id12 = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
     DefaultId id21 = (new DefaultId("foo")).withTag("k1", "v1").withTags(id12.tags());
-    Assert.assertEquals(id12, id21);
-    Assert.assertEquals(id12, id21.normalize());
+    Assertions.assertEquals(id12, id21);
+    Assertions.assertEquals(id12, id21.normalize());
   }
 
   @Test
@@ -82,14 +80,14 @@ public class DefaultIdTest {
     DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
     DefaultId keepId = (new DefaultId("foo")).withTag("k1", "v1");
     DefaultId dropId = (new DefaultId("foo")).withTag("k2", "v2");
-    Assert.assertEquals(keepId, id.rollup(keys, true));
-    Assert.assertEquals(dropId, id.rollup(keys, false));
+    Assertions.assertEquals(keepId, id.rollup(keys, true));
+    Assertions.assertEquals(dropId, id.rollup(keys, false));
   }
 
   @Test
   public void testRollupJustName() {
     DefaultId id = new DefaultId("foo");
-    Assert.assertSame(id, id.normalize());
+    Assertions.assertSame(id, id.normalize());
   }
 
   @Test
@@ -98,7 +96,7 @@ public class DefaultIdTest {
     keys.add("k1");
     DefaultId idWithDupes = (new DefaultId("foo")).withTag("k1", "v1").withTag("k1", "v2");
     DefaultId expectedId = (new DefaultId("foo")).withTag("k1", "v2");
-    Assert.assertEquals(expectedId, idWithDupes.rollup(keys, true));
+    Assertions.assertEquals(expectedId, idWithDupes.rollup(keys, true));
   }
 
   @Test
@@ -107,19 +105,19 @@ public class DefaultIdTest {
     keys.add("k1");
     DefaultId idWithDupes = (new DefaultId("foo")).withTag("k1", "v1").withTag("k1", "v2");
     DefaultId expectedId = new DefaultId("foo");
-    Assert.assertEquals(expectedId, idWithDupes.rollup(keys, false));
+    Assertions.assertEquals(expectedId, idWithDupes.rollup(keys, false));
   }
 
   @Test
   public void testToString() {
     DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
-    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
+    Assertions.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
   public void testToStringNameOnly() {
     DefaultId id = new DefaultId("foo");
-    Assert.assertEquals(id.toString(), "foo");
+    Assertions.assertEquals(id.toString(), "foo");
   }
 
   @Test
@@ -128,7 +126,7 @@ public class DefaultIdTest {
     map.put("k1", "v1");
     map.put("k2", "v2");
     DefaultId id = (new DefaultId("foo")).withTags(map);
-    Assert.assertEquals("foo:k1=v1:k2=v2", id.toString());
+    Assertions.assertEquals("foo:k1=v1:k2=v2", id.toString());
   }
 
   @Test
@@ -136,7 +134,7 @@ public class DefaultIdTest {
     Id id = new DefaultId("TotalTime")
         .withTag("app", "foo")
         .withTag("exception.thrown", "pvr");
-    Assert.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
+    Assertions.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
   }
 
   @Test
@@ -144,7 +142,7 @@ public class DefaultIdTest {
     Id id = new DefaultId("TotalTime")
         .withTag("app", "foo")
         .withTag("aaa", "pvr");
-    Assert.assertEquals("TotalTime:aaa=pvr:app=foo", id.toString());
+    Assertions.assertEquals("TotalTime:aaa=pvr:app=foo", id.toString());
   }
 
   @Test
@@ -153,7 +151,7 @@ public class DefaultIdTest {
         .withTag("app", "foo")
         .withTag("exception.thrown", "pvr")
         .withTag("bbb", "bar");
-    Assert.assertEquals("TotalTime:app=foo:bbb=bar:exception.thrown=pvr", id.toString());
+    Assertions.assertEquals("TotalTime:app=foo:bbb=bar:exception.thrown=pvr", id.toString());
   }
 
   @Test
@@ -162,34 +160,51 @@ public class DefaultIdTest {
         .withTag("app", "foo")
         .withTags("app", "foo")
         .withTag("exception.thrown", "pvr");
-    Assert.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
+    Assertions.assertEquals("TotalTime:app=foo:exception.thrown=pvr", id.toString());
   }
 
   @Test
   public void withTagBooleanTrue() {
     Id id = new DefaultId("test").withTag("bool", true);
-    Assert.assertEquals("test:bool=true", id.toString());
-    Assert.assertEquals(new DefaultId("test").withTag("bool", "true"), id);
+    Assertions.assertEquals("test:bool=true", id.toString());
+    Assertions.assertEquals(new DefaultId("test").withTag("bool", "true"), id);
   }
 
   @Test
   public void withTagBooleanFalse() {
     Id id = new DefaultId("test").withTag("bool", false);
-    Assert.assertEquals("test:bool=false", id.toString());
-    Assert.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
+    Assertions.assertEquals("test:bool=false", id.toString());
+    Assertions.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
   }
 
   @Test
   public void withTagBooleanObjFalse() {
     Id id = new DefaultId("test").withTag("bool", Boolean.FALSE);
-    Assert.assertEquals("test:bool=false", id.toString());
-    Assert.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
+    Assertions.assertEquals("test:bool=false", id.toString());
+    Assertions.assertEquals(new DefaultId("test").withTag("bool", "false"), id);
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void withTagBooleanObjNull() {
-    Boolean value = null;
-    new DefaultId("test").withTag("bool", value);
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      Boolean value = null;
+      new DefaultId("test").withTag("bool", value);
+    });
+  }
+  
+  @Test
+  public void withTagEnum() {
+    Id id = new DefaultId("test").withTag("enum", AccessMode.WRITE);
+    Assertions.assertEquals("test:enum=WRITE", id.toString());
+    Assertions.assertEquals(new DefaultId("test").withTag("enum", "WRITE"), id);
+  }
+
+  @Test
+  public void withTagEnumNull() {
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      Enum value = null;
+      new DefaultId("test").withTag("enum", value);
+    });
   }
 
   @Test
@@ -206,8 +221,8 @@ public class DefaultIdTest {
             Statistic.percentile, new BasicTag("percentile", "2"),
             Statistic.percentile, new BasicTag("percentile", "1"));
 
-    Assert.assertEquals(id1.hashCode(), id2.hashCode());
-    Assert.assertEquals(id1, id2);
+    Assertions.assertEquals(id1.hashCode(), id2.hashCode());
+    Assertions.assertEquals(id1, id2);
   }
 
   @Test
@@ -232,7 +247,7 @@ public class DefaultIdTest {
             Statistic.percentile, new BasicTag("percentile", "2"),
             Statistic.percentile, new BasicTag("percentile", "1"));
 
-    Assert.assertEquals(id1.hashCode(), id2.hashCode());
-    Assert.assertEquals(id1, id2);
+    Assertions.assertEquals(id1.hashCode(), id2.hashCode());
+    Assertions.assertEquals(id1, id2);
   }
 }

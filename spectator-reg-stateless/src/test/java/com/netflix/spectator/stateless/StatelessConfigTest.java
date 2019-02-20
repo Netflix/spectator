@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,21 @@
  */
 package com.netflix.spectator.stateless;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 
-@RunWith(JUnit4.class)
 public class StatelessConfigTest {
 
   @Test
   public void enabledByDefault() {
     Map<String, String> props = Collections.emptyMap();
     StatelessConfig config = props::get;
-    Assert.assertTrue(config.enabled());
+    Assertions.assertTrue(config.enabled());
   }
 
   @Test
@@ -40,7 +37,7 @@ public class StatelessConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("stateless.enabled", "true");
     StatelessConfig config = props::get;
-    Assert.assertTrue(config.enabled());
+    Assertions.assertTrue(config.enabled());
   }
 
   @Test
@@ -48,7 +45,7 @@ public class StatelessConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("stateless.enabled", "false");
     StatelessConfig config = props::get;
-    Assert.assertFalse(config.enabled());
+    Assertions.assertFalse(config.enabled());
   }
 
   @Test
@@ -56,6 +53,6 @@ public class StatelessConfigTest {
     Map<String, String> props = new HashMap<>();
     props.put("stateless.enabled", "abc");
     StatelessConfig config = props::get;
-    Assert.assertFalse(config.enabled());
+    Assertions.assertFalse(config.enabled());
   }
 }

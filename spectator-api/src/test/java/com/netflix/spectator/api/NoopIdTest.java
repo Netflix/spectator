@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,45 +15,42 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RunWith(JUnit4.class)
 public class NoopIdTest {
   @Test
   public void testTags() {
-    Assert.assertFalse(NoopId.INSTANCE.tags().iterator().hasNext());
+    Assertions.assertFalse(NoopId.INSTANCE.tags().iterator().hasNext());
   }
 
   @Test
   public void testWithKeyValue() {
-    Assert.assertSame(NoopId.INSTANCE.withTag("k", "v"), NoopId.INSTANCE);
+    Assertions.assertSame(NoopId.INSTANCE.withTag("k", "v"), NoopId.INSTANCE);
   }
 
   @Test
   public void testWithTag() {
-    Assert.assertSame(NoopId.INSTANCE.withTag(new BasicTag("k", "v")), NoopId.INSTANCE);
+    Assertions.assertSame(NoopId.INSTANCE.withTag(new BasicTag("k", "v")), NoopId.INSTANCE);
   }
 
   @Test
   public void testWithTags() {
-    Assert.assertSame(NoopId.INSTANCE.withTags(ArrayTagSet.create("k", "v")), NoopId.INSTANCE);
+    Assertions.assertSame(NoopId.INSTANCE.withTags(ArrayTagSet.create("k", "v")), NoopId.INSTANCE);
   }
 
   @Test
   public void testWithTagMap() {
     Map<String, String> tags = new HashMap<>();
     tags.put("k", "v");
-    Assert.assertSame(NoopId.INSTANCE.withTags(tags), NoopId.INSTANCE);
+    Assertions.assertSame(NoopId.INSTANCE.withTags(tags), NoopId.INSTANCE);
   }
 
   @Test
   public void testToString() {
-    Assert.assertEquals(NoopId.INSTANCE.toString(), "noop");
+    Assertions.assertEquals(NoopId.INSTANCE.toString(), "noop");
   }
 }

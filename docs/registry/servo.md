@@ -1,11 +1,15 @@
 # Servo Registry
 
+!!! warning
+    ServoRegistry is deprecated. If you are running internally at Netflix, see the
+    [Netflix Integration](../intro/netflix.md) docs instead.
+
 Registry that uses [servo](https://github.com/Netflix/servo) as the underlying
 implementation. To use the servo registry, add a dependency on the
 `spectator-reg-servo` library. For gradle:
 
 ```
-com.netflix.spectator:spectator-reg-servo:0.69.0
+com.netflix.spectator:spectator-reg-servo:0.83.0
 ```
 
 Then when initializing the application, use the `ServoRegistry`. If using guice
@@ -24,5 +28,4 @@ Injector injector = Guice.createInjector(new AbstractModule() {
   });
 ```
 
-For more information see the [servo example](https://github.com/brharrington/spectator-examples/tree/master/servo). Note if running internally at Netflix see the
-[Netflix Integration](../intro/netflix.md) docs instead.
+For more information see the [servo example](https://github.com/brharrington/spectator-examples/tree/master/servo).

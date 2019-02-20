@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,12 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
 
-@RunWith(JUnit4.class)
 public class AtlasTimerTest {
 
   private ManualClock clock = new ManualClock();
@@ -43,28 +40,28 @@ public class AtlasTimerTest {
       String stat = Utils.getTagValue(m.id(), "statistic");
       DsType ds = "max".equals(stat) ? DsType.gauge : DsType.rate;
       Id expectedId = dist.id().withTag(ds).withTag("statistic", stat);
-      Assert.assertEquals(expectedId, m.id());
+      Assertions.assertEquals(expectedId, m.id());
       switch (stat) {
         case "count":
-          Assert.assertEquals(count / 10.0, m.value(), 1e-12);
+          Assertions.assertEquals(count / 10.0, m.value(), 1e-12);
           break;
         case "totalTime":
-          Assert.assertEquals(amount / 10.0e9, m.value(), 1e-12);
+          Assertions.assertEquals(amount / 10.0e9, m.value(), 1e-12);
           break;
         case "totalOfSquares":
-          Assert.assertEquals(square / 10.0e18, m.value(), 1e-12);
+          Assertions.assertEquals(square / 10.0e18, m.value(), 1e-12);
           break;
         case "max":
-          Assert.assertEquals(max / 1e9, m.value(), 1e-12);
+          Assertions.assertEquals(max / 1e9, m.value(), 1e-12);
           break;
         default:
           throw new IllegalArgumentException("unknown stat: " + stat);
       }
-      Assert.assertEquals(count, dist.count());
-      Assert.assertEquals(amount, dist.totalTime());
+      Assertions.assertEquals(count, dist.count());
+      Assertions.assertEquals(amount, dist.totalTime());
       ++num;
     }
-    Assert.assertEquals(4, num);
+    Assertions.assertEquals(4, num);
   }
 
   @Test
@@ -143,7 +140,7 @@ public class AtlasTimerTest {
       clock.setMonotonicTime(clock.monotonicTime() + 2);
       return "foo";
     });
-    Assert.assertEquals("foo", s);
+    Assertions.assertEquals("foo", s);
     clock.setWallTime(step + 1);
     checkValue(1, 2, 4, 2);
   }
@@ -161,12 +158,12 @@ public class AtlasTimerTest {
   public void expiration() {
     long start = clock.wallTime();
     clock.setWallTime(start + step * 2);
-    Assert.assertTrue(dist.hasExpired());
+    Assertions.assertTrue(dist.hasExpired());
 
     dist.record(42, TimeUnit.MICROSECONDS);
-    Assert.assertFalse(dist.hasExpired());
+    Assertions.assertFalse(dist.hasExpired());
 
     clock.setWallTime(start + step * 3 + 1);
-    Assert.assertTrue(dist.hasExpired());
+    Assertions.assertTrue(dist.hasExpired());
   }
 }

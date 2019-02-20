@@ -54,4 +54,10 @@
       <Bug pattern="REC_CATCH_EXCEPTION"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.impl.matcher.Parser"/>
+      <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
+    </And>
+  </Match>
 </FindBugsFilter>

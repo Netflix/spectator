@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -147,7 +147,7 @@ public interface Registry extends Iterable<Meter> {
   Meter get(Id id);
 
   /** Iterator for traversing the set of meters in the registry. */
-  Iterator<Meter> iterator();
+  @Override Iterator<Meter> iterator();
 
   /////////////////////////////////////////////////////////////////
   // Additional helper methods below

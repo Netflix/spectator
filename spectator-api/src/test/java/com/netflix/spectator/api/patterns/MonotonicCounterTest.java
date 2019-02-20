@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,13 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
-@RunWith(JUnit4.class)
 public class MonotonicCounterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -43,38 +40,38 @@ public class MonotonicCounterTest {
   public void usingAtomicLong() {
     AtomicLong count = new AtomicLong();
     AtomicLong c = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(count);
-    Assert.assertSame(count, c);
+    Assertions.assertSame(count, c);
 
     Counter counter = registry.counter(id);
     update();
-    Assert.assertEquals(0L, counter.count());
+    Assertions.assertEquals(0L, counter.count());
 
     c.incrementAndGet();
     update();
-    Assert.assertEquals(1L, counter.count());
+    Assertions.assertEquals(1L, counter.count());
 
     c.addAndGet(42);
     update();
-    Assert.assertEquals(43L, counter.count());
+    Assertions.assertEquals(43L, counter.count());
   }
 
   @Test
   public void usingLongAdder() {
     LongAdder count = new LongAdder();
     LongAdder c = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(count);
-    Assert.assertSame(count, c);
+    Assertions.assertSame(count, c);
 
     Counter counter = registry.counter(id);
     update();
-    Assert.assertEquals(0L, counter.count());
+    Assertions.assertEquals(0L, counter.count());
 
     c.increment();
     update();
-    Assert.assertEquals(1L, counter.count());
+    Assertions.assertEquals(1L, counter.count());
 
     c.add(42);
     update();
-    Assert.assertEquals(43L, counter.count());
+    Assertions.assertEquals(43L, counter.count());
   }
 
   @Test
@@ -84,22 +81,22 @@ public class MonotonicCounterTest {
 
     Counter counter = registry.counter(id);
     update();
-    Assert.assertEquals(0L, counter.count());
+    Assertions.assertEquals(0L, counter.count());
 
     c.set(42L);
     update();
-    Assert.assertEquals(42L, counter.count());
+    Assertions.assertEquals(42L, counter.count());
 
     // Should not update the counter because it is lower, but must update
     // the previous recorded value
     c.set(21L);
     update();
-    Assert.assertEquals(42L, counter.count());
+    Assertions.assertEquals(42L, counter.count());
 
     // Make sure a subsequent increase is detected
     c.set(23L);
     update();
-    Assert.assertEquals(44L, counter.count());
+    Assertions.assertEquals(44L, counter.count());
   }
 
   @Test
@@ -110,24 +107,24 @@ public class MonotonicCounterTest {
       System.gc();
     }
 
-    Assert.assertEquals(1, registry.state().size());
+    Assertions.assertEquals(1, registry.state().size());
     update();
-    Assert.assertEquals(0, registry.state().size());
+    Assertions.assertEquals(0, registry.state().size());
   }
 
   @Test
   public void removeGauge() throws Exception {
     LongAdder v = PolledMeter.using(registry).withId(id).monitorMonotonicCounter(new LongAdder());
-    Assert.assertEquals(1, registry.state().size());
+    Assertions.assertEquals(1, registry.state().size());
     PolledMeter.remove(registry, id);
-    Assert.assertEquals(0, registry.state().size());
+    Assertions.assertEquals(0, registry.state().size());
   }
 
   @Test
   public void removeOtherType() throws Exception {
     LongTaskTimer t = LongTaskTimer.get(registry, id);
-    Assert.assertEquals(3, registry.state().size());
+    Assertions.assertEquals(3, registry.state().size());
     PolledMeter.remove(registry, id);
-    Assert.assertEquals(3, registry.state().size());
+    Assertions.assertEquals(3, registry.state().size());
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,14 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
-@RunWith(JUnit4.class)
 public class FilteredIteratorTest {
 
   private static final Predicate<String> ALL = v -> true;
@@ -46,27 +43,27 @@ public class FilteredIteratorTest {
   public void matchesAll() {
     List<String> vs = newList("1", "2", "3");
     List<String> out = Utils.toList(new FilteredIterator<>(vs.iterator(), ALL));
-    Assert.assertEquals(vs, out);
+    Assertions.assertEquals(vs, out);
   }
 
   @Test
   public void matchesNone() {
     List<String> vs = newList("1", "2", "3");
     List<String> out = Utils.toList(new FilteredIterator<>(vs.iterator(), NONE));
-    Assert.assertEquals(0, out.size());
+    Assertions.assertEquals(0, out.size());
   }
 
   @Test
   public void matchesEven() {
     List<String> vs = newList("1", "2", "3");
     List<String> out = Utils.toList(new FilteredIterator<>(vs.iterator(), EVEN));
-    Assert.assertEquals(newList("2"), out);
+    Assertions.assertEquals(newList("2"), out);
   }
 
   @Test
   public void matchesOdd() {
     List<String> vs = newList("1", "2", "3");
     List<String> out = Utils.toList(new FilteredIterator<>(vs.iterator(), ODD));
-    Assert.assertEquals(newList("1", "3"), out);
+    Assertions.assertEquals(newList("1", "3"), out);
   }
 }

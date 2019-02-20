@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,11 @@
 package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.impl.AsciiSet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 // Suite for removed ValidCharacters class. Test case was kept and changed to use AsciiSet
 // to help verify the new validation.
-@RunWith(JUnit4.class)
 public class ValidCharactersTest {
 
   private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
@@ -32,30 +29,32 @@ public class ValidCharactersTest {
     return set.replaceNonMembers(str, '_');
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void nullValue() throws Exception {
-    String input = null;
-    toValidCharset(input);
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      String input = null;
+      toValidCharset(input);
+    });
   }
 
   @Test
   public void empty() throws Exception {
     String input = "";
     String actual = toValidCharset(input);
-    Assert.assertEquals("", actual);
+    Assertions.assertEquals("", actual);
   }
 
   @Test
   public void allValid() throws Exception {
     String input = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
     String actual = toValidCharset(input);
-    Assert.assertEquals(input, actual);
+    Assertions.assertEquals(input, actual);
   }
 
   @Test
   public void invalidConvertsToUnderscore() throws Exception {
     String input = "a,b%c^d&e|f{g}h:i;";
     String actual = toValidCharset(input);
-    Assert.assertEquals("a_b_c_d_e_f_g_h_i_", actual);
+    Assertions.assertEquals("a_b_c_d_e_f_g_h_i_", actual);
   }
 }

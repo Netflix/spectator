@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * A {@link RequestMetricCollector} that captures request level metrics for AWS clients.
@@ -39,6 +40,11 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
 
+  private static final Set<String> ALL_DEFAULT_TAGS = new HashSet<>();
+
+  private static final String TAG_ERROR = "error";
+  private static final String TAG_REQUEST_TYPE = "requestType";
+  private static final String TAG_THROTTLE_EXCEPTION = "throttleException";
   private static final String UNKNOWN = "UNKNOWN";
 
   private static final Field[] TIMERS = {
@@ -70,41 +76,66 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       new TagField(Field.Exception, e -> e.getClass().getSimpleName())
   };
 
+  static {
+    Stream.concat(Arrays.stream(TAGS), Arrays.stream(ERRORS))
+        .map(TagField::getName).forEach(ALL_DEFAULT_TAGS::add);
+    ALL_DEFAULT_TAGS.addAll(Arrays.asList(TAG_THROTTLE_EXCEPTION, TAG_REQUEST_TYPE, TAG_ERROR));
+  }
+
   private final Registry registry;
+  private final Map<String, String> customTags;
 
   /**
    * Constructs a new instance.
    */
   public SpectatorRequestMetricCollector(Registry registry) {
+    this(registry, Collections.emptyMap());
+  }
+
+  /**
+   * Constructs a new instance. Custom tags provided by the user will be applied to every metric.
+   * Overriding built-in tags is not allowed.
+   */
+  public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags) {
     super();
     this.registry = Preconditions.checkNotNull(registry, "registry");
+    Preconditions.checkNotNull(customTags, "customTags");
+    this.customTags = new HashMap<>();
+    customTags.forEach((key, value) -> {
+      if (ALL_DEFAULT_TAGS.contains(key)) {
+        registry.propagate(new IllegalArgumentException("Invalid custom tag " + key
+              + " - cannot override built-in tag"));
+      } else {
+        this.customTags.put(key, value);
+      }
+    });
   }
 
   @Override
   public void collectMetrics(Request<?> request, Object response) {
     final AwsRequestMetrics metrics = request.getAwsRequestMetrics();
     if (metrics.isEnabled()) {
-      final Map<String, String> baseTags = getBaseTags(request);
+      final Map<String, String> allTags = getAllTags(request);
       final TimingInfo timing = metrics.getTimingInfo();
 
       for (Field counter : COUNTERS) {
         Optional.ofNullable(timing.getCounter(counter.name()))
             .filter(v -> v.longValue() > 0)
-            .ifPresent(v -> registry.counter(metricId(counter, baseTags)).increment(v.longValue()));
+            .ifPresent(v -> registry.counter(metricId(counter, allTags)).increment(v.longValue()));
       }
 
       for (Field timer : TIMERS) {
         Optional.ofNullable(timing.getLastSubMeasurement(timer.name()))
             .filter(TimingInfo::isEndTimeKnown)
-            .ifPresent(t -> registry.timer(metricId(timer, baseTags))
+            .ifPresent(t -> registry.timer(metricId(timer, allTags))
                 .record(t.getEndTimeNano() - t.getStartTimeNano(), TimeUnit.NANOSECONDS));
       }
 
       notEmpty(metrics.getProperty(Field.ThrottleException)).ifPresent(throttleExceptions -> {
-        final Id throttling = metricId("throttling", baseTags);
+        final Id throttling = metricId("throttling", allTags);
         throttleExceptions.forEach(ex ->
-            registry.counter(throttling.withTag("throttleException", ex.getClass().getSimpleName()))
-                .increment());
+            registry.counter(throttling.withTag(TAG_THROTTLE_EXCEPTION,
+                ex.getClass().getSimpleName())).increment());
       });
     }
   }
@@ -117,21 +148,22 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     return registry.createId(idName(metric), tags);
   }
 
-  private Map<String, String> getBaseTags(Request<?> request) {
+  private Map<String, String> getAllTags(Request<?> request) {
     final AwsRequestMetrics metrics = request.getAwsRequestMetrics();
-    final Map<String, String> baseTags = new HashMap<>();
+    final Map<String, String> allTags = new HashMap<>();
     for (TagField tag : TAGS) {
-      baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
+      allTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
     }
-    baseTags.put("requestType", request.getOriginalRequest().getClass().getSimpleName());
+    allTags.put(TAG_REQUEST_TYPE, request.getOriginalRequest().getClass().getSimpleName());
     final boolean error = isError(metrics);
     if (error) {
       for (TagField tag : ERRORS) {
-        baseTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
+        allTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
       }
     }
-    baseTags.put("error", Boolean.toString(error));
-    return Collections.unmodifiableMap(baseTags);
+    allTags.put(TAG_ERROR, Boolean.toString(error));
+    allTags.putAll(customTags);
+    return Collections.unmodifiableMap(allTags);
   }
 
   /**

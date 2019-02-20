@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ import com.netflix.spectator.api.Counter;
 public interface DoubleCounter extends Counter {
 
   /** Update the counter by the specified amount. */
-  void add(double amount);
+  @Override void add(double amount);
 
   /**
    * Current count as a double value. The {@link #count()} method returns a long to stay
    * compatible with the default counter type.
    */
-  double actualCount();
+  @Override double actualCount();
 
   @Override default void increment() {
     add(1.0);

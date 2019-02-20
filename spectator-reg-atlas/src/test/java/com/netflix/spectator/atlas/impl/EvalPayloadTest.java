@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,30 @@
  */
 package com.netflix.spectator.atlas.impl;
 
-import com.netflix.spectator.api.DefaultRegistry;
-import com.netflix.spectator.api.ManualClock;
-import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Tag;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class EvalPayloadTest {
 
   @Test
   public void metricEquals() {
     EqualsVerifier.forClass(EvalPayload.Metric.class)
+        .suppress(Warning.NULL_FIELDS)
+        .verify();
+  }
+
+  @Test
+  public void messageEquals() {
+    EqualsVerifier.forClass(EvalPayload.Message.class)
+        .suppress(Warning.NULL_FIELDS)
+        .verify();
+  }
+
+  @Test
+  public void diagnosticMessageEquals() {
+    EqualsVerifier.forClass(EvalPayload.DiagnosticMessage.class)
         .suppress(Warning.NULL_FIELDS)
         .verify();
   }

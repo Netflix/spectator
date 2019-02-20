@@ -3,7 +3,7 @@ buildscript {
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:6.1.1'
-    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:6.0.1'
+    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:7.1.0'
 
     // This is a workaround for getting the shadow plugin to work correctly
     // for some sub-projects. For more details see:
@@ -13,8 +13,8 @@ buildscript {
 }
 
 plugins {
-  id 'me.champeau.gradle.jmh' version '0.4.5'
-  id "com.github.spotbugs" version "1.6.3" apply false
+  id 'me.champeau.gradle.jmh' version '0.4.7'
+  id "com.github.spotbugs" version "1.6.9" apply false
 }
 
 // Establish version and status
@@ -26,17 +26,12 @@ allprojects {
   apply plugin: 'me.champeau.gradle.jmh'
   apply plugin: 'com.github.ben-manes.versions'
   apply plugin: 'nebula.netflixoss'
-
-  task wrapper(type: Wrapper) {
-    gradleVersion = '4.9'
-  }
 }
 
 subprojects {
   apply plugin: 'nebula.compile-api'
   apply plugin: 'java'
   apply plugin: 'build-dashboard'
-  apply plugin: 'jacoco'
   apply plugin: 'com.github.spotbugs'
   apply plugin: 'checkstyle'
   apply plugin: 'pmd'
@@ -68,50 +63,38 @@ subprojects {
 
   dependencies {
     compile "org.slf4j:slf4j-api"
-    testCompile 'junit:junit'
+    testCompile 'org.junit.jupiter:junit-jupiter-engine'
     testCompile 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
     jmh "org.openjdk.jmh:jmh-core:1.19"
     jmh "org.openjdk.jmh:jmh-generator-annprocess:1.19"
   }
 
+  test {
+    useJUnitPlatform()
+  }
+
   jmh {
-    jmhVersion = '1.19'
-    warmupIterations = 10
+    jmhVersion = '1.21'
+    warmupIterations = 5
     iterations = 10
     fork = 1
     threads = 1
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = 'warn'
-    include = ['.*DefaultConfig.*']
+    include = ['.*PatternMatching.*']
   }
 
-  jacoco {
-    toolVersion = "0.8.2"
-  }
-
-  jacocoTestReport {
-    additionalSourceDirs = files(sourceSets.main.allJava.srcDirs)
-    reports {
-      xml.enabled false
-      csv.enabled false
-      html.destination file("${buildDir}/reports/jacoco")
-    }
-  }
-  
   checkstyle {
-    toolVersion = '6.7'
+    toolVersion = '8.14'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
-  tasks.withType(Checkstyle) {
-    exclude '**/tdunning/**'
-  }
   
   spotbugs {
-    toolVersion = '3.1.7'
+    toolVersion = '3.1.10'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     sourceSets = [sourceSets.main]
@@ -124,14 +107,11 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '5.5.4'
+    toolVersion = '6.9.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
     ruleSetFiles = rootProject.files("codequality/pmd.xml")
-  }
-  tasks.withType(Pmd) {
-    exclude '**/tdunning/**'
   }
 }
 

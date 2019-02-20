@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,15 @@
  */
 package com.netflix.spectator.api;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RunWith(JUnit4.class)
 public class CompositeCounterTest {
 
   private final ManualClock clock = new ManualClock();
@@ -42,13 +39,13 @@ public class CompositeCounterTest {
   }
 
   private void assertCountEquals(Counter c, long expected) {
-    Assert.assertEquals(c.count(), expected);
+    Assertions.assertEquals(c.count(), expected);
     for (Registry r : registries) {
-      Assert.assertEquals(r.counter(id).count(), expected);
+      Assertions.assertEquals(r.counter(id).count(), expected);
     }
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     registries = new ArrayList<>();
     for (int i = 0; i < 5; ++i) {
@@ -93,9 +90,9 @@ public class CompositeCounterTest {
     c.increment(42);
     clock.setWallTime(3712345L);
     for (Measurement m : c.measure()) {
-      Assert.assertEquals(m.id(), c.id());
-      Assert.assertEquals(m.timestamp(), 3712345L);
-      Assert.assertEquals(m.value(), 42.0, 0.1e-12);
+      Assertions.assertEquals(m.id(), c.id());
+      Assertions.assertEquals(m.timestamp(), 3712345L);
+      Assertions.assertEquals(m.value(), 42.0, 0.1e-12);
     }
   }
 

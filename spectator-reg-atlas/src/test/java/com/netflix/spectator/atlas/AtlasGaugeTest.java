@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,10 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class AtlasGaugeTest {
 
   private ManualClock clock = new ManualClock();
@@ -37,11 +34,11 @@ public class AtlasGaugeTest {
   private void checkValue(long expected) {
     int count = 0;
     for (Measurement m : gauge.measure()) {
-      Assert.assertEquals(gauge.id().withTags(Statistic.gauge, DsType.gauge), m.id());
-      Assert.assertEquals(expected, m.value(), 1e-12);
+      Assertions.assertEquals(gauge.id().withTags(Statistic.gauge, DsType.gauge), m.id());
+      Assertions.assertEquals(expected, m.value(), 1e-12);
       ++count;
     }
-    Assert.assertEquals(1, count);
+    Assertions.assertEquals(1, count);
   }
 
   @Test
@@ -71,15 +68,15 @@ public class AtlasGaugeTest {
   public void expiration() {
     long start = clock.wallTime();
     clock.setWallTime(start + step * 2);
-    Assert.assertTrue(gauge.hasExpired());
+    Assertions.assertTrue(gauge.hasExpired());
 
     gauge.set(1);
-    Assert.assertFalse(gauge.hasExpired());
+    Assertions.assertFalse(gauge.hasExpired());
 
     clock.setWallTime(start + step * 3 + 1);
-    Assert.assertTrue(gauge.hasExpired());
+    Assertions.assertTrue(gauge.hasExpired());
 
     gauge.set(1);
-    Assert.assertFalse(gauge.hasExpired());
+    Assertions.assertFalse(gauge.hasExpired());
   }
 }

@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,22 +20,19 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import com.typesafe.config.ConfigFactory;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@RunWith(JUnit4.class)
 public class SparkNameFunctionTest {
 
   private final Registry registry = new DefaultRegistry();
   private final SparkNameFunction f = SparkNameFunction.fromConfig(ConfigFactory.load(), registry);
 
   private void assertEquals(Id expected, Id actual) {
-    Assert.assertEquals(Utils.normalize(expected), Utils.normalize(actual));
+    Assertions.assertEquals(Utils.normalize(expected), Utils.normalize(actual));
   }
 
   //EXECUTOR
@@ -178,11 +175,11 @@ public class SparkNameFunctionTest {
     final Pattern pattern = Pattern.compile(pattern_string);
     final Matcher m = pattern.matcher(metric);
 
-    Assert.assertEquals(true, m.matches());
-    Assert.assertEquals("97278898-4bd4-49c2-9889-aa5f969a7816-0023", m.group(1));
-    Assert.assertEquals("driver", m.group(2));
-    Assert.assertEquals("jvm.pools.PS-Old-Gen.used", m.group(3));
-    Assert.assertEquals("jvm", m.group(4));
+    Assertions.assertEquals(true, m.matches());
+    Assertions.assertEquals("97278898-4bd4-49c2-9889-aa5f969a7816-0023", m.group(1));
+    Assertions.assertEquals("driver", m.group(2));
+    Assertions.assertEquals("jvm.pools.PS-Old-Gen.used", m.group(3));
+    Assertions.assertEquals("jvm", m.group(4));
   }
 
 

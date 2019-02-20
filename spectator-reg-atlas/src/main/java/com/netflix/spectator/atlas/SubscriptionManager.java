@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2018 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ class SubscriptionManager {
         payload = filterByStep(mapper.readValue(res.entity(), Subscriptions.class));
       }
     } catch (Exception e) {
-      LOGGER.warn("failed to update subscriptions", e);
+      LOGGER.warn("failed to update subscriptions (uri={})", uri, e);
     }
 
     // Update with the current payload, it will be null if there hasn't been a single

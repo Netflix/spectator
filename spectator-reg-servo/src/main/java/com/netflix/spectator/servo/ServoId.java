@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ final class ServoId implements Id {
   private final MonitorConfig config;
 
   /** Create a new instance. */
-  public ServoId(MonitorConfig config) {
+  ServoId(MonitorConfig config) {
     this.config = config;
   }
 
@@ -45,15 +45,15 @@ final class ServoId implements Id {
     return () -> new Iterator<Tag>() {
       private final Iterator<com.netflix.servo.tag.Tag> iter = config.getTags().iterator();
 
-      public boolean hasNext() {
+      @Override public boolean hasNext() {
         return iter.hasNext();
       }
 
-      public Tag next() {
+      @Override public Tag next() {
         return new ServoTag(iter.next());
       }
 
-      public void remove() {
+      @Override public void remove() {
         iter.remove();
       }
     };

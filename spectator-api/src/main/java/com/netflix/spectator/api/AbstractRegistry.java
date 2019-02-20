@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -229,13 +229,28 @@ public abstract class AbstractRegistry implements Registry {
    * The SwapMeter types that are returned will lookup a new copy on the next access.
    */
   protected void removeExpiredMeters() {
+    int total = 0;
+    int expired = 0;
     Iterator<Map.Entry<Id, Meter>> it = meters.entrySet().iterator();
     while (it.hasNext()) {
+      ++total;
       Map.Entry<Id, Meter> entry = it.next();
       Meter m = entry.getValue();
       if (m.hasExpired()) {
+        ++expired;
         it.remove();
       }
     }
+    logger.debug("removed {} expired meters out of {} total", expired, total);
+  }
+
+  /**
+   * This can be called be sub-classes to reset all state for the registry. Typically this
+   * should only be exposed for test registries as most users should not be able to reset the
+   * state and interrupt metrics collection for the overall system.
+   */
+  protected void reset() {
+    meters.clear();
+    state.clear();
   }
 }

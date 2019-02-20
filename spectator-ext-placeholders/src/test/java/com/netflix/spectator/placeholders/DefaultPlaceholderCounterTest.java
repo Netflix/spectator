@@ -1,5 +1,5 @@
-/**
- * Copyright 2015 Netflix, Inc.
+/*
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,8 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +32,6 @@ import java.util.List;
  *
  * Created on 10/8/15.
  */
-@RunWith(JUnit4.class)
 public class DefaultPlaceholderCounterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry(clock);
@@ -43,7 +40,7 @@ public class DefaultPlaceholderCounterTest {
   @Test
   public void testInit() {
     Counter c = new DefaultPlaceholderCounter(new DefaultPlaceholderId("unused", registry), registry);
-    Assert.assertEquals(c.count(), 0L);
+    Assertions.assertEquals(c.count(), 0L);
   }
 
   @Test
@@ -51,23 +48,23 @@ public class DefaultPlaceholderCounterTest {
     String[] tagValue = new String[] { "default" };
     Counter c = factory.counter(factory.createId("testIncrement",
             Collections.singleton(new TestTagFactory(tagValue))));
-    Assert.assertEquals(0L, c.count());
-    Assert.assertEquals("testIncrement:tag=default", c.id().toString());
+    Assertions.assertEquals(0L, c.count());
+    Assertions.assertEquals("testIncrement:tag=default", c.id().toString());
     c.increment();
-    Assert.assertEquals(1L, c.count());
+    Assertions.assertEquals(1L, c.count());
     c.increment();
     c.increment();
-    Assert.assertEquals(3L, c.count());
+    Assertions.assertEquals(3L, c.count());
 
     tagValue[0] = "value2";
-    Assert.assertEquals("testIncrement:tag=value2", c.id().toString());
+    Assertions.assertEquals("testIncrement:tag=value2", c.id().toString());
     c.increment();
-    Assert.assertEquals(1L, c.count());
+    Assertions.assertEquals(1L, c.count());
 
     tagValue[0] = "default";
-    Assert.assertEquals("testIncrement:tag=default", c.id().toString());
+    Assertions.assertEquals("testIncrement:tag=default", c.id().toString());
     c.increment();
-    Assert.assertEquals(4L, c.count());
+    Assertions.assertEquals(4L, c.count());
   }
 
   @Test
@@ -77,11 +74,11 @@ public class DefaultPlaceholderCounterTest {
             Collections.singleton(new TestTagFactory(tagValue))));
 
     c.increment(42);
-    Assert.assertEquals(42L, c.count());
+    Assertions.assertEquals(42L, c.count());
 
     tagValue[0] = "value2";
     c.increment(54);
-    Assert.assertEquals(54L, c.count());
+    Assertions.assertEquals(54L, c.count());
   }
 
   @Test
@@ -100,12 +97,12 @@ public class DefaultPlaceholderCounterTest {
     clock.setWallTime(expectedTime);
     List<Measurement> measurements = Utils.toList(c.measure());
 
-    Assert.assertEquals(1, measurements.size());
+    Assertions.assertEquals(1, measurements.size());
 
     Measurement m = measurements.get(0);
-    Assert.assertEquals(c.id(), m.id());
-    Assert.assertEquals(expectedTime, m.timestamp());
-    Assert.assertEquals(expectedValue, m.value(), 0.1e-12);
+    Assertions.assertEquals(c.id(), m.id());
+    Assertions.assertEquals(expectedTime, m.timestamp());
+    Assertions.assertEquals(expectedValue, m.value(), 0.1e-12);
   }
 
   @Test
@@ -114,6 +111,6 @@ public class DefaultPlaceholderCounterTest {
     Counter c = factory.counter(factory.createId("testHasExpired",
             Collections.singleton(new TestTagFactory(tagValue))));
 
-    Assert.assertFalse(c.hasExpired());
+    Assertions.assertFalse(c.hasExpired());
   }
 }

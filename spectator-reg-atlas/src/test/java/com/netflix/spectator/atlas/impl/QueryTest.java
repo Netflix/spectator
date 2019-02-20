@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Netflix, Inc.
+ * Copyright 2014-2019 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,10 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
-@RunWith(JUnit4.class)
 public class QueryTest {
 
   private final Registry registry = new DefaultRegistry();
@@ -33,28 +30,28 @@ public class QueryTest {
   private Query parse(String expr) {
     Query q1 = Parser.parseQuery(expr);
     Query q2 = Parser.parseQuery(expr);
-    Assert.assertEquals(q1, q2);
-    Assert.assertEquals(expr, q1.toString());
+    Assertions.assertEquals(q1, q2);
+    Assertions.assertEquals(expr, q1.toString());
     return q1;
   }
 
   @Test
   public void trueQuery() {
     Query q = parse(":true");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
   }
 
   @Test
   public void falseQuery() {
     Query q = parse(":false");
-    Assert.assertFalse(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
   }
 
   @Test
   public void eqQuery() {
     Query q = parse("name,foo,:eq");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("bar")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("bar")));
   }
 
   @Test
@@ -68,9 +65,9 @@ public class QueryTest {
   @Test
   public void hasQuery() {
     Query q = parse("bar,:has");
-    Assert.assertFalse(q.matches(registry.createId("bar")));
-    Assert.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
-    Assert.assertFalse(q.matches(registry.createId("foo", "baz", "baz")));
+    Assertions.assertFalse(q.matches(registry.createId("bar")));
+    Assertions.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
+    Assertions.assertFalse(q.matches(registry.createId("foo", "baz", "baz")));
   }
 
   @Test
@@ -81,17 +78,17 @@ public class QueryTest {
         .verify();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void inQueryEmpty() {
-    parse("name,(,),:in");
+    Assertions.assertThrows(IllegalArgumentException.class, () -> parse("name,(,),:in"));
   }
 
   @Test
   public void inQuery() {
     Query q = parse("name,(,bar,foo,),:in");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertTrue(q.matches(registry.createId("bar")));
-    Assert.assertFalse(q.matches(registry.createId("baz")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("bar")));
+    Assertions.assertFalse(q.matches(registry.createId("baz")));
   }
 
   @Test
@@ -105,9 +102,9 @@ public class QueryTest {
   @Test
   public void ltQuery() {
     Query q = parse("name,foo,:lt");
-    Assert.assertFalse(q.matches(registry.createId("foo")));
-    Assert.assertTrue(q.matches(registry.createId("faa")));
-    Assert.assertFalse(q.matches(registry.createId("fzz")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("faa")));
+    Assertions.assertFalse(q.matches(registry.createId("fzz")));
   }
 
   @Test
@@ -121,9 +118,9 @@ public class QueryTest {
   @Test
   public void leQuery() {
     Query q = parse("name,foo,:le");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertTrue(q.matches(registry.createId("faa")));
-    Assert.assertFalse(q.matches(registry.createId("fzz")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("faa")));
+    Assertions.assertFalse(q.matches(registry.createId("fzz")));
   }
 
   @Test
@@ -137,9 +134,9 @@ public class QueryTest {
   @Test
   public void gtQuery() {
     Query q = parse("name,foo,:gt");
-    Assert.assertFalse(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("faa")));
-    Assert.assertTrue(q.matches(registry.createId("fzz")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("faa")));
+    Assertions.assertTrue(q.matches(registry.createId("fzz")));
   }
 
   @Test
@@ -153,9 +150,9 @@ public class QueryTest {
   @Test
   public void geQuery() {
     Query q = parse("name,foo,:ge");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("faa")));
-    Assert.assertTrue(q.matches(registry.createId("fzz")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("faa")));
+    Assertions.assertTrue(q.matches(registry.createId("fzz")));
   }
 
   @Test
@@ -169,17 +166,17 @@ public class QueryTest {
   @Test
   public void reQuery() {
     Query q = parse("name,foo,:re");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("abcfoo")));
-    Assert.assertTrue(q.matches(registry.createId("foobar")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("abcfoo")));
+    Assertions.assertTrue(q.matches(registry.createId("foobar")));
   }
 
   @Test
   public void reicQuery() {
     Query q = parse("name,foO,:reic");
-    Assert.assertTrue(q.matches(registry.createId("fOo")));
-    Assert.assertFalse(q.matches(registry.createId("abcFoo")));
-    Assert.assertTrue(q.matches(registry.createId("Foobar")));
+    Assertions.assertTrue(q.matches(registry.createId("fOo")));
+    Assertions.assertFalse(q.matches(registry.createId("abcFoo")));
+    Assertions.assertTrue(q.matches(registry.createId("Foobar")));
   }
 
   @Test
@@ -193,12 +190,12 @@ public class QueryTest {
   @Test
   public void andQuery() {
     Query q = parse("name,foo,:eq,bar,baz,:eq,:and");
-    Assert.assertFalse(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("bar")));
-    Assert.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
-    Assert.assertFalse(q.matches(registry.createId("bar", "bar", "baz")));
-    Assert.assertFalse(q.matches(registry.createId("foo", "bar", "def")));
-    Assert.assertFalse(q.matches(registry.createId("foo", "abc", "def")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("bar")));
+    Assertions.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
+    Assertions.assertFalse(q.matches(registry.createId("bar", "bar", "baz")));
+    Assertions.assertFalse(q.matches(registry.createId("foo", "bar", "def")));
+    Assertions.assertFalse(q.matches(registry.createId("foo", "abc", "def")));
   }
 
   @Test
@@ -212,12 +209,12 @@ public class QueryTest {
   @Test
   public void orQuery() {
     Query q = parse("name,foo,:eq,bar,baz,:eq,:or");
-    Assert.assertTrue(q.matches(registry.createId("foo")));
-    Assert.assertFalse(q.matches(registry.createId("bar")));
-    Assert.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
-    Assert.assertTrue(q.matches(registry.createId("bar", "bar", "baz")));
-    Assert.assertTrue(q.matches(registry.createId("foo", "bar", "def")));
-    Assert.assertTrue(q.matches(registry.createId("foo", "abc", "def")));
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("bar")));
+    Assertions.assertTrue(q.matches(registry.createId("foo", "bar", "baz")));
+    Assertions.assertTrue(q.matches(registry.createId("bar", "bar", "baz")));
+    Assertions.assertTrue(q.matches(registry.createId("foo", "bar", "def")));
+    Assertions.assertTrue(q.matches(registry.createId("foo", "abc", "def")));
   }
 
   @Test
@@ -231,8 +228,8 @@ public class QueryTest {
   @Test
   public void notQuery() {
     Query q = parse("name,foo,:eq,:not");
-    Assert.assertFalse(q.matches(registry.createId("foo")));
-    Assert.assertTrue(q.matches(registry.createId("bar")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("bar")));
   }
 
   @Test
