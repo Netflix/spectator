@@ -33,8 +33,10 @@ implementations.
 * `ipc.attempt.final`: Indicates if this request was the final attempt of potentially multiple
   retry attempts. Allowed Values = [`true`, `false`].
 * `ipc.server.app`: The `nf.app` of the server the message is being sent *to*.
+* `ipc.server.cluster`: The `nf.cluster` of the server the message is being sent *to*.
 * `ipc.server.asg`: The `nf.asg` of the server the message is being sent *to*.
 * `ipc.client.app`: The `nf.app` of the server the message is being sent *from*.
+* `ipc.client.cluster`: The `nf.cluster` of the server the message is being sent *from*.
 * `ipc.client.asg`: The `nf.asg` of the server the message is being sent *from*.
 * `owner`: The library/impl publishing the metrics, eg. evcache, zuul, grpc, nodequark,
   platform_1_ipc, geoclient, etc ...
@@ -73,6 +75,7 @@ This is a [percentile timer] that is recorded for each inbound message to a serv
 * `ipc.failure.injected`
 * `ipc.attempt`
 * `ipc.client.app`
+* `ipc.client.cluster`
 * `ipc.client.asg`
 * `owner`
 * `id`
@@ -90,6 +93,7 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 * `ipc.status`
 * `ipc.status.detail`
 * `ipc.client.app`
+* `ipc.client.cluster`
 * `ipc.client.asg`
 * `owner`
 * `id`
@@ -107,6 +111,7 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 * `ipc.status`
 * `ipc.status.detail`
 * `ipc.client.app`
+* `ipc.client.cluster`
 * `ipc.client.asg`
 * `owner`
 * `id`
@@ -121,6 +126,7 @@ processed in a server.
 * `ipc.protocol`
 * `ipc.endpoint`
 * `ipc.client.app`
+* `ipc.client.cluster`
 * `ipc.client.asg`
 * `owner`
 * `id`
@@ -143,6 +149,7 @@ This is a [percentile timer] that is recorded for each outbound message from a c
 * `ipc.attempt`
 * `ipc.attempt.final`
 * `ipc.server.app`
+* `ipc.server.cluster`
 * `ipc.server.asg`
 * `owner`
 * `id`
@@ -156,7 +163,11 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 * `ipc.protocol`
 * `ipc.vip`
 * `ipc.endpoint`
+* `ipc.result`
+* `ipc.status`
+* `ipc.status.detail`
 * `ipc.server.app`
+* `ipc.server.cluster`
 * `ipc.server.asg`
 * `owner`
 * `id`
@@ -174,6 +185,7 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 * `ipc.status`
 * `ipc.status.detail`
 * `ipc.server.app`
+* `ipc.server.cluster`
 * `ipc.server.asg`
 * `owner`
 * `id`
@@ -188,10 +200,8 @@ IPC messages from a client.
 * `ipc.protocol`
 * `ipc.vip`
 * `ipc.endpoint`
-* `ipc.result`
-* `ipc.status`
-* `ipc.status.detail`
 * `ipc.server.app`
+* `ipc.server.cluster`
 * `ipc.server.asg`
 * `owner`
 * `id`
