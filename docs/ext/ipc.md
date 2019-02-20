@@ -60,8 +60,7 @@ implementations.
 
 ### ipc.server.call
 
-This is a `com.netflix.spectator.api.histogram.PercentileTimer` that is recorded for each
-inbound message to a server.
+This is a [percentile timer] that is recorded for each inbound message to a server.
 
 #### Dimensions
 
@@ -80,8 +79,7 @@ inbound message to a server.
 
 ### ipc.server.call.size.inbound
 
-This is a `com.netflix.spectator.api.DistributionSummary` of the size in bytes of inbound
-messages received by a server.
+This is a [distribution summary] of the size in bytes of inbound messages received by a server.
 
 #### Dimensions
 
@@ -98,8 +96,7 @@ messages received by a server.
 
 ### ipc.server.call.size.outbound
 
-This is a `com.netflix.spectator.api.DistributionSummary` of the size in bytes of outbound
-messages sent from a server.
+This is a [distribution summary] of the size in bytes of outbound messages sent from a server.
 
 #### Dimensions
 
@@ -116,8 +113,8 @@ messages sent from a server.
 
 ### ipc.server.inflight
 
-This is a `com.netflix.spectator.api.DistributionSummary` that shows the number of inbound
-IPC messages currently being processed in a server.
+This is a [distribution summary] that shows the number of inbound IPC messages currently being
+processed in a server.
 
 #### Dimensions
 
@@ -132,8 +129,7 @@ IPC messages currently being processed in a server.
 
 ### ipc.client.call
 
-This is a `com.netflix.spectator.api.histogram.PercentileTimer` that is recorded for each
-outbound message from a client.
+This is a [percentile timer] that is recorded for each outbound message from a client.
 
 #### Dimensions
 
@@ -153,8 +149,7 @@ outbound message from a client.
 
 ### ipc.client.call.size.inbound
 
-This is a `com.netflix.spectator.api.DistributionSummary` of the size in bytes of inbound
-messages received by a client.
+This is a [distribution summary] of the size in bytes of inbound messages received by a client.
 
 #### Dimensions
 
@@ -168,8 +163,7 @@ messages received by a client.
 
 ### ipc.client.call.size.outbound
 
-This is a `com.netflix.spectator.api.DistributionSummary` of the size in bytes of outbound
-messages sent from a client.
+This is a [distribution summary] of the size in bytes of outbound messages sent from a client.
 
 #### Dimensions
 
@@ -186,8 +180,8 @@ messages sent from a client.
 
 ### ipc.client.inflight
 
-This is a `com.netflix.spectator.api.DistributionSummary` that shows the number of currently
-outstanding outbound IPC messages from a client.
+This is a [distribution summary] that shows the number of currently outstanding outbound
+IPC messages from a client.
 
 #### Dimensions
 
@@ -201,3 +195,6 @@ outstanding outbound IPC messages from a client.
 * `ipc.server.asg`
 * `owner`
 * `id`
+
+[percentile timer]: https://www.javadoc.io/page/com.netflix.spectator/spectator-api/latest/com/netflix/spectator/api/histogram/PercentileTimer.html
+[distribution summary]: ../intro/dist-summary.md
