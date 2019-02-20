@@ -20,7 +20,7 @@ implementations.
 * `ipc.status`: One of a predefined list of status values indicating the general result, eg.
   success, bad_request, timeout, etc… See the _ipc.status values section below_.
 * `ipc.status.detail`: For cases where the ipc.status needs to be further subdivided, this tag
-  can hold an additional more specific detail, likely ipc-implemention specific. eg status of
+  can hold an additional more specific detail, likely ipc-implementation specific. eg status of
   connection_error and detail of no_servers / connect_timeout / ssl_handshake_failure.
 * `ipc.failure.injected`: Indicates that an artificial failure was injected into the request
   processing for testing purposes. The outcome of that failure will be reflected in the other
