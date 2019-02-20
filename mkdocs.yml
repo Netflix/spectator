@@ -18,6 +18,7 @@ nav:
   - 'Netflix Integration': intro/netflix.md
   - 'Servo Comparison': intro/servo-comparison.md
 - Extensions:
+  - 'IPC': ext/ipc.md
   - 'JVM Stats':
     - 'Buffer Pools': ext/jvm-buffer-pools.md
     - 'Garbage Collection': ext/jvm-gc.md
