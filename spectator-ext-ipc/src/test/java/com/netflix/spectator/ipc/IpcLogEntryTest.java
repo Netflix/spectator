@@ -474,7 +474,7 @@ public class IpcLogEntryTest {
         .withHttpStatus(503)
         .convert(this::toMap)
         .get("status");
-    Assertions.assertEquals(IpcStatus.unavailable.value(), actual);
+    Assertions.assertEquals(IpcStatus.throttled.value(), actual);
   }
 
   @Test
