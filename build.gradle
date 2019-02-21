@@ -46,11 +46,28 @@ subprojects {
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
 
-  project.tasks.withType(Javadoc) {
-    if (JavaVersion.current().isJava8Compatible()) {
-      options.addStringOption('Xdoclint:none', '-quiet')
+  tasks {
+    compileJava {
+      options.encoding = 'UTF-8'
+      // Generate java8 bytecode and compile against the java8 class
+      // libraries.
+      if (JavaVersion.current().isJava9Compatible()) {
+        options.compilerArgs.addAll(['--release', '8'])
+      }
+    }
+    compileTestJava {
+      options.encoding = 'UTF-8'
+      sourceCompatibility = JavaVersion.current()
+      targetCompatibility = JavaVersion.current()
+    }
+
+    javadoc {
+      if (JavaVersion.current().isJava8Compatible()) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+      }
     }
   }
+
   javadoc {
     options {
       links = ['http://docs.oracle.com/javase/8/docs/api/']
