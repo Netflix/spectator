@@ -13,7 +13,7 @@ section for the type of project you are working on:
 For libraries, the only dependency that should be needed is:
 
 ```
-com.netflix.spectator:spectator-api:0.83.0
+com.netflix.spectator:spectator-api:0.85.0
 ```
 
 The bindings to integrate internally should be included with the application. In your code,
@@ -130,7 +130,7 @@ If you are only interested in getting the GC logging, there is a library with an
 singleton that can be used:
 
 ```
-com.netflix.spectator:spectator-nflx:0.83.0
+com.netflix.spectator:spectator-nflx:0.85.0
 ```
 
 Assuming you are using karyon/base-server or governator with `com.netflix` in the list of base
