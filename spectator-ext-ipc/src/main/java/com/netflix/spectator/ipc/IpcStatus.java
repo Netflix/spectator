@@ -94,7 +94,11 @@ public enum IpcStatus implements Tag {
   }
 
   /**
-   * Maps HTTP status codes to the appropriate status.
+   * Maps HTTP status codes to the appropriate status. Note, this method follows the historical
+   * convention in Netflix where services would use the service unavailable,
+   * <a href="https://tools.ietf.org/html/rfc7231#section-6.6.4">503</a> status code, to indicate
+   * throttling. To get behavior inline with the RFCs use {@link #forHttpStatusStandard(int)}
+   * instead.
    *
    * @param httpStatus
    *     HTTP status for the request.
@@ -102,6 +106,21 @@ public enum IpcStatus implements Tag {
    *     Status value corresponding to the HTTP status code.
    */
   public static IpcStatus forHttpStatus(int httpStatus) {
+    return forHttpStatusStandard(httpStatus == 503 ? 429 : httpStatus);
+  }
+
+  /**
+   * Maps HTTP status codes to the appropriate status based on the standard RFC definitions.
+   * In particular, <a href="https://tools.ietf.org/html/rfc7231#section-6.6.4">503</a> maps
+   * to {@link #unavailable} and <a href="https://tools.ietf.org/html/rfc6585#section-4">429</a>
+   * maps to {@link #throttled}.
+   *
+   * @param httpStatus
+   *     HTTP status for the request.
+   * @return
+   *     Status value corresponding to the HTTP status code.
+   */
+  public static IpcStatus forHttpStatusStandard(int httpStatus) {
     IpcStatus status;
     switch (httpStatus) {
       case 200: status = success;       break; // OK

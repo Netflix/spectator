@@ -70,7 +70,12 @@ public class IpcStatusTest {
 
   @Test
   public void forHttpStatus503() {
-    Assertions.assertEquals(IpcStatus.unavailable, IpcStatus.forHttpStatus(503));
+    Assertions.assertEquals(IpcStatus.throttled, IpcStatus.forHttpStatus(503));
+  }
+
+  @Test
+  public void forHttpStatusStandard503() {
+    Assertions.assertEquals(IpcStatus.unavailable, IpcStatus.forHttpStatusStandard(503));
   }
 
   @Test
