@@ -66,12 +66,12 @@ public class IpcLogger {
 
   /** Create a new instance. */
   public IpcLogger(Registry registry, Logger logger) {
-    this(registry, Clock.SYSTEM, logger);
+    this(registry, registry.clock(), logger);
   }
 
   /** Create a new instance. */
   public IpcLogger(Registry registry) {
-    this(registry, Clock.SYSTEM, LoggerFactory.getLogger(IpcLogger.class));
+    this(registry, registry.clock(), LoggerFactory.getLogger(IpcLogger.class));
   }
 
   /** Return the number of inflight requests associated with the given id. */
