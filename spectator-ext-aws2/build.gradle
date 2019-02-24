@@ -1,10 +1,9 @@
 dependencies {
   compileApi project(":spectator-api")
-  compileApi "software.amazon.awssdk:core:2.0.0-preview-2"
-  compile "com.fasterxml.jackson.core:jackson-databind"
-  compile "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor"
-  compile "com.fasterxml.jackson.jr:jackson-jr-objects"
-  testCompile "software.amazon.awssdk:cloudwatch:2.0.0-preview-2"
+  compileApi "software.amazon.awssdk:sdk-core"
+
+  compile project(":spectator-ext-ipc")
+  compile "software.amazon.awssdk:aws-core"
 }
 
 jar {
