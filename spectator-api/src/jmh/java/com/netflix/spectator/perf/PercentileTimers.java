@@ -16,6 +16,7 @@
 package com.netflix.spectator.perf;
 
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.histogram.PercentileTimer;
@@ -36,16 +37,30 @@ public class PercentileTimers {
   private final PercentileTimer percentileTimerCached =
       PercentileTimer.get(registry, registry.createId("percentile-cached"));
 
+  private final Id dfltId = registry.createId("default");
+
+  private final Id pctId = registry.createId("percentile");
+
   @Threads(1)
   @Benchmark
   public void defaultTimerGet() {
-    registry.timer("default").record(31, TimeUnit.MILLISECONDS);
+    registry.timer(dfltId).record(31, TimeUnit.MILLISECONDS);
   }
 
   @Threads(1)
   @Benchmark
   public void percentileTimerGet() {
-    PercentileTimer.get(registry, registry.createId("percentile")).record(31, TimeUnit.MILLISECONDS);
+    PercentileTimer.get(registry, pctId).record(31, TimeUnit.MILLISECONDS);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void percentileTimerBuilder() {
+    PercentileTimer.builder(registry)
+        .withId(pctId)
+        .withRange(10, 10000, TimeUnit.MILLISECONDS)
+        .build()
+        .record(31, TimeUnit.MILLISECONDS);
   }
 
   @Threads(1)

@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.IdBuilder;
 import com.netflix.spectator.api.patterns.TagsBuilder;
 
@@ -41,7 +42,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  * highly recommended to set a threshold (see {@link Builder#withRange(long, long)}) whenever
  * possible to greatly restrict the worst case overhead.</p>
  */
-public class PercentileDistributionSummary implements DistributionSummary {
+public final class PercentileDistributionSummary implements DistributionSummary {
 
   // Precomputed values for the corresponding buckets. This is done to avoid expensive
   // String.format calls when creating new instances of a percentile variant. The
@@ -55,6 +56,21 @@ public class PercentileDistributionSummary implements DistributionSummary {
     for (int i = 0; i < length; ++i) {
       TAG_VALUES[i] = String.format("D%04X", i);
     }
+  }
+
+  /**
+   * Only create a new instance of the counter if there is not a cached copy. The array for
+   * keeping track of the counter per bucket is quite large (1-2k depending on pointer size)
+   * and can lead to a high allocation rate if the timer is not reused in a high volume call
+   * site.
+   */
+  private static PercentileDistributionSummary computeIfAbsent(
+      Registry registry, Id id, long min, long max) {
+    Object summary = Utils.computeIfAbsent(
+        registry.state(), id, i -> new PercentileDistributionSummary(registry, id, min, max));
+    return (summary instanceof PercentileDistributionSummary)
+        ? ((PercentileDistributionSummary) summary).withRange(min, max)
+        : new PercentileDistributionSummary(registry, id, min, max);
   }
 
   /**
@@ -151,13 +167,30 @@ public class PercentileDistributionSummary implements DistributionSummary {
   private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
-  PercentileDistributionSummary(Registry registry, Id id, long min, long max) {
+  private PercentileDistributionSummary(Registry registry, Id id, long min, long max) {
+    this(registry, id, min, max, new AtomicReferenceArray<>(PercentileBuckets.length()));
+  }
+
+  /** Create a new instance. */
+  private PercentileDistributionSummary(
+      Registry registry,
+      Id id,
+      long min,
+      long max,
+      AtomicReferenceArray<Counter> counters) {
     this.registry = registry;
     this.id = id;
     this.summary = registry.distributionSummary(id);
     this.min = min;
     this.max = max;
-    this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
+    this.counters = counters;
+  }
+
+  /** Returns a PercentileTimer limited to the specified range. */
+  private PercentileDistributionSummary withRange(long min, long max) {
+    return (this.min == min && this.max == max)
+        ? this
+        : new PercentileDistributionSummary(registry, id, min, max, counters);
   }
 
   @Override public Id id() {

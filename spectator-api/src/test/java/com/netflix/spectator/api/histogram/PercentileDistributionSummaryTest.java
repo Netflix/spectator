@@ -63,4 +63,34 @@ public class PercentileDistributionSummaryTest {
         .build();
     checkPercentiles(t, 25);
   }
+
+  private void checkValue(PercentileDistributionSummary t1, PercentileDistributionSummary t2, double expected) {
+    Assertions.assertEquals(expected, t1.percentile(99.0), expected / 5.0);
+    Assertions.assertEquals(expected, t2.percentile(99.0), expected / 5.0);
+  }
+
+  @Test
+  public void builderWithDifferentThresholds() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t1 = PercentileDistributionSummary.builder(r)
+        .withName("test")
+        .withRange(10, 50)
+        .build();
+    PercentileDistributionSummary t2 = PercentileDistributionSummary.builder(r)
+        .withName("test")
+        .withRange(100, 200)
+        .build();
+
+    t1.record(5);
+    checkValue(t1, t2, 10.0);
+
+    t1.record(500);
+    checkValue(t1, t2, 50.0);
+
+    t2.record(5);
+    checkValue(t1, t2, 100.0);
+
+    t2.record(500);
+    checkValue(t1, t2, 200.0);
+  }
 }
