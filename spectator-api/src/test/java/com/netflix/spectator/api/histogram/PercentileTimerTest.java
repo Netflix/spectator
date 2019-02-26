@@ -67,4 +67,34 @@ public class PercentileTimerTest {
         .build();
     checkPercentiles(t, 0);
   }
+
+  private void checkValue(PercentileTimer t1, PercentileTimer t2, double expected) {
+    Assertions.assertEquals(expected, t1.percentile(99.0), expected / 5.0);
+    Assertions.assertEquals(expected, t2.percentile(99.0), expected / 5.0);
+  }
+
+  @Test
+  public void builderWithDifferentThresholds() {
+    Registry r = newRegistry();
+    PercentileTimer t1 = PercentileTimer.builder(r)
+        .withName("test")
+        .withRange(10, 50, TimeUnit.SECONDS)
+        .build();
+    PercentileTimer t2 = PercentileTimer.builder(r)
+        .withName("test")
+        .withRange(100, 200, TimeUnit.SECONDS)
+        .build();
+
+    t1.record(5, TimeUnit.SECONDS);
+    checkValue(t1, t2, 10.0);
+
+    t1.record(500, TimeUnit.SECONDS);
+    checkValue(t1, t2, 50.0);
+
+    t2.record(5, TimeUnit.SECONDS);
+    checkValue(t1, t2, 100.0);
+
+    t2.record(500, TimeUnit.SECONDS);
+    checkValue(t1, t2, 200.0);
+  }
 }

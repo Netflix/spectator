@@ -105,6 +105,7 @@ public final class CompositeRegistry implements Registry {
       distSummaries.clear();
       timers.clear();
       gauges.clear();
+      state.clear();
     } finally {
       wlock.unlock();
     }

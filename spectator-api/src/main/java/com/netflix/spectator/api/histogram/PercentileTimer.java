@@ -23,6 +23,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.IdBuilder;
 import com.netflix.spectator.api.patterns.TagsBuilder;
 
@@ -66,6 +67,20 @@ public final class PercentileTimer implements Timer {
   }
 
   /**
+   * Only create a new instance of the counter if there is not a cached copy. The array for
+   * keeping track of the counter per bucket is quite large (1-2k depending on pointer size)
+   * and can lead to a high allocation rate if the timer is not reused in a high volume call
+   * site.
+   */
+  private static PercentileTimer computeIfAbsent(Registry registry, Id id, long min, long max) {
+    Object timer = Utils.computeIfAbsent(
+        registry.state(), id, i -> new PercentileTimer(registry, id, min, max));
+    return (timer instanceof PercentileTimer)
+        ? ((PercentileTimer) timer).withRange(min, max)
+        : new PercentileTimer(registry, id, min, max);
+  }
+
+  /**
    * Creates a timer object that can be used for estimating percentiles. <b>Percentile timers
    * are expensive compared to basic timers from the registry.</b> Be diligent with ensuring
    * that any additional dimensions have a small bounded cardinality. It is also highly
@@ -81,7 +96,7 @@ public final class PercentileTimer implements Timer {
    *     the percentiles for the distribution.
    */
   public static PercentileTimer get(Registry registry, Id id) {
-    return new PercentileTimer(registry, id, 0L, Long.MAX_VALUE);
+    return computeIfAbsent(registry, id, 0L, Long.MAX_VALUE);
   }
 
   /**
@@ -163,7 +178,7 @@ public final class PercentileTimer implements Timer {
      */
     public PercentileTimer build() {
       final Id id = baseId.withTags(extraTags);
-      return new PercentileTimer(registry, id, min, max);
+      return computeIfAbsent(registry, id, min, max);
     }
   }
 
@@ -175,13 +190,30 @@ public final class PercentileTimer implements Timer {
   private final AtomicReferenceArray<Counter> counters;
 
   /** Create a new instance. */
-  PercentileTimer(Registry registry, Id id, long min, long max) {
+  private PercentileTimer(Registry registry, Id id, long min, long max) {
+    this(registry, id, min, max, new AtomicReferenceArray<>(PercentileBuckets.length()));
+  }
+
+  /** Create a new instance. */
+  private PercentileTimer(
+      Registry registry,
+      Id id,
+      long min,
+      long max,
+      AtomicReferenceArray<Counter> counters) {
     this.registry = registry;
     this.id = id;
     this.timer = registry.timer(id);
     this.min = min;
     this.max = max;
-    this.counters = new AtomicReferenceArray<>(PercentileBuckets.length());
+    this.counters = counters;
+  }
+
+  /** Returns a PercentileTimer limited to the specified range. */
+  private PercentileTimer withRange(long min, long max) {
+    return (this.min == min && this.max == max)
+        ? this
+        : new PercentileTimer(registry, id, min, max, counters);
   }
 
   @Override public Id id() {
