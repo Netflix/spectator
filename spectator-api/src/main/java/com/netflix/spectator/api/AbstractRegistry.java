@@ -242,6 +242,27 @@ public abstract class AbstractRegistry implements Registry {
       }
     }
     logger.debug("removed {} expired meters out of {} total", expired, total);
+    cleanupCachedState();
+  }
+
+  /**
+   * Cleanup any expired meter patterns stored in the state. It should only be used as
+   * a cache so the entry should get recreated if needed.
+   */
+  private void cleanupCachedState() {
+    int total = 0;
+    int expired = 0;
+    Iterator<Map.Entry<Id, Object>> it = state.entrySet().iterator();
+    while (it.hasNext()) {
+      ++total;
+      Map.Entry<Id, Object> entry = it.next();
+      Object obj = entry.getValue();
+      if (obj instanceof Meter && ((Meter) obj).hasExpired()) {
+        ++expired;
+        it.remove();
+      }
+    }
+    logger.debug("removed {} expired entries from cache out of {} total", expired, total);
   }
 
   /**
