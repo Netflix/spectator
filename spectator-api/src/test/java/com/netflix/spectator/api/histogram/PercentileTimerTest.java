@@ -17,7 +17,10 @@ package com.netflix.spectator.api.histogram;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.ExpiringRegistry;
+import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -96,5 +99,51 @@ public class PercentileTimerTest {
 
     t2.record(500, TimeUnit.SECONDS);
     checkValue(t1, t2, 200.0);
+  }
+
+  @Test
+  public void expiration() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry r = new ExpiringRegistry(clock);
+    PercentileTimer t = PercentileTimer.builder(r)
+        .withName("test")
+        .build();
+
+    Assertions.assertFalse(t.hasExpired());
+    t.record(5, TimeUnit.SECONDS);
+    Assertions.assertEquals(1, r.timer("test").count());
+
+    clock.setWallTime(1);
+    Assertions.assertTrue(t.hasExpired());
+    r.removeExpiredMeters();
+    Assertions.assertNull(r.state().get(t.id()));
+
+    t.record(5, TimeUnit.SECONDS);
+    Assertions.assertFalse(t.hasExpired());
+    Assertions.assertEquals(1, r.timer("test").count());
+  }
+
+  @Test
+  public void expirationGlobalRegistry() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry r = new ExpiringRegistry(clock);
+    Spectator.globalRegistry().removeAll();
+    Spectator.globalRegistry().add(r);
+    PercentileTimer t = PercentileTimer.builder(Spectator.globalRegistry())
+        .withName("test")
+        .build();
+
+    Assertions.assertFalse(t.hasExpired());
+    t.record(5, TimeUnit.SECONDS);
+    Assertions.assertEquals(1, r.timer("test").count());
+
+    clock.setWallTime(1);
+    Assertions.assertTrue(t.hasExpired());
+    r.removeExpiredMeters();
+    Assertions.assertNull(r.state().get(t.id()));
+
+    t.record(5, TimeUnit.SECONDS);
+    Assertions.assertFalse(t.hasExpired());
+    Assertions.assertEquals(1, r.timer("test").count());
   }
 }
