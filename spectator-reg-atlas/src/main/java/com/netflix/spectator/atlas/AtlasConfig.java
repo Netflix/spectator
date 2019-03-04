@@ -145,10 +145,10 @@ public interface AtlasConfig extends RegistryConfig {
   /**
    * Returns a pattern indicating the valid characters for a tag key or value. The character
    * set for tag values can be overridden for a particular tag key using
-   * {@link #validTagValueCharacters()}. The default is {@code -._A-Za-z0-9}.
+   * {@link #validTagValueCharacters()}. The default is {@code -._A-Za-z0-9~^}.
    */
   default String validTagCharacters() {
-    return "-._A-Za-z0-9~";
+    return "-._A-Za-z0-9~^";
   }
 
   /**

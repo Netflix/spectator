@@ -89,7 +89,7 @@ public class AtlasConfigTest {
   }
 
   @Test
-  public void defaultValidCharsTilde() {
+  public void defaultValidChars() {
     Map<String, String> props = Collections.emptyMap();
     AtlasConfig config = props::get;
     AsciiSet set = AsciiSet.fromPattern(config.validTagCharacters());
@@ -98,6 +98,7 @@ public class AtlasConfigTest {
     Assertions.assertTrue(set.contains('c'));
     Assertions.assertTrue(set.contains('C'));
     Assertions.assertTrue(set.contains('~'));
+    Assertions.assertTrue(set.contains('^'));
     Assertions.assertTrue(set.contains('_'));
     Assertions.assertFalse(set.contains('!'));
     Assertions.assertFalse(set.contains('%'));
