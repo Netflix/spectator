@@ -48,7 +48,7 @@ import java.util.HashMap;
  */
 @RequestMapping("/spectator/metrics")
 @RestController
-@ConditionalOnExpression("${spectator.webEndpoint.enabled:false}")
+@ConditionalOnExpression("${spectator.web-endpoint.enabled:false}")
 public class MetricsController {
   @Autowired
   private Registry registry;
@@ -58,13 +58,13 @@ public class MetricsController {
    */
   public static final Predicate<Measurement> ALL_MEASUREMENTS_FILTER = m -> true;
 
-  @Value("${spectator.applicationName:}")
+  @Value("${spectator.application-name:}")
   private String applicationName;
 
-  @Value("${spectator.applicationVersion:}")
+  @Value("${spectator.application-version:}")
   private String applicationVersion;
 
-  @Value("${spectator.webEndpoint.prototypeFilter.path:}")
+  @Value("${spectator.web-endpoint.prototype-filter.path:}")
   private String prototypeFilterPath;
 
   private final Map<Id, String> knownMeterKinds = new HashMap<>();
