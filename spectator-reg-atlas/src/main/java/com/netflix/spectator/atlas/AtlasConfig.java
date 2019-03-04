@@ -148,7 +148,7 @@ public interface AtlasConfig extends RegistryConfig {
    * {@link #validTagValueCharacters()}. The default is {@code -._A-Za-z0-9}.
    */
   default String validTagCharacters() {
-    return "-._A-Za-z0-9";
+    return "-._A-Za-z0-9~";
   }
 
   /**
