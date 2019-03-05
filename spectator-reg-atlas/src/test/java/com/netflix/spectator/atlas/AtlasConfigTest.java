@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.impl.AsciiSet;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -85,5 +86,23 @@ public class AtlasConfigTest {
     props.put("atlas.lwc.enabled", "abc");
     AtlasConfig config = props::get;
     Assertions.assertFalse(config.lwcEnabled());
+  }
+
+  @Test
+  public void defaultValidChars() {
+    Map<String, String> props = Collections.emptyMap();
+    AtlasConfig config = props::get;
+    AsciiSet set = AsciiSet.fromPattern(config.validTagCharacters());
+    // quick sanity check of the allowed values
+    Assertions.assertTrue(set.contains('7'));
+    Assertions.assertTrue(set.contains('c'));
+    Assertions.assertTrue(set.contains('C'));
+    Assertions.assertTrue(set.contains('~'));
+    Assertions.assertTrue(set.contains('^'));
+    Assertions.assertTrue(set.contains('_'));
+    Assertions.assertFalse(set.contains('!'));
+    Assertions.assertFalse(set.contains('%'));
+    Assertions.assertFalse(set.contains('/'));
+    Assertions.assertFalse(set.contains(':'));
   }
 }
