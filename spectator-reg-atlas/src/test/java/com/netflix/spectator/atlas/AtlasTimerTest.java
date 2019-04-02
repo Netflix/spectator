@@ -34,7 +34,7 @@ public class AtlasTimerTest {
   private long step = 10000L;
   private AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step, step);
 
-  private void checkValue(long count, long amount, double square, long max) {
+  private void checkValue(long count, double amount, double square, long max) {
     int num = 0;
     for (Measurement m : dist.measure()) {
       String stat = Utils.getTagValue(m.id(), "statistic");
@@ -58,7 +58,10 @@ public class AtlasTimerTest {
           throw new IllegalArgumentException("unknown stat: " + stat);
       }
       Assertions.assertEquals(count, dist.count());
-      Assertions.assertEquals(amount, dist.totalTime());
+      // This method cannot handle overflows
+      if (amount < Long.MAX_VALUE) {
+        Assertions.assertEquals(amount, dist.totalTime());
+      }
       ++num;
     }
     Assertions.assertEquals(4, num);
@@ -92,6 +95,20 @@ public class AtlasTimerTest {
     dist.record(2, TimeUnit.MILLISECONDS);
     clock.setWallTime(step + 1);
     checkValue(1, 2000000L, 4000000000000L, 2000000L);
+  }
+
+  @Test
+  public void recordOverflow() {
+    // Simulate case where we have old items in a queue and when processing again we record
+    // the ages of many of those items in a short span
+    long amount = TimeUnit.DAYS.toNanos(14);
+    double square = 0.0;
+    for (int i = 0; i < 10000; ++i) {
+      dist.record(amount, TimeUnit.NANOSECONDS);
+      square += (double) amount * amount;
+    }
+    clock.setWallTime(step + 1);
+    checkValue(10000, 10e3 * amount, square, amount);
   }
 
   @Test
