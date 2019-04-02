@@ -16,10 +16,12 @@
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.BasicTag;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.Preconditions;
 
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -71,6 +73,11 @@ public final class ThreadPoolMonitor {
   static final String COMPLETED_TASK_COUNT = "threadpool.completedTaskCount";
 
   /**
+   * Rejected task count meter name.
+   */
+  static final String REJECTED_TASK_COUNT = "threadpool.rejectedTaskCount";
+
+  /**
    * Current threads busy meter name.
    */
   static final String CURRENT_THREADS_BUSY = "threadpool.currentThreadsBusy";
@@ -99,11 +106,17 @@ public final class ThreadPoolMonitor {
   private ThreadPoolMonitor() { }
 
   /**
-   * Register the provided thread pool, optionally tagged with a name.
+   * Register the provided thread pool, optionally tagged with a name. If a custom
+   * {@link RejectedExecutionHandler} is going to be used, then it should be set on the pool
+   * prior to attaching. Otherwise it will overwrite the wrapped rejection handler used to
+   * track the number of rejected tasks from this pool.
    *
-   * @param registry the registry to use
-   * @param threadPool the thread pool on which to attach monitoring
-   * @param threadPoolName a name with which to tag the metrics (default name used if {@code null} or empty)
+   * @param registry
+   *     The registry to use.
+   * @param threadPool
+   *     The thread pool to monitor.
+   * @param threadPoolName
+   *     A name with which to tag the metrics (default name used if {@code null} or empty).
    */
   public static void attach(
       final Registry registry,
@@ -150,5 +163,14 @@ public final class ThreadPoolMonitor {
         .withName(QUEUE_SIZE)
         .withTag(idTag)
         .monitorValue(threadPool, tp -> tp.getQueue().size());
+
+    // Handler is not allowed to be null, checked internally to thread pool
+    Counter rejected = registry.counter(registry.createId(REJECTED_TASK_COUNT).withTag(idTag));
+    RejectedExecutionHandler handler = threadPool.getRejectedExecutionHandler();
+    RejectedExecutionHandler monitoredHandler = (Runnable r, ThreadPoolExecutor exec) -> {
+      rejected.increment();
+      handler.rejectedExecution(r, exec);
+    };
+    threadPool.setRejectedExecutionHandler(monitoredHandler);
   }
 }

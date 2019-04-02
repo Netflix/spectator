@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -243,6 +244,22 @@ public class ThreadPoolMonitorTest {
   @Test
   public void threadPoolMonitorHasQueueSizeMeter() {
     Assertions.assertNotNull(getMeter(ThreadPoolMonitor.QUEUE_SIZE));
+  }
+
+  @Test
+  public void threadPoolMonitorHasRejectedExecutionsCounter() {
+    ThreadPoolMonitor.attach(registry, latchedExecutor, THREAD_POOL_NAME);
+    latchedExecutor.shutdown();
+    int rejected = 0;
+    try {
+      latchedExecutor.submit(() -> {});
+    } catch (RejectedExecutionException e) {
+      e.printStackTrace();
+      ++rejected;
+    }
+    Counter c = registry.counter(ThreadPoolMonitor.REJECTED_TASK_COUNT, "id", THREAD_POOL_NAME);
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(rejected, c.count());
   }
 
   @Test
