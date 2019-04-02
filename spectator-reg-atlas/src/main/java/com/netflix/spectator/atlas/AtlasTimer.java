@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicLong;
 class AtlasTimer extends AtlasMeter implements Timer {
 
   private final StepLong count;
-  private final StepLong total;
+  private final StepDouble total;
   private final StepDouble totalOfSquares;
   private final StepLong max;
 
@@ -61,7 +61,7 @@ class AtlasTimer extends AtlasMeter implements Timer {
   AtlasTimer(Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
     this.count = new StepLong(0L, clock, step);
-    this.total = new StepLong(0L, clock, step);
+    this.total = new StepDouble(0.0, clock, step);
     this.totalOfSquares = new StepDouble(0.0, clock, step);
     this.max = new StepLong(0L, clock, step);
     this.stats = new Id[] {
@@ -140,6 +140,9 @@ class AtlasTimer extends AtlasMeter implements Timer {
   }
 
   @Override public long totalTime() {
-    return total.poll();
+    // Cannot change the return type since this is a public API so the result of this can
+    // potentially overflow and result in a negative value. This is predominately used for
+    // unit tests so it is rarely a problem in practice. API can be revisited in 2.0.
+    return (long) total.poll();
   }
 }
