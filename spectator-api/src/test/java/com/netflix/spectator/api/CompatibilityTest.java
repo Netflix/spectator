@@ -194,6 +194,7 @@ public class CompatibilityTest {
     EXPECTED.add("Measurement(threadpool.maxThreads:id=test-pool,1234567890,2.147483647E9)");
     EXPECTED.add("Measurement(threadpool.poolSize:id=test-pool,1234567890,0.0)");
     EXPECTED.add("Measurement(threadpool.queueSize:id=test-pool,1234567890,0.0)");
+    EXPECTED.add("Measurement(threadpool.rejectedTaskCount:id=test-pool,1234567890,0.0)");
     EXPECTED.add("Measurement(threadpool.taskCount:id=test-pool,1234567890,0.0)");
     EXPECTED.add("Measurement(timer:a=b:statistic=count,1234567890,24.0)");
     EXPECTED.add("Measurement(timer:a=b:statistic=totalTime,1234567890,4.53852000126E14)");
