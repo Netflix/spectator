@@ -52,6 +52,17 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
+   * Returns true if the registry should automatically start the background reporting threads
+   * in the constructor. When using DI systems this can be used to automatically start the
+   * registry when it is constructed. Otherwise the {@code AtlasRegistry.start()} method will
+   * need to be called explicitly. Default is false.
+   */
+  default boolean autoStart() {
+    String v = get("atlas.autoStart");
+    return v != null && Boolean.valueOf(v);
+  }
+
+  /**
    * Returns the number of threads to use with the scheduler. The default is
    * 2 threads.
    */
