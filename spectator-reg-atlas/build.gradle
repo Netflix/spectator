@@ -4,6 +4,7 @@ dependencies {
   compile 'com.fasterxml.jackson.core:jackson-core'
   compile 'com.fasterxml.jackson.core:jackson-databind'
   compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-smile'
+  compile 'javax.inject:javax.inject'
   jmh project(':spectator-api')
 }
 
