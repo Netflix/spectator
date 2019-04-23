@@ -19,7 +19,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.multibindings.OptionalBinder;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.ManualClock;
@@ -49,9 +48,7 @@ public class SpectatorModuleTest {
     Injector injector = Guice.createInjector(
         new AbstractModule() {
           @Override protected void configure() {
-            OptionalBinder.newOptionalBinder(binder(), Clock.class)
-                .setBinding()
-                .toInstance(clock);
+            bind(Clock.class).toInstance(clock);
           }
         },
         new SpectatorModule());

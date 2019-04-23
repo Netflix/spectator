@@ -39,8 +39,6 @@ import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
 import com.netflix.spectator.ipc.http.HttpResponse;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -57,8 +55,7 @@ import java.util.stream.StreamSupport;
 /**
  * Registry for reporting metrics to Atlas.
  */
-@Singleton
-public final class AtlasRegistry extends AbstractRegistry implements AutoCloseable {
+public final class AtlasRegistry extends AbstractRegistry {
 
   private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
 
@@ -93,7 +90,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final SubscriptionManager subManager;
 
   /** Create a new instance. */
-  @Inject
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     super(clock, config);
     this.config = config;
@@ -125,10 +121,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.client = HttpClient.create(this);
 
     this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
-
-    if (config.autoStart()) {
-      start();
-    }
   }
 
   /**
@@ -189,15 +181,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     } else {
       logger.warn("registry stopped, but was never started");
     }
-  }
-
-  /**
-   * Stop the scheduler reporting Atlas data. This is the same as calling {@link #stop()} and
-   * is included to allow the registry to be stopped correctly when used with DI frameworks that
-   * support lifecycle management.
-   */
-  @Override public void close() {
-    stop();
   }
 
   /** Collect data and send to Atlas. */

@@ -18,15 +18,13 @@ package com.netflix.spectator.nflx;
 import com.google.inject.Inject;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.OptionalBinder;
-import com.google.inject.name.Names;
 import com.netflix.archaius.api.Config;
 import com.netflix.servo.SpectatorContext;
 import com.netflix.spectator.api.Clock;
-import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.atlas.AtlasConfig;
 import com.netflix.spectator.atlas.AtlasRegistry;
 
-import javax.inject.Named;
+import javax.annotation.PreDestroy;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
@@ -34,6 +32,8 @@ import com.google.inject.AbstractModule;
 import com.netflix.spectator.api.ExtendedRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -72,22 +72,17 @@ import java.util.Map;
  */
 public final class SpectatorModule extends AbstractModule {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorModule.class);
+
   @Override protected void configure() {
-    bind(Plugin.class).asEagerSingleton();
+    bind(Plugin.class).toProvider(PluginProvider.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
-    bind(Config.class)
-        .annotatedWith(Names.named("spectator"))
-        .toProvider(ConfigProvider.class);
-    bind(AtlasConfig.class).to(AtlasConfiguration.class);
     OptionalBinder.newOptionalBinder(binder(), ExtendedRegistry.class)
         .setDefault()
         .toInstance(Spectator.registry());
-    OptionalBinder.newOptionalBinder(binder(), Clock.class)
-        .setDefault()
-        .toInstance(Clock.SYSTEM);
     OptionalBinder.newOptionalBinder(binder(), Registry.class)
         .setDefault()
-        .to(AtlasRegistry.class)
+        .toProvider(RegistryProvider.class)
         .in(Scopes.SINGLETON);
   }
 
@@ -99,66 +94,94 @@ public final class SpectatorModule extends AbstractModule {
     return getClass().hashCode();
   }
 
-  @Singleton
-  private static class ConfigProvider implements Provider<Config> {
+  private static class PluginProvider implements Provider<Plugin> {
+    private final Plugin plugin;
+
+    @Inject
+    PluginProvider(Registry registry, OptionalInjections opts) {
+      plugin = new Plugin(registry, opts.config());
+    }
+
+    @Override public Plugin get() {
+      return plugin;
+    }
+  }
+
+  private static class OptionalInjections {
     @Inject(optional = true)
     private Config config;
 
     private Config atlasConfig;
 
-    @Override public Config get() {
+    @Inject(optional = true)
+    private Clock clock;
+
+    Config config() {
       if (atlasConfig == null) {
         atlasConfig = NetflixConfig.createConfig(config);
       }
+
       return atlasConfig;
+    }
+
+    Clock clock() {
+      return (clock == null) ? Clock.SYSTEM : clock;
     }
   }
 
-  private static class StaticManager implements AutoCloseable {
+  private static class StaticManager {
     private final Registry registry;
 
     @Inject
     StaticManager(Registry registry) {
       this.registry = registry;
       Spectator.globalRegistry().add(registry);
-      SpectatorContext.setRegistry(registry);
     }
 
-    @Override public void close() {
+    @PreDestroy
+    void onShutdown() {
       Spectator.globalRegistry().remove(registry);
-      SpectatorContext.setRegistry(new NoopRegistry());
     }
   }
 
   @Singleton
-  private static class AtlasConfiguration implements AtlasConfig {
+  private static class RegistryProvider implements Provider<Registry>, AutoCloseable {
 
-    private final Config cfg;
+    private final AtlasRegistry registry;
 
     @Inject
-    AtlasConfiguration(@Named("spectator") Config cfg) {
-      this.cfg = cfg;
+    RegistryProvider(OptionalInjections opts) {
+      final Config config = opts.config();
+      final Map<String, String> nflxCommonTags = NetflixConfig.commonTags();
+
+      LOGGER.info("using AtlasRegistry and delegating Servo operations to Spectator");
+      AtlasConfig cfg = new AtlasConfig() {
+        @Override public String get(String k) {
+          final String prop = "netflix.spectator.registry." + k;
+          return config.getString(prop, null);
+        }
+
+        @Override public boolean enabled() {
+          String v = get("atlas.enabled");
+          return v != null && Boolean.valueOf(v);
+        }
+
+        @Override
+        public Map<String, String> commonTags() {
+          return nflxCommonTags;
+        }
+      };
+      registry = new AtlasRegistry(opts.clock(), cfg);
+      registry.start();
+      SpectatorContext.setRegistry(registry);
     }
 
-    private final Map<String, String> nflxCommonTags = NetflixConfig.commonTags();
-
-    @Override public String get(String k) {
-      final String prop = "netflix.spectator.registry." + k;
-      return cfg.getString(prop, null);
+    @Override public void close() {
+      registry.stop();
     }
 
-    @Override public boolean enabled() {
-      String v = get("atlas.enabled");
-      return v != null && Boolean.valueOf(v);
-    }
-
-    @Override public boolean autoStart() {
-      return true;
-    }
-
-    @Override
-    public Map<String, String> commonTags() {
-      return nflxCommonTags;
+    @Override public Registry get() {
+      return registry;
     }
   }
 }
