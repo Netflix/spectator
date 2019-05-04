@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 /**
@@ -39,7 +40,7 @@ final class Plugin {
 
   /** Create a new instance. */
   @Inject
-  Plugin(Registry registry, Config config) {
+  Plugin(Registry registry, @Named("spectator") Config config) {
 
     final boolean enabled = config.getBoolean(ENABLED_PROP, true);
     if (enabled) {
