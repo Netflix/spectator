@@ -73,6 +73,9 @@ import java.util.Map;
 public final class SpectatorModule extends AbstractModule {
 
   @Override protected void configure() {
+    // Servo is all based on static classes. The context for servo needs to be set as early
+    // as possible to avoid missing metrics because the context has not yet been set.
+    SpectatorContext.setRegistry(Spectator.globalRegistry());
     bind(Plugin.class).asEagerSingleton();
     bind(StaticManager.class).asEagerSingleton();
     bind(Config.class)
@@ -121,12 +124,10 @@ public final class SpectatorModule extends AbstractModule {
     StaticManager(Registry registry) {
       this.registry = registry;
       Spectator.globalRegistry().add(registry);
-      SpectatorContext.setRegistry(registry);
     }
 
     @Override public void close() {
       Spectator.globalRegistry().remove(registry);
-      SpectatorContext.setRegistry(new NoopRegistry());
     }
   }
 
