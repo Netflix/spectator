@@ -22,7 +22,6 @@ import com.google.inject.name.Names;
 import com.netflix.archaius.api.Config;
 import com.netflix.servo.SpectatorContext;
 import com.netflix.spectator.api.Clock;
-import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.atlas.AtlasConfig;
 import com.netflix.spectator.atlas.AtlasRegistry;
 
