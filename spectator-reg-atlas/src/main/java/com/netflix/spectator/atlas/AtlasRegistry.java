@@ -26,6 +26,7 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.atlas.impl.EvalPayload;
@@ -48,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -86,6 +88,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
 
+  private final Registry debugRegistry;
+
   private final HttpClient client;
 
   private Scheduler scheduler;
@@ -122,7 +126,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
-    this.client = HttpClient.create(this);
+    this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
+
+    this.client = HttpClient.create(debugRegistry);
 
     this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
 
@@ -141,7 +147,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
           .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
           .withStopOnFailure(false);
-      scheduler = new Scheduler(this, "spectator-reg-atlas", numThreads);
+      scheduler = new Scheduler(debugRegistry, "spectator-reg-atlas", numThreads);
       scheduler.schedule(options, this::collectData);
       logger.info("started collecting metrics every {} reporting to {}", step, uri);
       logger.info("common tags: {}", commonTags);
@@ -300,12 +306,12 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         // Local clock is running fast compared to the server. Note this should also be the
         // common case for if the clocks are in sync as there will be some delay for the server
         // response to reach this node.
-        timer(CLOCK_SKEW_TIMER, "id", "fast").record(delta, TimeUnit.MILLISECONDS);
+        debugRegistry.timer(CLOCK_SKEW_TIMER, "id", "fast").record(delta, TimeUnit.MILLISECONDS);
       } else {
         // Local clock is running slow compared to the server. This means the response timestamp
         // appears to be after the current time on this node. The timer will ignore negative
         // values so we negate and record it with a different id.
-        timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
+        debugRegistry.timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
       }
       logger.debug("clock skew between client and server: {}ms", delta);
     }
@@ -342,8 +348,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   /** Get a list of all measurements and break them into batches. */
   List<List<Measurement>> getBatches() {
-    List<List<Measurement>> batches = new ArrayList<>();
     List<Measurement> ms = getMeasurements().collect(Collectors.toList());
+    debugRegistry.distributionSummary("spectator.registrySize").record(ms.size());
+
+    List<List<Measurement>> batches = new ArrayList<>();
     for (int i = 0; i < ms.size(); i += batchSize) {
       List<Measurement> batch = ms.subList(i, Math.min(ms.size(), i + batchSize));
       batches.add(batch);
