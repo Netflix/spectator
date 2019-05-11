@@ -55,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import java.util.zip.Deflater;
 
 /**
  * Registry for reporting metrics to Atlas.
@@ -231,6 +232,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
               .withConnectTimeout(connectTimeout)
               .withReadTimeout(readTimeout)
               .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
+              .compress(Deflater.BEST_SPEED)
               .send();
           Instant date = res.dateHeader("Date");
           recordClockSkew((date == null) ? 0L : date.toEpochMilli());
