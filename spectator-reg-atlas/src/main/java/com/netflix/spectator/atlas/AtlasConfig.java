@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
 
 import java.time.Duration;
@@ -168,5 +169,15 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default Map<String, String> validTagValueCharacters() {
     return Collections.emptyMap();
+  }
+
+  /**
+   * Returns a registry to use for recording metrics about the behavior of the AtlasRegistry.
+   * By default it will return null and the metrics will be reported to itself. In some cases
+   * it is useful to customize this for debugging so that the metrics for the behavior of
+   * AtlasRegistry will have a different failure mode than AtlasRegistry.
+   */
+  default Registry debugRegistry() {
+    return null;
   }
 }

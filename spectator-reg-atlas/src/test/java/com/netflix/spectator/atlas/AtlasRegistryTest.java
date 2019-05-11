@@ -17,12 +17,15 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
+import com.netflix.spectator.api.Registry;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,11 +36,20 @@ public class AtlasRegistryTest {
   private AtlasRegistry registry = new AtlasRegistry(clock, newConfig());
 
   private AtlasConfig newConfig() {
-    ConcurrentHashMap<String, String> props = new ConcurrentHashMap<>();
+    Map<String, String> props = new LinkedHashMap<>();
     props.put("atlas.enabled", "false");
     props.put("atlas.step", "PT10S");
     props.put("atlas.batchSize", "3");
-    return props::get;
+
+    return new AtlasConfig() {
+      @Override public String get(String k) {
+        return props.get(k);
+      }
+
+      @Override public Registry debugRegistry() {
+        return new NoopRegistry();
+      }
+    };
   }
 
   private List<Measurement> getMeasurements() {
