@@ -90,6 +90,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   private final Registry debugRegistry;
 
+  private final RollupPolicy rollupPolicy;
+
   private final HttpClient client;
 
   private Scheduler scheduler;
@@ -127,6 +129,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
+
+    this.rollupPolicy = config.rollupPolicy();
 
     this.client = HttpClient.create(debugRegistry);
 
@@ -348,8 +352,11 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   /** Get a list of all measurements and break them into batches. */
   List<List<Measurement>> getBatches() {
-    List<Measurement> ms = getMeasurements().collect(Collectors.toList());
-    debugRegistry.distributionSummary("spectator.registrySize").record(ms.size());
+    List<Measurement> input = getMeasurements().collect(Collectors.toList());
+    debugRegistry.distributionSummary("spectator.registrySize").record(input.size());
+
+    List<Measurement> ms = rollupPolicy.apply(input);
+    debugRegistry.distributionSummary("spectator.rollupResultSize").record(ms.size());
 
     List<List<Measurement>> batches = new ArrayList<>();
     for (int i = 0; i < ms.size(); i += batchSize) {
