@@ -180,4 +180,13 @@ public interface AtlasConfig extends RegistryConfig {
   default Registry debugRegistry() {
     return null;
   }
+
+  /**
+   * Returns a rollup policy that will be applied to the measurements before sending to Atlas.
+   * The policy will not be applied to data going to the streaming path. Default is a no-op
+   * policy.
+   */
+  default RollupPolicy rollupPolicy() {
+    return RollupPolicy.noop();
+  }
 }
