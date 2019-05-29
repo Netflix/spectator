@@ -16,13 +16,11 @@
 package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.typesafe.config.Config;
 
 import javax.management.ObjectName;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -77,7 +75,7 @@ final class JmxMeasurementConfig {
   /**
    * Fill in {@code ms} with measurements extracted from {@code data}.
    */
-  void measure(Registry registry, JmxData data, List<Measurement> ms) {
+  void measure(Registry registry, JmxData data) {
     Map<String, String> tags = tagMappings.entrySet().stream().collect(Collectors.toMap(
         Map.Entry::getKey,
         e -> MappingExpr.substitute(e.getValue(), data.getStringAttrs())
@@ -98,7 +96,7 @@ final class JmxMeasurementConfig {
       if (counter) {
         updateCounter(registry, id, v.longValue());
       } else {
-        ms.add(new Measurement(id, registry.clock().wallTime(), v));
+        registry.gauge(id).set(v);
       }
     }
   }

@@ -22,8 +22,7 @@ import com.netflix.spectator.api.Registry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
 
 /** Meter based on a {@link JmxConfig}. */
 final class JmxMeter implements Meter {
@@ -47,18 +46,17 @@ final class JmxMeter implements Meter {
 
   @Override
   public Iterable<Measurement> measure() {
-
-    List<Measurement> ms = new ArrayList<>();
     try {
       for (JmxData data : JmxData.query(config.getQuery())) {
         for (JmxMeasurementConfig cfg : config.getMeasurements()) {
-          cfg.measure(registry, data, ms);
+          cfg.measure(registry, data);
         }
       }
     } catch (Exception e) {
       LOGGER.warn("failed to query jmx data: {}", config.getQuery().getCanonicalName(), e);
     }
-    return ms;
+    // The measure will update counter/gauge values in the registry directly
+    return Collections.emptyList();
   }
 
   @Override public boolean hasExpired() {
