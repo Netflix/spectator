@@ -27,14 +27,14 @@ public class AgentTest {
 
   @Test
   public void loadConfigA() {
-    Config config = Agent.loadConfig("a");
+    Config config = Agent.loadConfig(Agent.parseResourceList("a"));
     Assertions.assertEquals("a", config.getString("option"));
     Assertions.assertTrue(config.getBoolean("a"));
   }
 
   @Test
   public void loadConfigAB() {
-    Config config = Agent.loadConfig("a,b");
+    Config config = Agent.loadConfig(Agent.parseResourceList("a,b"));
     Assertions.assertEquals("b", config.getString("option"));
     Assertions.assertTrue(config.getBoolean("a"));
     Assertions.assertTrue(config.getBoolean("b"));
@@ -42,7 +42,7 @@ public class AgentTest {
 
   @Test
   public void loadConfigABC() {
-    Config config = Agent.loadConfig("a\tb, \nc");
+    Config config = Agent.loadConfig(Agent.parseResourceList("a\tb, \nc"));
     Assertions.assertEquals("c", config.getString("option"));
     Assertions.assertTrue(config.getBoolean("a"));
     Assertions.assertTrue(config.getBoolean("b"));
@@ -51,7 +51,7 @@ public class AgentTest {
 
   @Test
   public void loadConfigListsAppend() {
-    Config config = Agent.loadConfig("a,b,c");
+    Config config = Agent.loadConfig(Agent.parseResourceList("a,b,c"));
     List<String> items = config.getStringList("list");
     Collections.sort(items);
 

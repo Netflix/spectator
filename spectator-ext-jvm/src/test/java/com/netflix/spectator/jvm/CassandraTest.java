@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 
 public class CassandraTest {
@@ -45,15 +47,16 @@ public class CassandraTest {
   }
 
   private List<Measurement> measure(Registry registry, List<JmxConfig> configs, JmxData data) {
-    List<Measurement> ms = new ArrayList<>();
     for (JmxConfig cfg : configs) {
       if (cfg.getQuery().apply(data.getName())) {
         for (JmxMeasurementConfig c : cfg.getMeasurements()) {
-          c.measure(registry, data, ms);
+          c.measure(registry, data);
         }
       }
     }
-    return ms;
+    return registry.stream()
+        .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
+        .collect(Collectors.toList());
   }
 
   private JmxData timer(String props, int i) throws Exception {
