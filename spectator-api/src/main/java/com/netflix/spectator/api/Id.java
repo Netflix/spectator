@@ -73,7 +73,7 @@ public interface Id {
    */
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2) {
-    final Tag[] ts = new Tag[] {
+    final Tag[] ts = {
         new BasicTag(k1, v1),
         new BasicTag(k2, v2)
     };
@@ -86,7 +86,7 @@ public interface Id {
    */
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
-    final Tag[] ts = new Tag[] {
+    final Tag[] ts = {
         new BasicTag(k1, v1),
         new BasicTag(k2, v2),
         new BasicTag(k3, v3)

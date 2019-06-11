@@ -87,7 +87,7 @@ public final class PatternUtils {
    * Expand escaped characters. Escapes that are needed for structural elements of the
    * pattern will not be expanded.
    */
-  @SuppressWarnings("PMD.NcssCount")
+  @SuppressWarnings({"PMD.NcssCount", "PMD.AvoidReassigningLoopVariables"})
   static String expandEscapedChars(String str) {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < str.length(); ++i) {
