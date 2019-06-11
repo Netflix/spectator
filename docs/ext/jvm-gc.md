@@ -113,11 +113,7 @@ live data size.
 Timer reporting the pause time for a GC event. All of the values reported are stop the world
 pauses.
 
-**Unit:**
-
-* `statistic=max`: seconds
-* `statistic=count`: events/second
-* `statistic=totalTime`: seconds/second
+**Unit:** seconds
 
 **Dimensions:**
 
@@ -132,11 +128,7 @@ pauses.
 Timer reporting time spent in concurrent phases of CMS.
 pauses.
 
-**Unit:**
-
-* `statistic=max`: seconds
-* `statistic=count`: events/second
-* `statistic=totalTime`: seconds/second
+**Unit:** seconds
 
 **Dimensions:**
 
