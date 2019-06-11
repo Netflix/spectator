@@ -465,7 +465,7 @@ public final class PolledMeter {
 
     /** Create new instance. */
     ValueEntry(T obj, ToDoubleFunction<T> f) {
-      this.ref = new WeakReference<T>(obj);
+      this.ref = new WeakReference<>(obj);
       this.f = f;
     }
   }
@@ -576,7 +576,7 @@ public final class PolledMeter {
 
     /** Create new instance. */
     CounterEntry(T obj, ToLongFunction<T> f) {
-      this.ref = new WeakReference<T>(obj);
+      this.ref = new WeakReference<>(obj);
       this.f = f;
       this.previous = f.applyAsLong(obj);
     }

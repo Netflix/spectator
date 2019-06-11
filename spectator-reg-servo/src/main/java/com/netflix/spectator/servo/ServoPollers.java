@@ -40,7 +40,7 @@ final class ServoPollers {
   static final String POLLERS = System.getProperty("servo.pollers", "60000,10000");
 
   /** Default periods, used if the servo.poller property isn't set. */
-  static final long[] DEFAULT_PERIODS = new long[] {60000L, 10000L};
+  static final long[] DEFAULT_PERIODS = {60000L, 10000L};
 
   /**
    * Polling intervals in milliseconds.

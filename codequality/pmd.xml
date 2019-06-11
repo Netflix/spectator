@@ -49,7 +49,6 @@
     <exclude name="ImmutableField"/>
     <exclude name="LawOfDemeter"/>
     <exclude name="LocalVariableCouldBeFinal"/>
-    <exclude name="LoggerIsNotStaticFinal"/>
     <exclude name="LongVariable"/>
     <exclude name="LoosePackageCoupling"/>
     <exclude name="MethodArgumentCouldBeFinal"/>
@@ -75,6 +74,7 @@
     <exclude name="UseIndexOfChar"/>
     <exclude name="UselessParentheses"/>
     <exclude name="UseStringBufferForStringAppends"/>
+    <exclude name="UseUnderscoresInNumericLiterals"/>
     <exclude name="UseVarargs"/>
   </rule>
 </ruleset>

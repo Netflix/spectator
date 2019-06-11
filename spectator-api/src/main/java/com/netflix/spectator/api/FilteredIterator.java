@@ -57,7 +57,7 @@ class FilteredIterator<T> implements Iterator<T> {
   }
 
   @SuppressWarnings("PMD.UnnecessaryLocalBeforeReturn")
-  @Override public T next() throws NoSuchElementException {
+  @Override public T next() {
     if (item == null) {
       throw new NoSuchElementException("next() called after reaching end of iterator");
     }
