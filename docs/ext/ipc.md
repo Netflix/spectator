@@ -64,6 +64,8 @@ implementations.
 
 This is a [percentile timer] that is recorded for each inbound message to a server.
 
+**Unit:** seconds
+
 **Dimensions:**
 
 * `ipc.protocol`
@@ -84,6 +86,8 @@ This is a [percentile timer] that is recorded for each inbound message to a serv
 
 This is a [distribution summary] of the size in bytes of inbound messages received by a server.
 
+**Unit:** bytes
+
 **Dimensions:**
 
 * `ipc.protocol`
@@ -101,6 +105,8 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 ### ipc.server.call.size.outbound
 
 This is a [distribution summary] of the size in bytes of outbound messages sent from a server.
+
+**Unit:** bytes
 
 **Dimensions:**
 
@@ -121,6 +127,8 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 This is a [distribution summary] that shows the number of inbound IPC messages currently being
 processed in a server.
 
+**Unit:** inflight message count
+
 **Dimensions:**
 
 * `ipc.protocol`
@@ -136,6 +144,8 @@ processed in a server.
 ### ipc.client.call
 
 This is a [percentile timer] that is recorded for each outbound message from a client.
+
+**Unit:** seconds
 
 **Dimensions:**
 
@@ -158,6 +168,8 @@ This is a [percentile timer] that is recorded for each outbound message from a c
 
 This is a [distribution summary] of the size in bytes of inbound messages received by a client.
 
+**Unit:** bytes
+
 **Dimensions:**
 
 * `ipc.protocol`
@@ -175,6 +187,8 @@ This is a [distribution summary] of the size in bytes of inbound messages receiv
 ### ipc.client.call.size.outbound
 
 This is a [distribution summary] of the size in bytes of outbound messages sent from a client.
+
+**Unit:** bytes
 
 **Dimensions:**
 
@@ -194,6 +208,8 @@ This is a [distribution summary] of the size in bytes of outbound messages sent 
 
 This is a [distribution summary] that shows the number of currently outstanding outbound
 IPC messages from a client.
+
+**Unit:** inflight message count
 
 **Dimensions:**
 
