@@ -23,49 +23,56 @@ registry. The third parameter will be added to each metric as an `id` dimension,
 
 Counter of the total number of tasks that have been scheduled.
 
-**Unit:** tasks/second<br/>
+**Unit:** tasks/second
+
 **Data Source:** `ThreadPoolExecutor#getTaskCount()`
 
 ### threadpool.completedTaskCount
 
 Counter of the total number of tasks that have completed.
 
-**Unit:** tasks/second<br/>
+**Unit:** tasks/second
+
 **Data Source:** `ThreadPoolExecutor#getCompletedTaskCount()`
 
 ### threadpool.currentThreadsBusy
 
 Gauge showing the current number of threads actively doing work.
 
-**Unit:** count<br/>
+**Unit:** count
+
 **Data Source:** `ThreadPoolExecutor#getActiveCount()`
 
 ### threadpool.maxThreads
 
 Gauge showing the current maximum number of threads configured for the pool.
 
-**Unit:** count<br/>
+**Unit:** count
+
 **Data Source:** `ThreadPoolExecutor#getMaximumPoolSize()`
 
 ### threadpool.poolSize
 
 Gauge showing the current size of the pool.
 
-**Unit:** count<br/>
+**Unit:** count
+
 **Data Source:** `ThreadPoolExecutor#getPoolSize()`
 
 ### threadpool.corePoolSize
 
 Gauge showing the current maximum number of core threads configured for the pool.
 
-**Unit:** count<br/>
+**Unit:** count
+
 **Data Source:** `ThreadPoolExecutor#getCorePoolSize()`
 
 ### threadpool.queueSize
 
 Gauge showing the current number of threads queued for execution.
 
-**Unit:** count<br/>
+**Unit:** count
+
 **Data Source:** `ThreadPoolExecutor#getQueue().size()`
 
 [ThreadPoolExecutor]: http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ThreadPoolExecutor.html
