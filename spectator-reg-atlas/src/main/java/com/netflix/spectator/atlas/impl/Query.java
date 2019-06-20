@@ -20,8 +20,10 @@ import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.PatternMatcher;
 import com.netflix.spectator.impl.Preconditions;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -83,21 +85,52 @@ public interface Query {
 
   /** Returns a new query: {@code this AND q}. */
   default Query and(Query q) {
-    return new And(this, q);
+    return (q == TRUE || q == FALSE) ? q.and(this) : new And(this, q);
   }
 
   /** Returns a new query: {@code this OR q}. */
   default Query or(Query q) {
-    return new Or(this, q);
+    return (q == TRUE || q == FALSE) ? q.or(this) : new Or(this, q);
   }
 
   /** Returns an inverted version of this query. */
   default Query not() {
-    return new Not(this);
+    return (this instanceof KeyQuery)
+        ? new InvertedKeyQuery((KeyQuery) this)
+        : new Not(this);
+  }
+
+  /**
+   * Converts this query into disjunctive normal form. The return value is a list of
+   * sub-queries that should be ORd together.
+   */
+  default List<Query> dnfList() {
+    return Collections.singletonList(this);
+  }
+
+  /**
+   * Converts this query into a list of sub-queries that can be ANDd together. The query will
+   * not be normalized first, it will only expand top-level AND clauses.
+   */
+  default List<Query> andList() {
+    return Collections.singletonList(this);
   }
 
   /** Query that always matches. */
   Query TRUE = new Query() {
+
+    @Override public Query and(Query q) {
+      return q;
+    }
+
+    @Override public Query or(Query q) {
+      return TRUE;
+    }
+
+    @Override public Query not() {
+      return FALSE;
+    }
+
     @Override public boolean matches(Map<String, String> tags) {
       return true;
     }
@@ -109,6 +142,19 @@ public interface Query {
 
   /** Query that never matches. */
   Query FALSE = new Query() {
+
+    @Override public Query and(Query q) {
+      return FALSE;
+    }
+
+    @Override public Query or(Query q) {
+      return q;
+    }
+
+    @Override public Query not() {
+      return TRUE;
+    }
+
     @Override public boolean matches(Map<String, String> tags) {
       return false;
     }
@@ -127,6 +173,32 @@ public interface Query {
     And(Query q1, Query q2) {
       this.q1 = Preconditions.checkNotNull(q1, "q1");
       this.q2 = Preconditions.checkNotNull(q2, "q2");
+    }
+
+    @Override public Query not() {
+      Query nq1 = q1.not();
+      Query nq2 = q2.not();
+      return nq1.or(nq2);
+    }
+
+    @Override public List<Query> dnfList() {
+      return crossAnd(q1.dnfList(), q2.dnfList());
+    }
+
+    @Override public List<Query> andList() {
+      List<Query> tmp = new ArrayList<>(q1.andList());
+      tmp.addAll(q2.andList());
+      return tmp;
+    }
+
+    private List<Query> crossAnd(List<Query> qs1, List<Query> qs2) {
+      List<Query> tmp = new ArrayList<>();
+      for (Query q1 : qs1) {
+        for (Query q2 : qs2) {
+          tmp.add(q1.and(q2));
+        }
+      }
+      return tmp;
     }
 
     @Override public boolean matches(Map<String, String> tags) {
@@ -169,6 +241,18 @@ public interface Query {
       this.q2 = Preconditions.checkNotNull(q2, "q2");
     }
 
+    @Override public Query not() {
+      Query nq1 = q1.not();
+      Query nq2 = q2.not();
+      return nq1.and(nq2);
+    }
+
+    @Override public List<Query> dnfList() {
+      List<Query> qs = new ArrayList<>(q1.dnfList());
+      qs.addAll(q2.dnfList());
+      return qs;
+    }
+
     @Override public boolean matches(Map<String, String> tags) {
       return q1.matches(tags) || q2.matches(tags);
     }
@@ -198,6 +282,26 @@ public interface Query {
     /** Create a new instance. */
     Not(Query q) {
       this.q = Preconditions.checkNotNull(q, "q");
+    }
+
+    @Override public Query not() {
+      return q;
+    }
+
+    @Override public List<Query> dnfList() {
+      if (q instanceof And) {
+        And query = (And) q;
+        List<Query> qs = new ArrayList<>(query.q1.not().dnfList());
+        qs.addAll(query.q2.not().dnfList());
+        return qs;
+      } else if (q instanceof Or) {
+        Or query = (Or) q;
+        Query q1 = query.q1.not();
+        Query q2 = query.q2.not();
+        return q1.and(q2).dnfList();
+      } else {
+        return Collections.singletonList(this);
+      }
     }
 
     @Override public boolean matches(Map<String, String> tags) {
@@ -230,6 +334,43 @@ public interface Query {
 
     @Override default boolean matches(Map<String, String> tags) {
       return matches(tags.get(key()));
+    }
+  }
+
+  /** Query that matches if the underlying key query does not match. */
+  final class InvertedKeyQuery implements KeyQuery {
+    private final KeyQuery q;
+
+    /** Create a new instance. */
+    InvertedKeyQuery(KeyQuery q) {
+      this.q = Preconditions.checkNotNull(q, "q");
+    }
+
+    @Override public Query not() {
+      return q;
+    }
+
+    @Override public String key() {
+      return q.key();
+    }
+
+    @Override public boolean matches(String value) {
+      return !q.matches(value);
+    }
+
+    @Override public String toString() {
+      return q + ",:not";
+    }
+
+    @Override public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (obj == null || !(obj instanceof InvertedKeyQuery)) return false;
+      InvertedKeyQuery other = (InvertedKeyQuery) obj;
+      return q.equals(other.q);
+    }
+
+    @Override public int hashCode() {
+      return q.hashCode();
     }
   }
 

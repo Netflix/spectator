@@ -101,16 +101,16 @@ public final class Parser {
         case ":and":
           q2 = (Query) stack.pop();
           q1 = (Query) stack.pop();
-          stack.push(new Query.And(q1, q2));
+          stack.push(q1.and(q2));
           break;
         case ":or":
           q2 = (Query) stack.pop();
           q1 = (Query) stack.pop();
-          stack.push(new Query.Or(q1, q2));
+          stack.push(q1.or(q2));
           break;
         case ":not":
           q = (Query) stack.pop();
-          stack.push(new Query.Not(q));
+          stack.push(q.not());
           break;
         case ":has":
           k = (String) stack.pop();

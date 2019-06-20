@@ -22,6 +22,11 @@ import nl.jqno.equalsverifier.Warning;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
 
 public class QueryTest {
 
@@ -238,5 +243,208 @@ public class QueryTest {
         .forClass(Query.Not.class)
         .suppress(Warning.NULL_FIELDS)
         .verify();
+  }
+
+  @Test
+  public void andOptimizationTrue() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Assertions.assertEquals(new Query.And(q1, q2), q1.and(q2));
+    Assertions.assertEquals(q2, Query.TRUE.and(q2));
+    Assertions.assertEquals(q1, q1.and(Query.TRUE));
+  }
+
+  @Test
+  public void andOptimizationFalse() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Assertions.assertEquals(new Query.And(q1, q2), q1.and(q2));
+    Assertions.assertEquals(Query.FALSE, Query.FALSE.and(q2));
+    Assertions.assertEquals(Query.FALSE, q1.and(Query.FALSE));
+  }
+
+  @Test
+  public void orOptimizationTrue() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Assertions.assertEquals(new Query.Or(q1, q2), q1.or(q2));
+    Assertions.assertEquals(Query.TRUE, Query.TRUE.or(q2));
+    Assertions.assertEquals(Query.TRUE, q1.or(Query.TRUE));
+  }
+
+  @Test
+  public void orOptimizationFalse() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Assertions.assertEquals(new Query.Or(q1, q2), q1.or(q2));
+    Assertions.assertEquals(q2, Query.FALSE.or(q2));
+    Assertions.assertEquals(q1, q1.or(Query.FALSE));
+  }
+
+  @Test
+  public void notOptimizationTrue() {
+    Assertions.assertEquals(Query.FALSE, Query.TRUE.not());
+  }
+
+  @Test
+  public void notOptimizationFalse() {
+    Assertions.assertEquals(Query.TRUE, Query.FALSE.not());
+  }
+
+  @Test
+  public void notOptimizationAnd() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Query expected = new Query.Or(q1.not(), q2.not());
+    Assertions.assertEquals(expected, new Query.And(q1, q2).not());
+  }
+
+  @Test
+  public void notOptimizationOr() {
+    Query q1 = new Query.Has("a");
+    Query q2 = new Query.Has("b");
+    Query expected = new Query.And(q1.not(), q2.not());
+    Assertions.assertEquals(expected, new Query.Or(q1, q2).not());
+  }
+
+  @Test
+  public void notOptimizationNot() {
+    Query.KeyQuery q = new Query.Has("a");
+    Assertions.assertEquals(q, new Query.Not(q).not());
+    Assertions.assertEquals(q, new Query.InvertedKeyQuery(q).not());
+    Assertions.assertEquals(q, q.not().not());
+    Assertions.assertTrue(q.not() instanceof Query.InvertedKeyQuery);
+  }
+
+  @Test
+  public void parseOptimizationAnd() {
+    Assertions.assertEquals(Query.TRUE, Parser.parseQuery(":true,:true,:and"));
+    Assertions.assertEquals(Query.FALSE, Parser.parseQuery(":true,:false,:and"));
+    Assertions.assertEquals(Query.FALSE, Parser.parseQuery(":false,:true,:and"));
+    Assertions.assertEquals(Query.FALSE, Parser.parseQuery(":false,:false,:and"));
+  }
+
+  @Test
+  public void parseOptimizationOr() {
+    Assertions.assertEquals(Query.TRUE, Parser.parseQuery(":true,:true,:or"));
+    Assertions.assertEquals(Query.TRUE, Parser.parseQuery(":true,:false,:or"));
+    Assertions.assertEquals(Query.TRUE, Parser.parseQuery(":false,:true,:or"));
+    Assertions.assertEquals(Query.FALSE, Parser.parseQuery(":false,:false,:or"));
+  }
+
+  @Test
+  public void parseOptimizationNot() {
+    Assertions.assertEquals(Query.TRUE, Parser.parseQuery(":true,:not,:not"));
+    Assertions.assertEquals(Query.FALSE, Parser.parseQuery(":false,:not,:not"));
+  }
+
+  @Test
+  public void dnfListA() {
+    Query a = new Query.Has("a");
+    Assertions.assertEquals(Collections.singletonList(a), a.dnfList());
+  }
+
+  @Test
+  public void dnfListAnd() {
+    Query a = new Query.Has("a");
+    Query b = new Query.Has("b");
+    Query q = a.and(b);
+    Assertions.assertEquals(Collections.singletonList(q), q.dnfList());
+  }
+
+  private List<Query> qs(Query... queries) {
+    return Arrays.asList(queries);
+  }
+
+  @Test
+  public void dnfListOrAnd() {
+    Query a = new Query.Has("a");
+    Query b = new Query.Has("b");
+    Query c = new Query.Has("c");
+    Query q = a.or(b).and(c);
+    Assertions.assertEquals(qs(a.and(c), b.and(c)), q.dnfList());
+  }
+
+  @Test
+  public void dnfListOrOrAnd() {
+    Query a = new Query.Has("a");
+    Query b = new Query.Has("b");
+    Query c = new Query.Has("c");
+    Query d = new Query.Has("d");
+    Query q = a.or(b).and(c.or(d));
+    List<Query> expected = qs(
+        a.and(c),
+        a.and(d),
+        b.and(c),
+        b.and(d)
+    );
+    Assertions.assertEquals(expected, q.dnfList());
+  }
+
+  @Test
+  public void dnfListNotOr() {
+    Query a = new Query.Has("a");
+    Query b = new Query.Has("b");
+    Query q = new Query.Not(a.or(b));
+    Assertions.assertEquals(qs(a.not().and(b.not())), q.dnfList());
+  }
+
+  @Test
+  public void dnfListNotAnd() {
+    Query a = new Query.Has("a");
+    Query b = new Query.Has("b");
+    Query q = new Query.Not(a.and(b));
+    Assertions.assertEquals(qs(a.not(), b.not()), q.dnfList());
+  }
+
+  @Test
+  public void dnfListNotSimple() {
+    Query a = new Query.Has("a");
+    Query q = new Query.Not(a);
+    Assertions.assertEquals(qs(q), q.dnfList());
+  }
+
+  private String randomString(Random r) {
+    char c = (char) ('a' + r.nextInt(26));
+    return "" + c;
+  }
+
+  private Query randomQuery(Random r, int depth) {
+    if (depth > 0) {
+      Query q;
+      switch (r.nextInt(4)) {
+        case 0:
+          q = randomQuery(r, depth - 1).and(randomQuery(r, depth - 1));
+          break;
+        case 1:
+          q = randomQuery(r, depth - 1).or(randomQuery(r, depth - 1));
+          break;
+        case 2:
+          q = randomQuery(r, depth - 1).not();
+          break;
+        default:
+          q = new Query.Has(randomString(r));
+          break;
+      }
+      return q;
+    } else {
+      return new Query.Has(randomString(r));
+    }
+  }
+
+  @Test
+  public void dnfListSimplifiesToKeyQueries() {
+    Random r = new Random(42);
+    for (int i = 0; i < 1000; ++i) {
+      Query query = randomQuery(r, 5);
+      for (Query dnfQ : query.dnfList()) {
+        for (Query q : dnfQ.andList()) {
+          Assertions.assertTrue(
+              q instanceof Query.KeyQuery,
+              "[" + q + "] is not a KeyQuery, extracted from [" + query + "]"
+          );
+        }
+      }
+    }
   }
 }
