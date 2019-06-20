@@ -220,13 +220,34 @@ public interface Query {
     }
   }
 
+  /** Base interface for simple queries that check the value associated with a single key. */
+  interface KeyQuery extends Query {
+    /** Key checked by this query. */
+    String key();
+
+    /** Returns true if the value matches for this query clause. */
+    boolean matches(String value);
+
+    @Override default boolean matches(Map<String, String> tags) {
+      return matches(tags.get(key()));
+    }
+  }
+
   /** Query that matches if the tag map contains a specified key. */
-  final class Has implements Query {
+  final class Has implements KeyQuery {
     private final String k;
 
     /** Create a new instance. */
     Has(String k) {
       this.k = Preconditions.checkNotNull(k, "k");
+    }
+
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null;
     }
 
     @Override public boolean matches(Map<String, String> tags) {
@@ -250,7 +271,7 @@ public interface Query {
   }
 
   /** Query that matches if the tag map contains key {@code k} with value {@code v}. */
-  final class Equal implements Query {
+  final class Equal implements KeyQuery {
     private final String k;
     private final String v;
 
@@ -260,8 +281,12 @@ public interface Query {
       this.v = Preconditions.checkNotNull(v, "v");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      return v.equals(tags.get(k));
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return v.equals(value);
     }
 
     @Override public Map<String, String> exactTags() {
@@ -292,7 +317,7 @@ public interface Query {
    * Query that matches if the tag map contains key {@code k} with a value in the set
    * {@code vs}.
    */
-  final class In implements Query {
+  final class In implements KeyQuery {
     private final String k;
     private final Set<String> vs;
 
@@ -303,9 +328,12 @@ public interface Query {
       this.vs = Preconditions.checkNotNull(vs, "vs");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && vs.contains(tags.get(k));
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && vs.contains(value);
     }
 
     @Override public String toString() {
@@ -331,7 +359,7 @@ public interface Query {
    * Query that matches if the tag map contains key {@code k} with a value that is lexically
    * less than {@code v}.
    */
-  final class LessThan implements Query {
+  final class LessThan implements KeyQuery {
     private final String k;
     private final String v;
 
@@ -341,9 +369,12 @@ public interface Query {
       this.v = Preconditions.checkNotNull(v, "v");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && s.compareTo(v) < 0;
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && value.compareTo(v) < 0;
     }
 
     @Override public String toString() {
@@ -368,7 +399,7 @@ public interface Query {
    * Query that matches if the tag map contains key {@code k} with a value that is lexically
    * less than or equal to {@code v}.
    */
-  final class LessThanEqual implements Query {
+  final class LessThanEqual implements KeyQuery {
     private final String k;
     private final String v;
 
@@ -378,9 +409,12 @@ public interface Query {
       this.v = Preconditions.checkNotNull(v, "v");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && s.compareTo(v) <= 0;
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && value.compareTo(v) <= 0;
     }
 
     @Override public String toString() {
@@ -405,7 +439,7 @@ public interface Query {
    * Query that matches if the tag map contains key {@code k} with a value that is lexically
    * greater than {@code v}.
    */
-  final class GreaterThan implements Query {
+  final class GreaterThan implements KeyQuery {
     private final String k;
     private final String v;
 
@@ -415,9 +449,12 @@ public interface Query {
       this.v = Preconditions.checkNotNull(v, "v");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && s.compareTo(v) > 0;
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && value.compareTo(v) > 0;
     }
 
     @Override public String toString() {
@@ -442,7 +479,7 @@ public interface Query {
    * Query that matches if the tag map contains key {@code k} with a value that is lexically
    * greater than or equal to {@code v}.
    */
-  final class GreaterThanEqual implements Query {
+  final class GreaterThanEqual implements KeyQuery {
     private final String k;
     private final String v;
 
@@ -452,9 +489,12 @@ public interface Query {
       this.v = Preconditions.checkNotNull(v, "v");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && s.compareTo(v) >= 0;
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && value.compareTo(v) >= 0;
     }
 
     @Override public String toString() {
@@ -483,7 +523,7 @@ public interface Query {
    * <p><b>Warning:</b> regular expressions are often expensive and can add a lot of overhead.
    * Use them sparingly.</p>
    */
-  final class Regex implements Query {
+  final class Regex implements KeyQuery {
     private final String k;
     private final String v;
     private final PatternMatcher pattern;
@@ -506,9 +546,12 @@ public interface Query {
       this.name = Preconditions.checkNotNull(name, "name");
     }
 
-    @Override public boolean matches(Map<String, String> tags) {
-      String s = tags.get(k);
-      return s != null && pattern.matches(s);
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      return value != null && pattern.matches(value);
     }
 
     @Override public String toString() {
