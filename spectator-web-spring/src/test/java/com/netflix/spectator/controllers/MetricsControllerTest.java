@@ -17,7 +17,6 @@ package com.netflix.spectator.controllers;
 
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.patterns.PolledMeter;
-import com.netflix.spectator.controllers.model.TestId;
 
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Clock;
@@ -44,8 +43,8 @@ public class MetricsControllerTest {
   private Clock clock = new ManualClock(12345L, 0L);
 
   MetricsController controller = new MetricsController();
-  Id idA = new TestId("idA");
-  Id idB = new TestId("idB");
+  Id idA = Id.create("idA");
+  Id idB = Id.create("idB");
   Id idAXY = idA.withTag("tagA", "X").withTag("tagB", "Y");
   Id idAYX = idA.withTag("tagA", "Y").withTag("tagB", "X");
   Id idAXZ = idA.withTag("tagA", "X").withTag("tagZ", "Z");
@@ -152,26 +151,23 @@ public class MetricsControllerTest {
     registry.register(meterA);
     registry.register(meterA2);
 
-    List<TaggedDataPoints> expected_tagged_data_points
-        = Arrays.asList(
-               new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "Y"),
-                                                  new BasicTag("tagB", "X")),
-                                    Arrays.asList(new DataPoint(clock.wallTime(), 12.12))),
-               new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "X"),
-                                                  new BasicTag("tagB", "Y")),
-                                    // This should be 20, but AggrMeter keeps first time,
-                                    // which happens to be the 11th, not the most recent time.
-                                    Arrays.asList(new DataPoint(clock.wallTime(), 11.11 + 20.20))),
-               new TaggedDataPoints(Arrays.asList(new BasicTag("tagA", "X"),
-                                                  new BasicTag("tagZ", "Z")),
-                                    Arrays.asList(new DataPoint(clock.wallTime(), 13.13))));
+    List<TaggedDataPoints> expectedDataPoints = Arrays.asList(
+        new TaggedDataPoints(
+            Arrays.asList(new BasicTag("tagA", "X"), new BasicTag("tagZ", "Z")),
+            Arrays.asList(new DataPoint(clock.wallTime(), 13.13))),
+        new TaggedDataPoints(
+            Arrays.asList(new BasicTag("tagA", "X"), new BasicTag("tagB", "Y")),
+            Arrays.asList(new DataPoint(clock.wallTime(), 11.11 + 20.20))),
+        new TaggedDataPoints(
+            Arrays.asList(new BasicTag("tagA", "Y"), new BasicTag("tagB", "X")),
+            Arrays.asList(new DataPoint(clock.wallTime(), 12.12)))
+    );
 
     HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
-    expect.put("idA", new MetricValues("Counter", expected_tagged_data_points));
+    expect.put("idA", new MetricValues("Counter", expectedDataPoints));
 
     PolledMeter.update(registry);
-    Assertions.assertEquals(expect,
-                        controller.encodeRegistry(registry, allowAll));
+    Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
 };
 
