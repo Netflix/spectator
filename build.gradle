@@ -100,7 +100,7 @@ subprojects {
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = 'warn'
-    include = ['.*PercentileTimers.*']
+    include = ['.*IdTraversal.*']
   }
 
   checkstyle {

@@ -53,4 +53,16 @@ final class NoopId implements Id {
   @Override public String toString() {
     return name();
   }
+
+  @Override public String getKey(int i) {
+    return "name";
+  }
+
+  @Override public String getValue(int i) {
+    return name();
+  }
+
+  @Override public int size() {
+    return 1;
+  }
 }
