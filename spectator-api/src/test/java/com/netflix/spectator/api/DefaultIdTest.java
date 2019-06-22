@@ -21,8 +21,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.AccessMode;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -249,5 +251,37 @@ public class DefaultIdTest {
 
     Assertions.assertEquals(id1.hashCode(), id2.hashCode());
     Assertions.assertEquals(id1, id2);
+  }
+
+  @Test
+  public void tagListIterator() {
+    List<Tag> expected = new ArrayList<>();
+    expected.add(Tag.of("name", "foo"));
+    expected.add(Tag.of("k1", "v1"));
+    expected.add(Tag.of("k2", "v2"));
+
+    DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
+    List<Tag> actual = new ArrayList<>();
+    for (Tag t : id) {
+      actual.add(t);
+    }
+
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void tagListForEach() {
+    List<Tag> expected = new ArrayList<>();
+    expected.add(Tag.of("name", "foo"));
+    expected.add(Tag.of("k1", "v1"));
+    expected.add(Tag.of("k2", "v2"));
+
+    DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
+    List<Tag> actual = new ArrayList<>();
+    id.forEach((k, v) -> {
+      actual.add(Tag.of(k, v));
+    });
+
+    Assertions.assertEquals(expected, actual);
   }
 }

@@ -338,4 +338,24 @@ public class ArrayTagSetTest {
         .add(new BasicTag("b", "1"));
     Assertions.assertEquals(expected, ts);
   }
+
+  @Test
+  public void tagListIterate() {
+    ArrayTagSet expected = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4", "e", "5");
+    ArrayTagSet actual = ArrayTagSet.EMPTY;
+    for (Tag t : expected) {
+      actual = actual.add(t);
+    }
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void tagListForEach() {
+    ArrayTagSet expected = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4", "e", "5");
+    List<Tag> tmp = new ArrayList<>();
+    expected.forEach((k, v) -> {
+      tmp.add(Tag.of(k, v));
+    });
+    Assertions.assertEquals(expected, ArrayTagSet.create(tmp));
+  }
 }

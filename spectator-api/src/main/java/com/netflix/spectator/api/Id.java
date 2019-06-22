@@ -20,7 +20,8 @@ import java.util.Map;
 /**
  * Identifier for a meter or measurement.
  */
-public interface Id {
+public interface Id extends TagList {
+
   /** Description of the measurement that is being collected. */
   String name();
 

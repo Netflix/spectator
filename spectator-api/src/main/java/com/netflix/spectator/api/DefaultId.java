@@ -71,6 +71,18 @@ final class DefaultId implements Id {
     return new DefaultId(name, tags.addAll(ts));
   }
 
+  @Override public String getKey(int i) {
+    return i == 0 ? "name" : tags.getKey(i - 1);
+  }
+
+  @Override public String getValue(int i) {
+    return i == 0 ? name : tags.getValue(i - 1);
+  }
+
+  @Override public int size() {
+    return tags.size() + 1;
+  }
+
   /**
    * Returns a new id with the tag list sorted by key and with no duplicate keys.  This is equivalent to
    * {@code rollup(Collections.<String>emptySet(), false)}.

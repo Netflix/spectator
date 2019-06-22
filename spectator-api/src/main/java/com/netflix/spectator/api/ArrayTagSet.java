@@ -19,15 +19,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * An immutable set of tags sorted by the tag key.
  */
-final class ArrayTagSet implements Iterable<Tag> {
+final class ArrayTagSet implements TagList {
 
   private static final Comparator<Tag> TAG_COMPARATOR = (t1, t2) -> t1.key().compareTo(t2.key());
 
@@ -73,25 +71,6 @@ final class ArrayTagSet implements Iterable<Tag> {
     this.tags = tags;
     this.length = length;
     this.cachedHashCode = 0;
-  }
-
-  @Override public Iterator<Tag> iterator() {
-    return new Iterator<Tag>() {
-      private int i = 0;
-
-      @Override public boolean hasNext() {
-        return i < length;
-      }
-
-      @Override public Tag next() {
-        if (i >= length) {
-          throw new NoSuchElementException("next called after end of iterator");
-        }
-        final String k = tags[i++];
-        final String v = tags[i++];
-        return new BasicTag(k, v);
-      }
-    };
   }
 
   /** Check if this set is empty. */
@@ -321,8 +300,18 @@ final class ArrayTagSet implements Iterable<Tag> {
     }
   }
 
+  /** Return the key at the specified position. */
+  @Override public String getKey(int i) {
+    return tags[i * 2];
+  }
+
+  /** Return the value at the specified position. */
+  @Override public String getValue(int i) {
+    return tags[i * 2 + 1];
+  }
+
   /** Return the current size of this tag set. */
-  public int size() {
+  @Override public int size() {
     return length / 2;
   }
 
