@@ -15,8 +15,6 @@
  */
 package com.netflix.spectator.controllers.filter;
 
-import com.netflix.spectator.controllers.model.TestId;
-
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 
@@ -27,15 +25,13 @@ import org.junit.jupiter.api.Test;
 
 
 public class TagFilterTest {
-  Id idA = new TestId("idA");
-  Id idB = new TestId("idB");
+  Id idA = Id.create("idA");
+  Id idB = Id.create("idB");
   Id idAXY = idA.withTag("tagA", "X").withTag("tagB", "Y");
-  Id idAYX = idA.withTag("tagA", "Y").withTag("tagB", "X");
   Id idAXZ = idA.withTag("tagA", "X").withTag("tagZ", "Z");
   Id idBXY = idB.withTag("tagA", "X").withTag("tagB", "Y");
 
   Measurement measureAXY = new Measurement(idAXY, 11, 11.11);
-  Measurement measureAYX = new Measurement(idAYX, 12, 12.12);
   Measurement measureAXZ = new Measurement(idAXZ, 13, 13.13);
   Measurement measureBXY = new Measurement(idBXY, 50, 50.50);
 

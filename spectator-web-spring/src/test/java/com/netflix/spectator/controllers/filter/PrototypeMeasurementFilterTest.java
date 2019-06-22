@@ -15,9 +15,6 @@
  */
 package com.netflix.spectator.controllers.filter;
 
-import com.netflix.spectator.controllers.model.TestId;
-
-
 import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
@@ -39,7 +36,6 @@ import org.junit.jupiter.api.Test;
 
 
 public class PrototypeMeasurementFilterTest {
-    private long millis = 12345L;
 
     PrototypeMeasurementFilterSpecification.ValueFilterSpecification valueSpecAxBy;
     PrototypeMeasurementFilterSpecification.ValueFilterSpecification valueSpecAyBx;
@@ -238,8 +234,8 @@ public class PrototypeMeasurementFilterTest {
 
         PrototypeMeasurementFilter filter = new PrototypeMeasurementFilter(spec);
 
-        Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
-        Id idBZY = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "Y");
+        Id idAYX = Id.create("counterA").withTag("tagA", "Y").withTag("tagB", "X");
+        Id idBZY = Id.create("counterB").withTag("tagA", "Z").withTag("tagB", "Y");
 
         Assertions.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
         Assertions.assertTrue(filter.test(new Measurement(idBZY, 2, 2)));
@@ -256,8 +252,8 @@ public class PrototypeMeasurementFilterTest {
                 new PrototypeMeasurementFilterSpecification.MeterFilterSpecification());
         PrototypeMeasurementFilter filter = new PrototypeMeasurementFilter(spec);
 
-        Id idAYX = new TestId("counterA").withTag("tagA", "Y").withTag("tagB", "X");
-        Id idCYX = new TestId("counterC").withTag("tagA", "Y").withTag("tagB", "X");
+        Id idAYX = Id.create("counterA").withTag("tagA", "Y").withTag("tagB", "X");
+        Id idCYX = Id.create("counterC").withTag("tagA", "Y").withTag("tagB", "X");
 
         Assertions.assertTrue(filter.test(new Measurement(idAYX, 1, 1)));
         Assertions.assertFalse(filter.test(new Measurement(idCYX, 2, 2)));
@@ -274,8 +270,8 @@ public class PrototypeMeasurementFilterTest {
 
         PrototypeMeasurementFilter filter = new PrototypeMeasurementFilter(spec);
 
-        Id idAXX = new TestId("counterA").withTag("tagA", "X").withTag("tagB", "X");
-        Id idBZX = new TestId("counterB").withTag("tagA", "Z").withTag("tagB", "X");
+        Id idAXX = Id.create("counterA").withTag("tagA", "X").withTag("tagB", "X");
+        Id idBZX = Id.create("counterB").withTag("tagA", "Z").withTag("tagB", "X");
 
         Assertions.assertFalse(filter.test(new Measurement(idAXX, 1, 1)));
         Assertions.assertFalse(filter.test(new Measurement(idBZX, 2, 2)));
