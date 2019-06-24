@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -337,6 +338,70 @@ public interface Query {
     }
   }
 
+  /** Checks all of a set of conditions for the same key match the specified value. */
+  final class CompositeKeyQuery implements KeyQuery {
+    private final String k;
+    private final List<KeyQuery> queries;
+
+    /** Create a new instance. */
+    CompositeKeyQuery(KeyQuery query) {
+      Preconditions.checkNotNull(query, "query");
+      this.k = query.key();
+      this.queries = new ArrayList<>();
+      this.queries.add(query);
+    }
+
+    /** Add another query to the list. */
+    void add(KeyQuery query) {
+      Preconditions.checkArg(k.equals(query.key()), "key mismatch: " + k + " != " + query.key());
+      queries.add(query);
+    }
+
+    @Override public String key() {
+      return k;
+    }
+
+    @Override public boolean matches(String value) {
+      for (KeyQuery kq : queries) {
+        if (!kq.matches(value)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override public String toString() {
+      StringBuilder builder = new StringBuilder();
+      boolean first = true;
+      for (KeyQuery kq : queries) {
+        builder.append(kq);
+        if (first) {
+          first = false;
+        } else {
+          builder.append(",:and");
+        }
+      }
+      return builder.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      CompositeKeyQuery that = (CompositeKeyQuery) o;
+      return Objects.equals(queries, that.queries) && Objects.equals(k, that.k);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(queries, k);
+    }
+  }
+
   /** Query that matches if the underlying key query does not match. */
   final class InvertedKeyQuery implements KeyQuery {
     private final KeyQuery q;
@@ -426,6 +491,10 @@ public interface Query {
       return k;
     }
 
+    public String value() {
+      return v;
+    }
+
     @Override public boolean matches(String value) {
       return v.equals(value);
     }
@@ -471,6 +540,10 @@ public interface Query {
 
     @Override public String key() {
       return k;
+    }
+
+    public Set<String> values() {
+      return vs;
     }
 
     @Override public boolean matches(String value) {

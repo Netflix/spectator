@@ -46,7 +46,7 @@ public interface TagList extends Iterable<Tag> {
       consumer.accept(getKey(i), getValue(i));
     }
   }
-  
+
   @Override default Iterator<Tag> iterator() {
     final int length = size();
     return new Iterator<Tag>() {
