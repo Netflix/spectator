@@ -33,15 +33,13 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * With NoopRegistry:
+ * Compare performance of simple caching implementation to Caffeine. In some cases we have
+ * see Caffeine/Guava implementations cause quite a bit of thread contention for concurrent
+ * access of a LoadingCache.
  *
- * <pre>
- * </pre>
- *
- * With DefaultRegistry:
- *
- * <pre>
- * </pre>
+ * Also the enabling the registry causes updating the hits/misses counters for each access.
+ * This can potentially be quite a bit of overhead compared to just the lookup, so enabling
+ * the monitoring may significantly reduce performance.
  */
 public class Caching {
 

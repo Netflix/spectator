@@ -28,7 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Index that to efficiently match an {@link com.netflix.spectator.api.Id} against a set of
- * queries that are known in advance.
+ * queries that are known in advance. The index is thread safe for queries. Updates to the
+ * index should be done from a single thread at a time.
  */
 public final class QueryIndex<T> {
 
@@ -41,8 +42,8 @@ public final class QueryIndex<T> {
 
   /**
    * Return a new instance of an index that is empty and doesn't have an explicit key set.
-   * Used internally rather than {@link #newInstance(Registry)}. For external usage the
-   * {@link #newInstance(Registry)}
+   * Used internally rather than {@link #newInstance(Registry)} which sets the key to {@code name}
+   * so the root node will be correct for traversing the id.
    */
   private static <V> QueryIndex<V> empty(Registry registry) {
     return new QueryIndex<>(registry, null);
