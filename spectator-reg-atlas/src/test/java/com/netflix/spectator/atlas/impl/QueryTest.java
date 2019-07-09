@@ -24,7 +24,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 
@@ -446,5 +448,113 @@ public class QueryTest {
         }
       }
     }
+  }
+
+  private Map<String, String> tags(String... vs) {
+    Map<String, String> tmp = new LinkedHashMap<>();
+    for (int i = 0; i < vs.length; i += 2) {
+      tmp.put(vs[i], vs[i + 1]);
+    }
+    return tmp;
+  }
+
+  @Test
+  public void simplifyEqualsMatch() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq");
+    Assertions.assertEquals(Query.TRUE, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyEqualsNoMatch() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq");
+    Assertions.assertEquals(Query.FALSE, q.simplify(tags("nf.cluster", "bar")));
+  }
+
+  @Test
+  public void simplifyEqualsNoValueForKey() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq");
+    Assertions.assertSame(q, q.simplify(tags("nf.app", "foo")));
+  }
+
+  @Test
+  public void simplifyAndMatchLeft() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:and");
+    Query expected = Parser.parseQuery("name,cpu,:eq");
+    Assertions.assertEquals(expected, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyAndMatchRight() {
+    Query q = Parser.parseQuery("name,cpu,:eq,nf.cluster,foo,:eq,:and");
+    Query expected = Parser.parseQuery("name,cpu,:eq");
+    Assertions.assertEquals(expected, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyAndNoMatch() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:and");
+    Assertions.assertSame(Query.FALSE, q.simplify(tags("nf.cluster", "bar")));
+  }
+
+  @Test
+  public void simplifyAndNoValueForKey() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:and");
+    Assertions.assertSame(q, q.simplify(tags("nf.app", "foo")));
+  }
+
+  @Test
+  public void simplifyOrMatchLeft() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:or");
+    Assertions.assertEquals(Query.TRUE, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyOrMatchRight() {
+    Query q = Parser.parseQuery("name,cpu,:eq,nf.cluster,foo,:eq,:or");
+    Assertions.assertEquals(Query.TRUE, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyOrNoMatch() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:or");
+    Query expected = Parser.parseQuery("name,cpu,:eq");
+    Assertions.assertEquals(expected, q.simplify(tags("nf.cluster", "bar")));
+  }
+
+  @Test
+  public void simplifyOrNoValueForKey() {
+    Query q = Parser.parseQuery("nf.cluster,foo,:eq,name,cpu,:eq,:or");
+    Assertions.assertSame(q, q.simplify(tags("nf.app", "foo")));
+  }
+
+  @Test
+  public void simplifyNotMatch() {
+    Query q = Parser.parseQuery("name,cpu,:eq,nf.cluster,foo,:eq,:not,:and");
+    Assertions.assertEquals(Query.FALSE, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyNotNoMatch() {
+    Query q = Parser.parseQuery("name,cpu,:eq,nf.cluster,foo,:eq,:not,:and");
+    Query expected = Parser.parseQuery("name,cpu,:eq");
+    Assertions.assertEquals(expected, q.simplify(tags("nf.cluster", "bar")));
+  }
+
+  @Test
+  public void simplifyNotNoValueForKeyMatch() {
+    Query q = Parser.parseQuery("name,cpu,:eq,nf.cluster,foo,:eq,:not,:and");
+    Assertions.assertSame(q, q.simplify(tags("nf.app", "foo")));
+  }
+
+  @Test
+  public void simplifyTrue() {
+    Query q = Parser.parseQuery(":true");
+    Assertions.assertSame(q, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void simplifyFalse() {
+    Query q = Parser.parseQuery(":false");
+    Assertions.assertSame(q, q.simplify(tags("nf.cluster", "foo")));
   }
 }
