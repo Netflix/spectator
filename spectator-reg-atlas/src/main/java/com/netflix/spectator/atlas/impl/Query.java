@@ -117,6 +117,14 @@ public interface Query {
     return Collections.singletonList(this);
   }
 
+  /**
+   * Return a new query that has been simplified by pre-evaluating the conditions for a set
+   * of tags that are common to all metrics.
+   */
+  default Query simplify(Map<String, String> tags) {
+    return this;
+  }
+
   /** Query that always matches. */
   Query TRUE = new Query() {
 
@@ -213,6 +221,12 @@ public interface Query {
       return tags;
     }
 
+    @Override public Query simplify(Map<String, String> tags) {
+      Query sq1 = q1.simplify(tags);
+      Query sq2 = q2.simplify(tags);
+      return (sq1 != q1 || sq2 != q2) ? sq1.and(sq2) : this;
+    }
+
     @Override public String toString() {
       return q1 + "," + q2 + ",:and";
     }
@@ -256,6 +270,12 @@ public interface Query {
 
     @Override public boolean matches(Map<String, String> tags) {
       return q1.matches(tags) || q2.matches(tags);
+    }
+
+    @Override public Query simplify(Map<String, String> tags) {
+      Query sq1 = q1.simplify(tags);
+      Query sq2 = q2.simplify(tags);
+      return (sq1 != q1 || sq2 != q2) ? sq1.or(sq2) : this;
     }
 
     @Override public String toString() {
@@ -309,6 +329,11 @@ public interface Query {
       return !q.matches(tags);
     }
 
+    @Override public Query simplify(Map<String, String> tags) {
+      Query sq = q.simplify(tags);
+      return (sq != q) ? sq.not() : this;
+    }
+
     @Override public String toString() {
       return q + ",:not";
     }
@@ -335,6 +360,14 @@ public interface Query {
 
     @Override default boolean matches(Map<String, String> tags) {
       return matches(tags.get(key()));
+    }
+
+    @Override default Query simplify(Map<String, String> tags) {
+      String v = tags.get(key());
+      if (v == null) {
+        return this;
+      }
+      return matches(v) ? Query.TRUE : Query.FALSE;
     }
   }
 
@@ -421,6 +454,11 @@ public interface Query {
 
     @Override public boolean matches(String value) {
       return !q.matches(value);
+    }
+
+    @Override public Query simplify(Map<String, String> tags) {
+      Query sq = q.simplify(tags);
+      return (sq != q) ? sq.not() : this;
     }
 
     @Override public String toString() {
