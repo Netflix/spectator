@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * Index that to efficiently match an {@link com.netflix.spectator.api.Id} against a set of
@@ -229,13 +230,25 @@ public final class QueryIndex<T> {
    */
   public List<T> findMatches(Id id) {
     List<T> result = new ArrayList<>();
-    findMatches(result, id, 0);
+    forEachMatch(id, result::add);
     return result;
   }
 
-  private void findMatches(List<T> result, Id tags, int i) {
+  /**
+   * Invoke the consumer for all values where the corresponding queries match the specified id.
+   *
+   * @param id
+   *     Id to check against the queries.
+   * @param consumer
+   *     Function to invoke for values associated with a query that matches the id.
+   */
+  public void forEachMatch(Id id, Consumer<T> consumer) {
+    forEachMatch(id, 0, consumer);
+  }
+
+  private void forEachMatch(Id tags, int i, Consumer<T> consumer) {
     // Matches for this level
-    result.addAll(matches);
+    matches.forEach(consumer);
 
     if (key != null) {
 
@@ -247,7 +260,7 @@ public final class QueryIndex<T> {
           // Find exact matches
           QueryIndex<T> eqIdx = equalChecks.get(v);
           if (eqIdx != null) {
-            eqIdx.findMatches(result, tags, i + 1);
+            eqIdx.forEachMatch(tags, i + 1, consumer);
           }
 
           // Scan for matches with other conditions
@@ -257,13 +270,13 @@ public final class QueryIndex<T> {
             otherChecks.forEach((kq, idx) -> {
               if (kq.matches(v)) {
                 tmp.add(idx);
-                idx.findMatches(result, tags, i + 1);
+                idx.forEachMatch(tags, i + 1, consumer);
               }
             });
             otherChecksCache.put(v, tmp);
           } else {
             for (QueryIndex<T> idx : otherMatches) {
-              idx.findMatches(result, tags, i + 1);
+              idx.forEachMatch(tags, i + 1, consumer);
             }
           }
         } else if (cmp > 0) {
@@ -273,7 +286,7 @@ public final class QueryIndex<T> {
 
       // Check matches with other keys
       if (otherKeysIdx != null) {
-        otherKeysIdx.findMatches(result, tags, i);
+        otherKeysIdx.forEachMatch(tags, i, consumer);
       }
     }
   }
