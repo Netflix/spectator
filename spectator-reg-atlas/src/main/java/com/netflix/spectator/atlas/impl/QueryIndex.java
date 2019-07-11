@@ -111,7 +111,13 @@ public final class QueryIndex<T> {
    */
   public QueryIndex<T> add(Query query, T value) {
     for (Query q : query.dnfList()) {
-      add(sort(q), 0, value);
+      if (q == Query.TRUE) {
+        matches.add(value);
+      } else if (q == Query.FALSE) {
+        break;
+      } else {
+        add(sort(q), 0, value);
+      }
     }
     return this;
   }

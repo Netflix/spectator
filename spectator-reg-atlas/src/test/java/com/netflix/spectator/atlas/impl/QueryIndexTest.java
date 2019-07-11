@@ -138,6 +138,21 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void trueMatches() {
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(Query.TRUE, Query.TRUE);
+    Id id1 = id("a", "key", "b", "c", "12345");
+    Id id2 = id("a", "foo", "bar", "key", "b", "c", "foobar");
+    Assertions.assertEquals(list(Query.TRUE), idx.findMatches(id1));
+    Assertions.assertEquals(list(Query.TRUE), idx.findMatches(id2));
+  }
+
+  @Test
+  public void falseDoesNotMatch() {
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(Query.FALSE, Query.FALSE);
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
   public void removals() {
     QueryIndex<Query> idx = QueryIndex.newInstance(registry);
     idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
