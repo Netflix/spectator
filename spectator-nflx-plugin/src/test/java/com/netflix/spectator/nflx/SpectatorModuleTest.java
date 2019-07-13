@@ -57,7 +57,7 @@ public class SpectatorModuleTest {
         new SpectatorModule());
     Registry registry = injector.getInstance(Registry.class);
     Spectator.globalRegistry().counter("test").increment();
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     Assertions.assertEquals(1, registry.counter("test").count());
   }
 

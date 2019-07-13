@@ -29,12 +29,11 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.atlas.impl.Consolidator;
 import com.netflix.spectator.atlas.impl.EvalPayload;
 import com.netflix.spectator.atlas.impl.Evaluator;
 import com.netflix.spectator.atlas.impl.MeasurementSerializer;
 import com.netflix.spectator.atlas.impl.PublishPayload;
-import com.netflix.spectator.atlas.impl.Subscription;
-import com.netflix.spectator.atlas.impl.TagsValuePair;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
@@ -47,6 +46,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,6 +74,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final long meterTTL;
   private final URI uri;
 
+  private final Duration lwcStep;
+  private final long lwcStepMillis;
   private final Duration configRefreshFrequency;
   private final URI evalUri;
 
@@ -98,18 +100,33 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private Scheduler scheduler;
 
   private final SubscriptionManager subManager;
+  private final Evaluator evaluator;
+
+  private long lastPollTimestamp = -1L;
+  private final Map<Id, Consolidator> atlasMeasurements = new HashMap<>();
 
   /** Create a new instance. */
   @Inject
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     super(clock, config);
     this.config = config;
-    this.stepClock = new StepClock(clock, config.step().toMillis());
+    this.stepClock = new StepClock(clock, config.lwcStep().toMillis());
 
     this.step = config.step();
     this.stepMillis = step.toMillis();
     this.meterTTL = config.meterTTL().toMillis();
     this.uri = URI.create(config.uri());
+
+    this.lwcStep = config.lwcStep();
+    this.lwcStepMillis = lwcStep.toMillis();
+    if (lwcStepMillis > stepMillis) {
+      throw new IllegalArgumentException(
+          "lwcStep cannot be larger than step (" + lwcStep + " > " + step + ")");
+    }
+    if (stepMillis % lwcStepMillis != 0) {
+      throw new IllegalArgumentException(
+          "step is not an even multiple of lwcStep (" + step + " % " + lwcStep + " != 0)");
+    }
 
     this.configRefreshFrequency = config.configRefreshFrequency();
     this.evalUri = URI.create(config.evalUri());
@@ -136,6 +153,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.client = HttpClient.create(debugRegistry);
 
     this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
+    this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
 
     if (config.autoStart()) {
       start();
@@ -147,17 +165,25 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    */
   public void start() {
     if (scheduler == null) {
+      logger.info("common tags: {}", commonTags);
+
       // Setup main collection for publishing to Atlas
       Scheduler.Options options = new Scheduler.Options()
           .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
           .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
           .withStopOnFailure(false);
       scheduler = new Scheduler(debugRegistry, "spectator-reg-atlas", numThreads);
-      scheduler.schedule(options, this::collectData);
+      scheduler.schedule(options, this::sendToAtlas);
       logger.info("started collecting metrics every {} reporting to {}", step, uri);
-      logger.info("common tags: {}", commonTags);
 
-      // Setup collection for subscriptions
+      // Setup collection for LWC
+      Scheduler.Options lwcOptions = new Scheduler.Options()
+          .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, lwcStep)
+          .withInitialDelay(Duration.ofMillis(getInitialDelay(lwcStepMillis)))
+          .withStopOnFailure(false);
+      scheduler.schedule(lwcOptions, this::sendToLWC);
+
+      // Setup refresh of LWC subscription data
       Scheduler.Options subOptions = new Scheduler.Options()
           .withFrequency(Scheduler.Policy.FIXED_DELAY, configRefreshFrequency)
           .withStopOnFailure(false);
@@ -211,23 +237,19 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     stop();
   }
 
-  /** Collect data and send to Atlas. */
-  void collectData() {
-    // Send data for any subscriptions
-    if (config.lwcEnabled()) {
-      try {
-        handleSubscriptions();
-      } catch (Exception e) {
-        logger.warn("failed to handle subscriptions", e);
-      }
-    } else {
-      logger.debug("lwc is disabled, skipping subscriptions");
-    }
+  /** Returns the timestamp of the last completed interval for the specified step size. */
+  private long lastCompletedTimestamp(long s) {
+    long now = clock().wallTime();
+    return now / s * s;
+  }
 
-    // Publish to Atlas
+  void sendToAtlas() {
     if (config.enabled()) {
+      long t = lastCompletedTimestamp(stepMillis);
+      pollMeters(t);
+      logger.debug("sending to Atlas for time: {}", t);
       try {
-        for (List<Measurement> batch : getBatches()) {
+        for (List<Measurement> batch : getBatches(t)) {
           PublishPayload p = new PublishPayload(commonTags, batch);
           if (logger.isTraceEnabled()) {
             logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
@@ -248,30 +270,18 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       logger.debug("publishing is disabled, skipping collection");
     }
 
-    // Clean up any expired meters
+    // Clean up any expired meters, do this regardless of whether it is enabled to avoid
+    // a memory leak
     removeExpiredMeters();
   }
 
-  /**
-   * Removes expired meters from the registry. This is public to allow some integration
-   * from third parties. Behavior may change in the future. It is strongly advised to only
-   * interact with AtlasRegistry using the interface provided by Registry.
-   */
-  @SuppressWarnings("PMD.UselessOverridingMethod")
-  @Override public void removeExpiredMeters() {
-    // Overridden to increase visibility from protected in base class to public
-    super.removeExpiredMeters();
-  }
-
-  private void handleSubscriptions() {
-    List<Subscription> subs = subManager.subscriptions();
-    if (!subs.isEmpty()) {
-      List<TagsValuePair> ms = getMeasurements()
-          .map(this::newTagsValuePair)
-          .collect(Collectors.toList());
-      Evaluator evaluator = new Evaluator().addGroupSubscriptions("local", subs);
-      EvalPayload payload = evaluator.eval("local", stepClock.wallTime(), ms);
+  void sendToLWC() {
+    if (config.lwcEnabled()) {
+      long t = lastCompletedTimestamp(lwcStepMillis);
+      pollMeters(t);
+      logger.debug("sending to LWC for time: {}", t);
       try {
+        EvalPayload payload = evaluator.eval(t);
         String json = jsonMapper.writeValueAsString(payload);
         if (logger.isTraceEnabled()) {
           logger.trace("eval payload: {}", json);
@@ -285,12 +295,51 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       } catch (Exception e) {
         logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
+    } else {
+      logger.debug("lwc is disabled, skipping subscriptions");
     }
+  }
+
+  /** Collect measurements from all of the meters in the registry. */
+  synchronized void pollMeters(long t) {
+    if (t > lastPollTimestamp) {
+      logger.debug("collecting data for time: {}", t);
+      getMeasurements().forEach(m -> {
+        if ("jvm.gc.pause".equals(m.id().name())) {
+          logger.trace("received measurement for time: {}: {}", t, m);
+        }
+
+        // Update the map for data to go to the Atlas storage layer
+        Consolidator consolidator = atlasMeasurements.get(m.id());
+        if (consolidator == null) {
+          int multiple = (int) (stepMillis / lwcStepMillis);
+          consolidator = Consolidator.create(m.id(), stepMillis, multiple);
+          atlasMeasurements.put(m.id(), consolidator);
+        }
+        consolidator.update(m);
+
+        // Update aggregators for streaming
+        evaluator.update(m);
+      });
+      lastPollTimestamp = t;
+    }
+  }
+
+  /**
+   * Removes expired meters from the registry. This is public to allow some integration
+   * from third parties. Behavior may change in the future. It is strongly advised to only
+   * interact with AtlasRegistry using the interface provided by Registry.
+   */
+  @SuppressWarnings("PMD.UselessOverridingMethod")
+  @Override public void removeExpiredMeters() {
+    // Overridden to increase visibility from protected in base class to public
+    super.removeExpiredMeters();
   }
 
   private void fetchSubscriptions() {
     if (config.lwcEnabled()) {
       subManager.refresh();
+      evaluator.sync(subManager.subscriptions());
     } else {
       logger.debug("lwc is disabled, skipping subscription config refresh");
     }
@@ -338,12 +387,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return tags;
   }
 
-  private TagsValuePair newTagsValuePair(Measurement m) {
-    Map<String, String> tags = toMap(m.id());
-    tags.putAll(commonTags);
-    return new TagsValuePair(tags, m.value());
-  }
-
   /** Get a list of all measurements from the registry. */
   Stream<Measurement> getMeasurements() {
     return stream()
@@ -352,10 +395,33 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         .filter(m -> !Double.isNaN(m.value()));
   }
 
-  /** Get a list of all measurements and break them into batches. */
-  List<List<Measurement>> getBatches() {
-    List<Measurement> input = getMeasurements().collect(Collectors.toList());
-    debugRegistry.distributionSummary("spectator.registrySize").record(input.size());
+  /**
+   * Get a list of all consolidated measurements intended to be sent to Atlas and break them
+   * into batches.
+   */
+  synchronized List<List<Measurement>> getBatches(long t) {
+    int n = atlasMeasurements.size();
+    debugRegistry.distributionSummary("spectator.registrySize").record(n);
+    List<Measurement> input = new ArrayList<>(n);
+    Iterator<Map.Entry<Id, Consolidator>> it = atlasMeasurements.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Id, Consolidator> entry = it.next();
+      Consolidator consolidator = entry.getValue();
+
+      // Ensure it has been updated for this interval
+      consolidator.update(t, Double.NaN);
+
+      // Add the measurement to the list
+      double v = consolidator.value(t);
+      if (!Double.isNaN(v)) {
+        input.add(new Measurement(entry.getKey(), t, v));
+      }
+
+      // Clean up if there is no longer a need to preserve the state for this id
+      if (consolidator.isEmpty()) {
+        it.remove();
+      }
+    }
 
     List<Measurement> ms = rollupPolicy.apply(input);
     debugRegistry.distributionSummary("spectator.rollupResultSize").record(ms.size());
@@ -369,15 +435,15 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   @Override protected Counter newCounter(Id id) {
-    return new AtlasCounter(id, clock(), meterTTL, stepMillis);
+    return new AtlasCounter(id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    return new AtlasDistributionSummary(id, clock(), meterTTL, stepMillis);
+    return new AtlasDistributionSummary(id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected Timer newTimer(Id id) {
-    return new AtlasTimer(id, clock(), meterTTL, stepMillis);
+    return new AtlasTimer(id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected Gauge newGauge(Id id) {
@@ -387,6 +453,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
-    return new AtlasMaxGauge(id, clock(), meterTTL, stepMillis);
+    return new AtlasMaxGauge(id, clock(), meterTTL, lwcStepMillis);
   }
 }
