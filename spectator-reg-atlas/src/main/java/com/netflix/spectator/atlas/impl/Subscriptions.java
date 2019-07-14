@@ -57,7 +57,7 @@ public final class Subscriptions {
     // Update expiration time for existing subs and log new ones
     for (Subscription sub : expressions) {
       if (subs.put(sub, expirationTime) == null) {
-        LOGGER.info("new subscription: {}", sub);
+        LOGGER.debug("new subscription: {}", sub);
       }
     }
 
@@ -66,7 +66,7 @@ public final class Subscriptions {
     while (it.hasNext()) {
       Map.Entry<Subscription, Long> entry = it.next();
       if (entry.getValue() < currentTime) {
-        LOGGER.info("expired: {}", entry.getKey());
+        LOGGER.debug("expired: {}", entry.getKey());
         it.remove();
       }
     }

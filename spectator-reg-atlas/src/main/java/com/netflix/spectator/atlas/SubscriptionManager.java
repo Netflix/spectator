@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Helper for managing the set of LWC subscriptions.
@@ -61,7 +60,7 @@ class SubscriptionManager {
     this.uri = URI.create(config.configUri());
     this.connectTimeout = (int) config.connectTimeout().toMillis();
     this.readTimeout = (int) config.readTimeout().toMillis();
-    this.stepMillis = config.step().toMillis();
+    this.stepMillis = config.lwcStep().toMillis();
     this.configTTL = config.configTTL().toMillis();
   }
 
@@ -101,11 +100,18 @@ class SubscriptionManager {
   }
 
   private Subscriptions filterByStep(Subscriptions subs) {
-    List<Subscription> subscriptions = subs
-        .getExpressions()
-        .stream()
-        .filter(s -> s.getFrequency() == stepMillis)
-        .collect(Collectors.toList());
-    return new Subscriptions().withExpressions(subscriptions);
+    List<Subscription> filtered = new ArrayList<>(subs.getExpressions().size());
+    for (Subscription sub : subs.getExpressions()) {
+      if (isSupportedFrequency(sub.getFrequency())) {
+        filtered.add(sub);
+      } else {
+        LOGGER.trace("ignored subscription with invalid frequency: {}", sub);
+      }
+    }
+    return new Subscriptions().withExpressions(filtered);
+  }
+
+  private boolean isSupportedFrequency(long s) {
+    return s >= stepMillis && s % stepMillis == 0;
   }
 }

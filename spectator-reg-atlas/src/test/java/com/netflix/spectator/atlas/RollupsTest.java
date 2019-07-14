@@ -56,7 +56,7 @@ public class RollupsTest {
     for (int i = 0; i < 10; ++i) {
       registry.counter("test", "i", "" + i).increment();
     }
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
@@ -66,7 +66,7 @@ public class RollupsTest {
         .withTag("atlas.dstype", "rate")
         .withTag(Statistic.count);
     Assertions.assertEquals(id, m.id());
-    Assertions.assertEquals(10.0 / 60.0, m.value(), 1e-12);
+    Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
   }
 
   @Test
@@ -74,7 +74,7 @@ public class RollupsTest {
     for (int i = 0; i < 10; ++i) {
       registry.gauge("test", "i", "" + i).set(2.0);
     }
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
@@ -93,7 +93,7 @@ public class RollupsTest {
       double v = (i % 2 == 0) ? i : Double.NaN;
       registry.gauge("test", "i", "" + i).set(v);
     }
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
@@ -111,7 +111,7 @@ public class RollupsTest {
     for (int i = 0; i < 10; ++i) {
       registry.timer("test", "i", "" + i).record(i, TimeUnit.SECONDS);
     }
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(4, aggr.size());
@@ -122,17 +122,17 @@ public class RollupsTest {
         case "count":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.count);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(10.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalTime":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalTime);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(45.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(45.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalOfSquares":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalOfSquares);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(285.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(285.0 / 5.0, m.value(), 1e-12);
           break;
         case "max":
           id = id.withTag("atlas.dstype", "gauge").withTag(Statistic.max);
@@ -151,7 +151,7 @@ public class RollupsTest {
     for (int i = 0; i < 10; ++i) {
       registry.distributionSummary("test", "i", "" + i).record(i);
     }
-    clock.setWallTime(60000);
+    clock.setWallTime(5000);
     List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(4, aggr.size());
@@ -162,17 +162,17 @@ public class RollupsTest {
         case "count":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.count);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(10.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalAmount":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalAmount);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(45.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(45.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalOfSquares":
           id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalOfSquares);
           Assertions.assertEquals(id, m.id());
-          Assertions.assertEquals(285.0 / 60.0, m.value(), 1e-12);
+          Assertions.assertEquals(285.0 / 5.0, m.value(), 1e-12);
           break;
         case "max":
           id = id.withTag("atlas.dstype", "gauge").withTag(Statistic.max);

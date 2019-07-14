@@ -82,6 +82,17 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
+   * Returns the step size (reporting frequency) to use for streaming to Atlas LWC.
+   * The default is 5s. This is the highest resolution that would be supported for getting
+   * an on-demand stream of the data. It must be less than or equal to the Atlas step
+   * ({@link #step()}) and the Atlas step should be an even multiple of this value.
+   */
+  default Duration lwcStep() {
+    String v = get("atlas.lwc.step");
+    return (v == null) ? Duration.ofSeconds(5) : Duration.parse(v);
+  }
+
+  /**
    * Returns true if streaming to Atlas LWC is enabled. Default is false.
    */
   default boolean lwcEnabled() {
