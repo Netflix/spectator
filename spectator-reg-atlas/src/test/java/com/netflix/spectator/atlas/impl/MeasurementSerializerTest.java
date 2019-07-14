@@ -30,14 +30,14 @@ import java.util.Map;
 
 public class MeasurementSerializerTest {
 
-  private AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
-  private Map<String, AsciiSet> overrides =
+  private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
+  private final Map<String, AsciiSet> overrides =
       Collections.singletonMap("cluster", AsciiSet.fromPattern("-._A-Za-z0-9^~"));
 
-  private DefaultRegistry registry = new DefaultRegistry();
-  private SimpleModule module = new SimpleModule()
+  private final DefaultRegistry registry = new DefaultRegistry();
+  private final SimpleModule module = new SimpleModule()
       .addSerializer(Measurement.class, new MeasurementSerializer(set, overrides));
-  private ObjectMapper mapper = new ObjectMapper().registerModule(module);
+  private final ObjectMapper mapper = new ObjectMapper().registerModule(module);
 
   @Test
   public void encode() throws Exception {

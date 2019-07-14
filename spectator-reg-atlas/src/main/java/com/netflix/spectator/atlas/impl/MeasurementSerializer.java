@@ -16,7 +16,6 @@
 package com.netflix.spectator.atlas.impl;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.netflix.spectator.api.Measurement;
@@ -66,7 +65,7 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
   public void serialize(
       Measurement value,
       JsonGenerator gen,
-      SerializerProvider serializers) throws IOException, JsonProcessingException {
+      SerializerProvider serializers) throws IOException {
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
     gen.writeStringField("name", fixValue("name", value.id().name()));

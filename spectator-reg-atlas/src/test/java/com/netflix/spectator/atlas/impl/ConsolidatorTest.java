@@ -117,7 +117,6 @@ public class ConsolidatorTest {
   }
 
   private void consolidateRandomData(
-      Id id,
       Id measurementId,
       ManualClock clock,
       Consolidator consolidator,
@@ -167,7 +166,6 @@ public class ConsolidatorTest {
     Consolidator consolidator = new Consolidator.Avg(CONSOLIDATED_STEP, MULTIPLE);
 
     consolidateRandomData(
-        id,
         measurementId,
         clock,
         consolidator,
@@ -189,7 +187,6 @@ public class ConsolidatorTest {
     Consolidator consolidator = new Consolidator.Max(CONSOLIDATED_STEP, MULTIPLE);
 
     consolidateRandomData(
-        id,
         measurementId,
         clock,
         consolidator,
@@ -211,7 +208,6 @@ public class ConsolidatorTest {
     Consolidator consolidator = new Consolidator.Last(CONSOLIDATED_STEP, MULTIPLE);
 
     consolidateRandomData(
-        id,
         measurementId,
         clock,
         consolidator,
@@ -233,7 +229,6 @@ public class ConsolidatorTest {
     Consolidator consolidator = new Consolidator.None();
 
     consolidateRandomData(
-        id,
         measurementId,
         clock,
         consolidator,

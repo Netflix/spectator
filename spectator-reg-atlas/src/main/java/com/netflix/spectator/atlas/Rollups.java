@@ -78,8 +78,8 @@ final class Rollups {
     SUM_STATS.add("percentile");
   }
 
-  private static final DoubleBinaryOperator SUM = nanAwareOp((a, b) -> a + b);
-  private static final DoubleBinaryOperator MAX = nanAwareOp((a, b) -> a > b ? a : b);
+  private static final DoubleBinaryOperator SUM = nanAwareOp(Double::sum);
+  private static final DoubleBinaryOperator MAX = nanAwareOp(Double::max);
 
   private static DoubleBinaryOperator nanAwareOp(DoubleBinaryOperator op) {
     return (a, b) -> Double.isNaN(a) ? b : Double.isNaN(b) ? a : op.applyAsDouble(a, b);
