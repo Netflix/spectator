@@ -43,12 +43,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SubscriptionManagerTest {
 
-  private SimpleModule module = new SimpleModule()
+  private final SimpleModule module = new SimpleModule()
       .addSerializer(
           Measurement.class,
           new MeasurementSerializer(AsciiSet.fromPattern("a-z"), Collections.emptyMap()));
 
-  private ObjectMapper mapper = new ObjectMapper(new JsonFactory()).registerModule(module);
+  private final ObjectMapper mapper = new ObjectMapper(new JsonFactory()).registerModule(module);
 
   private SubscriptionManager newInstance(ManualClock clock, HttpResponse... responses) {
     final AtomicInteger pos = new AtomicInteger();

@@ -29,10 +29,10 @@ import java.util.concurrent.TimeUnit;
 
 public class AtlasTimerTest {
 
-  private ManualClock clock = new ManualClock();
-  private Registry registry = new DefaultRegistry();
-  private long step = 10000L;
-  private AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step, step);
+  private final ManualClock clock = new ManualClock();
+  private final Registry registry = new DefaultRegistry();
+  private final long step = 10000L;
+  private final AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step, step);
 
   private void checkValue(long count, double amount, double square, long max) {
     int num = 0;

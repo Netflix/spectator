@@ -230,6 +230,6 @@ public final class EvalPayload {
     warn,
 
     /** Expression cannot be handled will be rejected. */
-    error;
+    error
   }
 }

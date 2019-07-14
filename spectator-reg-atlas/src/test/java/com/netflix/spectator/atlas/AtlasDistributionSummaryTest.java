@@ -27,10 +27,10 @@ import org.junit.jupiter.api.Test;
 
 public class AtlasDistributionSummaryTest {
 
-  private ManualClock clock = new ManualClock();
-  private Registry registry = new DefaultRegistry();
-  private long step = 10000L;
-  private AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);
+  private final ManualClock clock = new ManualClock();
+  private final Registry registry = new DefaultRegistry();
+  private final long step = 10000L;
+  private final AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);
 
   private void checkValue(long count, long amount, long square, long max) {
     int num = 0;

@@ -26,10 +26,10 @@ import org.junit.jupiter.api.Test;
 
 public class AtlasCounterTest {
 
-  private ManualClock clock = new ManualClock();
-  private Registry registry = new DefaultRegistry();
-  private long step = 10000L;
-  private AtlasCounter counter = new AtlasCounter(registry.createId("test"), clock, step, step);
+  private final ManualClock clock = new ManualClock();
+  private final Registry registry = new DefaultRegistry();
+  private final long step = 10000L;
+  private final AtlasCounter counter = new AtlasCounter(registry.createId("test"), clock, step, step);
 
   private void checkValue(double expected) {
     int count = 0;

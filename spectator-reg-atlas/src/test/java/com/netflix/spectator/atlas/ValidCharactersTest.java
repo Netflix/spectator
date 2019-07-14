@@ -30,29 +30,26 @@ public class ValidCharactersTest {
   }
 
   @Test
-  public void nullValue() throws Exception {
-    Assertions.assertThrows(NullPointerException.class, () -> {
-      String input = null;
-      toValidCharset(input);
-    });
+  public void nullValue() {
+    Assertions.assertThrows(NullPointerException.class, () -> toValidCharset(null));
   }
 
   @Test
-  public void empty() throws Exception {
+  public void empty() {
     String input = "";
     String actual = toValidCharset(input);
     Assertions.assertEquals("", actual);
   }
 
   @Test
-  public void allValid() throws Exception {
+  public void allValid() {
     String input = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-";
     String actual = toValidCharset(input);
     Assertions.assertEquals(input, actual);
   }
 
   @Test
-  public void invalidConvertsToUnderscore() throws Exception {
+  public void invalidConvertsToUnderscore() {
     String input = "a,b%c^d&e|f{g}h:i;";
     String actual = toValidCharset(input);
     Assertions.assertEquals("a_b_c_d_e_f_g_h_i_", actual);

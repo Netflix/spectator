@@ -108,7 +108,7 @@ public interface DataExpr {
 
     @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
-        private List<TagsValuePair> pairs = new ArrayList<>();
+        private final List<TagsValuePair> pairs = new ArrayList<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
@@ -133,7 +133,7 @@ public interface DataExpr {
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof All)) return false;
+      if (!(obj instanceof All)) return false;
       All other = (All) obj;
       return query.equals(other.query);
     }
@@ -192,7 +192,7 @@ public interface DataExpr {
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof Sum)) return false;
+      if (!(obj instanceof Sum)) return false;
       Sum other = (Sum) obj;
       return query.equals(other.query);
     }
@@ -247,7 +247,7 @@ public interface DataExpr {
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof Min)) return false;
+      if (!(obj instanceof Min)) return false;
       Min other = (Min) obj;
       return query.equals(other.query);
     }
@@ -302,7 +302,7 @@ public interface DataExpr {
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof Max)) return false;
+      if (!(obj instanceof Max)) return false;
       Max other = (Max) obj;
       return query.equals(other.query);
     }
@@ -355,7 +355,7 @@ public interface DataExpr {
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof Count)) return false;
+      if (!(obj instanceof Count)) return false;
       Count other = (Count) obj;
       return query.equals(other.query);
     }
@@ -401,7 +401,7 @@ public interface DataExpr {
 
     @Override public Aggregator aggregator(Map<String, String> queryTags, boolean shouldCheckQuery) {
       return new Aggregator() {
-        private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
+        private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
@@ -423,13 +423,13 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = keys.stream().collect(Collectors.joining(","));
+      final String keyList = String.join(",", keys);
       return af.toString() + ",(," + keyList + ",),:by";
     }
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof GroupBy)) return false;
+      if (!(obj instanceof GroupBy)) return false;
       GroupBy other = (GroupBy) obj;
       return af.equals(other.af) && keys.equals(other.keys);
     }
@@ -465,7 +465,7 @@ public interface DataExpr {
 
     @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
-        private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
+        private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = new HashMap<>(p.tags());
@@ -490,13 +490,13 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = keys.stream().collect(Collectors.joining(","));
+      final String keyList = String.join(",", keys);
       return af.toString() + ",(," + keyList + ",),:rollup-drop";
     }
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof DropRollup)) return false;
+      if (!(obj instanceof DropRollup)) return false;
       DropRollup other = (DropRollup) obj;
       return af.equals(other.af) && keys.equals(other.keys);
     }
@@ -532,7 +532,7 @@ public interface DataExpr {
 
     @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
-        private Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
+        private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
@@ -557,13 +557,13 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = keys.stream().collect(Collectors.joining(","));
+      final String keyList = String.join(",", keys);
       return af.toString() + ",(," + keyList + ",),:rollup-keep";
     }
 
     @Override public boolean equals(Object obj) {
       if (this == obj) return true;
-      if (obj == null || !(obj instanceof KeepRollup)) return false;
+      if (!(obj instanceof KeepRollup)) return false;
       KeepRollup other = (KeepRollup) obj;
       return af.equals(other.af) && keys.equals(other.keys);
     }
