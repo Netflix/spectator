@@ -58,7 +58,9 @@ public class SubscriptionManagerTest {
         return responses[pos.getAndIncrement()];
       }
     };
-    return new SubscriptionManager(mapper, client, clock, v -> null);
+    Map<String, String> config = new HashMap<>();
+    config.put("atlas.lwc.ignore-publish-step", "false");
+    return new SubscriptionManager(mapper, client, clock, config::get);
   }
 
   private Set<Subscription> set(Subscription... subs) {
@@ -100,7 +102,21 @@ public class SubscriptionManagerTest {
   }
 
   @Test
-  public void singleExpressionIgnore() throws Exception {
+  public void singleExpressionIgnoreMissing() throws Exception {
+    ManualClock clock = new ManualClock();
+    byte[] data = json(sub(1));
+    HttpClient client = uri -> new HttpRequestBuilder(HttpClient.DEFAULT_LOGGER, uri) {
+      @Override public HttpResponse send() {
+        return ok(data);
+      }
+    };
+    SubscriptionManager mgr = new SubscriptionManager(mapper, client, clock, v -> null);
+    mgr.refresh();
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
+  }
+
+  @Test
+  public void singleExpressionIgnoreExplicit() throws Exception {
     ManualClock clock = new ManualClock();
     byte[] data = json(sub(1));
     HttpClient client = uri -> new HttpRequestBuilder(HttpClient.DEFAULT_LOGGER, uri) {
@@ -109,7 +125,7 @@ public class SubscriptionManagerTest {
       }
     };
     Map<String, String> config = new HashMap<>();
-    config.put("atlas.lwc.ignore-publish-step", "false");
+    config.put("atlas.lwc.ignore-publish-step", "true");
     SubscriptionManager mgr = new SubscriptionManager(mapper, client, clock, config::get);
     mgr.refresh();
     Assertions.assertTrue(mgr.subscriptions().isEmpty());

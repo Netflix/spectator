@@ -116,6 +116,6 @@ class SubscriptionManager {
   }
 
   private boolean isSupportedFrequency(long s) {
-    return s >= lwcStepMillis && s % lwcStepMillis == 0 && (s != stepMillis || ignorePublishStep);
+    return s >= lwcStepMillis && s % lwcStepMillis == 0 && (s != stepMillis || !ignorePublishStep);
   }
 }
