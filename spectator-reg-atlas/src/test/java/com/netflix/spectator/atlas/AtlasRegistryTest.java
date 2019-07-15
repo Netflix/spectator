@@ -54,7 +54,7 @@ public class AtlasRegistryTest {
   }
 
   private List<Measurement> getMeasurements() {
-    return registry.getMeasurements().collect(Collectors.toList());
+    return registry.measurements().collect(Collectors.toList());
   }
 
   private List<List<Measurement>> getBatches() {

@@ -53,8 +53,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.Deflater;
 
 /**
@@ -304,7 +302,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   synchronized void pollMeters(long t) {
     if (t > lastPollTimestamp) {
       logger.debug("collecting data for time: {}", t);
-      getMeasurements().forEach(m -> {
+      measurements().forEach(m -> {
         if ("jvm.gc.pause".equals(m.id().name())) {
           logger.trace("received measurement for time: {}: {}", t, m);
         }
@@ -385,14 +383,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     tags.put("name", name);
 
     return tags;
-  }
-
-  /** Get a list of all measurements from the registry. */
-  Stream<Measurement> getMeasurements() {
-    return stream()
-        .filter(m -> !m.hasExpired())
-        .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
-        .filter(m -> !Double.isNaN(m.value()));
   }
 
   /**
