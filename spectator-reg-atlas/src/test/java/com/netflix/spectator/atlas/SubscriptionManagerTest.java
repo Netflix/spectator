@@ -34,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +97,22 @@ public class SubscriptionManagerTest {
     SubscriptionManager mgr = newInstance(clock, ok(data));
     mgr.refresh();
     Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+  }
+
+  @Test
+  public void singleExpressionIgnore() throws Exception {
+    ManualClock clock = new ManualClock();
+    byte[] data = json(sub(1));
+    HttpClient client = uri -> new HttpRequestBuilder(HttpClient.DEFAULT_LOGGER, uri) {
+      @Override public HttpResponse send() {
+        return ok(data);
+      }
+    };
+    Map<String, String> config = new HashMap<>();
+    config.put("atlas.lwc.ignore-publish-step", "false");
+    SubscriptionManager mgr = new SubscriptionManager(mapper, client, clock, config::get);
+    mgr.refresh();
+    Assertions.assertTrue(mgr.subscriptions().isEmpty());
   }
 
   @Test
