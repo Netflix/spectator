@@ -755,6 +755,18 @@ public interface Registry extends Iterable<Meter> {
     methodValue(createId(name), obj, method);
   }
 
+  /**
+   * Returns a stream with the current flattened set of measurements across all meters.
+   * This should typically be preferred over {@link #stream()} to get the data as it will
+   * automatically handle expired meters, NaN values, etc.
+   */
+  default Stream<Measurement> measurements() {
+    return stream()
+        .filter(m -> !m.hasExpired())
+        .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
+        .filter(m -> !Double.isNaN(m.value()));
+  }
+
   /** Returns a stream of all registered meters. */
   default Stream<Meter> stream() {
     return StreamSupport.stream(spliterator(), false);
