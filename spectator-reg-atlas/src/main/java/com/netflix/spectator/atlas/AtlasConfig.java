@@ -100,6 +100,16 @@ public interface AtlasConfig extends RegistryConfig {
     return v != null && Boolean.valueOf(v);
   }
 
+  /**
+   * Returns true if expressions with the same step size as Atlas publishing should be
+   * ignored for streaming. This is used for cases where data being published to Atlas
+   * is also sent into streaming from the backend. Default is false.
+   */
+  default boolean lwcIgnorePublishStep() {
+    String v = get("atlas.lwc.ignore-publish-step");
+    return v != null && Boolean.valueOf(v);
+  }
+
   /** Returns the frequency for refreshing config settings from the LWC service. */
   default Duration configRefreshFrequency() {
     String v = get("atlas.configRefreshFrequency");

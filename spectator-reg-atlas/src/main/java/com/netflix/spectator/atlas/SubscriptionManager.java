@@ -44,6 +44,8 @@ class SubscriptionManager {
   private final int connectTimeout;
   private final int readTimeout;
   private final long stepMillis;
+  private final long lwcStepMillis;
+  private final boolean ignorePublishStep;
 
   private final long configTTL;
 
@@ -60,7 +62,9 @@ class SubscriptionManager {
     this.uri = URI.create(config.configUri());
     this.connectTimeout = (int) config.connectTimeout().toMillis();
     this.readTimeout = (int) config.readTimeout().toMillis();
-    this.stepMillis = config.lwcStep().toMillis();
+    this.stepMillis = config.step().toMillis();
+    this.lwcStepMillis = config.lwcStep().toMillis();
+    this.ignorePublishStep = config.lwcIgnorePublishStep();
     this.configTTL = config.configTTL().toMillis();
   }
 
@@ -112,6 +116,6 @@ class SubscriptionManager {
   }
 
   private boolean isSupportedFrequency(long s) {
-    return s >= stepMillis && s % stepMillis == 0;
+    return s >= lwcStepMillis && s % lwcStepMillis == 0 && (s != stepMillis || ignorePublishStep);
   }
 }
