@@ -58,9 +58,7 @@ public class SubscriptionManagerTest {
         return responses[pos.getAndIncrement()];
       }
     };
-    Map<String, String> config = new HashMap<>();
-    config.put("atlas.lwc.ignore-publish-step", "true");
-    return new SubscriptionManager(mapper, client, clock, config::get);
+    return new SubscriptionManager(mapper, client, clock, v -> null);
   }
 
   private Set<Subscription> set(Subscription... subs) {
@@ -110,7 +108,9 @@ public class SubscriptionManagerTest {
         return ok(data);
       }
     };
-    SubscriptionManager mgr = new SubscriptionManager(mapper, client, clock, v -> null);
+    Map<String, String> config = new HashMap<>();
+    config.put("atlas.lwc.ignore-publish-step", "false");
+    SubscriptionManager mgr = new SubscriptionManager(mapper, client, clock, config::get);
     mgr.refresh();
     Assertions.assertTrue(mgr.subscriptions().isEmpty());
   }
