@@ -53,8 +53,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.Deflater;
 
 /**
@@ -266,7 +264,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private void handleSubscriptions() {
     List<Subscription> subs = subManager.subscriptions();
     if (!subs.isEmpty()) {
-      List<TagsValuePair> ms = getMeasurements()
+      List<TagsValuePair> ms = measurements()
           .map(this::newTagsValuePair)
           .collect(Collectors.toList());
       Evaluator evaluator = new Evaluator().addGroupSubscriptions("local", subs);
@@ -344,17 +342,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return new TagsValuePair(tags, m.value());
   }
 
-  /** Get a list of all measurements from the registry. */
-  Stream<Measurement> getMeasurements() {
-    return stream()
-        .filter(m -> !m.hasExpired())
-        .flatMap(m -> StreamSupport.stream(m.measure().spliterator(), false))
-        .filter(m -> !Double.isNaN(m.value()));
-  }
-
   /** Get a list of all measurements and break them into batches. */
   List<List<Measurement>> getBatches() {
-    List<Measurement> input = getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = measurements().collect(Collectors.toList());
     debugRegistry.distributionSummary("spectator.registrySize").record(input.size());
 
     List<Measurement> ms = rollupPolicy.apply(input);

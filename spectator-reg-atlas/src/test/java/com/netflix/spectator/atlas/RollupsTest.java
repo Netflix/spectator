@@ -57,7 +57,7 @@ public class RollupsTest {
       registry.counter("test", "i", "" + i).increment();
     }
     clock.setWallTime(60000);
-    List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
 
@@ -75,7 +75,7 @@ public class RollupsTest {
       registry.gauge("test", "i", "" + i).set(2.0);
     }
     clock.setWallTime(60000);
-    List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
 
@@ -94,7 +94,7 @@ public class RollupsTest {
       registry.gauge("test", "i", "" + i).set(v);
     }
     clock.setWallTime(60000);
-    List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(1, aggr.size());
 
@@ -112,7 +112,7 @@ public class RollupsTest {
       registry.timer("test", "i", "" + i).record(i, TimeUnit.SECONDS);
     }
     clock.setWallTime(60000);
-    List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(4, aggr.size());
 
@@ -152,7 +152,7 @@ public class RollupsTest {
       registry.distributionSummary("test", "i", "" + i).record(i);
     }
     clock.setWallTime(60000);
-    List<Measurement> input = registry.getMeasurements().collect(Collectors.toList());
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
     List<Measurement> aggr = Rollups.aggregate(this::removeIdxTag, input);
     Assertions.assertEquals(4, aggr.size());
 
