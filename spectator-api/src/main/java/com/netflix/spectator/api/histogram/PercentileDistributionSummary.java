@@ -89,7 +89,7 @@ public final class PercentileDistributionSummary implements DistributionSummary 
    *     the percentiles for the distribution.
    */
   public static PercentileDistributionSummary get(Registry registry, Id id) {
-    return new PercentileDistributionSummary(registry, id, 0L, Long.MAX_VALUE);
+    return computeIfAbsent(registry, id, 0L, Long.MAX_VALUE);
   }
 
   /**
@@ -155,7 +155,7 @@ public final class PercentileDistributionSummary implements DistributionSummary 
      */
     public PercentileDistributionSummary build() {
       final Id id = baseId.withTags(extraTags);
-      return new PercentileDistributionSummary(registry, id, min, max);
+      return computeIfAbsent(registry, id, min, max);
     }
   }
 
