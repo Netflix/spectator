@@ -122,7 +122,14 @@ public interface Id extends TagList {
     return tmp;
   }
 
-  /** Return a new id with additional tag values. */
+  /**
+   * Return a new id with additional tag values.
+   *
+   * If using a {@link java.util.concurrent.ConcurrentMap}, note that the map <strong>should
+   * not</strong> be concurrently modified during this call. It is up to the user to ensure
+   * that it contains the correct set of tags that should be added to the id before and for the
+   * entire duration of the call until the new id is returned.
+   */
   default Id withTags(Map<String, String> tags) {
     Id tmp = this;
     for (Map.Entry<String, String> entry : tags.entrySet()) {
