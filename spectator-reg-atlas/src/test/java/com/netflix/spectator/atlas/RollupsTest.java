@@ -38,7 +38,7 @@ public class RollupsTest {
   @BeforeEach
   public void before() {
     clock = new ManualClock();
-    registry = new AtlasRegistry(clock, k -> null);
+    registry = new AtlasRegistry(clock, k -> "atlas.step".equals(k) ? "PT5S" : null);
   }
 
   private Id removeIdxTag(Id id) {

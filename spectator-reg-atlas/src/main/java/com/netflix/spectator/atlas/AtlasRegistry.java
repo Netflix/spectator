@@ -53,6 +53,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.Deflater;
 
 /**
@@ -274,9 +275,13 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   void sendToLWC() {
-    if (config.lwcEnabled()) {
-      long t = lastCompletedTimestamp(lwcStepMillis);
+    long t = lastCompletedTimestamp(lwcStepMillis);
+    if (config.enabled() || config.lwcEnabled()) {
+      // If either are enabled we poll the meters for each step interval to flush the
+      // data into the consolidator
       pollMeters(t);
+    }
+    if (config.lwcEnabled()) {
       logger.debug("sending to LWC for time: {}", t);
       try {
         EvalPayload payload = evaluator.eval(t);
@@ -302,7 +307,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   synchronized void pollMeters(long t) {
     if (t > lastPollTimestamp) {
       logger.debug("collecting data for time: {}", t);
-      measurements().forEach(m -> {
+      // Be sure to call measurements() on the superclass. The overridden version for the
+      // registry is for public consumption to get consolidated values for the publish step
+      // rather than the step for the meters which is needed here.
+      super.measurements().forEach(m -> {
         if ("jvm.gc.pause".equals(m.id().name())) {
           logger.trace("received measurement for time: {}: {}", t, m);
         }
@@ -422,6 +430,12 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       batches.add(batch);
     }
     return batches;
+  }
+
+  @Override public Stream<Measurement> measurements() {
+    long t = lastCompletedTimestamp(stepMillis);
+    pollMeters(t);
+    return getBatches(t).stream().flatMap(List::stream);
   }
 
   @Override protected Counter newCounter(Id id) {
