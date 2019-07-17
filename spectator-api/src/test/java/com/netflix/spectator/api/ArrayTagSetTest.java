@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ArrayTagSetTest {
 
@@ -357,5 +359,44 @@ public class ArrayTagSetTest {
       tmp.add(Tag.of(k, v));
     });
     Assertions.assertEquals(expected, ArrayTagSet.create(tmp));
+  }
+
+  @Test
+  public void addAllConcurrentMap() {
+    Map<String, String> tags = new ConcurrentHashMap<>();
+    tags.put("app", "foo");
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(tags);
+    Assertions.assertEquals(ArrayTagSet.EMPTY.add("app", "foo"), ts);
+  }
+
+  @Test
+  public void addAllConcurrentMapFailure() {
+    // This test just checks that we do not throw if the map is being modified concurrently.
+    // It seems to fail reliably when testing prior to the patch.
+    // https://github.com/Netflix/spectator/issues/733
+    final AtomicBoolean done = new AtomicBoolean(false);
+    final Map<String, String> tags = new ConcurrentHashMap<>();
+
+    Thread t1 = new Thread(() -> {
+      while (!done.get()) {
+        tags.remove("app");
+      }
+    });
+    t1.start();
+
+    Thread t2 = new Thread(() -> {
+      while (!done.get()) {
+        tags.put("app", "foo");
+      }
+    });
+    t2.start();
+
+    try {
+      for (int i = 0; i < 10_000; ++i) {
+        ArrayTagSet.EMPTY.addAll(tags);
+      }
+    } finally {
+      done.set(true);
+    }
   }
 }

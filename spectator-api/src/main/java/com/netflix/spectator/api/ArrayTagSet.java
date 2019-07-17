@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * An immutable set of tags sorted by the tag key.
@@ -141,6 +142,15 @@ final class ArrayTagSet implements TagList {
   ArrayTagSet addAll(Map<String, String> ts) {
     if (ts.isEmpty()) {
       return this;
+    } else if (ts instanceof ConcurrentMap) {
+      // Special case ConcurrentMaps to avoid propagating errors if there is a bug in the caller
+      // and the map is mutated while being added:
+      // https://github.com/Netflix/spectator/issues/733
+      List<Tag> data = new ArrayList<>(ts.size());
+      for (Map.Entry<String, String> entry : ts.entrySet()) {
+        data.add(new BasicTag(entry.getKey(), entry.getValue()));
+      }
+      return addAll(data);
     } else {
       Tag[] newTags = new Tag[ts.size()];
       int i = 0;
