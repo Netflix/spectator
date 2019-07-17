@@ -370,7 +370,7 @@ public class ArrayTagSetTest {
   }
 
   @Test
-  public void addAllConcurrentMapFailure() {
+  public void addAllConcurrentMapFailure() throws InterruptedException {
     // This test just checks that we do not throw if the map is being modified concurrently.
     // It seems to fail reliably when testing prior to the patch.
     // https://github.com/Netflix/spectator/issues/733
@@ -397,6 +397,8 @@ public class ArrayTagSetTest {
       }
     } finally {
       done.set(true);
+      t1.join();
+      t2.join();
     }
   }
 }
