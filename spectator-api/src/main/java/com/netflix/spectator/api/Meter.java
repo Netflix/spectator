@@ -15,11 +15,13 @@
  */
 package com.netflix.spectator.api;
 
+import java.io.Serializable;
+
 /**
  * A device for collecting a set of measurements. Note, this interface is only intended to be
  * implemented by registry implementations.
  */
-public interface Meter {
+public interface Meter extends Serializable {
 
   /**
    * Identifier used to lookup this meter in the registry.
