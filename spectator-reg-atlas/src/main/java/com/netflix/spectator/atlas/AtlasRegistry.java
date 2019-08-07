@@ -276,11 +276,15 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   void sendToLWC() {
     long t = lastCompletedTimestamp(lwcStepMillis);
-    if (config.enabled() || config.lwcEnabled()) {
+    //if (config.enabled() || config.lwcEnabled()) {
       // If either are enabled we poll the meters for each step interval to flush the
       // data into the consolidator
+      // NOTE: temporarily to avoid breaking some internal use-cases, the meters will always
+      // be polled to ensure the consolidated values for the main publishing path will be
+      // correct. Once those use-cases have been transitioned the condition should be enabled
+      // again.
       pollMeters(t);
-    }
+    //}
     if (config.lwcEnabled()) {
       logger.debug("sending to LWC for time: {}", t);
       try {
