@@ -37,7 +37,6 @@ import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
-import com.netflix.spectator.ipc.http.HttpResponse;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -51,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -248,20 +248,25 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       pollMeters(t);
       logger.debug("sending to Atlas for time: {}", t);
       try {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (List<Measurement> batch : getBatches(t)) {
           PublishPayload p = new PublishPayload(commonTags, batch);
           if (logger.isTraceEnabled()) {
             logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
           }
-          HttpResponse res = client.post(uri)
+          CompletableFuture<Void> future = client.post(uri)
               .withConnectTimeout(connectTimeout)
               .withReadTimeout(readTimeout)
               .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
               .compress(Deflater.BEST_SPEED)
-              .send();
-          Instant date = res.dateHeader("Date");
-          recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+              .sendAsync()
+              .thenAccept(res -> {
+                Instant date = res.dateHeader("Date");
+                recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+              });
+          futures.add(future);
         }
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
       } catch (Exception e) {
         logger.warn("failed to send metrics (uri={})", uri, e);
       }
@@ -293,8 +298,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
             .withJsonContent(json)
-            .send()
-            .decompress();
+            .send();
       } catch (Exception e) {
         logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }

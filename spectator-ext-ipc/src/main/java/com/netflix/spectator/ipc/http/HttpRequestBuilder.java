@@ -29,13 +29,20 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.zip.Deflater;
 
 /**
@@ -49,6 +56,35 @@ public class HttpRequestBuilder {
 
   private static final Map<String, String> NETFLIX_HEADERS =
       NetflixHeaders.extractFromEnvironment();
+
+  // Should not be used directly, use the method of the same name that will create the
+  // executor if needed on the first access.
+  private static volatile ExecutorService defaultExecutor;
+
+  private static ThreadFactory newThreadFactory() {
+    return new ThreadFactory() {
+      private final AtomicInteger next = new AtomicInteger();
+
+      @Override public Thread newThread(Runnable r) {
+        final String name = "spectator-ipc-" + next.getAndIncrement();
+        final Thread t = new Thread(r, name);
+        t.setDaemon(true);
+        return t;
+      }
+    };
+  }
+
+  private static ExecutorService defaultExecutor() {
+    ExecutorService executor = defaultExecutor;
+    if (executor != null) {
+      return executor;
+    }
+    synchronized (LOGGER) {
+      defaultExecutor = Executors.newFixedThreadPool(
+          Runtime.getRuntime().availableProcessors(), newThreadFactory());
+      return defaultExecutor;
+    }
+  }
 
   private final URI uri;
   private final IpcLogEntry entry;
@@ -261,6 +297,22 @@ public class HttpRequestBuilder {
       throw new IOException("request failed " + method + " " + uri);
     }
     return response;
+  }
+
+  /**
+   * Send the request asynchronously and log/update metrics for the results. The request
+   * will be sent on a background thread pool and will update the future when complete. In
+   * the future it can be changed to use the new HttpClient in Java 11+.
+   */
+  public CompletableFuture<HttpResponse> sendAsync() {
+    Supplier<HttpResponse> responseSupplier = () -> {
+      try {
+        return send();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    };
+    return CompletableFuture.supplyAsync(responseSupplier, defaultExecutor());
   }
 
   private void configureHTTPS(HttpURLConnection http) {
