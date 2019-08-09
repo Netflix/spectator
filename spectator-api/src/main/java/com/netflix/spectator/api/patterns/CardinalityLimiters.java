@@ -18,6 +18,7 @@ package com.netflix.spectator.api.patterns;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Utils;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -154,7 +155,10 @@ public final class CardinalityLimiters {
     return new RollupLimiter(n);
   }
 
-  private static class FirstLimiter implements Function<String, String> {
+  private static class FirstLimiter implements Function<String, String>, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private final ReentrantLock lock = new ReentrantLock();
     private final ConcurrentHashMap<String, String> values = new ConcurrentHashMap<>();
     private final AtomicInteger remaining;
@@ -200,7 +204,10 @@ public final class CardinalityLimiters {
     }
   }
 
-  private static class MostFrequentLimiter implements Function<String, String> {
+  private static class MostFrequentLimiter implements Function<String, String>, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     // With a 10m refresh interval this is ~2h for it to return to normal if there
     // is a temporary window with lots of churn
     private static final int MAX_UPDATES = 12;
@@ -312,10 +319,11 @@ public final class CardinalityLimiters {
           .collect(Collectors.joining(","));
       return "MostFrequentLimiter(" + cutoff + "," + limiter + ",values=[" + vs + "])";
     }
-
   }
 
-  private static class RollupLimiter implements Function<String, String> {
+  private static class RollupLimiter implements Function<String, String>, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final int n;
     private final Set<String> values;
@@ -342,6 +350,11 @@ public final class CardinalityLimiters {
       } else {
         return s;
       }
+    }
+
+    @Override public String toString() {
+      final String state = rollup ? "true" : values.size()  + " of " + n;
+      return "RollupLimiter(" + state + ")";
     }
   }
 }
