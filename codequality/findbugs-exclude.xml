@@ -60,4 +60,10 @@
       <Bug pattern="SF_SWITCH_FALLTHROUGH"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.api.Clock"/>
+      <Bug pattern="IC_SUPERCLASS_USES_SUBCLASS_DURING_INITIALIZATION"/>
+    </And>
+  </Match>
 </FindBugsFilter>

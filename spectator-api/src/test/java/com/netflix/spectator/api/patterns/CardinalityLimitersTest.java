@@ -15,10 +15,15 @@
  */
 package com.netflix.spectator.api.patterns;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -310,5 +315,50 @@ public class CardinalityLimitersTest {
     Assertions.assertEquals("b", f.apply("b"));
     Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("c"));
     Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("a"));
+  }
+
+  @SuppressWarnings("unchecked")
+  static void checkSerde(Function<String, String> limiter) {
+    try {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (ObjectOutputStream out = new ObjectOutputStream(baos)) {
+        out.writeObject(limiter);
+      }
+
+      ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+      try (ObjectInputStream in = new ObjectInputStream(bais)) {
+        Function<String, String> deserialized = (Function<String, String>) in.readObject();
+        Assertions.assertEquals(limiter.toString(), deserialized.toString());
+      }
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void firstSerializability() {
+    Function<String, String> limiter = CardinalityLimiters.first(2);
+    limiter.apply("a");
+    limiter.apply("b");
+    limiter.apply("c");
+    checkSerde(limiter);
+  }
+
+  @Test
+  public void mostFrequentSerializability() {
+    Function<String, String> limiter = CardinalityLimiters.mostFrequent(2);
+    limiter.apply("a");
+    limiter.apply("b");
+    limiter.apply("c");
+    checkSerde(limiter);
+  }
+
+  @Test
+  public void rollupSerializability() {
+    Function<String, String> limiter = CardinalityLimiters.rollup(2);
+    limiter.apply("a");
+    limiter.apply("b");
+    limiter.apply("c");
+    checkSerde(limiter);
   }
 }
