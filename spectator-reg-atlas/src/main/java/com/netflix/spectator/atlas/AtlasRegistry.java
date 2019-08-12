@@ -294,15 +294,17 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       logger.debug("sending to LWC for time: {}", t);
       try {
         EvalPayload payload = evaluator.eval(t);
-        String json = jsonMapper.writeValueAsString(payload);
-        if (logger.isTraceEnabled()) {
-          logger.trace("eval payload: {}", json);
+        if (!payload.getMetrics().isEmpty()) {
+          String json = jsonMapper.writeValueAsString(payload);
+          if (logger.isTraceEnabled()) {
+            logger.trace("eval payload: {}", json);
+          }
+          client.post(evalUri)
+              .withConnectTimeout(connectTimeout)
+              .withReadTimeout(readTimeout)
+              .withJsonContent(json)
+              .send();
         }
-        client.post(evalUri)
-            .withConnectTimeout(connectTimeout)
-            .withReadTimeout(readTimeout)
-            .withJsonContent(json)
-            .send();
       } catch (Exception e) {
         logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
