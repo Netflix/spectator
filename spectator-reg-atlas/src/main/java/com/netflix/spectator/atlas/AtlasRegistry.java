@@ -37,6 +37,7 @@ import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpResponse;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -51,7 +52,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.Deflater;
@@ -97,6 +102,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final HttpClient client;
 
   private Scheduler scheduler;
+  private ExecutorService senderPool;
 
   private final SubscriptionManager subManager;
   private final Evaluator evaluator;
@@ -166,6 +172,19 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     if (scheduler == null) {
       logger.info("common tags: {}", commonTags);
 
+      // Thread pool for encoding the requests and sending
+      ThreadFactory factory = new ThreadFactory() {
+        private final AtomicInteger next = new AtomicInteger();
+
+        @Override public Thread newThread(Runnable r) {
+          final String name = "spectator-atlas-publish-" + next.getAndIncrement();
+          final Thread t = new Thread(r, name);
+          t.setDaemon(true);
+          return t;
+        }
+      };
+      senderPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), factory);
+
       // Setup main collection for publishing to Atlas
       Scheduler.Options options = new Scheduler.Options()
           .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
@@ -218,6 +237,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * Stop the scheduler reporting Atlas data.
    */
   public void stop() {
+    if (senderPool != null) {
+      senderPool.shutdown();
+      senderPool = null;
+    }
     if (scheduler != null) {
       scheduler.shutdown();
       scheduler = null;
@@ -242,34 +265,37 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return now / s * s;
   }
 
+  private void sendBatch(List<Measurement> batch) {
+    try {
+      PublishPayload p = new PublishPayload(commonTags, batch);
+      if (logger.isTraceEnabled()) {
+        logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
+      }
+      HttpResponse res = client.post(uri)
+          .withConnectTimeout(connectTimeout)
+          .withReadTimeout(readTimeout)
+          .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
+          .compress(Deflater.BEST_SPEED)
+          .send();
+      Instant date = res.dateHeader("Date");
+      recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+    } catch (Exception e) {
+      logger.warn("failed to send metrics (uri={})", uri, e);
+    }
+  }
+
   void sendToAtlas() {
     if (config.enabled()) {
       long t = lastCompletedTimestamp(stepMillis);
       pollMeters(t);
       logger.debug("sending to Atlas for time: {}", t);
-      try {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (List<Measurement> batch : getBatches(t)) {
-          PublishPayload p = new PublishPayload(commonTags, batch);
-          if (logger.isTraceEnabled()) {
-            logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
-          }
-          CompletableFuture<Void> future = client.post(uri)
-              .withConnectTimeout(connectTimeout)
-              .withReadTimeout(readTimeout)
-              .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
-              .compress(Deflater.BEST_SPEED)
-              .sendAsync()
-              .thenAccept(res -> {
-                Instant date = res.dateHeader("Date");
-                recordClockSkew((date == null) ? 0L : date.toEpochMilli());
-              });
-          futures.add(future);
-        }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-      } catch (Exception e) {
-        logger.warn("failed to send metrics (uri={})", uri, e);
+      List<CompletableFuture<Void>> futures = new ArrayList<>();
+      for (List<Measurement> batch : getBatches(t)) {
+        CompletableFuture<Void> future = CompletableFuture.runAsync(
+            () -> sendBatch(batch), senderPool);
+        futures.add(future);
       }
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     } else {
       logger.debug("publishing is disabled, skipping collection");
     }
