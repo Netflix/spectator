@@ -197,27 +197,6 @@ public class ConsolidatorTest {
   }
 
   @Test
-  public void lastRandom() {
-    Id id = Id.create("test");
-    Id measurementId = id.withTag("atlas.dstype", "gauge").withTag(Statistic.gauge);
-    ManualClock clock = new ManualClock();
-
-    Gauge primary = registry(clock, PRIMARY_STEP).gauge(id);
-    Gauge consolidated = registry(clock, CONSOLIDATED_STEP).gauge(id);
-
-    Consolidator consolidator = new Consolidator.Last(CONSOLIDATED_STEP, MULTIPLE);
-
-    consolidateRandomData(
-        measurementId,
-        clock,
-        consolidator,
-        primary::set,
-        consolidated::set,
-        primary::measure,
-        consolidated::measure);
-  }
-
-  @Test
   public void noneRandom() {
     Id id = Id.create("test");
     Id measurementId = id.withTag("atlas.dstype", "rate").withTag(Statistic.count);
@@ -246,21 +225,12 @@ public class ConsolidatorTest {
         Statistic.totalTime,
         Statistic.totalOfSquares,
         Statistic.percentile);
-    EnumSet<Statistic> maxGauges = EnumSet.of(
-        Statistic.max,
-        Statistic.duration,
-        Statistic.activeTasks);
-    EnumSet<Statistic> gauges = EnumSet.of(Statistic.gauge);
     for (Statistic statistic : Statistic.values()) {
       Consolidator consolidator = Consolidator.create(statistic, CONSOLIDATED_STEP, MULTIPLE);
       if (counters.contains(statistic)) {
         Assertions.assertTrue(consolidator instanceof Consolidator.Avg, statistic.name());
-      } else if (maxGauges.contains(statistic)) {
-        Assertions.assertTrue(consolidator instanceof Consolidator.Max, statistic.name());
-      } else if (gauges.contains(statistic)) {
-        Assertions.assertTrue(consolidator instanceof Consolidator.Last, statistic.name());
       } else {
-        Assertions.fail(statistic.name());
+        Assertions.assertTrue(consolidator instanceof Consolidator.Max, statistic.name());
       }
     }
   }
@@ -276,14 +246,14 @@ public class ConsolidatorTest {
   public void createFromIdGauge() {
     Id id = Id.create("foo").withTag(Statistic.gauge);
     Consolidator consolidator = Consolidator.create(id, CONSOLIDATED_STEP, MULTIPLE);
-    Assertions.assertTrue(consolidator instanceof Consolidator.Last);
+    Assertions.assertTrue(consolidator instanceof Consolidator.Max);
   }
 
   @Test
   public void createFromIdNoStatistic() {
     Id id = Id.create("foo");
     Consolidator consolidator = Consolidator.create(id, CONSOLIDATED_STEP, MULTIPLE);
-    Assertions.assertTrue(consolidator instanceof Consolidator.Last);
+    Assertions.assertTrue(consolidator instanceof Consolidator.Max);
   }
 
   @Test

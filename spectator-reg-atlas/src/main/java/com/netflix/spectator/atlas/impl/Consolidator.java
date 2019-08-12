@@ -117,13 +117,8 @@ public interface Consolidator {
       case "percentile":
         consolidator = new Avg(step, multiple);
         break;
-      case "max":
-      case "duration":
-      case "activeTasks":
-        consolidator = new Max(step, multiple);
-        break;
       default:
-        consolidator = new Last(step, multiple);
+        consolidator = new Max(step, multiple);
         break;
     }
     return consolidator;
@@ -260,25 +255,6 @@ public interface Consolidator {
 
     @Override protected double aggregate(double v1, double v2) {
       return Double.isNaN(v1) ? v2 : Double.isNaN(v2) ? v1 : Math.max(v1, v2);
-    }
-
-    @Override protected double complete(double v) {
-      return v;
-    }
-  }
-
-  /**
-   * Selects the last value that is reported. This is used for normal gauges to preserve the
-   * local behavior of a normal gauge collected with the consolidated step.
-   */
-  final class Last extends AbstractConsolidator {
-
-    Last(long step, int multiple) {
-      super(step, multiple);
-    }
-
-    @Override protected double aggregate(double v1, double v2) {
-      return Double.isNaN(v2) ? v1 : v2;
     }
 
     @Override protected double complete(double v) {
