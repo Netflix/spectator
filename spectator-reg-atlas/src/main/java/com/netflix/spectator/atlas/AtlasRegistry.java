@@ -347,10 +347,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // registry is for public consumption to get consolidated values for the publish step
       // rather than the step for the meters which is needed here.
       super.measurements().forEach(m -> {
-        if ("jvm.gc.pause".equals(m.id().name())) {
-          logger.trace("received measurement for time: {}: {}", t, m);
-        }
-
         // Update the map for data to go to the Atlas storage layer
         Consolidator consolidator = atlasMeasurements.get(m.id());
         if (consolidator == null) {
