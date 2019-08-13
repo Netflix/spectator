@@ -111,4 +111,54 @@ public class UtilsTest {
     List<Measurement> out = Utils.toList(Utils.filter(ms, v -> false));
     Assertions.assertEquals(0, out.size());
   }
+
+  @Test
+  public void sizeTagList() {
+    Id id = Id.create("test").withTags("a", "1", "b", "2");
+    Assertions.assertEquals(2, Utils.size(id.tags()));
+  }
+
+  @Test
+  public void sizeCollection() {
+    List<String> vs = new ArrayList<>();
+    vs.add("a");
+    vs.add("b");
+    vs.add("c");
+    Assertions.assertEquals(3, Utils.size(vs));
+  }
+
+  @Test
+  public void sizeIterable() {
+    List<String> vs = new ArrayList<>();
+    vs.add("a");
+    vs.add("b");
+    Assertions.assertEquals(2, Utils.size(vs::iterator));
+  }
+
+  @Test
+  public void getValueList() {
+    List<String> vs = new ArrayList<>();
+    vs.add("a");
+    vs.add("b");
+    vs.add("c");
+    Assertions.assertEquals("a", Utils.getValue(vs, 0));
+    Assertions.assertEquals("b", Utils.getValue(vs, 1));
+    Assertions.assertEquals("c", Utils.getValue(vs, 2));
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> Utils.getValue(vs, 3));
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> Utils.getValue(vs, -3));
+  }
+
+  @Test
+  public void getValueIterable() {
+    List<String> vs = new ArrayList<>();
+    vs.add("a");
+    vs.add("b");
+    vs.add("c");
+    Iterable<String> it = vs::iterator;
+    Assertions.assertEquals("a", Utils.getValue(it, 0));
+    Assertions.assertEquals("b", Utils.getValue(it, 1));
+    Assertions.assertEquals("c", Utils.getValue(it, 2));
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> Utils.getValue(it, 3));
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> Utils.getValue(it, -3));
+  }
 }
