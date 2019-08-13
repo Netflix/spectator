@@ -18,8 +18,8 @@ package com.netflix.spectator.atlas.impl;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.AsciiSet;
 
 import java.io.IOException;
@@ -66,17 +66,19 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
       Measurement value,
       JsonGenerator gen,
       SerializerProvider serializers) throws IOException {
+    Id id = value.id();
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
-    gen.writeStringField("name", fixValue("name", value.id().name()));
+    gen.writeStringField("name", fixValue("name", id.name()));
     boolean explicitDsType = false;
-    for (Tag t : value.id().tags()) {
-      if (!"name".equals(t.key())) {
-        if ("atlas.dstype".equals(t.key())) {
+    int n = id.size();
+    for (int i = 1; i < n; ++i) {
+      final String k = fixKey(id.getKey(i));
+      final String v = fixValue(k, id.getValue(i));
+      if (!"name".equals(k)) {
+        if ("atlas.dstype".equals(k)) {
           explicitDsType = true;
         }
-        final String k = fixKey(t.key());
-        final String v = fixValue(k, t.value());
         gen.writeStringField(k, v);
       }
     }
