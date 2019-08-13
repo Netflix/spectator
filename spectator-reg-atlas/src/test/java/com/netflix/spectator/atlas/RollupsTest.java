@@ -18,6 +18,8 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Utils;
@@ -38,7 +40,16 @@ public class RollupsTest {
   @BeforeEach
   public void before() {
     clock = new ManualClock();
-    registry = new AtlasRegistry(clock, k -> "atlas.step".equals(k) ? "PT5S" : null);
+    AtlasConfig config = new AtlasConfig() {
+      @Override public String get(String k) {
+        return "atlas.step".equals(k) ? "PT5S" : null;
+      }
+
+      @Override public Registry debugRegistry() {
+        return new NoopRegistry();
+      }
+    };
+    registry = new AtlasRegistry(clock, config);
   }
 
   private Id removeIdxTag(Id id) {
