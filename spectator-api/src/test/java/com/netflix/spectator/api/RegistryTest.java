@@ -20,8 +20,11 @@ import com.netflix.spectator.impl.SwapMeter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.DoubleSummaryStatistics;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -573,5 +576,114 @@ public class RegistryTest {
     PolledMeter.update(r);
     Assertions.assertEquals(0, r.stream().count());
     Assertions.assertEquals(0, r.state().size());
+  }
+
+  @Test
+  public void customIdTags() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test").withTags("b", "2", "a", "1");
+    r.counter(id).increment();
+    Assertions.assertEquals(1, r.counter("test", "a", "1", "b", "2").count());
+  }
+
+  @Test
+  public void customIdCounter() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test");
+    r.counter(id).increment();
+    Assertions.assertEquals(1, r.counter("test").count());
+  }
+
+  @Test
+  public void customIdGauge() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test");
+    r.gauge(id).set(42.0);
+    Assertions.assertEquals(42.0, r.gauge("test").value(), 1e-12);
+  }
+
+  @Test
+  public void customIdMaxGauge() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test");
+    r.maxGauge(id).set(42.0);
+    Assertions.assertEquals(42.0, r.maxGauge("test").value(), 1e-12);
+  }
+
+  @Test
+  public void customIdTimer() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test");
+    r.timer(id).record(42, TimeUnit.NANOSECONDS);
+    Assertions.assertEquals(42L, r.timer("test").totalTime());
+  }
+
+  @Test
+  public void customIdDistributionSummary() {
+    DefaultRegistry r = newRegistry(false, 10000);
+    Id id = new CustomId("test");
+    r.distributionSummary(id).record(42);
+    Assertions.assertEquals(42L, r.distributionSummary("test").totalAmount());
+  }
+
+  @Test
+  public void customIdGetKey() {
+    Id id = new CustomId("test").withTags("b", "2", "a", "1");
+    Assertions.assertEquals("name", id.getKey(0));
+    Assertions.assertEquals("b", id.getKey(1));
+    Assertions.assertEquals("a", id.getKey(2));
+  }
+
+  @Test
+  public void customIdGetValue() {
+    Id id = new CustomId("test").withTags("b", "2", "a", "1");
+    Assertions.assertEquals("test", id.getValue(0));
+    Assertions.assertEquals("2", id.getValue(1));
+    Assertions.assertEquals("1", id.getValue(2));
+  }
+
+  @Test
+  public void customIdSize() {
+    Id id = new CustomId("test").withTags("b", "2", "a", "1");
+    Assertions.assertEquals(3, id.size());
+  }
+
+  // Used to test that custom Id implementations will get normalized correctly and that
+  // backwards compatibility for inheritance is maintained.
+  public static class CustomId implements Id {
+
+    private final String name;
+    private final List<Tag> tags;
+
+    CustomId(String name) {
+      this(name, Collections.emptyList());
+    }
+
+    CustomId(String name, List<Tag> tags) {
+      this.name = name;
+      this.tags = Collections.unmodifiableList(tags);
+    }
+
+    private List<Tag> append(Tag tag) {
+      List<Tag> tmp = new ArrayList<>(tags);
+      tmp.add(tag);
+      return tmp;
+    }
+
+    @Override public String name() {
+      return name;
+    }
+
+    @Override public Iterable<Tag> tags() {
+      return tags;
+    }
+
+    @Override public Id withTag(String k, String v) {
+      return new CustomId(name, append(Tag.of(k, v)));
+    }
+
+    @Override public Id withTag(Tag t) {
+      return new CustomId(name, append(t));
+    }
   }
 }

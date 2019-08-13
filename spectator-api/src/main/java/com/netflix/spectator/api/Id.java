@@ -138,6 +138,21 @@ public interface Id extends TagList {
     return tmp;
   }
 
+  /** Return the key at the specified index. The name will be treated as position 0. */
+  @Override default String getKey(int i) {
+    return i == 0 ? "name" : Utils.getValue(tags(), i - 1).key();
+  }
+
+  /** Return the value at the specified index. The name will be treated as position 0. */
+  @Override default String getValue(int i) {
+    return i == 0 ? name() : Utils.getValue(tags(), i - 1).value();
+  }
+
+  /** Return the size, number of tags, for the id including the name. */
+  @Override default int size() {
+    return Utils.size(tags()) + 1;
+  }
+
   /**
    * Create an immutable Id with the provided name. In many cases it is preferable to use
    * {@link Registry#createId(String)} instead so that the overhead for instrumentation can
