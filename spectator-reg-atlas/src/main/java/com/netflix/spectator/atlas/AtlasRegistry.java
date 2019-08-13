@@ -183,7 +183,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           return t;
         }
       };
-      senderPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), factory);
+      senderPool = Executors.newFixedThreadPool(numThreads, factory);
 
       // Setup main collection for publishing to Atlas
       Scheduler.Options options = new Scheduler.Options()

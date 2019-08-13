@@ -65,11 +65,11 @@ public interface AtlasConfig extends RegistryConfig {
 
   /**
    * Returns the number of threads to use with the scheduler. The default is
-   * 2 threads.
+   * 4 threads.
    */
   default int numThreads() {
     String v = get("atlas.numThreads");
-    return (v == null) ? 2 : Integer.parseInt(v);
+    return (v == null) ? 4 : Integer.parseInt(v);
   }
 
   /**
