@@ -25,18 +25,15 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-import java.util.Map;
 
 
 public class MeasurementSerializerTest {
 
   private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
-  private final Map<String, AsciiSet> overrides =
-      Collections.singletonMap("cluster", AsciiSet.fromPattern("-._A-Za-z0-9^~"));
 
   private final DefaultRegistry registry = new DefaultRegistry();
   private final SimpleModule module = new SimpleModule()
-      .addSerializer(Measurement.class, new MeasurementSerializer(set, overrides));
+      .addSerializer(Measurement.class, new MeasurementSerializer(set));
   private final ObjectMapper mapper = new ObjectMapper().registerModule(module);
 
   @Test
@@ -95,16 +92,6 @@ public class MeasurementSerializerTest {
     Measurement m = new Measurement(id, 42L, 3.0);
     String json = mapper.writeValueAsString(m);
     String tags = "{\"name\":\"foo\",\"bar\":\"b__\",\"atlas.dstype\":\"gauge\"}";
-    String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
-    Assertions.assertEquals(expected, json);
-  }
-
-  @Test
-  public void valueCharsetOverrides() throws Exception {
-    Id id = registry.createId("foo", "bar", "abc^~def", "cluster", "abc^~def");
-    Measurement m = new Measurement(id, 42L, 3.0);
-    String json = mapper.writeValueAsString(m);
-    String tags = "{\"name\":\"foo\",\"bar\":\"abc__def\",\"cluster\":\"abc^~def\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     Assertions.assertEquals(expected, json);
   }
