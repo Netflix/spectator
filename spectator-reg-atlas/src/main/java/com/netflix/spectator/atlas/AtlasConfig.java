@@ -176,9 +176,8 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
-   * Returns a pattern indicating the valid characters for a tag key or value. The character
-   * set for tag values can be overridden for a particular tag key using
-   * {@link #validTagValueCharacters()}. The default is {@code -._A-Za-z0-9~^}.
+   * Returns a pattern indicating the valid characters for a tag key or value. The default is
+   * {@code -._A-Za-z0-9~^}.
    */
   default String validTagCharacters() {
     return "-._A-Za-z0-9~^";
@@ -187,7 +186,10 @@ public interface AtlasConfig extends RegistryConfig {
   /**
    * Returns a map from tag key to a pattern indicating the valid characters for the values
    * of that key. The default is an empty map.
+   *
+   * @deprecated This method is no longer used internally.
    */
+  @Deprecated
   default Map<String, String> validTagValueCharacters() {
     return Collections.emptyMap();
   }

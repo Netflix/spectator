@@ -23,7 +23,6 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.impl.AsciiSet;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Jackson serializer for measurements. Values will be converted to a
@@ -36,29 +35,20 @@ import java.util.Map;
 public class MeasurementSerializer extends JsonSerializer<Measurement> {
 
   private final AsciiSet set;
-  private final Map<String, AsciiSet> overrides;
 
   /**
    * Create a new instance of the serializer.
    *
    * @param set
    *     The set of characters that are allowed to be used for tag keys.
-   * @param overrides
-   *     Overrides for the set of characters allowed to be used for tag values.
    */
-  public MeasurementSerializer(AsciiSet set, Map<String, AsciiSet> overrides) {
+  public MeasurementSerializer(AsciiSet set) {
     super();
     this.set = set;
-    this.overrides = overrides;
   }
 
-  private String fixKey(String k) {
-    return set.replaceNonMembers(k, '_');
-  }
-
-  private String fixValue(String k, String v) {
-    AsciiSet s = overrides.getOrDefault(k, set);
-    return s.replaceNonMembers(v, '_');
+  private String fix(String s) {
+    return set.replaceNonMembers(s, '_');
   }
 
   @Override
@@ -69,12 +59,12 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
     Id id = value.id();
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
-    gen.writeStringField("name", fixValue("name", id.name()));
+    gen.writeStringField("name", fix(id.name()));
     boolean explicitDsType = false;
     int n = id.size();
     for (int i = 1; i < n; ++i) {
-      final String k = fixKey(id.getKey(i));
-      final String v = fixValue(k, id.getValue(i));
+      final String k = fix(id.getKey(i));
+      final String v = fix(id.getValue(i));
       if (!"name".equals(k)) {
         if ("atlas.dstype".equals(k)) {
           explicitDsType = true;

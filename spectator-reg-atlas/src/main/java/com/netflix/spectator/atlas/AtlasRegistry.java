@@ -58,7 +58,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.Deflater;
 
@@ -92,7 +91,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final Map<String, String> commonTags;
 
   private final AsciiSet charset;
-  private final Map<String, AsciiSet> overrides;
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -145,11 +143,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.commonTags = new TreeMap<>(config.commonTags());
 
     this.charset = AsciiSet.fromPattern(config.validTagCharacters());
-    this.overrides = config.validTagValueCharacters()
-        .keySet().stream()
-        .collect(Collectors.toMap(k -> k, AsciiSet::fromPattern));
     SimpleModule module = new SimpleModule()
-        .addSerializer(Measurement.class, new MeasurementSerializer(charset, overrides));
+        .addSerializer(Measurement.class, new MeasurementSerializer(charset));
     this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
@@ -440,11 +435,11 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
     for (Tag t : id.tags()) {
       String k = charset.replaceNonMembers(t.key(), '_');
-      String v = overrides.getOrDefault(k, charset).replaceNonMembers(t.value(), '_');
+      String v = charset.replaceNonMembers(t.value(), '_');
       tags.put(k, v);
     }
 
-    String name = overrides.getOrDefault("name", charset).replaceNonMembers(id.name(), '_');
+    String name = charset.replaceNonMembers(id.name(), '_');
     tags.put("name", name);
 
     return tags;
