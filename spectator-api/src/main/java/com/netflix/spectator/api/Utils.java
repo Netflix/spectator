@@ -113,9 +113,19 @@ public final class Utils {
   public static String getTagValue(Iterable<Tag> tags, String k) {
     Preconditions.checkNotNull(tags, "tags");
     Preconditions.checkNotNull(k, "key");
-    for (Tag t : tags) {
-      if (k.equals(t.key())) {
-        return t.value();
+    if (tags instanceof TagList) {
+      TagList list = (TagList) tags;
+      int n = list.size();
+      for (int i = 0; i < n; ++i) {
+        if (k.equals(list.getKey(i))) {
+          return list.getValue(i);
+        }
+      }
+    } else {
+      for (Tag t : tags) {
+        if (k.equals(t.key())) {
+          return t.value();
+        }
       }
     }
     return null;

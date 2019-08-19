@@ -48,6 +48,13 @@ public class UtilsTest {
   }
 
   @Test
+  public void getTagValueIterable() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("foo", "bar", "baz", "abc", "def");
+    Assertions.assertEquals("def", Utils.getTagValue(id.tags()::iterator, "abc"));
+  }
+
+  @Test
   public void firstTag() {
     List<Measurement> ms = newList(10);
     Tag t = new BasicTag("i", "7");
