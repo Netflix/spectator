@@ -113,7 +113,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   /** Create a new instance. */
   @Inject
   public AtlasRegistry(Clock clock, AtlasConfig config) {
-    super(clock, config);
+    super(new OverridableClock(clock), config);
     this.config = config;
     this.stepClock = new StepClock(clock, config.lwcStep().toMillis());
 
@@ -234,16 +234,32 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * Stop the scheduler reporting Atlas data.
    */
   public void stop() {
-    if (senderPool != null) {
-      senderPool.shutdown();
-      senderPool = null;
-    }
+    // Shutdown backround tasks to collect data
     if (scheduler != null) {
       scheduler.shutdown();
       scheduler = null;
       logger.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
     } else {
       logger.warn("registry stopped, but was never started");
+    }
+
+    // Flush data to Atlas
+    try {
+      logger.info("flushing data for final interval to Atlas");
+      OverridableClock overridableClock = (OverridableClock) clock();
+      long now = clock().wallTime();
+      overridableClock.setWallTime(now / lwcStepMillis * lwcStepMillis + lwcStepMillis);
+      pollMeters(overridableClock.wallTime());
+      overridableClock.setWallTime(now / stepMillis * stepMillis + stepMillis);
+      sendToAtlas();
+    } catch (Exception e) {
+      logger.warn("failed to flush data to Atlas", e);
+    }
+
+    // Shutdown pool used for sending metrics
+    if (senderPool != null) {
+      senderPool.shutdown();
+      senderPool = null;
     }
   }
 
