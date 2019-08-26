@@ -16,6 +16,7 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.api.patterns.PolledMeter;
+import com.netflix.spectator.impl.Cache;
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
@@ -41,6 +42,8 @@ public abstract class AbstractRegistry implements Registry {
   private final ConcurrentHashMap<Id, Meter> meters;
   private final ConcurrentHashMap<Id, Object> state;
 
+  private final Cache<Id, Id> idNormalizationCache;
+
   /**
    * Create a new instance.
    *
@@ -65,6 +68,7 @@ public abstract class AbstractRegistry implements Registry {
     this.config = config;
     this.meters = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
+    this.idNormalizationCache = Cache.lfu(new NoopRegistry(), "spectator-id", 1000, 10000);
   }
 
   /**
@@ -141,7 +145,9 @@ public abstract class AbstractRegistry implements Registry {
    * then it will not create a new instance.
    */
   private Id normalizeId(Id id) {
-    return (id instanceof DefaultId) ? id : createId(id.name(), id.tags());
+    return (id instanceof DefaultId)
+        ? id
+        : idNormalizationCache.computeIfAbsent(id, i -> createId(i.name(), i.tags()));
   }
 
   private void logTypeError(Id id, Class<?> desired, Class<?> found) {
