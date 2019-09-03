@@ -366,7 +366,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   synchronized void pollMeters(long t) {
     publishTaskTimer("pollMeters").record(() -> {
       if (t > lastPollTimestamp) {
-        logger.debug("collecting data for time: {}", t);
         // The `for if for if` that follows is equivalent to `super.measurements().forEach`.
         // It is expanded here because with many measurements the stream adds quite a bit of
         // overhead on the JVMs we tested. This can be revisited in the future if streams get
@@ -375,25 +374,39 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         // Note: Be sure to call measurements() on the superclass. The overridden version for
         // the registry is for public consumption to get consolidated values for the publish step
         // rather than the step for the meters which is needed here.
-        for (Meter meter : this) {
-          if (!meter.hasExpired()) {
-            for (Measurement m : meter.measure()) {
-              if (!Double.isNaN(m.value())) {
-                // Update the map for data to go to the Atlas storage layer
-                Consolidator consolidator = atlasMeasurements.get(m.id());
-                if (consolidator == null) {
-                  int multiple = (int) (stepMillis / lwcStepMillis);
-                  consolidator = Consolidator.create(m.id(), stepMillis, multiple);
-                  atlasMeasurements.put(m.id(), consolidator);
+        //
+        // We first collect the measurements into a local list to minimize the time to poll
+        // all values and reduce the chances of crossing a step boundary while sampling the
+        // values.
+        logger.debug("collecting measurements for time: {}", t);
+        List<Measurement> measurements = new ArrayList<>(atlasMeasurements.size());
+        publishTaskTimer("pollMeasurements").record(() -> {
+          for (Meter meter : this) {
+            if (!meter.hasExpired()) {
+              for (Measurement m : meter.measure()) {
+                if (!Double.isNaN(m.value())) {
+                  measurements.add(m);
                 }
-                consolidator.update(m);
-
-                // Update aggregators for streaming
-                evaluator.update(m);
               }
             }
           }
+        });
+
+        logger.debug("updating evaluator for time: {}", t);
+        for (Measurement m : measurements) {
+          // Update the map for data to go to the Atlas storage layer
+          Consolidator consolidator = atlasMeasurements.get(m.id());
+          if (consolidator == null) {
+            int multiple = (int) (stepMillis / lwcStepMillis);
+            consolidator = Consolidator.create(m.id(), stepMillis, multiple);
+            atlasMeasurements.put(m.id(), consolidator);
+          }
+          consolidator.update(m);
+
+          // Update aggregators for streaming
+          evaluator.update(m);
         }
+
         lastPollTimestamp = t;
       }
     });
