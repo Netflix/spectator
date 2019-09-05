@@ -152,14 +152,14 @@ public class AtlasRegistryTest {
   public void initialDelayTooCloseToEnd() {
     clock.setWallTime(19123);
     long d = registry.getInitialDelay(10000);
-    Assertions.assertEquals(9000, d);
+    Assertions.assertEquals(1877, d);
   }
 
   @Test
   public void initialDelayOk() {
     clock.setWallTime(12123);
     long d = registry.getInitialDelay(10000);
-    Assertions.assertEquals(2123, d);
+    Assertions.assertEquals(8877, d);
   }
 
   @Test

@@ -210,24 +210,19 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   /**
    * Avoid collecting right on boundaries to minimize transitions on step longs
-   * during a collection. Randomly distribute across the middle of the step interval.
+   * during a collection. Bias to early in the step interval to get data as quickly
+   * after it is complete and to increase the amount of time to send when there are a
+   * lot of metrics.
    */
   long getInitialDelay(long stepSize) {
     long now = clock().wallTime();
     long stepBoundary = now / stepSize * stepSize;
 
-    // Buffer by 10% of the step interval on either side
-    long offset = stepSize / 10;
-
-    // Check if the current delay is within the acceptable range
-    long delay = now - stepBoundary;
-    if (delay < offset) {
-      return delay + offset;
-    } else if (delay > stepSize - offset) {
-      return stepSize - offset;
-    } else {
-      return delay;
-    }
+    // Buffer by 10% of the step interval
+    long firstTime = stepBoundary + stepSize / 10;
+    return firstTime > now
+        ? firstTime - now
+        : firstTime + stepSize - now;
   }
 
   /**
