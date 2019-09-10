@@ -217,6 +217,8 @@ public final class NetflixConfig {
       props.put(ENVIRONMENT, "test");
       props.put(OWNER, "unknown");
       props.put(REGION, "us-east-1");
+      props.put(APP, "local");
+      props.put(CLUSTER, "local-dev");
     }
   }
 }
