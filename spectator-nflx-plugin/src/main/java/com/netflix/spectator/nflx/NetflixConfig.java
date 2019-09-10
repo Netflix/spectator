@@ -76,8 +76,9 @@ public final class NetflixConfig {
     }
   }
 
-  private static Config loadPropFiles() {
+  static Config loadPropFiles() {
     final Properties props = new Properties();
+    Env.addDefaults(props);
     final String env = Env.environment();
     final String acctId = Env.accountId();
     tryLoadingConfig(props, "atlas_plugin");
@@ -151,11 +152,11 @@ public final class NetflixConfig {
     }
 
     private static String environment() {
-      return getenv(ENVIRONMENT, "dev");
+      return getenv(ENVIRONMENT, "test");
     }
 
     private static String accountId() {
-      return getenv(OWNER, "dc");
+      return getenv(OWNER, "unknown");
     }
 
     private static String region() {
@@ -205,6 +206,17 @@ public final class NetflixConfig {
       } catch (UnknownHostException e) {
         throw new RuntimeException(e);
       }
+    }
+
+    /**
+     * Set default values for environment variables that are used for the basic context
+     * of where an app is running. Helps avoid startup issues when running locally and
+     * these are not set.
+     */
+    private static void addDefaults(Properties props) {
+      props.put(ENVIRONMENT, "test");
+      props.put(OWNER, "unknown");
+      props.put(REGION, "us-east-1");
     }
   }
 }
