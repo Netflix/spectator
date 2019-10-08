@@ -74,12 +74,16 @@ public final class MicrometerRegistry implements Registry {
 
   private Meter convert(io.micrometer.core.instrument.Meter meter) {
     Id id = convert(meter.getId());
-    switch (meter.getId().getType()) {
-      case COUNTER:              return counter(id);
-      case TIMER:                return timer(id);
-      case DISTRIBUTION_SUMMARY: return distributionSummary(id);
-      case GAUGE:                return gauge(id);
-      default:                   return null;
+    if (meter instanceof io.micrometer.core.instrument.Counter) {
+      return counter(id);
+    } else if (meter instanceof io.micrometer.core.instrument.Timer) {
+      return timer(id);
+    } else if (meter instanceof io.micrometer.core.instrument.DistributionSummary) {
+      return distributionSummary(id);
+    } else if (meter instanceof io.micrometer.core.instrument.Gauge) {
+      return gauge(id);
+    } else {
+      return null;
     }
   }
 
