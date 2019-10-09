@@ -315,4 +315,14 @@ public class CompositeRegistryTest {
     Assertions.assertEquals(2, r.gauges().count());
     Assertions.assertEquals(2, r.stream().filter(m -> m instanceof Gauge).count());
   }
+
+  @Test
+  public void dedupAddedRegistries() {
+    CompositeRegistry registry = new CompositeRegistry(clock);
+    Registry r = new DefaultRegistry();
+    registry.add(r);
+    registry.add(r);
+    registry.counter("test").increment();
+    Assertions.assertEquals(1, r.counter("test").count());
+  }
 }

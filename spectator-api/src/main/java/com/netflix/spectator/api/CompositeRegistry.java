@@ -78,7 +78,9 @@ public final class CompositeRegistry implements Registry {
   public void add(Registry registry) {
     wlock.lock();
     try {
-      registries.add(registry);
+      if (!registries.contains(registry)) {
+        registries.add(registry);
+      }
       updateMeters();
     } finally {
       wlock.unlock();
