@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -41,11 +42,7 @@ public final class CompositeRegistry implements Registry {
   private final Clock clock;
 
   private final List<Registry> registries;
-
-  private final ConcurrentHashMap<Id, SwapCounter> counters;
-  private final ConcurrentHashMap<Id, SwapDistributionSummary> distSummaries;
-  private final ConcurrentHashMap<Id, SwapTimer> timers;
-  private final ConcurrentHashMap<Id, SwapGauge> gauges;
+  private final AtomicLong version;
 
   private final ConcurrentHashMap<Id, Object> state;
 
@@ -53,10 +50,7 @@ public final class CompositeRegistry implements Registry {
   CompositeRegistry(Clock clock) {
     this.clock = clock;
     this.registries = new ArrayList<>();
-    this.counters = new ConcurrentHashMap<>();
-    this.distSummaries = new ConcurrentHashMap<>();
-    this.timers = new ConcurrentHashMap<>();
-    this.gauges = new ConcurrentHashMap<>();
+    this.version = new AtomicLong();
     this.state = new ConcurrentHashMap<>();
   }
 
@@ -80,8 +74,8 @@ public final class CompositeRegistry implements Registry {
     try {
       if (!registries.contains(registry)) {
         registries.add(registry);
+        version.incrementAndGet();
       }
-      updateMeters();
     } finally {
       wlock.unlock();
     }
@@ -91,8 +85,9 @@ public final class CompositeRegistry implements Registry {
   public void remove(Registry registry) {
     wlock.lock();
     try {
-      registries.remove(registry);
-      updateMeters();
+      if (registries.remove(registry)) {
+        version.incrementAndGet();
+      }
     } finally {
       wlock.unlock();
     }
@@ -103,21 +98,10 @@ public final class CompositeRegistry implements Registry {
     wlock.lock();
     try {
       registries.clear();
-      counters.clear();
-      distSummaries.clear();
-      timers.clear();
-      gauges.clear();
       state.clear();
     } finally {
       wlock.unlock();
     }
-  }
-
-  private void updateMeters() {
-    counters.forEach((id, c) -> c.set(newCounter(id)));
-    distSummaries.forEach((id, d) -> d.set(newDistributionSummary(id)));
-    timers.forEach((id, t) -> t.set(newTimer(id)));
-    gauges.forEach((id, g) -> g.set(newGauge(id)));
   }
 
   @Override public Clock clock() {
@@ -165,7 +149,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Counter counter(Id id) {
-    return Utils.computeIfAbsent(counters, id, i -> new SwapCounter(this, i, newCounter(i)));
+    return new SwapCounter(this, version::get, id, newCounter(id));
   }
 
   private DistributionSummary newDistributionSummary(Id id) {
@@ -193,8 +177,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
-    return Utils.computeIfAbsent(distSummaries, id,
-        i -> new SwapDistributionSummary(this, i, newDistributionSummary(i)));
+    return new SwapDistributionSummary(this, version::get, id, newDistributionSummary(id));
   }
 
   private Timer newTimer(Id id) {
@@ -222,7 +205,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Timer timer(Id id) {
-    return Utils.computeIfAbsent(timers, id, i -> new SwapTimer(this, i, newTimer(i)));
+    return new SwapTimer(this, version::get, id, newTimer(id));
   }
 
   private Gauge newGauge(Id id) {
@@ -250,7 +233,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge gauge(Id id) {
-    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(this, i, newGauge(i)));
+    return new SwapGauge(this, version::get, id, newGauge(id));
   }
 
   private Gauge newMaxGauge(Id id) {
@@ -278,7 +261,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge maxGauge(Id id) {
-    return Utils.computeIfAbsent(gauges, id, i -> new SwapGauge(this, i, newMaxGauge(i)));
+    return new SwapGauge(this, version::get, id, newMaxGauge(id));
   }
 
   @Override public Meter get(Id id) {
@@ -310,7 +293,7 @@ public final class CompositeRegistry implements Registry {
     rlock.lock();
     try {
       if (registries.isEmpty()) {
-        return Collections.<Meter>emptyList().iterator();
+        return Collections.emptyIterator();
       } else {
         final Set<Id> ids = new HashSet<>();
         for (Registry r : registries) {

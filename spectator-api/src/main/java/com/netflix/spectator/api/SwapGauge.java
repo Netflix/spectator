@@ -17,12 +17,14 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
+import java.util.function.LongSupplier;
+
 /** Wraps another gauge allowing the underlying type to be swapped. */
 final class SwapGauge extends SwapMeter<Gauge> implements Gauge {
 
   /** Create a new instance. */
-  SwapGauge(Registry registry, Id id, Gauge underlying) {
-    super(registry, id, underlying);
+  SwapGauge(Registry registry, LongSupplier versionSupplier, Id id, Gauge underlying) {
+    super(registry, versionSupplier, id, underlying);
   }
 
   @Override public Gauge lookup() {

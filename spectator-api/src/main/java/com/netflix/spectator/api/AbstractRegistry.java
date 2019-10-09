@@ -27,12 +27,17 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 
 /**
  * Base class to make it easier to implement a simple registry that only needs to customise the
  * types returned for Counter, DistributionSummary, and Timer calls.
  */
 public abstract class AbstractRegistry implements Registry {
+
+  /** Not used for this registry, always return 0. */
+  private static final LongSupplier VERSION = () -> 0L;
+
   /** Logger instance for the class. */
   protected final Logger logger;
 
@@ -173,7 +178,7 @@ public abstract class AbstractRegistry implements Registry {
   @Override public final Counter counter(Id id) {
     Id normId = normalizeId(id);
     Counter c = getOrCreate(normId, Counter.class, NoopCounter.INSTANCE, this::newCounter);
-    return new SwapCounter(this, normId, c);
+    return new SwapCounter(this, VERSION, normId, c);
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
@@ -183,25 +188,25 @@ public abstract class AbstractRegistry implements Registry {
         DistributionSummary.class,
         NoopDistributionSummary.INSTANCE,
         this::newDistributionSummary);
-    return new SwapDistributionSummary(this, normId, ds);
+    return new SwapDistributionSummary(this, VERSION, normId, ds);
   }
 
   @Override public final Timer timer(Id id) {
     Id normId = normalizeId(id);
     Timer t = getOrCreate(normId, Timer.class, NoopTimer.INSTANCE, this::newTimer);
-    return new SwapTimer(this, normId, t);
+    return new SwapTimer(this, VERSION, normId, t);
   }
 
   @Override public final Gauge gauge(Id id) {
     Id normId = normalizeId(id);
     Gauge g = getOrCreate(normId, Gauge.class, NoopGauge.INSTANCE, this::newGauge);
-    return new SwapGauge(this, normId, g);
+    return new SwapGauge(this, VERSION, normId, g);
   }
 
   @Override public final Gauge maxGauge(Id id) {
     Id normId = normalizeId(id);
     Gauge g = getOrCreate(normId, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);
-    return new SwapMaxGauge(this, normId, g);
+    return new SwapMaxGauge(this, VERSION, normId, g);
   }
 
   /**
