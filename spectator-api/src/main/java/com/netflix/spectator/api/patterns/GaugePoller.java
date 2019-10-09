@@ -48,13 +48,13 @@ final class GaugePoller {
       Executors.newSingleThreadScheduledExecutor(FACTORY);
 
   /** Schedule collection of gauges for a registry. */
-  static <T> void schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
-    schedule(DEFAULT_EXECUTOR, ref, delay, poll);
+  static <T> Future<?> schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
+    return schedule(DEFAULT_EXECUTOR, ref, delay, poll);
   }
 
   /** Schedule collection of gauges for a registry. */
   @SuppressWarnings("PMD")
-  static <T> void schedule(
+  static <T> Future<?> schedule(
       ScheduledExecutorService executor, WeakReference<T> ref, long delay, Consumer<T> poll) {
     final AtomicReference<Future<?>> futureRef = new AtomicReference<>();
     final Runnable cancel = () -> {
@@ -76,6 +76,7 @@ final class GaugePoller {
       }
     };
     futureRef.set(executor.scheduleWithFixedDelay(task, delay, delay, TimeUnit.MILLISECONDS));
+    return futureRef.get();
   }
 
   private GaugePoller() {
