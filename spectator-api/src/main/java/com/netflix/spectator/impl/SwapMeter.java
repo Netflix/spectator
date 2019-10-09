@@ -20,6 +20,8 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 
+import java.util.function.LongSupplier;
+
 /**
  * Base type for meters that allow the underlying implementation to be replaced with
  * another. This is used by {@link com.netflix.spectator.api.AbstractRegistry} as the
@@ -33,6 +35,9 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   /** Registry used to lookup values after expiration. */
   protected final Registry registry;
 
+  private final LongSupplier versionSupplier;
+  private volatile long currentVersion;
+
   /** Id to use when performing a lookup after expiration. */
   protected final Id id;
 
@@ -40,8 +45,10 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   private volatile T underlying;
 
   /** Create a new instance. */
-  public SwapMeter(Registry registry, Id id, T underlying) {
+  public SwapMeter(Registry registry, LongSupplier versionSupplier, Id id, T underlying) {
     this.registry = registry;
+    this.versionSupplier = versionSupplier;
+    this.currentVersion = versionSupplier.getAsLong();
     this.id = id;
     this.underlying = unwrap(underlying);
   }
@@ -60,7 +67,7 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   }
 
   @Override public boolean hasExpired() {
-    return underlying.hasExpired();
+    return currentVersion < versionSupplier.getAsLong() || underlying.hasExpired();
   }
 
   /**
@@ -73,7 +80,8 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
 
   /** Return the underlying instance of the meter. */
   public T get() {
-    if (underlying.hasExpired()) {
+    if (hasExpired()) {
+      currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
     }
     return underlying;

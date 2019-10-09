@@ -19,13 +19,14 @@ import com.netflix.spectator.impl.SwapMeter;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
 final class SwapTimer extends SwapMeter<Timer> implements Timer {
 
   /** Create a new instance. */
-  SwapTimer(Registry registry, Id id, Timer underlying) {
-    super(registry, id, underlying);
+  SwapTimer(Registry registry, LongSupplier versionSupplier, Id id, Timer underlying) {
+    super(registry, versionSupplier, id, underlying);
   }
 
   @Override public Timer lookup() {
