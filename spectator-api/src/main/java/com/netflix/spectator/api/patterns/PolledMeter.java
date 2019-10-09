@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.ToDoubleFunction;
 import java.util.function.ToLongFunction;
@@ -124,7 +125,7 @@ public final class PolledMeter {
   public static void remove(Registry registry, Id id) {
     Object obj = registry.state().get(id);
     if (obj instanceof AbstractMeterState) {
-      registry.state().remove(id, obj);
+      ((AbstractMeterState) obj).cleanup(registry);
     }
   }
 
@@ -365,7 +366,7 @@ public final class PolledMeter {
 
   /** Base class for meter state used for bookkeeping. */
   abstract static class AbstractMeterState {
-    private boolean scheduled = false;
+    private Future<?> future = null;
 
     /** Return the id for the meter. */
     protected abstract Id id();
@@ -376,6 +377,14 @@ public final class PolledMeter {
     /** Sample the meter and send updates to the registry. */
     protected abstract void update(Registry registry);
 
+    /** Cleanup any state associated with this meter and stop polling. */
+    void cleanup(Registry registry) {
+      if (future != null) {
+        future.cancel(true);
+      }
+      registry.state().remove(id());
+    }
+
     /**
      * Update the registry if this meter is not expired, otherwise cleanup any state
      * associated with this meter.
@@ -383,7 +392,7 @@ public final class PolledMeter {
     @SuppressWarnings("PMD.AvoidCatchingThrowable")
     void doUpdate(Registry registry) {
       if (hasExpired()) {
-        registry.state().remove(id());
+        cleanup(registry);
       } else {
         try {
           update(registry);
@@ -396,14 +405,13 @@ public final class PolledMeter {
 
     /** Schedule a task to regularly update the registry. */
     void schedule(Registry registry, ScheduledExecutorService executor, long delay) {
-      if (!scheduled) {
+      if (future == null) {
         WeakReference<AbstractMeterState> tupleRef = new WeakReference<>(this);
         if (executor == null) {
-          GaugePoller.schedule(tupleRef, delay, t -> t.doUpdate(registry));
+          future = GaugePoller.schedule(tupleRef, delay, t -> t.doUpdate(registry));
         } else {
-          GaugePoller.schedule(executor, tupleRef, delay, t -> t.doUpdate(registry));
+          future = GaugePoller.schedule(executor, tupleRef, delay, t -> t.doUpdate(registry));
         }
-        scheduled = true;
       }
     }
   }
