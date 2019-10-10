@@ -24,7 +24,7 @@ implementations.
   connection_error and detail of no_servers / connect_timeout / ssl_handshake_failure.
 * `ipc.failure.injected`: Indicates that an artificial failure was injected into the request
   processing for testing purposes. The outcome of that failure will be reflected in the other
-  error tags. Allowed Values = [true]
+  error tags. Allowed Values = [`none`,`failure`,`delay`]
 * `ipc.endpoint`: The name of the endpoint/function/feature the message was sent to within
   the server (eg. the URL path prefix for a java servlet, or the grpc endpoint name).
 * `ipc.attempt`: Which attempt at sending this message is this. Allowed Values =
