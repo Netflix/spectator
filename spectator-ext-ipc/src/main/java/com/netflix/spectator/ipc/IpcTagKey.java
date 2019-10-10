@@ -163,6 +163,13 @@ public enum IpcTagKey {
    * The port number connected to on the server.
    */
   serverPort("ipc.server.port"),
+  
+  /**
+   * Indicates that an artificial failure was injected into the request processing for testing purposes. 
+   * The outcome of that failure will be reflected in the other error tags. 
+   * Valid values are {@code none}, {@code failure}, {@code delay}.
+   */
+  failureInjected("ipc.failure.injected"),
 
   /**
    * HTTP status code. In most cases it is preferred to use {@link #statusDetail} instead.
