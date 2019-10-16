@@ -167,7 +167,7 @@ public enum IpcTagKey {
   /**
    * Indicates that an artificial failure was injected into the request processing for testing purposes. 
    * The outcome of that failure will be reflected in the other error tags. 
-   * Valid values are {@code none}, {@code failure}, {@code delay}.
+   * See {@link IpcFailureInjection} for permitted values.
    */
   failureInjected("ipc.failure.injected"),
 

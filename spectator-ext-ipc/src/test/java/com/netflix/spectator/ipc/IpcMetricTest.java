@@ -18,6 +18,7 @@ package com.netflix.spectator.ipc;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -210,6 +211,32 @@ public class IpcMetricTest {
           .withTag(IpcTagKey.owner.tag("test"));
       registry.counter(id).increment();
       IpcMetric.validate(registry);
+    });
+  }
+
+  @Test
+  public void validateFailureInjectionOk() {
+    Id id = registry.createId(IpcMetric.clientCall.metricName())
+            .withTag(IpcTagKey.owner.tag("test"))
+            .withTag(IpcResult.success)
+            .withTag(IpcStatus.success)
+            .withTag(IpcAttempt.initial)
+            .withTag(IpcFailureInjection.none)
+            .withTag(IpcTagKey.attemptFinal.key(), true);
+    IpcMetric.clientCall.validate(id);
+  }
+
+  @Test
+  public void validateFailureInjectionInvalid() {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      Id id = registry.createId(IpcMetric.clientCall.metricName())
+              .withTag(IpcTagKey.owner.tag("test"))
+              .withTag(IpcResult.success)
+              .withTag(IpcStatus.success)
+              .withTag(IpcAttempt.initial)
+              .withTag(Tag.of(IpcTagKey.failureInjected.key(), "false"))
+              .withTag(IpcTagKey.attemptFinal.key(), true);
+      IpcMetric.clientCall.validate(id);
     });
   }
 }

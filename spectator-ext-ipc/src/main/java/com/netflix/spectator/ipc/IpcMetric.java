@@ -194,6 +194,7 @@ public enum IpcMetric {
     validateValues(id, IpcTagKey.attempt.key(), IpcAttempt.class);
     validateValues(id, IpcTagKey.result.key(), IpcResult.class);
     validateValues(id, IpcTagKey.status.key(), IpcStatus.class);
+    validateValues(id, IpcTagKey.failureInjected.key(), IpcFailureInjection.class);
 
     // Check that result and status are consistent
     String status = Utils.getTagValue(id, IpcTagKey.status.key());
