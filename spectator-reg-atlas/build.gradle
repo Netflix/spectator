@@ -34,6 +34,9 @@ shadowJar {
     exclude(dependency('org.slf4j:slf4j-api'))
   }
   minimize()
+  exclude('module-info.class')
+  exclude('META-INF/maven/com.fasterxml.jackson.*/**')
+  exclude('META-INF/services/com.fasterxml.*')
   relocate('com.fasterxml.jackson', 'spectator-atlas.json')
 }
 
