@@ -1,3 +1,7 @@
+plugins {
+  id 'com.github.johnrengelman.shadow' version '5.1.0'
+}
+
 dependencies {
   compileApi project(':spectator-api')
   compile project(':spectator-ext-ipc')
@@ -9,9 +13,48 @@ dependencies {
 }
 
 jar {
+  // We only want to generate the shadow jar that hides the use of
+  // Jackson to prevent issues with other uses
+  enabled = false
   manifest {
     attributes(
       "Automatic-Module-Name": "com.netflix.spectator.atlas"
     )
+  }
+}
+jar.dependsOn(shadowJar)
+
+shadowJar {
+  classifier = null
+  configurations = [project.configurations.runtime]
+  dependencies {
+    exclude(project(':spectator-api'))
+    exclude(project(':spectator-ext-ipc'))
+    exclude(dependency('javax.inject:javax.inject'))
+    exclude(dependency('org.slf4j:slf4j-api'))
+  }
+  minimize()
+  exclude('module-info.class')
+  exclude('META-INF/maven/com.fasterxml.jackson.*/**')
+  exclude('META-INF/services/com.fasterxml.*')
+  relocate('com.fasterxml.jackson', 'spectator-atlas.json')
+}
+
+// Remove the Jackson dependencies from the POM file
+afterEvaluate {
+  publishing {
+    publications {
+      withType(MavenPublication) {
+        pom.withXml {
+          asNode()
+            .dependencies
+            .dependency
+            .findAll {
+              it.artifactId.text().startsWith("jackson-")
+            }
+            .each { it.parent().remove(it) }
+        }
+      }
+    }
   }
 }
