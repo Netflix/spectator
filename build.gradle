@@ -4,11 +4,6 @@ buildscript {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:8.0.0'
     classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.0.0'
-
-    // This is a workaround for getting the shadow plugin to work correctly
-    // for some sub-projects. For more details see:
-    // https://github.com/johnrengelman/shadow/issues/188
-    classpath 'org.apache.ant:ant:1.9.7'
   }
 }
 
