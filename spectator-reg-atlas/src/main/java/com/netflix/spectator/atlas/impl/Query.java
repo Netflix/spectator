@@ -406,11 +406,11 @@ public interface Query {
       StringBuilder builder = new StringBuilder();
       boolean first = true;
       for (KeyQuery kq : queries) {
-        builder.append(kq);
         if (first) {
           first = false;
+          builder.append(kq);
         } else {
-          builder.append(",:and");
+          builder.append(',').append(kq).append(",:and");
         }
       }
       return builder.toString();

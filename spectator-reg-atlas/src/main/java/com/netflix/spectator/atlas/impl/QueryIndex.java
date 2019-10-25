@@ -76,6 +76,7 @@ public final class QueryIndex<T> {
   private final Cache<String, List<QueryIndex<T>>> otherChecksCache;
 
   private volatile QueryIndex<T> otherKeysIdx;
+  private volatile QueryIndex<T> missingKeysIdx;
 
   private final Set<T> matches;
 
@@ -87,6 +88,7 @@ public final class QueryIndex<T> {
     this.otherChecks = new ConcurrentHashMap<>();
     this.otherChecksCache = Cache.lfu(registry, "QueryIndex", 100, 1000);
     this.otherKeysIdx = null;
+    this.missingKeysIdx = null;
     this.matches = ConcurrentHashMap.newKeySet();
   }
 
@@ -157,6 +159,15 @@ public final class QueryIndex<T> {
           QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(registry));
           idx.add(queries, j, value);
           otherChecksCache.clear();
+
+          // Not queries should match if the key is missing from the id, so they need to
+          // be included in the other keys sub-tree as well
+          if (kq instanceof Query.InvertedKeyQuery) {
+            if (missingKeysIdx == null) {
+              missingKeysIdx = QueryIndex.empty(registry);
+            }
+            missingKeysIdx.add(queries, j, value);
+          }
         }
       } else {
         if (otherKeysIdx == null) {
@@ -205,6 +216,17 @@ public final class QueryIndex<T> {
     }
   }
 
+  private boolean removeFromMissingKeysIdx(T value) {
+    if (missingKeysIdx != null && otherKeysIdx.remove(value)) {
+      if (missingKeysIdx.isEmpty()) {
+        missingKeysIdx = null;
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   /**
    * Remove the specified value from the index. Returns true if a value was successfully
    * removed.
@@ -213,7 +235,8 @@ public final class QueryIndex<T> {
     return matches.remove(value)
         || remove(equalChecks, value)
         || removeFromOtherChecks(value)
-        || removeFromOtherKeysIdx(value);
+        || removeFromOtherKeysIdx(value)
+        || removeFromMissingKeysIdx(value);
   }
 
   /**
@@ -223,7 +246,8 @@ public final class QueryIndex<T> {
     return matches.isEmpty()
         && equalChecks.values().stream().allMatch(QueryIndex::isEmpty)
         && otherChecks.values().stream().allMatch(QueryIndex::isEmpty)
-        && (otherKeysIdx == null || otherKeysIdx.isEmpty());
+        && (otherKeysIdx == null || otherKeysIdx.isEmpty())
+        && (missingKeysIdx == null || missingKeysIdx.isEmpty());
   }
 
   /**
@@ -258,11 +282,15 @@ public final class QueryIndex<T> {
 
     if (key != null) {
 
+      boolean keyPresent = false;
+
       for (int j = i; j < tags.size(); ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
         int cmp = compare(k, key);
         if (cmp == 0) {
+          keyPresent = true;
+
           // Find exact matches
           QueryIndex<T> eqIdx = equalChecks.get(v);
           if (eqIdx != null) {
@@ -293,6 +321,11 @@ public final class QueryIndex<T> {
       // Check matches with other keys
       if (otherKeysIdx != null) {
         otherKeysIdx.forEachMatch(tags, i, consumer);
+      }
+
+      // Check matches with missing keys
+      if (missingKeysIdx != null && !keyPresent) {
+        missingKeysIdx.forEachMatch(tags, i, consumer);
       }
     }
   }
@@ -331,6 +364,10 @@ public final class QueryIndex<T> {
     if (otherKeysIdx != null) {
       indent(builder, n).append("other keys:\n");
       otherKeysIdx.buildString(builder, n + 1);
+    }
+    if (missingKeysIdx != null) {
+      indent(builder, n).append("missing keys:\n");
+      missingKeysIdx.buildString(builder, n + 1);
     }
     if (!matches.isEmpty()) {
       indent(builder, n).append("matches:\n");
