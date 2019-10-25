@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.NoopRegistry;
@@ -193,5 +194,13 @@ public class AtlasRegistryTest {
     clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
     registry.sendToAtlas();
     Assertions.assertEquals(0, getBatches().size());
+  }
+
+  @Test
+  public void shutdownWithoutStarting() {
+    AtlasRegistry r = new AtlasRegistry(
+        Clock.SYSTEM,
+        k -> k.equals("atlas.enabled") ? "true" : null);
+    r.close();
   }
 }
