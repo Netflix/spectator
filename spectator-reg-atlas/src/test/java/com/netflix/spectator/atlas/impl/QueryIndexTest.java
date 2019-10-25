@@ -267,6 +267,69 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void notEqClause() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu", "id", "system")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "user")).isEmpty());
+  }
+
+  @Test
+  public void notEqMissingKey() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+    System.out.println(idx);
+    System.out.println(idx.findMatches(id("cpu")));
+    Assertions.assertFalse(idx.findMatches(id("cpu")).isEmpty());
+  }
+
+  @Test
+  public void notEqMissingKeyMiddle() {
+    Query q = Parser.parseQuery("name,cpu,:eq,mm,foo,:eq,:not,:and,zz,bar,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu", "zz", "bar")).isEmpty());
+  }
+
+  @Test
+  public void notEqMissingKeyEnd() {
+    Query q = Parser.parseQuery("name,cpu,:eq,zz,foo,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu")).isEmpty());
+  }
+
+  @Test
+  public void multiNotEqClause() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,system,:eq,:and,id,user,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu", "id", "system")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "user")).isEmpty());
+  }
+
+  @Test
+  public void notInClause() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,(,user,iowait,),:in,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu", "id", "system")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "user")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "iowait")).isEmpty());
+  }
+
+  @Test
+  public void multiNotInClause() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,system,:eq,:and,id,(,user,iowait,),:in,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+
+    Assertions.assertFalse(idx.findMatches(id("cpu", "id", "system")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "user")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "id", "iowait")).isEmpty());
+  }
+
+  @Test
   public void toStringMethod() {
     QueryIndex<Query> idx = QueryIndex.newInstance(registry);
     idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
