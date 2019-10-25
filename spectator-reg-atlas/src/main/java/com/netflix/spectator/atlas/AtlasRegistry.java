@@ -300,7 +300,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   void sendToAtlas() {
     publishTaskTimer("sendToAtlas").record(() -> {
-      if (config.enabled()) {
+      if (config.enabled() && senderPool != null) {
         long t = lastCompletedTimestamp(stepMillis);
         pollMeters(t);
         logger.debug("sending to Atlas for time: {}", t);
