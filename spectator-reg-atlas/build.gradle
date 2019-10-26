@@ -1,3 +1,5 @@
+import java.util.zip.ZipFile
+
 plugins {
   id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
@@ -22,16 +24,19 @@ jar {
     )
   }
 }
-jar.dependsOn(shadowJar)
+jar.dependsOn("checkShadowJar")
+
+static boolean shouldBeShaded(String name) {
+  name.startsWith("jackson-")
+}
 
 shadowJar {
   classifier = null
   configurations = [project.configurations.runtime]
   dependencies {
-    exclude(project(':spectator-api'))
-    exclude(project(':spectator-ext-ipc'))
-    exclude(dependency('javax.inject:javax.inject'))
-    exclude(dependency('org.slf4j:slf4j-api'))
+    exclude(dependency {
+      !shouldBeShaded(it.moduleName)
+    })
   }
   minimize()
   exclude('module-info.class')
@@ -50,7 +55,7 @@ afterEvaluate {
             .dependencies
             .dependency
             .findAll {
-              it.artifactId.text().startsWith("jackson-")
+              shouldBeShaded(it.artifactId.text())
             }
             .each { it.parent().remove(it) }
         }
@@ -58,3 +63,37 @@ afterEvaluate {
     }
   }
 }
+
+
+// Sanity check the shadow jar to ensure something hasn't creeped in that is
+// not properly relocated.
+task checkShadowJar {
+  doLast {
+    configurations.archives.allArtifacts.forEach {
+      if (it.name == "spectator-reg-atlas" && it.extension == "jar") {
+        Set<String> metadataFiles = [
+            "META-INF/LICENSE",
+            "META-INF/MANIFEST.MF",
+            "META-INF/NOTICE",
+            "META-INF/services/com.netflix.spectator.api.Registry",
+            "META-INF/spectator-reg-atlas.properties"
+        ]
+        ZipFile zf = new ZipFile(it.file)
+        try {
+          zf.stream()
+            .filter { !it.directory }
+            .filter { !it.name.startsWith("com/netflix/spectator/atlas/") }
+            .filter { !it.name.startsWith("spectator-atlas/") }
+            .filter { !metadataFiles.contains(it.name) }
+            .forEach {
+              throw new IllegalStateException(
+                  "Unexpected file included in jar (${it.name}). Check shadow configuration.")
+            }
+        } finally {
+          zf.close()
+        }
+      }
+    }
+  }
+}
+checkShadowJar.dependsOn(shadowJar)
