@@ -48,6 +48,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -108,7 +109,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final Evaluator evaluator;
 
   private long lastPollTimestamp = -1L;
-  private final Map<Id, Consolidator> atlasMeasurements = new HashMap<>();
+  private final Map<Id, Consolidator> atlasMeasurements = new LinkedHashMap<>();
 
   /** Create a new instance. */
   @Inject
