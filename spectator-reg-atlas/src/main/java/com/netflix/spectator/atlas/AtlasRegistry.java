@@ -378,13 +378,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         List<Measurement> measurements = new ArrayList<>(atlasMeasurements.size());
         publishTaskTimer("pollMeasurements").record(() -> {
           for (Meter meter : this) {
-            if (!meter.hasExpired()) {
-              for (Measurement m : meter.measure()) {
-                if (!Double.isNaN(m.value())) {
-                  measurements.add(m);
-                }
-              }
-            }
+            ((AtlasMeter) meter).measure(measurements);
           }
         });
 
@@ -514,6 +508,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   @Override public Stream<Measurement> measurements() {
     long t = lastCompletedTimestamp(stepMillis);
     pollMeters(t);
+    removeExpiredMeters();
     return getBatches(t).stream().flatMap(List::stream);
   }
 

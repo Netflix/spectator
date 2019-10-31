@@ -22,7 +22,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
 
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Counter that reports a rate per second to Atlas. Note that {@link #count()} will
@@ -37,16 +37,15 @@ class AtlasCounter extends AtlasMeter implements Counter {
   /** Create a new instance. */
   AtlasCounter(Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
-    this.value = new StepDouble(0L, clock, step);
+    this.value = new StepDouble(0.0, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
     this.stat = id.withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
   }
 
-  @Override public Iterable<Measurement> measure() {
+  @Override void measure(List<Measurement> ms) {
     final double rate = value.pollAsRate();
-    final Measurement m = new Measurement(stat, value.timestamp(), rate);
-    return Collections.singletonList(m);
+    ms.add(new Measurement(stat, value.timestamp(), rate));
   }
 
   @Override public void add(double amount) {
