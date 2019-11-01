@@ -24,7 +24,6 @@ import com.netflix.spectator.impl.StepDouble;
 import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -70,13 +69,11 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
     };
   }
 
-  @Override public Iterable<Measurement> measure() {
-    List<Measurement> ms = new ArrayList<>(4);
+  @Override void measure(List<Measurement> ms) {
     ms.add(newMeasurement(stats[0], count));
     ms.add(newMeasurement(stats[1], total));
     ms.add(newMeasurement(stats[2], totalOfSquares));
     ms.add(newMaxMeasurement(stats[3], max));
-    return ms;
   }
 
   private Measurement newMeasurement(Id mid, StepValue v) {

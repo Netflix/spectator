@@ -56,6 +56,12 @@ public class AtlasGaugeTest {
   }
 
   @Test
+  public void measureNaN() {
+    gauge.set(Double.NaN);
+    Assertions.assertFalse(gauge.measure().iterator().hasNext());
+  }
+
+  @Test
   public void rollForward() {
     gauge.set(42);
     clock.setWallTime(step + 1);

@@ -22,7 +22,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.AtomicDouble;
 
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Meter that reports a single value to Atlas.
@@ -41,9 +41,11 @@ class AtlasGauge extends AtlasMeter implements Gauge {
     this.stat = id.withTag(Statistic.gauge).withTags(id.tags()).withTag(DsType.gauge);
   }
 
-  @Override public Iterable<Measurement> measure() {
-    final Measurement m = new Measurement(stat, clock.wallTime(), value());
-    return Collections.singletonList(m);
+  @Override void measure(List<Measurement> ms) {
+    final double v = value();
+    if (Double.isFinite(v)) {
+      ms.add(new Measurement(stat, clock.wallTime(), v));
+    }
   }
 
   @Override public void set(double v) {

@@ -174,6 +174,7 @@ public class AtlasRegistryTest {
     }
 
     clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
+    registry.removeExpiredMeters();
     Assertions.assertEquals(0, getBatches().size());
   }
 

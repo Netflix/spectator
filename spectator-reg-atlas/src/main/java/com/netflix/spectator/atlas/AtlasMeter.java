@@ -17,7 +17,11 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** Base class for core meter types used by AtlasRegistry. */
 abstract class AtlasMeter implements Meter {
@@ -57,4 +61,12 @@ abstract class AtlasMeter implements Meter {
   @Override public boolean hasExpired() {
     return clock.wallTime() - lastUpdated > ttl;
   }
+
+  @Override public Iterable<Measurement> measure() {
+    List<Measurement> ms = new ArrayList<>();
+    measure(ms);
+    return ms;
+  }
+
+  abstract void measure(List<Measurement> ms);
 }

@@ -56,6 +56,33 @@ public class AtlasMaxGaugeTest {
   }
 
   @Test
+  public void setNaN() {
+    gauge.set(Double.NaN);
+    checkValue(0);
+
+    clock.setWallTime(step + 1);
+    checkValue(0);
+  }
+
+  @Test
+  public void setInfinity() {
+    gauge.set(Double.POSITIVE_INFINITY);
+    checkValue(0);
+
+    clock.setWallTime(step + 1);
+    checkValue(0);
+  }
+
+  @Test
+  public void setNegative() {
+    gauge.set(-1);
+    checkValue(0);
+
+    clock.setWallTime(step + 1);
+    checkValue(0);
+  }
+
+  @Test
   public void multipleSets() {
     gauge.set(42);
     gauge.set(44);
