@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
 
@@ -211,5 +212,38 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default RollupPolicy rollupPolicy() {
     return RollupPolicy.noop();
+  }
+
+  /**
+   * Avoid collecting right on boundaries to minimize transitions on step longs
+   * during a collection. By default it will randomly distribute across the middle
+   * of the step interval.
+   */
+  default long initialPollingDelay(Clock clock, long stepSize) {
+    long now = clock.wallTime();
+    long stepBoundary = now / stepSize * stepSize;
+
+    // Buffer by 10% of the step interval on either side
+    long offset = stepSize / 10;
+
+    // For larger intervals spread it out, otherwise bias towards the start
+    // to ensure there is plenty of time to send without needing to cross over
+    // to the next interval. The threshold of 1s was chosen because it is typically
+    // big enough to avoid GC troubles where it is common to see pause times in the
+    // low 100s of milliseconds.
+    if (offset >= 1000L) {
+      // Check if the current delay is within the acceptable range
+      long delay = now - stepBoundary;
+      if (delay < offset) {
+        return delay + offset;
+      } else {
+        return Math.min(delay, stepSize - offset);
+      }
+    } else {
+      long firstTime = stepBoundary + stepSize / 10;
+      return firstTime > now
+          ? firstTime - now
+          : firstTime + stepSize - now;
+    }
   }
 }

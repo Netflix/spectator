@@ -145,22 +145,35 @@ public class AtlasRegistryTest {
 
   @Test
   public void initialDelayTooCloseToStart() {
-    long d = registry.getInitialDelay(10000);
+    long d = newConfig().initialPollingDelay(clock, 10000);
     Assertions.assertEquals(1000, d);
   }
 
   @Test
   public void initialDelayTooCloseToEnd() {
     clock.setWallTime(19123);
-    long d = registry.getInitialDelay(10000);
-    Assertions.assertEquals(1877, d);
+    long d = newConfig().initialPollingDelay(clock, 10000);
+    Assertions.assertEquals(9000, d);
   }
 
   @Test
   public void initialDelayOk() {
     clock.setWallTime(12123);
-    long d = registry.getInitialDelay(10000);
-    Assertions.assertEquals(8877, d);
+    long d = newConfig().initialPollingDelay(clock, 10000);
+    Assertions.assertEquals(2123, d);
+  }
+
+  @Test
+  public void initialDelayTooCloseToStartSmallStep() {
+    long d = newConfig().initialPollingDelay(clock, 5000);
+    Assertions.assertEquals(500, d);
+  }
+
+  @Test
+  public void initialDelayTooCloseToEndSmallStep() {
+    clock.setWallTime(19623);
+    long d = newConfig().initialPollingDelay(clock, 5000);
+    Assertions.assertEquals(877, d);
   }
 
   @Test
