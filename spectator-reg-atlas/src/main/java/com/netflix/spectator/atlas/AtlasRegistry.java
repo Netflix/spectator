@@ -186,7 +186,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // Setup main collection for publishing to Atlas
       Scheduler.Options options = new Scheduler.Options()
           .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, step)
-          .withInitialDelay(Duration.ofMillis(getInitialDelay(stepMillis)))
+          .withInitialDelay(Duration.ofMillis(config.initialPollingDelay(clock(), stepMillis)))
           .withStopOnFailure(false);
       scheduler = new Scheduler(debugRegistry, "spectator-reg-atlas", numThreads);
       scheduler.schedule(options, this::sendToAtlas);
@@ -195,7 +195,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // Setup collection for LWC
       Scheduler.Options lwcOptions = new Scheduler.Options()
           .withFrequency(Scheduler.Policy.FIXED_RATE_SKIP_IF_LONG, lwcStep)
-          .withInitialDelay(Duration.ofMillis(getInitialDelay(lwcStepMillis)))
+          .withInitialDelay(Duration.ofMillis(config.initialPollingDelay(clock(), lwcStepMillis)))
           .withStopOnFailure(false);
       scheduler.schedule(lwcOptions, this::sendToLWC);
 
@@ -207,23 +207,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     } else {
       logger.warn("registry already started, ignoring duplicate request");
     }
-  }
-
-  /**
-   * Avoid collecting right on boundaries to minimize transitions on step longs
-   * during a collection. Bias to early in the step interval to get data as quickly
-   * after it is complete and to increase the amount of time to send when there are a
-   * lot of metrics.
-   */
-  long getInitialDelay(long stepSize) {
-    long now = clock().wallTime();
-    long stepBoundary = now / stepSize * stepSize;
-
-    // Buffer by 10% of the step interval
-    long firstTime = stepBoundary + stepSize / 10;
-    return firstTime > now
-        ? firstTime - now
-        : firstTime + stepSize - now;
   }
 
   /**
