@@ -5,7 +5,7 @@ matrix:
     env: GRADLE_PUBLISH=true
   - jdk: openjdk11
     env: GRADLE_PUBLISH=false
-  - jdk: openjdk12
+  - jdk: openjdk13
     env: GRADLE_PUBLISH=false
 dist: xenial
 install: ./installViaTravis.sh
