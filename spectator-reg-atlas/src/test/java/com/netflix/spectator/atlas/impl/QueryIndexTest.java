@@ -330,6 +330,14 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void removalOfNotQuery() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+    Assertions.assertTrue(idx.remove(q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
   public void toStringMethod() {
     QueryIndex<Query> idx = QueryIndex.newInstance(registry);
     idx.add(SIMPLE_QUERY, SIMPLE_QUERY);

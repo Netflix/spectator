@@ -217,7 +217,7 @@ public final class QueryIndex<T> {
   }
 
   private boolean removeFromMissingKeysIdx(T value) {
-    if (missingKeysIdx != null && otherKeysIdx.remove(value)) {
+    if (missingKeysIdx != null && missingKeysIdx.remove(value)) {
       if (missingKeysIdx.isEmpty()) {
         missingKeysIdx = null;
       }
@@ -232,11 +232,13 @@ public final class QueryIndex<T> {
    * removed.
    */
   public boolean remove(T value) {
+    // Note, we use | instead of || because a value could get added on multiple paths
+    // and so the short circuiting behavior is not desirable here.
     return matches.remove(value)
-        || remove(equalChecks, value)
-        || removeFromOtherChecks(value)
-        || removeFromOtherKeysIdx(value)
-        || removeFromMissingKeysIdx(value);
+        | remove(equalChecks, value)
+        | removeFromOtherChecks(value)
+        | removeFromOtherKeysIdx(value)
+        | removeFromMissingKeysIdx(value);
   }
 
   /**
