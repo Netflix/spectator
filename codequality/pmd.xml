@@ -17,7 +17,6 @@
     <exclude name="AvoidCatchingGenericException"/>
     <exclude name="AvoidDuplicateLiterals"/>
     <exclude name="AvoidFieldNameMatchingMethodName"/>
-    <exclude name="AvoidFinalLocalVariable"/>
     <exclude name="AvoidInstantiatingObjectsInLoops"/>
     <exclude name="AvoidLiteralsInIfCondition"/>
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
@@ -27,6 +26,7 @@
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="BeanMembersShouldSerialize"/>
     <exclude name="ClassNamingConventions"/>
+    <exclude name="CloseResource"/>
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="CommentRequired"/>
     <exclude name="CommentSize"/>
