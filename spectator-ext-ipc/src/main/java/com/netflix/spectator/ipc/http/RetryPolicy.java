@@ -62,6 +62,14 @@ public interface RetryPolicy {
     }
 
     @Override public boolean shouldRetry(String method, HttpResponse response) {
+      return isThrottled(response.status()) || isAllowed(method, response);
+    }
+
+    private boolean isThrottled(int status) {
+      return status == 429 || status == 503;
+    }
+
+    private boolean isAllowed(String method, HttpResponse response) {
       return allowedMethod(method) && allowedStatus(response.status());
     }
 
@@ -70,7 +78,7 @@ public interface RetryPolicy {
     }
 
     private boolean allowedStatus(int status) {
-      return status == 429 || status >= 500;
+      return status >= 500;
     }
   };
 

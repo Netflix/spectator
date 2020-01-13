@@ -273,7 +273,8 @@ public class HttpRequestBuilder {
       try {
         response = sendImpl();
         int s = response.status();
-        if (s == 429 || s == 503) {
+        boolean shouldRetry = retryPolicy.shouldRetry(method, response);
+        if (shouldRetry && (s == 429 || s == 503)) {
           // Request is getting throttled, exponentially back off
           // - 429 client sending too many requests
           // - 503 server unavailable
@@ -285,7 +286,7 @@ public class HttpRequestBuilder {
             Thread.currentThread().interrupt();
             throw new IOException("request failed " + method + " " + uri, e);
           }
-        } else if (!retryPolicy.shouldRetry(method, response)) {
+        } else if (!shouldRetry) {
           return response;
         }
       } catch (IOException e) {
