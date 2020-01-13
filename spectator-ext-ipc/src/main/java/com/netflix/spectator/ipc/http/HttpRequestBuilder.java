@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,8 +95,9 @@ public class HttpRequestBuilder {
   private int connectTimeout = 1000;
   private int readTimeout = 30000;
 
+  private RetryPolicy retryPolicy = RetryPolicy.SAFE;
   private long initialRetryDelay = 1000L;
-  private int numAttempts = 1;
+  private int numAttempts = 3;
 
   private HostnameVerifier hostVerifier = null;
   private SSLSocketFactory sslFactory = null;
@@ -219,6 +220,15 @@ public class HttpRequestBuilder {
     return this;
   }
 
+  /**
+   * Policy to determine whether a given failure can be retried. By default
+   * {@link RetryPolicy#SAFE} is used.
+   */
+  public HttpRequestBuilder retryPolicy(RetryPolicy policy) {
+    this.retryPolicy = policy;
+    return this;
+  }
+
   private void requireHttps(String msg) {
     Preconditions.checkState("https".equals(uri.getScheme()), msg);
   }
@@ -275,16 +285,11 @@ public class HttpRequestBuilder {
             Thread.currentThread().interrupt();
             throw new IOException("request failed " + method + " " + uri, e);
           }
-        } else if (s < 500) {
-          // 4xx errors other than 429 are not considered retriable, so for anything
-          // less than 500 just return the response to the user
+        } else if (!retryPolicy.shouldRetry(method, response)) {
           return response;
         }
       } catch (IOException e) {
-        // All exceptions are considered retriable. Some like UnknownHostException are
-        // debatable, but we have seen them in some cases if there is a high latency for
-        // DNS lookups. So for now assume all exceptions are transient issues.
-        if (attempt == numAttempts) {
+        if (attempt == numAttempts || !retryPolicy.shouldRetry(method, e)) {
           throw e;
         } else {
           LOGGER.warn("attempt {} of {} failed: {} {}", attempt, numAttempts, method, uri);
