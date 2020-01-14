@@ -42,7 +42,7 @@ shadowJar {
   exclude('module-info.class')
   exclude('META-INF/maven/com.fasterxml.jackson.*/**')
   exclude('META-INF/services/com.fasterxml.*')
-  relocate('com.fasterxml.jackson', 'spectator-atlas.json')
+  relocate('com.fasterxml.jackson', 'com.netflix.spectator.atlas.shaded.spectator-atlas.json')
 }
 
 // Remove the Jackson dependencies from the POM file
@@ -83,7 +83,6 @@ task checkShadowJar {
           zf.stream()
             .filter { !it.directory }
             .filter { !it.name.startsWith("com/netflix/spectator/atlas/") }
-            .filter { !it.name.startsWith("spectator-atlas/") }
             .filter { !metadataFiles.contains(it.name) }
             .forEach {
               throw new IllegalStateException(
