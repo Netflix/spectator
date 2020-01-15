@@ -30,7 +30,10 @@ public enum IpcFailureInjection implements Tag {
   failure,
 
   /** Indicates there was latency into the request. */
-  delay;
+  delay,
+
+  /** Indicates there was both a latency and an fault injected into the request. */
+  delay_and_failure;
 
   @Override public String key() {
     return IpcTagKey.failureInjected.key();
