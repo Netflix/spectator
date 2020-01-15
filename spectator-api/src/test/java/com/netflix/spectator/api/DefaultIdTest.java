@@ -204,7 +204,7 @@ public class DefaultIdTest {
   @Test
   public void withTagEnumNull() {
     Assertions.assertThrows(NullPointerException.class, () -> {
-      Enum value = null;
+      Enum<?> value = null;
       new DefaultId("test").withTag("enum", value);
     });
   }
@@ -278,9 +278,7 @@ public class DefaultIdTest {
 
     DefaultId id = (new DefaultId("foo")).withTag("k1", "v1").withTag("k2", "v2");
     List<Tag> actual = new ArrayList<>();
-    id.forEach((k, v) -> {
-      actual.add(Tag.of(k, v));
-    });
+    id.forEach((k, v) -> actual.add(Tag.of(k, v)));
 
     Assertions.assertEquals(expected, actual);
   }

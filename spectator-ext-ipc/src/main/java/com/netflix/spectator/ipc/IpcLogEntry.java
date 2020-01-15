@@ -579,7 +579,7 @@ public final class IpcLogEntry {
   }
 
   private void putTag(Map<String, String> tags, String k, String v) {
-    if (!isNullOrEmpty(v)) {
+    if (notNullOrEmpty(v)) {
       String value = logger.limiterForKey(k).apply(v);
       tags.put(k, value);
     }
@@ -905,8 +905,8 @@ public final class IpcLogEntry {
     return mapper.apply(this);
   }
 
-  private static boolean isNullOrEmpty(String s) {
-    return s == null || s.isEmpty();
+  private static boolean notNullOrEmpty(String s) {
+    return s != null && !s.isEmpty();
   }
 
   private static class Header {
@@ -954,7 +954,7 @@ public final class IpcLogEntry {
     }
 
     JsonStringBuilder addField(String k, String v) {
-      if (!isNullOrEmpty(v)) {
+      if (notNullOrEmpty(v)) {
         addSep();
         builder.append('"');
         escapeAndAppend(builder, k);

@@ -95,7 +95,7 @@ public class MetricsControllerTest {
                             new BasicTag("tagB", "Y")),
               Arrays.asList(new DataPoint(clock.wallTime(), 10))));
 
-    HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
+    HashMap<String, MetricValues> expect = new HashMap<>();
     expect.put("idA", new MetricValues("Counter", expectedTaggedDataPointsA));
     expect.put("idB", new MetricValues("Counter", expectedTaggedDataPointsB));
     Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
@@ -163,11 +163,11 @@ public class MetricsControllerTest {
             Arrays.asList(new DataPoint(clock.wallTime(), 12.12)))
     );
 
-    HashMap<String, MetricValues> expect = new HashMap<String, MetricValues>();
+    HashMap<String, MetricValues> expect = new HashMap<>();
     expect.put("idA", new MetricValues("Counter", expectedDataPoints));
 
     PolledMeter.update(registry);
     Assertions.assertEquals(expect, controller.encodeRegistry(registry, allowAll));
   }
-};
+}
 

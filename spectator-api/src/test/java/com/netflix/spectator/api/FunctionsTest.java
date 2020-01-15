@@ -18,17 +18,17 @@ package com.netflix.spectator.api;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.ToDoubleFunction;
 
 public class FunctionsTest {
 
   private final ManualClock clock = new ManualClock();
-  private final Registry registry = new DefaultRegistry();
 
   @Test
   public void ageFunction() {
     clock.setWallTime(5000L);
-    final DoubleFunction f = Functions.age(clock);
+    final DoubleFunction<AtomicLong> f = Functions.age(clock);
     Assertions.assertEquals(f.apply(1000L), 4.0, 1e-12);
   }
 

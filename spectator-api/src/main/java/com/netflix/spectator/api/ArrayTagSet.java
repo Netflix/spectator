@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 final class ArrayTagSet implements TagList {
 
-  private static final Comparator<Tag> TAG_COMPARATOR = (t1, t2) -> t1.key().compareTo(t2.key());
+  private static final Comparator<Tag> TAG_COMPARATOR = Comparator.comparing(Tag::key);
 
   /** Empty tag set. */
   static final ArrayTagSet EMPTY = new ArrayTagSet(new String[0]);

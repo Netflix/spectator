@@ -29,7 +29,6 @@ import com.netflix.spectator.ipc.http.HttpClient;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.AfterAll;
 
 import javax.inject.Singleton;
 import javax.servlet.DispatcherType;

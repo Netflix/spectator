@@ -36,7 +36,7 @@ public class UtilsTest {
   public void getTagValueIdNoTags() {
     Registry r = new DefaultRegistry();
     Id id = r.createId("foo");
-    Assertions.assertEquals(null, Utils.getTagValue(id, "abc"));
+    Assertions.assertNull(Utils.getTagValue(id, "abc"));
   }
 
   @Test
@@ -82,7 +82,7 @@ public class UtilsTest {
   public void firstPredicateEmpty() {
     List<Measurement> ms = newList(10);
     Measurement m = Utils.first(ms, v -> false);
-    Assertions.assertEquals(null, m);
+    Assertions.assertNull(m);
   }
 
   @Test

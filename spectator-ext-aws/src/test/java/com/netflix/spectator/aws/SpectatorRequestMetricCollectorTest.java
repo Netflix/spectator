@@ -24,20 +24,15 @@ import com.amazonaws.util.AWSRequestMetrics;
 import com.amazonaws.util.AWSRequestMetricsFullSupport;
 import com.amazonaws.util.TimingInfo;
 import com.netflix.spectator.api.*;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.*;
+
+import com.netflix.spectator.api.Timer;
 import org.apache.http.client.methods.HttpPost;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -81,7 +76,7 @@ public class SpectatorRequestMetricCollectorTest {
   private Set<String> valueSet(String k) {
     return registry.stream()
         .map(m -> Utils.getTagValue(m.id(), k))
-        .filter(v -> v != null)
+        .filter(Objects::nonNull)
         .collect(Collectors.toSet());
   }
 

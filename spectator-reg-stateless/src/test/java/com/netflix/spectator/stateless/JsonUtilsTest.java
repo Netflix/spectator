@@ -61,9 +61,7 @@ public class JsonUtilsTest {
     ms.add(count(42.0, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
     Assertions.assertEquals(1, values.size());
-    ms.forEach(m -> {
-      Assertions.assertEquals(42.0, values.get(m.id()).value, 1e-12);
-    });
+    ms.forEach(m -> Assertions.assertEquals(42.0, values.get(m.id()).value, 1e-12));
   }
 
   @Test

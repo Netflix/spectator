@@ -118,7 +118,7 @@ public class SparkSink implements Sink {
 
   private boolean shouldAddToGlobal(Properties properties) {
     final String v = properties.getProperty("addToGlobalRegistry");
-    return (v == null) || Boolean.valueOf(v);
+    return (v == null) || Boolean.parseBoolean(v);
   }
 
   @Override public void start() {

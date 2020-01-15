@@ -77,7 +77,7 @@ public class StringForeach {
   @Threads(1)
   @Benchmark
   public void stream(Blackhole bh) {
-    OptionalInt v = str.chars().reduce((acc, c) -> acc + c);
+    OptionalInt v = str.chars().reduce(Integer::sum);
     bh.consume(v.isPresent() ? v.getAsInt() : 0);
   }
 
