@@ -149,7 +149,7 @@ public final class SpectatorModule extends AbstractModule {
 
     @Override public boolean enabled() {
       String v = get("atlas.enabled");
-      return v != null && Boolean.valueOf(v);
+      return v != null && Boolean.parseBoolean(v);
     }
 
     @Override public boolean autoStart() {

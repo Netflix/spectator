@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 public class PercentileBucketsTest {
 
@@ -121,10 +120,10 @@ public class PercentileBucketsTest {
     }
 
     double[] pcts = new double[] {0.0, 25.0, 50.0, 75.0, 90.0, 95.0, 98.0, 99.0, 99.5, 100.0};
-    for (int i = 0 ; i < pcts.length; ++i) {
-      double expected = pcts[i] * 1e3;
+    for (double pct : pcts) {
+      double expected = pct * 1e3;
       double threshold = 0.1 * expected + 1e-12;
-      Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pcts[i]), threshold);
+      Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pct), threshold);
     }
   }
 }

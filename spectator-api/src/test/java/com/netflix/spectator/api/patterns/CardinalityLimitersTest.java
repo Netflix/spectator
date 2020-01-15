@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.api.patterns;
 
-import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

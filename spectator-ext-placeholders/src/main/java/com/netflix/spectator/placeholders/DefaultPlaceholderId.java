@@ -21,10 +21,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.impl.Preconditions;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -167,7 +164,7 @@ final class DefaultPlaceholderId implements PlaceholderId {
   public Id resolveToId() {
     Iterable<Tag> tags = tagFactories.stream()
             .map(TagFactory::createTag)
-            .filter(tag -> tag != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     return registry.createId(name, tags);

@@ -35,6 +35,7 @@ import scala.Option;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -207,7 +208,7 @@ public class SidecarRegistry extends AbstractRegistry {
         con.setDoInput(true);
         con.setDoOutput(true);
         try (OutputStream out = con.getOutputStream()) {
-          out.write(json.getBytes("UTF-8"));
+          out.write(json.getBytes(StandardCharsets.UTF_8));
         }
         con.connect();
 

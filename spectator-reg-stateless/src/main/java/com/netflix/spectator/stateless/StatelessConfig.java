@@ -31,7 +31,7 @@ public interface StatelessConfig extends RegistryConfig {
    */
   default boolean enabled() {
     String v = get("stateless.enabled");
-    return v == null || Boolean.valueOf(v);
+    return v == null || Boolean.parseBoolean(v);
   }
 
   /**

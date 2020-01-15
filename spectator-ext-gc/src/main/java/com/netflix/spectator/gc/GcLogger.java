@@ -35,7 +35,6 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -156,7 +155,7 @@ public final class GcLogger {
     for (CircularBuffer<GcEvent> buffer : gcLogs.values()) {
       logs.addAll(buffer.toList());
     }
-    Collections.sort(logs, GcEvent.REVERSE_TIME_ORDER);
+    logs.sort(GcEvent.REVERSE_TIME_ORDER);
     return logs;
   }
 

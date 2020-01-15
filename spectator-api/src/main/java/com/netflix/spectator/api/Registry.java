@@ -467,7 +467,7 @@ public interface Registry extends Iterable<Meter> {
 
   /**
    * Tells the registry to regularly poll the value of a {@link java.lang.Number} and report
-   * it as a gauge. See {@link #gauge(Id, Number)} for more information.
+   * it as a gauge.
    *
    * @param id
    *     Identifier for the metric being registered.

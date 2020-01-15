@@ -50,7 +50,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean enabled() {
     String v = get("atlas.enabled");
-    return v == null || Boolean.valueOf(v);
+    return v == null || Boolean.parseBoolean(v);
   }
 
   /**
@@ -61,7 +61,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean autoStart() {
     String v = get("atlas.autoStart");
-    return v != null && Boolean.valueOf(v);
+    return v != null && Boolean.parseBoolean(v);
   }
 
   /**
@@ -98,7 +98,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean lwcEnabled() {
     String v = get("atlas.lwc.enabled");
-    return v != null && Boolean.valueOf(v);
+    return v != null && Boolean.parseBoolean(v);
   }
 
   /**
@@ -108,7 +108,7 @@ public interface AtlasConfig extends RegistryConfig {
    */
   default boolean lwcIgnorePublishStep() {
     String v = get("atlas.lwc.ignore-publish-step");
-    return v == null || Boolean.valueOf(v);
+    return v == null || Boolean.parseBoolean(v);
   }
 
   /** Returns the frequency for refreshing config settings from the LWC service. */

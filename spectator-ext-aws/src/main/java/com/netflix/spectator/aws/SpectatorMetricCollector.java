@@ -48,7 +48,7 @@ public class SpectatorMetricCollector extends MetricCollector {
     }
 
     @Override public boolean isEnabled() {
-        return Boolean.valueOf(System.getProperty("spectator.ext.aws.enabled", "true"));
+        return Boolean.parseBoolean(System.getProperty("spectator.ext.aws.enabled", "true"));
     }
 
     @Override public RequestMetricCollector getRequestMetricCollector() {

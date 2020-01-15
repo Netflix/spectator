@@ -38,7 +38,7 @@ public class LongTaskTimerTest {
     long task1 = t.start();
     long task2 = t.start();
 
-    Assertions.assertFalse(task1 == task2);
+    Assertions.assertNotEquals(task1, task2);
     Assertions.assertEquals(t.activeTasks(), 2);
     Assertions.assertEquals(t.duration(), 0L);
   }
@@ -67,7 +67,7 @@ public class LongTaskTimerTest {
   public void stateIsPreservedAcrossGets() {
     long t1 = LongTaskTimer.get(registry, id).start();
     long t2 = LongTaskTimer.get(registry, id).start();
-    Assertions.assertFalse(t1 == t2);
+    Assertions.assertNotEquals(t1, t2);
 
     Assertions.assertEquals(LongTaskTimer.get(registry, id).activeTasks(), 2);
     clock.setMonotonicTime(5L);

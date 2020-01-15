@@ -175,7 +175,7 @@ public class SparkNameFunctionTest {
     final Pattern pattern = Pattern.compile(pattern_string);
     final Matcher m = pattern.matcher(metric);
 
-    Assertions.assertEquals(true, m.matches());
+   Assertions.assertTrue(m.matches());
     Assertions.assertEquals("97278898-4bd4-49c2-9889-aa5f969a7816-0023", m.group(1));
     Assertions.assertEquals("driver", m.group(2));
     Assertions.assertEquals("jvm.pools.PS-Old-Gen.used", m.group(3));

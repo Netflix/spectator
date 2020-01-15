@@ -51,7 +51,7 @@ public class TagsBuilderTest {
 
   private enum Level {
     info,
-    error;
+    error
   }
 
   @Test

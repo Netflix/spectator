@@ -47,5 +47,5 @@ public class TestMeter implements Meter {
   public boolean hasExpired() {
       return false;
   }
-};
+}
 

@@ -355,9 +355,7 @@ public class ArrayTagSetTest {
   public void tagListForEach() {
     ArrayTagSet expected = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4", "e", "5");
     List<Tag> tmp = new ArrayList<>();
-    expected.forEach((k, v) -> {
-      tmp.add(Tag.of(k, v));
-    });
+    expected.forEach((k, v) -> tmp.add(Tag.of(k, v)));
     Assertions.assertEquals(expected, ArrayTagSet.create(tmp));
   }
 
