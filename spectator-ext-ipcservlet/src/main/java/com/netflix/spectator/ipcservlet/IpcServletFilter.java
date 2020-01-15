@@ -17,7 +17,6 @@ package com.netflix.spectator.ipcservlet;
 
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.ipc.IpcErrorGroup;
 import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.NetflixHeader;
@@ -89,7 +88,6 @@ public class IpcServletFilter implements Filter {
         entry.markEnd().withHttpStatus(httpRes.getStatus());
       } catch (Throwable t) {
         entry.markEnd()
-            .withErrorGroup(IpcErrorGroup.server_error)
             .withException(t)
             .withHttpStatus(500);
         throw t;
