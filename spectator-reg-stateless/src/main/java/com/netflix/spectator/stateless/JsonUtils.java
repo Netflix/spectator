@@ -43,7 +43,6 @@ final class JsonUtils {
 
   private static final JsonFactory FACTORY = new JsonFactory();
 
-  private static final int UNKNOWN = -1;
   private static final int ADD = 0;
   private static final int MAX = 10;
 
@@ -137,28 +136,25 @@ final class JsonUtils {
         return operation(t.value());
       }
     }
-    LOGGER.warn("invalid statistic for {}, value will be dropped", id);
-    return UNKNOWN;
+    return MAX;
   }
 
   private static int operation(String stat) {
     int op;
     switch (stat) {
-      case "count":          op = ADD; break;
-      case "totalAmount":    op = ADD; break;
-      case "totalTime":      op = ADD; break;
-      case "totalOfSquares": op = ADD; break;
-      case "percentile":     op = ADD; break;
-      case "max":            op = MAX; break;
-      case "gauge":          op = MAX; break;
-      case "activeTasks":    op = MAX; break;
-      case "duration":       op = MAX; break;
-      default:               op = UNKNOWN; break;
+      case "count":
+      case "totalAmount":
+      case "totalTime":
+      case "totalOfSquares":
+      case "percentile":
+        op = ADD; break;
+      default:
+        op = MAX; break;
     }
     return op;
   }
 
   private static boolean shouldSend(int op, double value) {
-    return op != UNKNOWN && !Double.isNaN(value) && (value > 0.0 || op == MAX);
+    return !Double.isNaN(value) && (value > 0.0 || op == MAX);
   }
 }
