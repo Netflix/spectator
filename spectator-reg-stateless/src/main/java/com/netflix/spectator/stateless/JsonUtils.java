@@ -21,8 +21,6 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -38,8 +36,6 @@ import java.util.Map;
  * https://github.com/Netflix-Skunkworks/iep-apps/tree/master/atlas-aggregator
  */
 final class JsonUtils {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(JsonUtils.class);
 
   private static final JsonFactory FACTORY = new JsonFactory();
 
