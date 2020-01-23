@@ -108,19 +108,27 @@ public class JsonUtilsTest {
   }
 
   @Test
-  public void encodeIgnoresInvalidStatistic() throws Exception {
+  public void encodeInvalidStatisticAsGauge() throws Exception {
     List<Measurement> ms = new ArrayList<>();
     ms.add(count(42, "test", "statistic", "foo"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assertions.assertEquals(0, values.size());
+    Assertions.assertEquals(1, values.size());
+    ms.forEach(m -> {
+      Id id = m.id();
+      Assertions.assertEquals(values.get(id).op, 10);
+    });
   }
 
   @Test
-  public void encodeIgnoresNoStatistic() throws Exception {
+  public void encodeAssumesNoStatisticIsGauge() throws Exception {
     List<Measurement> ms = new ArrayList<>();
     ms.add(unknown(42, "test"));
     Map<Id, Delta> values = decode(JsonUtils.encode(Collections.emptyMap(), ms));
-    Assertions.assertEquals(0, values.size());
+    Assertions.assertEquals(1, values.size());
+    ms.forEach(m -> {
+      Id id = m.id();
+      Assertions.assertEquals(values.get(id).op, 10);
+    });
   }
 
   @Test
