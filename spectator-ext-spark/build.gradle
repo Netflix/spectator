@@ -3,13 +3,13 @@ plugins {
 }
 
 dependencies {
-  compile project(':spectator-api')
-  compile project(':spectator-ext-gc')
-  compile project(':spectator-ext-jvm')
-  compile "com.eclipsesource.minimal-json:minimal-json"
-  compile "com.typesafe:config"
-  compile 'io.dropwizard.metrics:metrics-core:3.1.2'
-  compile 'org.apache.spark:spark-core_2.10:1.6.1'
+  api project(':spectator-api')
+  api project(':spectator-ext-gc')
+  api project(':spectator-ext-jvm')
+  implementation "com.eclipsesource.minimal-json:minimal-json"
+  implementation "com.typesafe:config"
+  implementation 'io.dropwizard.metrics:metrics-core:3.1.2'
+  implementation 'org.apache.spark:spark-core_2.10:1.6.1'
 }
 
 jar {

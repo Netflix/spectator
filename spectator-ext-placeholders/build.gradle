@@ -3,8 +3,8 @@ dependencies {
 
   // The MdcTagFactoryTest requires a logging implementation that supports the MDC
   // functionality, which the slf4j-nop (default) and slf4j-simple implementations do not.
-  testCompile "org.slf4j:slf4j-log4j12"
-  testCompile "log4j:log4j"
+  testImplementation "org.slf4j:slf4j-log4j12"
+  testImplementation "log4j:log4j"
 }
 
 jar {
