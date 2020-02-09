@@ -1,5 +1,5 @@
 dependencies {
-  compileApi project(':spectator-api')
+  api project(':spectator-api')
   compile 'io.micrometer:micrometer-core'
 }
 

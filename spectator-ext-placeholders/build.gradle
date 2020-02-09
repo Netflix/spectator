@@ -1,5 +1,5 @@
 dependencies {
-  compileApi project(':spectator-api')
+  api project(':spectator-api')
 
   // The MdcTagFactoryTest requires a logging implementation that supports the MDC
   // functionality, which the slf4j-nop (default) and slf4j-simple implementations do not.

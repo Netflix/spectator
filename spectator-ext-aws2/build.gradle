@@ -1,6 +1,6 @@
 dependencies {
-  compileApi project(":spectator-api")
-  compileApi "software.amazon.awssdk:sdk-core"
+  api project(":spectator-api")
+  api "software.amazon.awssdk:sdk-core"
 
   compile project(":spectator-ext-ipc")
   compile "software.amazon.awssdk:aws-core"

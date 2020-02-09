@@ -1,6 +1,6 @@
 dependencies {
-  compileApi project(':spectator-api')
-  compileApi project(':spectator-ext-ipc')
+  api project(':spectator-api')
+  api project(':spectator-ext-ipc')
   compile 'javax.inject:javax.inject:1'
   compileOnly 'javax.servlet:javax.servlet-api:4.0.1'
   testCompile 'org.eclipse.jetty:jetty-servlet:9.4.11.v20180605'

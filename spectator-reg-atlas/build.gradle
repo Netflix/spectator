@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-  compileApi project(':spectator-api')
+  api project(':spectator-api')
   compile project(':spectator-ext-ipc')
   compile 'com.fasterxml.jackson.core:jackson-core'
   compile 'com.fasterxml.jackson.core:jackson-databind'

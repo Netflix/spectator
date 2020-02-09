@@ -24,8 +24,7 @@ allprojects {
 }
 
 subprojects {
-  apply plugin: 'nebula.compile-api'
-  apply plugin: 'java'
+  apply plugin: 'java-library'
   apply plugin: 'build-dashboard'
   apply plugin: 'com.github.spotbugs'
   apply plugin: 'checkstyle'
