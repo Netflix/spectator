@@ -24,8 +24,7 @@ allprojects {
 }
 
 subprojects {
-  apply plugin: 'nebula.compile-api'
-  apply plugin: 'java'
+  apply plugin: 'java-library'
   apply plugin: 'build-dashboard'
   apply plugin: 'com.github.spotbugs'
   apply plugin: 'checkstyle'
@@ -74,9 +73,9 @@ subprojects {
   }
 
   dependencies {
-    compile "org.slf4j:slf4j-api"
-    testCompile 'org.junit.jupiter:junit-jupiter-engine'
-    testCompile 'nl.jqno.equalsverifier:equalsverifier'
+    implementation "org.slf4j:slf4j-api"
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
     jmh "org.openjdk.jmh:jmh-core:1.22"
     jmh "org.openjdk.jmh:jmh-generator-annprocess:1.22"

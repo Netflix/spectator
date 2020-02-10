@@ -1,6 +1,6 @@
 dependencies {
-  compileApi project(':spectator-api')
-  compile 'com.typesafe:config'
+  api project(':spectator-api')
+  implementation 'com.typesafe:config'
 }
 
 jar {

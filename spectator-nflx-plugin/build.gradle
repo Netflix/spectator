@@ -1,14 +1,14 @@
 dependencies {
-  compile project(':spectator-api')
-  compile project(':spectator-ext-gc')
-  compile project(':spectator-ext-jvm')
-  compile project(':spectator-reg-atlas')
-  compile 'javax.inject:javax.inject'
-  compile "com.google.inject:guice"
-  compile "com.google.inject.extensions:guice-multibindings"
-  compile "com.netflix.archaius:archaius2-core"
-  compile "com.netflix.servo:servo-core"
-  testCompile "com.netflix.governator:governator"
+  api project(':spectator-api')
+  api project(':spectator-ext-gc')
+  api project(':spectator-ext-jvm')
+  api project(':spectator-reg-atlas')
+  implementation 'javax.inject:javax.inject'
+  implementation "com.google.inject:guice"
+  implementation "com.google.inject.extensions:guice-multibindings"
+  implementation "com.netflix.archaius:archaius2-core"
+  implementation "com.netflix.servo:servo-core"
+  testImplementation "com.netflix.governator:governator"
 }
 
 jar {

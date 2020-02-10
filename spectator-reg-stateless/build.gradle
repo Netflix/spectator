@@ -1,7 +1,7 @@
 dependencies {
-  compileApi project(':spectator-api')
-  compile project(':spectator-ext-ipc')
-  compile 'com.fasterxml.jackson.core:jackson-core'
+  api project(':spectator-api')
+  api project(':spectator-ext-ipc')
+  implementation 'com.fasterxml.jackson.core:jackson-core'
 }
 
 jar {

@@ -1,5 +1,5 @@
 dependencies {
-  compile project(':spectator-nflx-plugin')
+  api project(':spectator-nflx-plugin')
 }
 
 jar {
