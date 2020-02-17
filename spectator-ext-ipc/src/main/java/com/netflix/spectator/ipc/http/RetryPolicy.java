@@ -58,7 +58,9 @@ public interface RetryPolicy {
      * </pre>
      */
     private boolean isConnectTimeout(Throwable t) {
-      return t instanceof SocketTimeoutException && t.getMessage().contains("connect");
+      return t instanceof SocketTimeoutException
+          && t.getMessage() != null
+          && t.getMessage().contains("connect");
     }
 
     @Override public boolean shouldRetry(String method, HttpResponse response) {
