@@ -74,9 +74,12 @@ public interface Id extends TagList {
    */
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2) {
-    final Tag[] ts = {
-        new BasicTag(k1, v1),
-        new BasicTag(k2, v2)
+    // The original reason for this method was to avoid allocating a string array before
+    // creating a Tag array. The internals have changed so it can work on the string array
+    // directly. The overload is kept for backwards compatiblity.
+    final String[] ts = {
+        k1, v1,
+        k2, v2
     };
     return withTags(ts);
   }
@@ -87,10 +90,13 @@ public interface Id extends TagList {
    */
   @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
-    final Tag[] ts = {
-        new BasicTag(k1, v1),
-        new BasicTag(k2, v2),
-        new BasicTag(k3, v3)
+    // The original reason for this method was to avoid allocating a string array before
+    // creating a Tag array. The internals have changed so it can work on the string array
+    // directly. The overload is kept for backwards compatiblity.
+    final String[] ts = {
+        k1, v1,
+        k2, v2,
+        k3, v3
     };
     return withTags(ts);
   }
