@@ -78,6 +78,18 @@ public class ArrayTagSetTest {
   }
 
   @Test
+  public void testAddNullKey() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY;
+    Assertions.assertThrows(NullPointerException.class, () -> ts.add(null, "v"));
+  }
+
+  @Test
+  public void testAddNullValue() {
+    ArrayTagSet ts = ArrayTagSet.EMPTY;
+    Assertions.assertThrows(NullPointerException.class, () -> ts.add("k", null));
+  }
+
+  @Test
   public void testIteratorRemoveUnsupported() {
     Assertions.assertThrows(UnsupportedOperationException.class,
         () -> ArrayTagSet.create("k", "v").iterator().remove());
@@ -314,6 +326,14 @@ public class ArrayTagSetTest {
   public void addAllStringArrayEmpty() {
     ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(new String[0]);
     Assertions.assertSame(ArrayTagSet.EMPTY, ts);
+  }
+
+  @Test
+  public void addAllStringArrayMutate() {
+    String[] vs = {"a", "b"};
+    ArrayTagSet ts = ArrayTagSet.EMPTY.addAll(vs);
+    vs[0] = "c";
+    Assertions.assertEquals(ArrayTagSet.create("a", "b"), ts);
   }
 
   @Test
