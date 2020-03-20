@@ -20,8 +20,10 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Utils;
 
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongFunction;
 
 /** Counters that get incremented based on the bucket for recorded values. */
@@ -47,12 +49,14 @@ public final class BucketCounter implements DistributionSummary {
   private final Registry registry;
   private final Id id;
   private final LongFunction<String> f;
+  private final ConcurrentHashMap<String, Counter> counters;
 
   /** Create a new instance. */
   BucketCounter(Registry registry, Id id, LongFunction<String> f) {
     this.registry = registry;
     this.id = id;
     this.f = f;
+    this.counters = new ConcurrentHashMap<>();
   }
 
   @Override public Id id() {
@@ -73,7 +77,11 @@ public final class BucketCounter implements DistributionSummary {
 
   /** Return the count for a given bucket. */
   Counter counter(String bucket) {
-    return registry.counter(id.withTag("bucket", bucket));
+    return Utils.computeIfAbsent(
+        counters,
+        bucket,
+        k -> registry.counter(id.withTag("bucket", k))
+    );
   }
 
   /** Not supported, will always return 0. */

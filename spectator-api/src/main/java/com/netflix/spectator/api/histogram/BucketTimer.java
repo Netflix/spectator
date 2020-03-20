@@ -20,9 +20,11 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
 
 import java.util.Collections;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongFunction;
 
@@ -49,12 +51,14 @@ public final class BucketTimer implements Timer {
   private final Registry registry;
   private final Id id;
   private final LongFunction<String> f;
+  private final ConcurrentHashMap<String, Timer> timers;
 
   /** Create a new instance. */
   BucketTimer(Registry registry, Id id, LongFunction<String> f) {
     this.registry = registry;
     this.id = id;
     this.f = f;
+    this.timers = new ConcurrentHashMap<>();
   }
 
   @Override public Id id() {
@@ -98,7 +102,11 @@ public final class BucketTimer implements Timer {
 
   /** Return the timer for a given bucket. */
   Timer timer(String bucket) {
-    return registry.timer(id.withTag("bucket", bucket));
+    return Utils.computeIfAbsent(
+        timers,
+        bucket,
+        k -> registry.timer(id.withTag("bucket", k))
+    );
   }
 
   /** Not supported, will always return 0. */

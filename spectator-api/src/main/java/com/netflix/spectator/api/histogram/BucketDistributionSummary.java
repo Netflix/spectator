@@ -15,12 +15,15 @@
  */
 package com.netflix.spectator.api.histogram;
 
+
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Utils;
 
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.LongFunction;
 
 /** Distribution summaries that get updated based on the bucket for recorded values. */
@@ -47,12 +50,14 @@ public final class BucketDistributionSummary implements DistributionSummary {
   private final Registry registry;
   private final Id id;
   private final LongFunction<String> f;
+  private final ConcurrentHashMap<String, DistributionSummary> summaries;
 
   /** Create a new instance. */
   BucketDistributionSummary(Registry registry, Id id, LongFunction<String> f) {
     this.registry = registry;
     this.id = id;
     this.f = f;
+    this.summaries = new ConcurrentHashMap<>();
   }
 
   @Override public Id id() {
@@ -73,7 +78,11 @@ public final class BucketDistributionSummary implements DistributionSummary {
 
   /** Return the distribution summary for a given bucket. */
   DistributionSummary distributionSummary(String bucket) {
-    return registry.distributionSummary(id.withTag("bucket", bucket));
+    return Utils.computeIfAbsent(
+        summaries,
+        bucket,
+        k -> registry.distributionSummary(id.withTag("bucket", k))
+    );
   }
 
   /** Not supported, will always return 0. */
