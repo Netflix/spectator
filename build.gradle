@@ -9,7 +9,7 @@ buildscript {
 
 plugins {
   id 'me.champeau.gradle.jmh' version '0.5.0'
-  id "com.github.spotbugs" version "3.0.0" apply false
+  id "com.github.spotbugs" version "4.0.4" apply false
 }
 
 // Establish version and status
@@ -108,12 +108,14 @@ subprojects {
   }
   
   spotbugs {
-    toolVersion = '4.0.0-beta4'
+    toolVersion = '4.0.1'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
-    sourceSets = [sourceSets.main]
+    spotbugsMain.enabled = true
+    spotbugsTest.enabled = false
+    spotbugsJmh.enabled = false
   }
-  tasks.withType(com.github.spotbugs.SpotBugsTask) {
+  spotbugsMain {
     reports {
       xml.enabled = false
       html.enabled = true
