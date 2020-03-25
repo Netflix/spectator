@@ -59,12 +59,15 @@ subprojects {
       if (JavaVersion.current().isJava8Compatible()) {
         options.addStringOption('Xdoclint:none', '-quiet')
       }
+      if (JavaVersion.current().isJava9Compatible()) {
+        options.addStringOption('-release', '8')
+      }
     }
   }
 
   javadoc {
     options {
-      links = ['http://docs.oracle.com/javase/8/docs/api/']
+      links = ['https://docs.oracle.com/javase/8/docs/api/']
     }
   }
 
