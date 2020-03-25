@@ -3,13 +3,13 @@ buildscript {
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.27.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:9.0.1'
-    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.6.0'
+    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.8.0'
   }
 }
 
 plugins {
   id 'me.champeau.gradle.jmh' version '0.5.0'
-  id "com.github.spotbugs" version "3.0.0" apply false
+  id "com.github.spotbugs" version "4.0.4" apply false
 }
 
 // Establish version and status
@@ -59,12 +59,15 @@ subprojects {
       if (JavaVersion.current().isJava8Compatible()) {
         options.addStringOption('Xdoclint:none', '-quiet')
       }
+      if (JavaVersion.current().isJava9Compatible()) {
+        options.addStringOption('-release', '8')
+      }
     }
   }
 
   javadoc {
     options {
-      links = ['http://docs.oracle.com/javase/8/docs/api/']
+      links = ['https://docs.oracle.com/javase/8/docs/api/']
     }
   }
 
@@ -105,12 +108,14 @@ subprojects {
   }
   
   spotbugs {
-    toolVersion = '4.0.0-beta4'
+    toolVersion = '4.0.1'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
-    sourceSets = [sourceSets.main]
+    spotbugsMain.enabled = true
+    spotbugsTest.enabled = false
+    spotbugsJmh.enabled = false
   }
-  tasks.withType(com.github.spotbugs.SpotBugsTask) {
+  spotbugsMain {
     reports {
       xml.enabled = false
       html.enabled = true
