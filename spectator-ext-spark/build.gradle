@@ -35,11 +35,3 @@ shadowJar {
   }
 }
 
-publishing {
-  publications {
-    nebula(MavenPublication) {
-      artifact shadowJar
-    }
-  }
-}
-
