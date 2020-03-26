@@ -30,11 +30,3 @@ shadowJar {
   relocate('org.slf4j',                'spectator-agent.slf4j')
 }
 
-publishing {
-  publications {
-    nebula(MavenPublication) {
-      artifact shadowJar
-    }
-  }
-}
-
