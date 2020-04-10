@@ -302,14 +302,18 @@ public final class QueryIndex<T> {
           // Scan for matches with other conditions
           List<QueryIndex<T>> otherMatches = otherChecksCache.get(v);
           if (otherMatches == null) {
-            List<QueryIndex<T>> tmp = new ArrayList<>();
-            otherChecks.forEach((kq, idx) -> {
-              if (kq.matches(v)) {
-                tmp.add(idx);
-                idx.forEachMatch(tags, i + 1, consumer);
-              }
-            });
-            otherChecksCache.put(v, tmp);
+            // Avoid the list and cache allocations if there are no other checks at
+            // this level
+            if (!otherChecks.isEmpty()) {
+              List<QueryIndex<T>> tmp = new ArrayList<>();
+              otherChecks.forEach((kq, idx) -> {
+                if (kq.matches(v)) {
+                  tmp.add(idx);
+                  idx.forEachMatch(tags, i + 1, consumer);
+                }
+              });
+              otherChecksCache.put(v, tmp);
+            }
           } else {
             for (QueryIndex<T> idx : otherMatches) {
               idx.forEachMatch(tags, i + 1, consumer);
