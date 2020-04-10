@@ -18,11 +18,8 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.AtomicDouble;
-
-import java.util.List;
 
 /**
  * Meter that reports a single value to Atlas.
@@ -41,10 +38,10 @@ class AtlasGauge extends AtlasMeter implements Gauge {
     this.stat = id.withTag(Statistic.gauge).withTags(id.tags()).withTag(DsType.gauge);
   }
 
-  @Override void measure(List<Measurement> ms) {
+  @Override void measure(MeasurementConsumer consumer) {
     final double v = value();
     if (Double.isFinite(v)) {
-      ms.add(new Measurement(stat, clock.wallTime(), v));
+      consumer.accept(stat, clock.wallTime(), v);
     }
   }
 

@@ -64,9 +64,9 @@ abstract class AtlasMeter implements Meter {
 
   @Override public Iterable<Measurement> measure() {
     List<Measurement> ms = new ArrayList<>();
-    measure(ms);
+    measure((id, timestamp, value) -> ms.add(new Measurement(id, timestamp, value)));
     return ms;
   }
 
-  abstract void measure(List<Measurement> ms);
+  abstract void measure(MeasurementConsumer consumer);
 }

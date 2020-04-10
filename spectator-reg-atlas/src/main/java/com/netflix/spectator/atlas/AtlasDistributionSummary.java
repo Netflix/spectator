@@ -18,13 +18,11 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
 import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -69,29 +67,29 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
     };
   }
 
-  @Override void measure(List<Measurement> ms) {
-    ms.add(newMeasurement(stats[0], count));
-    ms.add(newMeasurement(stats[1], total));
-    ms.add(newMeasurement(stats[2], totalOfSquares));
-    ms.add(newMaxMeasurement(stats[3], max));
+  @Override void measure(MeasurementConsumer consumer) {
+    reportMeasurement(consumer, stats[0], count);
+    reportMeasurement(consumer, stats[1], total);
+    reportMeasurement(consumer, stats[2], totalOfSquares);
+    reportMaxMeasurement(consumer, stats[3], max);
   }
 
-  private Measurement newMeasurement(Id mid, StepValue v) {
+  private void reportMeasurement(MeasurementConsumer consumer, Id mid, StepValue v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
     double rate = v.pollAsRate();
     long timestamp = v.timestamp();
-    return new Measurement(mid, timestamp, rate);
+    consumer.accept(mid, timestamp, rate);
   }
 
-  private Measurement newMaxMeasurement(Id mid, StepLong v) {
+  private void reportMaxMeasurement(MeasurementConsumer consumer, Id mid, StepLong v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
     double maxValue = v.poll();
     long timestamp = v.timestamp();
-    return new Measurement(mid, timestamp, maxValue);
+    consumer.accept(mid, timestamp, maxValue);
   }
 
   @Override public void record(long amount) {

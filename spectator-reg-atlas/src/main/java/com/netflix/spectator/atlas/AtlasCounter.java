@@ -18,11 +18,8 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
-
-import java.util.List;
 
 /**
  * Counter that reports a rate per second to Atlas. Note that {@link #count()} will
@@ -43,9 +40,9 @@ class AtlasCounter extends AtlasMeter implements Counter {
     this.stat = id.withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
   }
 
-  @Override void measure(List<Measurement> ms) {
+  @Override void measure(MeasurementConsumer consumer) {
     final double rate = value.pollAsRate();
-    ms.add(new Measurement(stat, value.timestamp(), rate));
+    consumer.accept(stat, value.timestamp(), rate);
   }
 
   @Override public void add(double amount) {

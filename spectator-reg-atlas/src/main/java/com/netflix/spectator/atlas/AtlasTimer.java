@@ -17,14 +17,12 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.StepDouble;
 import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,29 +69,29 @@ class AtlasTimer extends AtlasMeter implements Timer {
     };
   }
 
-  @Override void measure(List<Measurement> ms) {
-    ms.add(newMeasurement(stats[0], count, 1.0));
-    ms.add(newMeasurement(stats[1], total, 1e-9));
-    ms.add(newMeasurement(stats[2], totalOfSquares, 1e-18));
-    ms.add(newMaxMeasurement(stats[3], max));
+  @Override void measure(MeasurementConsumer consumer) {
+    reportMeasurement(consumer, stats[0], count, 1.0);
+    reportMeasurement(consumer, stats[1], total, 1e-9);
+    reportMeasurement(consumer, stats[2], totalOfSquares, 1e-18);
+    reportMaxMeasurement(consumer, stats[3], max);
   }
 
-  private Measurement newMeasurement(Id mid, StepValue v, double f) {
+  private void reportMeasurement(MeasurementConsumer consumer, Id mid, StepValue v, double f) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
     double rate = v.pollAsRate() * f;
     long timestamp = v.timestamp();
-    return new Measurement(mid, timestamp, rate);
+    consumer.accept(mid, timestamp, rate);
   }
 
-  private Measurement newMaxMeasurement(Id mid, StepLong v) {
+  private void reportMaxMeasurement(MeasurementConsumer consumer, Id mid, StepLong v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
     double maxValue = v.poll() / 1e9;
     long timestamp = v.timestamp();
-    return new Measurement(mid, timestamp, maxValue);
+    consumer.accept(mid, timestamp, maxValue);
   }
 
   @Override public void record(long amount, TimeUnit unit) {

@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -46,6 +47,7 @@ public class Evaluator {
   private final long step;
   private final QueryIndex<SubscriptionEntry> index;
   private final Map<Subscription, SubscriptionEntry> subscriptions;
+  private final ThreadLocal<SubscriptionEntryConsumer> consumers;
 
   /**
    * Create a new instance.
@@ -63,6 +65,7 @@ public class Evaluator {
     this.step = step;
     this.index = QueryIndex.newInstance(new NoopRegistry());
     this.subscriptions = new ConcurrentHashMap<>();
+    this.consumers = new ThreadLocal<>();
   }
 
   /**
@@ -112,7 +115,16 @@ public class Evaluator {
    *     Value for the datapoint.
    */
   public void update(Id id, long t, double v) {
-    index.forEachMatch(id, entry -> entry.update(id, t, v));
+    // Using a simple lambda with forEachMatch results in a lot of allocations. The
+    // SubscriptionEntryConsumer can be updated with the datapoint and reused across
+    // invocations
+    SubscriptionEntryConsumer consumer = consumers.get();
+    if (consumer == null) {
+      consumer = new SubscriptionEntryConsumer();
+      consumers.set(consumer);
+    }
+    consumer.updateMeasurement(id, t, v);
+    index.forEachMatch(id, consumer);
   }
 
   /**
@@ -200,6 +212,27 @@ public class Evaluator {
         measurements.put(id, consolidator);
       }
       consolidator.update(t, v);
+    }
+  }
+
+  /**
+   * Consumer that allows the measurement data to be mutated. This can be used to avoid
+   * allocating instances of the closure when calling forEachMatch on the query index.
+   */
+  private static class SubscriptionEntryConsumer implements Consumer<SubscriptionEntry> {
+    private Id id;
+    private long timestamp;
+    private double value;
+
+    public void updateMeasurement(Id id, long timestamp, double value) {
+      this.id = id;
+      this.timestamp = timestamp;
+      this.value = value;
+    }
+
+    @Override
+    public void accept(SubscriptionEntry entry) {
+      entry.update(id, timestamp, value);
     }
   }
 }
