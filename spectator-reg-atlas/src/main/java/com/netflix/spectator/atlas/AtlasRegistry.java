@@ -345,41 +345,25 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   synchronized void pollMeters(long t) {
     publishTaskTimer("pollMeters").record(() -> {
       if (t > lastPollTimestamp) {
-        // The `for if for if` that follows is equivalent to `super.measurements().forEach`.
-        // It is expanded here because with many measurements the stream adds quite a bit of
-        // overhead on the JVMs we tested. This can be revisited in the future if streams get
-        // better optimized and we update the base JVM version.
-        //
-        // Note: Be sure to call measurements() on the superclass. The overridden version for
-        // the registry is for public consumption to get consolidated values for the publish step
-        // rather than the step for the meters which is needed here.
-        //
-        // We first collect the measurements into a local list to minimize the time to poll
-        // all values and reduce the chances of crossing a step boundary while sampling the
-        // values.
-        logger.debug("collecting measurements for time: {}", t);
-        List<Measurement> measurements = new ArrayList<>(atlasMeasurements.size());
-        publishTaskTimer("pollMeasurements").record(() -> {
-          for (Meter meter : this) {
-            ((AtlasMeter) meter).measure(measurements);
-          }
-        });
-
-        logger.debug("updating evaluator for time: {}", t);
-        for (Measurement m : measurements) {
+        MeasurementConsumer consumer = (id, timestamp, value) -> {
           // Update the map for data to go to the Atlas storage layer
-          Consolidator consolidator = atlasMeasurements.get(m.id());
+          Consolidator consolidator = atlasMeasurements.get(id);
           if (consolidator == null) {
             int multiple = (int) (stepMillis / lwcStepMillis);
-            consolidator = Consolidator.create(m.id(), stepMillis, multiple);
-            atlasMeasurements.put(m.id(), consolidator);
+            consolidator = Consolidator.create(id, stepMillis, multiple);
+            atlasMeasurements.put(id, consolidator);
           }
-          consolidator.update(m);
+          consolidator.update(timestamp, value);
 
           // Update aggregators for streaming
-          evaluator.update(m);
-        }
-
+          evaluator.update(id, timestamp, value);
+        };
+        logger.debug("collecting measurements for time: {}", t);
+        publishTaskTimer("pollMeasurements").record(() -> {
+          for (Meter meter : this) {
+            ((AtlasMeter) meter).measure(consumer);
+          }
+        });
         lastPollTimestamp = t;
       }
     });

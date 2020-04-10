@@ -18,11 +18,8 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
-
-import java.util.List;
 
 /**
  * Gauge that reports the maximum value submitted during an interval to Atlas. Main use-case
@@ -43,12 +40,12 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
     this.stat = id.withTag(Statistic.max).withTags(id.tags()).withTag(DsType.gauge);
   }
 
-  @Override void measure(List<Measurement> ms) {
+  @Override void measure(MeasurementConsumer consumer) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
     double v = value.poll();
-    ms.add(new Measurement(stat, value.timestamp(), v));
+    consumer.accept(stat, value.timestamp(), v);
   }
 
   @Override public void set(double v) {

@@ -97,7 +97,7 @@ subprojects {
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = 'warn'
-    include = ['.*Ids.*']
+    include = ['.*PollMetersBench.*']
   }
 
   checkstyle {
