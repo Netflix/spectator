@@ -16,10 +16,15 @@
 package com.netflix.spectator.ipc;
 
 import com.netflix.frigga.Names;
+import com.netflix.frigga.conventions.sharding.Shard;
+import com.netflix.frigga.conventions.sharding.ShardingNamingConvention;
+import com.netflix.frigga.conventions.sharding.ShardingNamingResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Random;
+import java.util.function.BiFunction;
 
 public class ServerGroupTest {
 
@@ -58,6 +63,13 @@ public class ServerGroupTest {
   public void getDetailForApp() {
     String asg = "app";
     Assertions.assertNull(ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getShardsForApp() {
+    String asg = "app";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
   }
 
   @Test
@@ -104,6 +116,13 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForAppStack() {
+    String asg = "app-stack";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForAppStack() {
     String asg = "app-stack";
     Assertions.assertNull(ServerGroup.parse(asg).sequence());
@@ -144,6 +163,13 @@ public class ServerGroupTest {
   public void getDetailForAppStackDetail() {
     String asg = "app-stack-detail";
     Assertions.assertEquals("detail", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getShardsForAppStackDetail() {
+    String asg = "app-stack-detail";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
   }
 
   @Test
@@ -190,6 +216,13 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForAppStackDetails() {
+    String asg = "app-stack-detail_1-detail_2";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForAppStackDetails() {
     String asg = "app-stack-detail_1-detail_2";
     Assertions.assertNull(ServerGroup.parse(asg).sequence());
@@ -230,6 +263,13 @@ public class ServerGroupTest {
   public void getDetailForAppDetail() {
     String asg = "app--detail";
     Assertions.assertEquals("detail", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getShardsForAppDetail() {
+    String asg = "app--detail";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
   }
 
   @Test
@@ -276,6 +316,13 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForAppSeq() {
+    String asg = "app-v001";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForAppSeq() {
     String asg = "app-v001";
     Assertions.assertEquals("v001", ServerGroup.parse(asg).sequence());
@@ -316,6 +363,13 @@ public class ServerGroupTest {
   public void getDetailForAppStackSeq() {
     String asg = "app-stack-v001";
     Assertions.assertNull(ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getShardsForAppStackSeq() {
+    String asg = "app-stack-v001";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
   }
 
   @Test
@@ -362,6 +416,13 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForAppStackDetailSeq() {
+    String asg = "app-stack-detail-v001";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForAppStackDetailSeq() {
     String asg = "app-stack-detail-v001";
     Assertions.assertEquals("v001", ServerGroup.parse(asg).sequence());
@@ -405,6 +466,13 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForAppStackDetailsSeq() {
+    String asg = "app-stack-detail_1-detail_2-v001";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForAppStackDetailsSeq() {
     String asg = "app-stack-detail_1-detail_2-v001";
     Assertions.assertEquals("v001", ServerGroup.parse(asg).sequence());
@@ -445,6 +513,13 @@ public class ServerGroupTest {
   public void getDetailForAppDetailSeq() {
     String asg = "app--detail-v001";
     Assertions.assertEquals("detail", ServerGroup.parse(asg).detail());
+  }
+
+  @Test
+  public void getShardsForAppDetailSeq() {
+    String asg = "app--detail-v001";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
   }
 
   @Test
@@ -510,18 +585,103 @@ public class ServerGroupTest {
   }
 
   @Test
+  public void getShardsForEmptyString() {
+    String asg = "";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
   public void getSequenceForEmptyString() {
     String asg = "";
     Assertions.assertNull(ServerGroup.parse(asg).sequence());
   }
 
+  @Test
+  public void getShardsOnlyShard1() {
+    String asg = "app-stack-x1shard1-detail-v000";
+    Assertions.assertEquals("shard1", ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsOnlyShard2() {
+    String asg = "app-stack-x2shard2-detail-v000";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertEquals("shard2", ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsBoth() {
+    String asg = "app-stack-x1shard1-x2shard2-detail-v000";
+    Assertions.assertEquals("shard1", ServerGroup.parse(asg).shard1());
+    Assertions.assertEquals("shard2", ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsThree() {
+    String asg = "app-stack-x1shard1-x2shard2-x3shard3-detail-v000";
+    Assertions.assertEquals("shard1", ServerGroup.parse(asg).shard1());
+    Assertions.assertEquals("shard2", ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsOutOfOrder() {
+    String asg = "app-stack-x2shard2-x1shard1-detail-v000";
+    Assertions.assertEquals("shard1", ServerGroup.parse(asg).shard1());
+    Assertions.assertEquals("shard2", ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsLeadingDigits() {
+    String asg = "app-stack-x10shard1-detail-v000";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsGap() {
+    String asg = "app-stack-x1shard1-foo-x2shard2-detail-v000";
+    Assertions.assertEquals("shard1", ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsEndOfDetail() {
+    String asg = "app-stack-detail-x1shard1-x2shard2-v000";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsDuplicate() {
+    String asg = "app-stack-x1a1-x2a2-x1b1-x2b2-v000";
+    Assertions.assertEquals("b1", ServerGroup.parse(asg).shard1());
+    Assertions.assertEquals("b2", ServerGroup.parse(asg).shard2());
+  }
+
+  @Test
+  public void getShardsEmpty() {
+    String asg = "app-stack-x1-x2-v000";
+    Assertions.assertNull(ServerGroup.parse(asg).shard1());
+    Assertions.assertNull(ServerGroup.parse(asg).shard2());
+  }
 
   private void appendRandomString(Random r, StringBuilder builder) {
-    int length = r.nextInt(20);
+    int length = r.nextInt(20) + 1;
     for (int i = 0; i < length; ++i) {
       char c = (char) (r.nextInt(26) + 'a');
       builder.append(c);
     }
+  }
+
+  private void appendRandomPart(Random r, StringBuilder builder) {
+    // https://github.com/cfieber/frigga/blob/master/src/main/java/com/netflix/frigga/NameConstants.java#L29
+    String[] prefixes = {"x0", "x1", "x2", "x3", "c0", "d0", "h0", "p0", "r0", "u0", "w0", "z0"};
+    if (r.nextBoolean()) {
+      builder.append(prefixes[r.nextInt(prefixes.length)]);
+    }
+    appendRandomString(r, builder);
   }
 
   private String randomServerGroup(Random r) {
@@ -529,10 +689,10 @@ public class ServerGroupTest {
     int parts = r.nextInt(6) + 1;
     for (int i = 0; i < parts; ++i) {
       if (r.nextBoolean()) {
-        appendRandomString(r, builder);
+        appendRandomPart(r, builder);
       } else {
         builder.append('v');
-        builder.append(r.nextInt(10000));
+        builder.append(r.nextInt(10_000_000));
       }
       if (i != parts - 1) {
         builder.append('-');
@@ -545,8 +705,13 @@ public class ServerGroupTest {
   public void compatibleWithFrigga() {
     // Seed the RNG so that each run is deterministic. In this case we are just using it to
     // generate a bunch of patterns to try
+    ShardingNamingConvention convention = new ShardingNamingConvention();
+    BiFunction<Map<Integer, Shard>, Integer, String> getShard = (shards, i) -> {
+      Shard s = shards.get(i);
+      return s == null ? null : s.getShardValue();
+    };
     Random r = new Random(42);
-    for (int i = 0; i < 5000; ++i) {
+    for (int i = 0; i < 50_000; ++i) {
       String asg = randomServerGroup(r);
       ServerGroup sg = ServerGroup.parse(asg);
       Names frigga = Names.parseName(asg);
@@ -555,6 +720,24 @@ public class ServerGroupTest {
       Assertions.assertEquals(frigga.getGroup(), sg.asg(), "asg: " + asg);
       Assertions.assertEquals(frigga.getStack(), sg.stack(), "stack: " + asg);
       Assertions.assertEquals(frigga.getDetail(), sg.detail(), "detail: " + asg);
+
+      if (frigga.getDetail() == null) {
+        continue;
+      }
+
+      try {
+        ShardingNamingResult result = convention.extractNamingConvention(frigga.getDetail());
+        if (result.getResult().isPresent()) {
+          Map<Integer, Shard> shards = result.getResult().get();
+          Assertions.assertEquals(getShard.apply(shards, 1), sg.shard1(), "shard1: " + asg);
+          Assertions.assertEquals(getShard.apply(shards, 2), sg.shard2(), "shard2: " + asg);
+        } else {
+          Assertions.assertNull(sg.shard1(), "shard1: " + asg);
+          Assertions.assertNull(sg.shard2(), "shard2: " + asg);
+        }
+      } catch (Exception e) {
+        throw new RuntimeException("parsing shards failed: " + asg, e);
+      }
     }
   }
 }

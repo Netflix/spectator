@@ -1,9 +1,9 @@
 dependencies {
   api project(':spectator-api')
-  jmh 'com.netflix.frigga:frigga:0.18.0'
+  jmh 'com.netflix.frigga:frigga'
   testImplementation 'com.fasterxml.jackson.core:jackson-core'
   testImplementation 'com.fasterxml.jackson.core:jackson-databind'
-  testImplementation 'com.netflix.frigga:frigga:0.18.0'
+  testImplementation 'com.netflix.frigga:frigga'
 }
 
 jar {

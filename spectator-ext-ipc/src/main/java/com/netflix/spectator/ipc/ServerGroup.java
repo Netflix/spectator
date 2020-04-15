@@ -45,7 +45,9 @@ public class ServerGroup {
    */
   private static boolean isSequence(String asg, int dN) {
     int length = asg.length();
-    if (length - dN < 3 || asg.charAt(dN + 1) != 'v') {
+    if (length - dN < 5 || length - dN > 8 || asg.charAt(dN + 1) != 'v') {
+      // Sequence must be 3 to 6 digits and start with v
+      // https://github.com/Netflix/frigga/pull/32
       return false;
     }
     for (int i = dN + 2; i < length; ++i) {
@@ -132,6 +134,53 @@ public class ServerGroup {
   /** If the server group has a detail, then return the detail name. Otherwise return null. */
   public String detail() {
     return (d1 != 0 && d2 > 0) ? substr(asg, d2 + 1, dN) : null;
+  }
+
+  private boolean isDigit(char c) {
+    return c >= '0' && c <= '9';
+  }
+
+  private boolean nonZeroDigit(char c) {
+    return c >= '1' && c <= '9';
+  }
+
+  private String shardN(char n) {
+    if (d1 != 0 && d2 > 0) {
+      int matchStart = -1;
+      int matchEnd = -1;
+      // Shards must be the first part of the detail, loop until we find a gap
+      int s = d2;
+      while (s != -1) {
+        int nextDash = asg.indexOf('-', s + 2);
+        int e = (nextDash == -1) ? dN : nextDash;
+        if (e <= s + 3 || asg.charAt(s + 1) != 'x' || !nonZeroDigit(asg.charAt(s + 2))) {
+          // Shard value must be at least 1 character
+          // The number prefix must match
+          break;
+        } else if (asg.charAt(s + 2) == n && !isDigit(asg.charAt(s + 3))) {
+          // If the first character of the value is numeric, means shard number is too high
+          // skip and move to the next. Otherwise we have a match. Since the match could get
+          // overwritten later, record positions for now and keep checking.
+          matchStart = s + 3;
+          matchEnd = e;
+        }
+        s = nextDash;
+      }
+      return (matchStart > 0) ? substr(asg, matchStart, matchEnd) : null;
+    } else {
+      // No detail means no shards
+      return null;
+    }
+  }
+
+  /** If the detail contains a shard with id 1, then return it. Otherwise return null. */
+  public String shard1() {
+    return shardN('1');
+  }
+
+  /** If the detail contains a shard with id 2, then return it. Otherwise return null. */
+  public String shard2() {
+    return shardN('2');
   }
 
   /** If the server group has a sequence number, then return it. Otherwise return null. */
