@@ -39,7 +39,7 @@ public interface StatelessConfig extends RegistryConfig {
    * default is 5 seconds.
    */
   default Duration frequency() {
-    String v = get("stateless.enabled");
+    String v = get("stateless.frequency");
     return v == null ? Duration.ofSeconds(5) : Duration.parse(v);
   }
 

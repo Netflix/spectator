@@ -18,6 +18,7 @@ package com.netflix.spectator.stateless;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,5 +55,13 @@ public class StatelessConfigTest {
     props.put("stateless.enabled", "abc");
     StatelessConfig config = props::get;
     Assertions.assertFalse(config.enabled());
+  }
+
+  @Test
+  public void frequency() {
+    Map<String, String> props = new HashMap<>();
+    props.put("stateless.frequency", "PT5S");
+    StatelessConfig config = props::get;
+    Assertions.assertEquals(Duration.ofSeconds(5), config.frequency());
   }
 }
