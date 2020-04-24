@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 package com.netflix.spectator.spark;
 
 import com.codahale.metrics.MetricRegistry;
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
+import com.netflix.spectator.stateless.StatelessRegistry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.spark.metrics.sink.Sink;
@@ -26,29 +28,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
- * Sink for exporting spark metrics to a prana sidecar.
+ * Sink for exporting spark metrics.
  */
 public class SparkSink implements Sink {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SparkSink.class);
 
-  private static final String DEFAULT_URL = "http://localhost:8078/metrics";
-
   private final SpectatorReporter reporter;
-  private final SidecarRegistry sidecarRegistry;
+  private final StatelessRegistry statelessRegistry;
 
   private final long pollPeriod;
   private final TimeUnit pollUnit;
-
-  private final URL url;
 
   private GcLogger gcLogger;
 
@@ -62,22 +58,22 @@ public class SparkSink implements Sink {
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) throws MalformedURLException {
     final Config config = loadConfig();
-    sidecarRegistry = new SidecarRegistry();
+    statelessRegistry = new StatelessRegistry(
+        Clock.SYSTEM, new SpectatorConfig(config.getConfig("spectator.spark.stateless")));
     reporter = SpectatorReporter.forRegistry(registry)
-        .withSpectatorRegistry(sidecarRegistry)
-        .withNameFunction(SparkNameFunction.fromConfig(config, sidecarRegistry))
+        .withSpectatorRegistry(statelessRegistry)
+        .withNameFunction(SparkNameFunction.fromConfig(config, statelessRegistry))
         .withValueFunction(SparkValueFunction.fromConfig(config))
         .withGaugeCounters(Pattern.compile(config.getString("spectator.spark.gauge-counters")))
         .build();
     pollPeriod = getPeriod(properties);
     pollUnit = getUnit(properties);
-    url = URI.create(properties.getProperty("url", DEFAULT_URL)).toURL();
 
     // If there is a need to collect application metrics from jobs running on Spark, then
     // this should be enabled. The apps can report to the global registry and it will get
     // picked up by the Spark integration.
     if (shouldAddToGlobal(properties)) {
-      Spectator.globalRegistry().add(sidecarRegistry);
+      Spectator.globalRegistry().add(statelessRegistry);
     }
   }
 
@@ -97,7 +93,7 @@ public class SparkSink implements Sink {
 
   private void startJvmCollection() {
     try {
-      Jmx.registerStandardMXBeans(sidecarRegistry);
+      Jmx.registerStandardMXBeans(statelessRegistry);
       gcLogger = new GcLogger();
       gcLogger.start(null);
     } catch (Exception e) {
@@ -125,8 +121,8 @@ public class SparkSink implements Sink {
     LOGGER.info("starting poller");
     reporter.start(pollPeriod, pollUnit);
     startJvmCollection();
-    if (sidecarRegistry != null) {
-      sidecarRegistry.start(url, pollPeriod, pollUnit);
+    if (statelessRegistry != null) {
+      statelessRegistry.start();
     }
   }
 
@@ -134,8 +130,8 @@ public class SparkSink implements Sink {
     LOGGER.info("stopping poller");
     reporter.stop();
     gcLogger.stop();
-    if (sidecarRegistry != null) {
-      sidecarRegistry.stop();
+    if (statelessRegistry != null) {
+      statelessRegistry.stop();
     }
   }
 

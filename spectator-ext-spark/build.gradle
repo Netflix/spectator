@@ -4,9 +4,9 @@ plugins {
 
 dependencies {
   api project(':spectator-api')
-  api project(':spectator-ext-gc')
-  api project(':spectator-ext-jvm')
-  implementation "com.eclipsesource.minimal-json:minimal-json"
+  implementation project(':spectator-ext-gc')
+  implementation project(':spectator-ext-jvm')
+  implementation project(':spectator-reg-stateless')
   implementation "com.typesafe:config"
   implementation 'io.dropwizard.metrics:metrics-core:3.1.2'
   implementation 'org.apache.spark:spark-core_2.10:1.6.1'
@@ -23,15 +23,19 @@ jar {
 shadowJar {
   classifier = 'shadow'
 
-  relocate 'com.eclipsesource.json', 'com.netflix.spectator.shadowedjson'
-
   // The dependencies not listed here should come from the spark distribution
   dependencies {
     include project(':spectator-api')
     include project(':spectator-ext-gc')
+    include project(':spectator-ext-ipc')
     include project(':spectator-ext-jvm')
-    include dependency("com.eclipsesource.minimal-json:minimal-json")
-    include dependency("com.typesafe:config")
+    include project(':spectator-reg-stateless')
+    include dependency("com.fasterxml.jackson.core:jackson-core")
   }
+  minimize()
+  exclude('module-info.class')
+  exclude('META-INF/maven/com.fasterxml.jackson.*/**')
+  exclude('META-INF/services/com.fasterxml.*')
+  relocate('com.fasterxml.jackson', 'com.netflix.spectator.spark-shaded.json')
 }
 
