@@ -31,6 +31,7 @@ shadowJar {
     include project(':spectator-ext-jvm')
     include project(':spectator-reg-stateless')
     include dependency("com.fasterxml.jackson.core:jackson-core")
+    include dependency("com.typesafe:config")
   }
   minimize()
   exclude('module-info.class')
