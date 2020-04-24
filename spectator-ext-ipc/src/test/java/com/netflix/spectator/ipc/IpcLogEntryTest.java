@@ -580,6 +580,16 @@ public class IpcLogEntryTest {
     Assertions.assertNull(actual);
   }
 
+  @Test
+  public void regionFromZoneAwsLocalZone() {
+    String expected = "us-west-2-lax-1a";
+    String actual = (String) entry
+        .withClientZone(expected)
+        .convert(this::toMap)
+        .get("clientRegion");
+    Assertions.assertEquals("us-west-2-lax-1", actual);
+  }
+
   @SuppressWarnings("unchecked")
   @Test
   public void customHeaders() {
