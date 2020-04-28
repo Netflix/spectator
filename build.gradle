@@ -1,7 +1,7 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.27.0'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.28.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:9.0.2'
     classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.8.1'
   }
@@ -9,7 +9,7 @@ buildscript {
 
 plugins {
   id 'me.champeau.gradle.jmh' version '0.5.0'
-  id "com.github.spotbugs" version "4.0.4" apply false
+  id "com.github.spotbugs" version "4.0.7" apply false
 }
 
 // Establish version and status
@@ -80,8 +80,8 @@ subprojects {
     testImplementation 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
-    jmh "org.openjdk.jmh:jmh-core:1.22"
-    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.22"
+    jmh "org.openjdk.jmh:jmh-core:1.23"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.23"
   }
 
   test {
@@ -89,7 +89,7 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.22'
+    jmhVersion = '1.23'
     warmupIterations = 2
     iterations = 5
     fork = 1
@@ -101,14 +101,14 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '8.28'
+    toolVersion = '8.32'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
   
   spotbugs {
-    toolVersion = '4.0.1'
+    toolVersion = '4.0.2'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
@@ -123,7 +123,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '6.20.0'
+    toolVersion = '6.23.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
