@@ -15,15 +15,109 @@
  */
 package com.netflix.spectator.api.patterns;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.RegistryConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PolledMeterTest {
+
+  private static final AtomicLong COUNTER = new AtomicLong();
+
+  private static long testCounter() {
+    return COUNTER.getAndIncrement();
+  }
+
+  private static double testValue() {
+    return 42.0;
+  }
+
+  @Test
+  public void monitorStaticMethodValue() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+
+    PolledMeter.using(r).withId(id).monitorStaticMethodValue(PolledMeterTest::testValue);
+    PolledMeter.update(r);
+
+    Assertions.assertEquals(42.0, r.gauge(id).value());
+  }
+
+  @Test
+  public void monitorStaticMethodMonotonicCounter() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+
+    PolledMeter.using(r)
+        .withId(id)
+        .monitorStaticMethodMonotonicCounter(PolledMeterTest::testCounter);
+    PolledMeter.update(r);
+    PolledMeter.update(r);
+    PolledMeter.update(r);
+    PolledMeter.update(r);
+
+    Assertions.assertEquals(4, r.counter(id).count());
+  }
+
+  @Test
+  public void monitorValueNull() {
+    Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    Id id = r.createId("test");
+
+    PolledMeter.using(r).withId(id).<Collection<?>>monitorValue(null, Collection::size);
+    PolledMeter.update(r);
+
+    Assertions.assertEquals(Double.NaN, r.gauge(id).value());
+  }
+
+  @Test
+  public void monitorValueNullPropagate() {
+    RegistryConfig config = s -> s.equals("propagateWarnings") ? "true" : null;
+    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+    Id id = r.createId("test");
+
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> PolledMeter.using(r)
+            .withId(id)
+            .<Collection<?>>monitorValue(null, Collection::size)
+    );
+    Assertions.assertTrue(e.getMessage().startsWith("obj is null"));
+  }
+
+  @Test
+  public void monitorMonotonicCounterNull() {
+    Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    Id id = r.createId("test");
+
+    AtomicLong v = new AtomicLong(42);
+    PolledMeter.using(r).withId(id).<AtomicLong>monitorMonotonicCounter(null, n -> v.get());
+    PolledMeter.update(r);
+
+    Assertions.assertEquals(0, r.counter(id).count());
+  }
+
+  @Test
+  public void monitorMonotonicCounterNullPropagate() {
+    RegistryConfig config = s -> s.equals("propagateWarnings") ? "true" : null;
+    Registry r = new DefaultRegistry(Clock.SYSTEM, config);
+    Id id = r.createId("test");
+
+    AtomicLong v = new AtomicLong(42);
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> PolledMeter.using(r)
+            .withId(id)
+            .<AtomicLong>monitorValue(null, n -> v.get())
+    );
+    Assertions.assertTrue(e.getMessage().startsWith("obj is null"));
+  }
 
   @Test
   public void removeAndAddRepeatedlyCounter() {
