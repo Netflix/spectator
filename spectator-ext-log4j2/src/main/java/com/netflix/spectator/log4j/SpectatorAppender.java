@@ -28,6 +28,7 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
@@ -66,7 +67,8 @@ public final class SpectatorAppender extends AbstractAppender {
       Registry registry,
       String name,
       boolean ignoreExceptions) {
-    final Appender appender = new SpectatorAppender(registry, name, null, null, ignoreExceptions);
+    final Appender appender = new SpectatorAppender(
+        registry, name, null, null, ignoreExceptions, Property.EMPTY_ARRAY);
     appender.start();
 
     LoggerContext context = (LoggerContext) LogManager.getContext(false);
@@ -88,8 +90,9 @@ public final class SpectatorAppender extends AbstractAppender {
       String name,
       Filter filter,
       Layout<? extends Serializable> layout,
-      boolean ignoreExceptions) {
-    super(name, filter, layout, ignoreExceptions);
+      boolean ignoreExceptions,
+      Property[] properties) {
+    super(name, filter, layout, ignoreExceptions, properties);
     this.registry = registry;
   }
 
@@ -106,7 +109,10 @@ public final class SpectatorAppender extends AbstractAppender {
       return null;
     }
 
-    return new SpectatorAppender(Spectator.globalRegistry(), name, filter, layout, ignoreExceptions);
+    return new SpectatorAppender(
+        Spectator.globalRegistry(),
+        name, filter, layout, ignoreExceptions,
+        Property.EMPTY_ARRAY);
   }
 
   @Override public void start() {
