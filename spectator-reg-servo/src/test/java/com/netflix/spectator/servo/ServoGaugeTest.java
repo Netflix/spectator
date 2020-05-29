@@ -34,7 +34,7 @@ public class ServoGaugeTest {
   private final ManualClock clock = new ManualClock();
 
   private Gauge newGauge(String name) {
-    final ServoRegistry r = new ServoRegistry(clock);
+    final ServoRegistry r = Servo.newRegistry(clock);
     return r.newGauge(r.createId(name));
   }
 
@@ -54,7 +54,7 @@ public class ServoGaugeTest {
 
   @Test
   public void testGet() {
-    final ServoRegistry r = new ServoRegistry(clock);
+    final ServoRegistry r = Servo.newRegistry(clock);
     Gauge g = r.gauge(r.createId("foo"));
     g.set(1.0);
 
@@ -92,7 +92,7 @@ public class ServoGaugeTest {
 
   @Test
   public void hasGaugeType() {
-    final ServoRegistry r = new ServoRegistry(clock);
+    final ServoRegistry r = Servo.newRegistry(clock);
     Gauge g = r.gauge(r.createId("foo"));
     g.set(1.0);
 
@@ -102,7 +102,7 @@ public class ServoGaugeTest {
 
   @Test
   public void measure() {
-    final ServoRegistry r = new ServoRegistry(clock);
+    final ServoRegistry r = Servo.newRegistry(clock);
     Gauge g = r.gauge(r.createId("foo"));
     g.set(1.0);
 

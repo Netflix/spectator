@@ -34,7 +34,7 @@ public class ServoTimerTest {
   private final ManualClock clock = new ManualClock();
 
   private Timer newTimer(String name) {
-    final Registry r = new ServoRegistry(clock);
+    final Registry r = Servo.newRegistry(clock);
     return r.timer(r.createId(name));
   }
 

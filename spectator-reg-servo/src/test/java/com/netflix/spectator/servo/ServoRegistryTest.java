@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.servo;
 
-import com.netflix.servo.DefaultMonitorRegistry;
 import com.netflix.servo.MonitorRegistry;
 import com.netflix.spectator.api.CompositeRegistry;
 import com.netflix.spectator.api.Counter;
@@ -39,16 +38,16 @@ public class ServoRegistryTest {
     // expect isolated counts from the spectator api. This test just verifies
     // that multiple registrations can coexist in servo and will not clobber
     // each other.
-    MonitorRegistry mr = DefaultMonitorRegistry.getInstance();
+    MonitorRegistry mr = Servo.getInstance();
 
-    ServoRegistry r1 = new ServoRegistry();
+    ServoRegistry r1 = Servo.newRegistry();
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
 
-    ServoRegistry r2 = new ServoRegistry();
+    ServoRegistry r2 = Servo.newRegistry();
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r2));
 
-    ServoRegistry r3 = new ServoRegistry();
+    ServoRegistry r3 = Servo.newRegistry();
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r1));
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r2));
     Assertions.assertTrue(mr.getRegisteredMonitors().contains(r3));
@@ -56,7 +55,7 @@ public class ServoRegistryTest {
 
   @Test
   public void iteratorDoesNotContainNullMeters() {
-    Registry dflt = new ServoRegistry();
+    Registry dflt = Servo.newRegistry();
 
     boolean found = false;
     Counter counter = dflt.counter("servo.testCounter");
@@ -68,7 +67,7 @@ public class ServoRegistryTest {
 
   // Reproduces: https://github.com/Netflix/spectator/issues/530
   public void globalIterator(Function<Registry, Meter> createMeter) {
-    Registry dflt = new ServoRegistry();
+    Registry dflt = Servo.newRegistry();
     CompositeRegistry global = Spectator.globalRegistry();
     global.removeAll();
     global.add(dflt);
@@ -104,7 +103,7 @@ public class ServoRegistryTest {
   @Test
   public void keepNonExpired() {
     ManualClock clock = new ManualClock();
-    ServoRegistry registry = new ServoRegistry(clock);
+    ServoRegistry registry = Servo.newRegistry(clock);
     registry.counter("test").increment();
     Assertions.assertEquals(1, registry.getMonitors().size());
     Assertions.assertEquals(1, registry.counters().count());
@@ -113,7 +112,7 @@ public class ServoRegistryTest {
   @Test
   public void removesExpired() {
     ManualClock clock = new ManualClock();
-    ServoRegistry registry = new ServoRegistry(clock);
+    ServoRegistry registry = Servo.newRegistry(clock);
     registry.counter("test").increment();
     clock.setWallTime(60000 * 30);
     Assertions.assertEquals(0, registry.getMonitors().size());
@@ -123,7 +122,7 @@ public class ServoRegistryTest {
   @Test
   public void resurrectExpiredAndIncrement() {
     ManualClock clock = new ManualClock();
-    ServoRegistry registry = new ServoRegistry(clock);
+    ServoRegistry registry = Servo.newRegistry(clock);
     Counter c = registry.counter("test");
 
     clock.setWallTime(60000 * 30);

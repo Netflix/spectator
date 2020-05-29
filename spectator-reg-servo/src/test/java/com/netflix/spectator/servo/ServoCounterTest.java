@@ -31,7 +31,7 @@ public class ServoCounterTest {
   private final ManualClock clock = new ManualClock();
 
   private Counter newCounter(String name) {
-    final ServoRegistry r = new ServoRegistry(clock);
+    final ServoRegistry r = Servo.newRegistry(clock);
     return r.newCounter(r.createId(name));
   }
 
