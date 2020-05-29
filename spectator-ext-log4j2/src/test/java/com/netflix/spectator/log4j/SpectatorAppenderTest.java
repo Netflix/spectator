@@ -20,6 +20,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,7 +51,8 @@ public class SpectatorAppenderTest {
   @BeforeEach
   public void before() {
     registry = new DefaultRegistry();
-    appender = new SpectatorAppender(registry, "foo", null, null, false);
+    appender = new SpectatorAppender(
+        registry, "foo", null, null, false, Property.EMPTY_ARRAY);
     appender.start();
   }
 
@@ -96,7 +98,8 @@ public class SpectatorAppenderTest {
 
   @Test
   public void ignoreExceptions() {
-    appender = new SpectatorAppender(registry, "foo", null, null, true);
+    appender = new SpectatorAppender(
+        registry, "foo", null, null, true, Property.EMPTY_ARRAY);
     appender.start();
     Counter c = registry.counter("log4j.numStackTraces",
         "appender", "foo",
