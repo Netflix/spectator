@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
 
@@ -32,12 +33,12 @@ class AtlasCounter extends AtlasMeter implements Counter {
   private final Id stat;
 
   /** Create a new instance. */
-  AtlasCounter(Id id, Clock clock, long ttl, long step) {
+  AtlasCounter(Registry registry, Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
     this.value = new StepDouble(0.0, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = id.withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
+    this.stat = registry.createId(id.name()).withTag(Statistic.count).withTags(id.tags()).withTag(DsType.rate);
   }
 
   @Override void measure(MeasurementConsumer consumer) {

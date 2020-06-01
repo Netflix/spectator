@@ -29,7 +29,8 @@ public class AtlasMaxGaugeTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasMaxGauge gauge = new AtlasMaxGauge(registry.createId("test"), clock, step, step);
+  private final AtlasMaxGauge gauge = new AtlasMaxGauge(registry,
+      registry.createId("test"), clock, step, step);
 
   private void checkValue(long expected) {
     int count = 0;
