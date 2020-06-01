@@ -29,7 +29,8 @@ public class AtlasCounterTest {
   private final ManualClock clock = new ManualClock();
   private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasCounter counter = new AtlasCounter(registry.createId("test"), clock, step, step);
+  private final AtlasCounter counter = new AtlasCounter(registry,
+      registry.createId("test"), clock, step, step);
 
   private void checkValue(double expected) {
     int count = 0;

@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.StepDouble;
 
@@ -32,12 +33,12 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
   private final Id stat;
 
   /** Create a new instance. */
-  AtlasMaxGauge(Id id, Clock clock, long ttl, long step) {
+  AtlasMaxGauge(Registry registry, Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
     this.value = new StepDouble(0.0, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = id.withTag(Statistic.max).withTags(id.tags()).withTag(DsType.gauge);
+    this.stat = registry.createId(id.name()).withTag(Statistic.max).withTags(id.tags()).withTag(DsType.gauge);
   }
 
   @Override void measure(MeasurementConsumer consumer) {

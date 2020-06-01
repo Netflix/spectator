@@ -480,7 +480,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   @Override protected Counter newCounter(Id id) {
-    return new AtlasCounter(id, clock(), meterTTL, lwcStepMillis);
+    return new AtlasCounter(this, id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
@@ -494,10 +494,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   @Override protected Gauge newGauge(Id id) {
     // Be sure to get StepClock so the measurements will have step aligned
     // timestamps.
-    return new AtlasGauge(id, stepClock, meterTTL);
+    return new AtlasGauge(this, id, stepClock, meterTTL);
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
-    return new AtlasMaxGauge(id, clock(), meterTTL, lwcStepMillis);
+    return new AtlasMaxGauge(this, id, clock(), meterTTL, lwcStepMillis);
   }
 }
