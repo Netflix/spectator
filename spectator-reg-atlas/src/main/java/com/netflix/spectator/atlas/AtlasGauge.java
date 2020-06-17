@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,10 @@ class AtlasGauge extends AtlasMeter implements Gauge {
     this.value = new AtomicDouble(0.0);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = registry.createId(id.name()).withTag(Statistic.gauge).withTags(id.tags()).withTag(DsType.gauge);
+    this.stat = registry.createId(id.name())
+        .withTag(Statistic.gauge)
+        .withTag(DsType.gauge)
+        .withTags(id.tags());
   }
 
   @Override void measure(MeasurementConsumer consumer) {
