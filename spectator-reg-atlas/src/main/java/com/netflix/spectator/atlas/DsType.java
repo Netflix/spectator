@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import com.netflix.spectator.api.Tag;
  * <a href="https://github.com/Netflix/atlas/wiki/Concepts#normalization">normalization</a>
  * docs for more information.
  */
-public enum DsType implements Tag {
+enum DsType implements Tag {
   /** Sampled value that should be used as is without weighting. */
   gauge,
 
