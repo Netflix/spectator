@@ -305,6 +305,24 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     });
   }
 
+  private void sendBatchLWC(EvalPayload batch) {
+    publishTaskTimer("sendBatchLWC").record(() -> {
+      try {
+        String json = jsonMapper.writeValueAsString(batch);
+        if (logger.isTraceEnabled()) {
+          logger.trace("eval payload: {}", json);
+        }
+        client.post(evalUri)
+            .withConnectTimeout(connectTimeout)
+            .withReadTimeout(readTimeout)
+            .withJsonContent(json)
+            .send();
+      } catch (Exception e) {
+        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
+      }
+    });
+  }
+
   void sendToLWC() {
     publishTaskTimer("sendToLWC").record(() -> {
       long t = lastCompletedTimestamp(lwcStepMillis);
@@ -322,15 +340,13 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         try {
           EvalPayload payload = evaluator.eval(t);
           if (!payload.getMetrics().isEmpty()) {
-            String json = jsonMapper.writeValueAsString(payload);
-            if (logger.isTraceEnabled()) {
-              logger.trace("eval payload: {}", json);
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            for (EvalPayload batch : payload.toBatches(batchSize)) {
+              CompletableFuture<Void> future = CompletableFuture.runAsync(
+                  () -> sendBatchLWC(batch), senderPool);
+              futures.add(future);
             }
-            client.post(evalUri)
-                .withConnectTimeout(connectTimeout)
-                .withReadTimeout(readTimeout)
-                .withJsonContent(json)
-                .send();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
           }
         } catch (Exception e) {
           logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);

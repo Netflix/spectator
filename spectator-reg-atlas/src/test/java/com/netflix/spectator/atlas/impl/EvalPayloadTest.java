@@ -17,7 +17,12 @@ package com.netflix.spectator.atlas.impl;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 public class EvalPayloadTest {
@@ -48,5 +53,63 @@ public class EvalPayloadTest {
     EqualsVerifier.forClass(EvalPayload.class)
         .suppress(Warning.NULL_FIELDS)
         .verify();
+  }
+
+  private List<EvalPayload.Metric> metrics(int n) {
+    List<EvalPayload.Metric> ms = new ArrayList<>();
+    for (int i = 0; i < n; ++i) {
+      ms.add(new EvalPayload.Metric("_", Collections.emptyMap(), i));
+    }
+    return ms;
+  }
+
+  private List<EvalPayload.Message> messages(int n) {
+    List<EvalPayload.Message> ms = new ArrayList<>();
+    for (int i = 0; i < n; ++i) {
+      ms.add(new EvalPayload.Message(
+          "_",
+          new EvalPayload.DiagnosticMessage(EvalPayload.MessageType.error, "" + i)
+      ));
+    }
+    return ms;
+  }
+
+  @Test
+  public void toBatchesBelowThreshold() {
+    EvalPayload payload = new EvalPayload(0L, metrics(4));
+    List<EvalPayload> batches = payload.toBatches(4);
+    Assertions.assertEquals(1, batches.size());
+    Assertions.assertSame(payload, batches.get(0));
+  }
+
+  @Test
+  public void toBatchesAboveThreshold() {
+    EvalPayload payload = new EvalPayload(0L, metrics(21));
+    List<EvalPayload> batches = payload.toBatches(4);
+    Assertions.assertEquals(6, batches.size());
+    int i = 0;
+    for (EvalPayload batch : batches) {
+      for (EvalPayload.Metric metric : batch.getMetrics()) {
+        int v = (int) metric.getValue();
+        Assertions.assertEquals(i, v);
+        ++i;
+      }
+    }
+  }
+
+  @Test
+  public void toBatchesWithMessages() {
+    EvalPayload payload = new EvalPayload(0L, metrics(21), messages(2));
+    List<EvalPayload> batches = payload.toBatches(4);
+    Assertions.assertEquals(6, batches.size());
+    int i = 0;
+    for (EvalPayload batch : batches) {
+      Assertions.assertEquals(i == 0 ? 2 : 0, batch.getMessages().size());
+      for (EvalPayload.Metric metric : batch.getMetrics()) {
+        int v = (int) metric.getValue();
+        Assertions.assertEquals(i, v);
+        ++i;
+      }
+    }
   }
 }
