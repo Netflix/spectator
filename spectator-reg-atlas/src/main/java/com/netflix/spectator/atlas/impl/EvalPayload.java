@@ -74,7 +74,7 @@ public final class EvalPayload {
     if (size <= batchSize) {
       return Collections.singletonList(this);
     } else {
-      List<EvalPayload> payloads = new ArrayList<>(size / batchSize + 2);
+      List<EvalPayload> payloads = new ArrayList<>(size / batchSize + 1);
       for (int i = 0; i < size; i += batchSize) {
         List<Metric> batch = metrics.subList(i, Math.min(size, i + batchSize));
         // There shouldn't be many messages, stick in the first batch
