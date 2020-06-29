@@ -9,7 +9,7 @@ buildscript {
 
 plugins {
   id 'me.champeau.gradle.jmh' version '0.5.0'
-  id "com.github.spotbugs" version "4.2.4" apply false
+  id "com.github.spotbugs" version "4.4.4" apply false
 }
 
 // Establish version and status
@@ -108,7 +108,7 @@ subprojects {
   }
   
   spotbugs {
-    toolVersion = '4.0.3'
+    toolVersion = '4.0.6'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
