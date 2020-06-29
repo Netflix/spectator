@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,31 @@ public final class EvalPayload {
   /** Return any diagnostic messages that should be sent back to the user. */
   public List<Message> getMessages() {
     return messages;
+  }
+
+  /**
+   * Break the payload down to a set of batches to limit the size of requests going to the
+   * service.
+   *
+   * @param batchSize
+   *     Size of the metric batches to create.
+   * @return
+   *     List of payloads that have at most {@code batchSize} metrics per payload.
+   */
+  public List<EvalPayload> toBatches(int batchSize) {
+    int size = metrics.size();
+    if (size <= batchSize) {
+      return Collections.singletonList(this);
+    } else {
+      List<EvalPayload> payloads = new ArrayList<>(size / batchSize + 2);
+      for (int i = 0; i < size; i += batchSize) {
+        List<Metric> batch = metrics.subList(i, Math.min(size, i + batchSize));
+        // There shouldn't be many messages, stick in the first batch
+        List<Message> msgs = (i == 0) ? messages : Collections.emptyList();
+        payloads.add(new EvalPayload(timestamp, batch, msgs));
+      }
+      return payloads;
+    }
   }
 
   @Override public boolean equals(Object o) {
