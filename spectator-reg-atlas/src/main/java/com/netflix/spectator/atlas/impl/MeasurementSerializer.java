@@ -20,9 +20,9 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.impl.AsciiSet;
 
 import java.io.IOException;
+import java.util.function.Function;
 
 /**
  * Jackson serializer for measurements. Values will be converted to a
@@ -34,21 +34,17 @@ import java.io.IOException;
  */
 public class MeasurementSerializer extends JsonSerializer<Measurement> {
 
-  private final AsciiSet set;
+  private final Function<String, String> fixTagString;
 
   /**
    * Create a new instance of the serializer.
    *
-   * @param set
-   *     The set of characters that are allowed to be used for tag keys.
+   * @param fixTagString
+   *     Function that fixes characters used for tag keys and values.
    */
-  public MeasurementSerializer(AsciiSet set) {
+  public MeasurementSerializer(Function<String, String> fixTagString) {
     super();
-    this.set = set;
-  }
-
-  private String fix(String s) {
-    return set.replaceNonMembers(s, '_');
+    this.fixTagString = fixTagString;
   }
 
   @Override
@@ -59,12 +55,12 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
     Id id = value.id();
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
-    gen.writeStringField("name", fix(id.name()));
+    gen.writeStringField("name", fixTagString.apply(id.name()));
     boolean explicitDsType = false;
     int n = id.size();
     for (int i = 1; i < n; ++i) {
-      final String k = fix(id.getKey(i));
-      final String v = fix(id.getValue(i));
+      final String k = fixTagString.apply(id.getKey(i));
+      final String v = fixTagString.apply(id.getValue(i));
       if (!"name".equals(k)) {
         if ("atlas.dstype".equals(k)) {
           explicitDsType = true;
