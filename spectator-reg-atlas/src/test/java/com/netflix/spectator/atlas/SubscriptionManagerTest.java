@@ -47,7 +47,7 @@ public class SubscriptionManagerTest {
   private final SimpleModule module = new SimpleModule()
       .addSerializer(
           Measurement.class,
-          new MeasurementSerializer(AsciiSet.fromPattern("a-z")));
+          new MeasurementSerializer(s -> AsciiSet.fromPattern("a-z").replaceNonMembers(s, '_')));
 
   private final ObjectMapper mapper = new ObjectMapper(new JsonFactory()).registerModule(module);
 

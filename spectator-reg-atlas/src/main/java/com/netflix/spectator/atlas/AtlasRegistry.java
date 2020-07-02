@@ -61,6 +61,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -92,7 +93,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final int numThreads;
   private final Map<String, String> commonTags;
 
-  private final AsciiSet charset;
+  private final Function<String, String> fixTagString;
 
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -146,9 +147,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.numThreads = config.numThreads();
     this.commonTags = new TreeMap<>(config.commonTags());
 
-    this.charset = AsciiSet.fromPattern(config.validTagCharacters());
+    this.fixTagString = createReplacementFunction(config.validTagCharacters());
     SimpleModule module = new SimpleModule()
-        .addSerializer(Measurement.class, new MeasurementSerializer(charset));
+        .addSerializer(Measurement.class, new MeasurementSerializer(fixTagString));
     this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
@@ -163,6 +164,15 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
     if (config.autoStart()) {
       start();
+    }
+  }
+
+  private Function<String, String> createReplacementFunction(String pattern) {
+    if (pattern == null) {
+      return Function.identity();
+    } else {
+      AsciiSet set = AsciiSet.fromPattern(pattern);
+      return s -> set.replaceNonMembers(s, '_');
     }
   }
 
@@ -453,12 +463,12 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     Map<String, String> tags = new HashMap<>();
 
     for (Tag t : id.tags()) {
-      String k = charset.replaceNonMembers(t.key(), '_');
-      String v = charset.replaceNonMembers(t.value(), '_');
+      String k = fixTagString.apply(t.key());
+      String v = fixTagString.apply(t.value());
       tags.put(k, v);
     }
 
-    String name = charset.replaceNonMembers(id.name(), '_');
+    String name = fixTagString.apply(id.name());
     tags.put("name", name);
 
     return tags;

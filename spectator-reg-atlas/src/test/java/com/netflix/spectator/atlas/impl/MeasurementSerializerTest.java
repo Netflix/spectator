@@ -33,7 +33,7 @@ public class MeasurementSerializerTest {
 
   private final DefaultRegistry registry = new DefaultRegistry();
   private final SimpleModule module = new SimpleModule()
-      .addSerializer(Measurement.class, new MeasurementSerializer(set));
+      .addSerializer(Measurement.class, new MeasurementSerializer(s -> set.replaceNonMembers(s, '_')));
   private final ObjectMapper mapper = new ObjectMapper().registerModule(module);
 
   @Test
