@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ import com.netflix.spectator.ipc.http.HttpResponse;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -110,6 +112,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   private long lastPollTimestamp = -1L;
   private final Map<Id, Consolidator> atlasMeasurements = new LinkedHashMap<>();
+
+  private final StreamHelper streamHelper = new StreamHelper();
 
   /** Create a new instance. */
   @Inject
@@ -261,6 +265,20 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return debugRegistry.timer(PUBLISH_TASK_TIMER, "id", id);
   }
 
+  /**
+   * Optimization to reduce the allocations for encoding the payload. The ByteArrayOutputStreams
+   * get reused to avoid the allocations for growing the buffer. In addition, the data is gzip
+   * compressed inline rather than relying on the HTTP client to do it. This reduces the buffer
+   * sizes and avoids another copy step and allocation for creating the compressed buffer.
+   */
+  private byte[] encodeBatch(PublishPayload payload) throws IOException {
+    ByteArrayOutputStream baos = streamHelper.getOrCreateStream();
+    try (GzipLevelOutputStream out = new GzipLevelOutputStream(baos)) {
+      smileMapper.writeValue(out, payload);
+    }
+    return baos.toByteArray();
+  }
+
   private void sendBatch(List<Measurement> batch) {
     publishTaskTimer("sendBatch").record(() -> {
       try {
@@ -271,8 +289,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         HttpResponse res = client.post(uri)
             .withConnectTimeout(connectTimeout)
             .withReadTimeout(readTimeout)
-            .withContent("application/x-jackson-smile", smileMapper.writeValueAsBytes(p))
-            .compress(Deflater.BEST_SPEED)
+            .addHeader("Content-Encoding", "gzip")
+            .withContent("application/x-jackson-smile", encodeBatch(p))
             .send();
         Instant date = res.dateHeader("Date");
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
