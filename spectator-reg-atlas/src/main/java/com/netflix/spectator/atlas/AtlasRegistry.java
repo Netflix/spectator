@@ -62,7 +62,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import java.util.zip.Deflater;
 
 /**
  * Registry for reporting metrics to Atlas.
