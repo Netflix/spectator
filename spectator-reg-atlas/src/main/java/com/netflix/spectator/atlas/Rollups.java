@@ -86,7 +86,6 @@ final class Rollups {
   }
 
   private static Aggregator newAggregator(Id id, Measurement m) {
-    DoubleBinaryOperator af = MAX;
     String statistic = Utils.getTagValue(id, "statistic");
     if (statistic != null && SUM_STATS.contains(statistic)) {
       return new Aggregator(id.withTag(DsType.sum), m.timestamp(), SUM, m.value());
