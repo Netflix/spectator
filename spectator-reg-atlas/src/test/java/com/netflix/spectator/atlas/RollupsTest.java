@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ public class RollupsTest {
 
     Measurement m = aggr.get(0);
     Id id = registry.createId("test")
-        .withTag("atlas.dstype", "rate")
+        .withTag("atlas.dstype", "sum")
         .withTag(Statistic.count);
     Assertions.assertEquals(id, m.id());
     Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
@@ -131,17 +131,17 @@ public class RollupsTest {
       Id id = registry.createId("test");
       switch (Utils.getTagValue(m.id(), "statistic")) {
         case "count":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.count);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.count);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalTime":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalTime);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.totalTime);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(45.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalOfSquares":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalOfSquares);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.totalOfSquares);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(285.0 / 5.0, m.value(), 1e-12);
           break;
@@ -171,17 +171,17 @@ public class RollupsTest {
       Id id = registry.createId("test");
       switch (Utils.getTagValue(m.id(), "statistic")) {
         case "count":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.count);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.count);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(10.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalAmount":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalAmount);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.totalAmount);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(45.0 / 5.0, m.value(), 1e-12);
           break;
         case "totalOfSquares":
-          id = id.withTag("atlas.dstype", "rate").withTag(Statistic.totalOfSquares);
+          id = id.withTag("atlas.dstype", "sum").withTag(Statistic.totalOfSquares);
           Assertions.assertEquals(id, m.id());
           Assertions.assertEquals(285.0 / 5.0, m.value(), 1e-12);
           break;

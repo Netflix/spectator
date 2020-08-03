@@ -27,7 +27,13 @@ enum DsType implements Tag {
   gauge,
 
   /** Rate per second that should use weighted averaging during normalization. */
-  rate;
+  rate,
+
+  /**
+   * Sum type used for inline aggregations on the backend. Sender must be careful to avoid
+   * overcounting since the backend cannot dedup.
+   */
+  sum;
 
   @Override public String key() {
     return "atlas.dstype";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,9 +89,10 @@ final class Rollups {
     DoubleBinaryOperator af = MAX;
     String statistic = Utils.getTagValue(id, "statistic");
     if (statistic != null && SUM_STATS.contains(statistic)) {
-      af = SUM;
+      return new Aggregator(id.withTag(DsType.sum), m.timestamp(), SUM, m.value());
+    } else {
+      return new Aggregator(id, m.timestamp(), MAX, m.value());
     }
-    return new Aggregator(id, m.timestamp(), af, m.value());
   }
 
   private static class Aggregator {
