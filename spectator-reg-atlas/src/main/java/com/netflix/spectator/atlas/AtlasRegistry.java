@@ -99,6 +99,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final ObjectMapper smileMapper;
 
   private final Registry debugRegistry;
+  private final ValidationHelper validationHelper;
 
   private final RollupPolicy rollupPolicy;
 
@@ -154,6 +155,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
 
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
+    this.validationHelper = new ValidationHelper(logger, jsonMapper, debugRegistry);
 
     this.rollupPolicy = config.rollupPolicy();
 
@@ -303,8 +305,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
             .send();
         Instant date = res.dateHeader("Date");
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
+        validationHelper.recordResults(batch.size(), res);
       } catch (Exception e) {
         logger.warn("failed to send metrics (uri={})", uri, e);
+        validationHelper.incrementDroppedHttp(batch.size());
       }
     });
   }
