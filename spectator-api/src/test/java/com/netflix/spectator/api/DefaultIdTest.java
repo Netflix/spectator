@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,5 +281,26 @@ public class DefaultIdTest {
     id.forEach((k, v) -> actual.add(Tag.of(k, v)));
 
     Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void tagListFilter() {
+    DefaultId id = new DefaultId("foo", ArrayTagSet.create("a", "1", "b", "2"));
+    Id expected = Id.create("foo").withTag("a", "1");
+    Assertions.assertEquals(expected, id.filter((k, v) -> !k.equals("b")));
+  }
+
+  @Test
+  public void tagListFilterByKey() {
+    DefaultId id = new DefaultId("foo", ArrayTagSet.create("a", "1", "b", "2"));
+    Id expected = Id.create("foo").withTag("a", "1");
+    Assertions.assertEquals(expected, id.filterByKey(k -> !k.equals("b")));
+  }
+
+  @Test
+  public void tagListFilterByKeyName() {
+    // Name is required and is ignored for filtering
+    DefaultId id = new DefaultId("foo", ArrayTagSet.create("a", "1", "b", "2"));
+    Assertions.assertEquals(id, id.filterByKey(k -> !k.equals("name")));
   }
 }

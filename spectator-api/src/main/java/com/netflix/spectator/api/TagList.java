@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,13 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * Base type for a collection of tags. Allows access to the keys and values without allocations
@@ -37,6 +41,25 @@ public interface TagList extends Iterable<Tag> {
   /** Return the tag at the specified index. */
   default Tag getTag(int i) {
     return Tag.of(getKey(i), getValue(i));
+  }
+
+  /** Return a new tag list with only tags that match the predicate. */
+  default TagList filter(BiPredicate<String, String> predicate) {
+    final int n = size();
+    List<Tag> result = new ArrayList<>(n);
+    for (int i = 0; i < n; ++i) {
+      final String k = getKey(i);
+      final String v = getValue(i);
+      if (predicate.test(k, v)) {
+        result.add(Tag.of(k, v));
+      }
+    }
+    return ArrayTagSet.create(result);
+  }
+
+  /** Return a new tag list with only tags with keys that match the predicate. */
+  default TagList filterByKey(Predicate<String> predicate) {
+    return filter((k, v) -> predicate.test(k));
   }
 
   /** Apply the consumer function for each tag in the list. */

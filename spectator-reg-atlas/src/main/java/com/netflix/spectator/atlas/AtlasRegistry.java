@@ -290,10 +290,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return baos.toByteArray();
   }
 
-  private void sendBatch(List<Measurement> batch) {
+  private void sendBatch(RollupPolicy.Result batch) {
     publishTaskTimer("sendBatch").record(() -> {
       try {
-        PublishPayload p = new PublishPayload(commonTags, batch);
+        PublishPayload p = new PublishPayload(batch.commonTags(), batch.measurements());
         if (logger.isTraceEnabled()) {
           logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
         }
@@ -305,10 +305,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
             .send();
         Instant date = res.dateHeader("Date");
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
-        validationHelper.recordResults(batch.size(), res);
+        validationHelper.recordResults(batch.measurements().size(), res);
       } catch (Exception e) {
         logger.warn("failed to send metrics (uri={})", uri, e);
-        validationHelper.incrementDroppedHttp(batch.size());
+        validationHelper.incrementDroppedHttp(batch.measurements().size());
       }
     });
   }
@@ -320,7 +320,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         pollMeters(t);
         logger.debug("sending to Atlas for time: {}", t);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (List<Measurement> batch : getBatches(t)) {
+        for (RollupPolicy.Result batch : getBatches(t)) {
           CompletableFuture<Void> future = CompletableFuture.runAsync(
               () -> sendBatch(batch), senderPool);
           futures.add(future);
@@ -482,8 +482,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * Get a list of all consolidated measurements intended to be sent to Atlas and break them
    * into batches.
    */
-  synchronized List<List<Measurement>> getBatches(long t) {
-    List<List<Measurement>> batches = new ArrayList<>();
+  synchronized List<RollupPolicy.Result> getBatches(long t) {
+    List<RollupPolicy.Result> batches = new ArrayList<>();
     publishTaskTimer("getBatches").record(() -> {
       int n = atlasMeasurements.size();
       debugRegistry.distributionSummary("spectator.registrySize").record(n);
@@ -508,12 +508,20 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         }
       }
 
-      List<Measurement> ms = rollupPolicy.apply(input);
-      debugRegistry.distributionSummary("spectator.rollupResultSize").record(ms.size());
+      List<RollupPolicy.Result> results = rollupPolicy.apply(input);
+      int rollupSize = results.stream().mapToInt(r -> r.measurements().size()).sum();
+      debugRegistry.distributionSummary("spectator.rollupResultSize").record(rollupSize);
 
-      for (int i = 0; i < ms.size(); i += batchSize) {
-        List<Measurement> batch = ms.subList(i, Math.min(ms.size(), i + batchSize));
-        batches.add(batch);
+      // Rollup policy can result multiple sets of metrics with different common tags. Batches
+      // are computed using sets with the same common tags. This avoids needing to merge the
+      // common tags into the ids and the larger payloads that would result from replicating them
+      // on all measurements.
+      for (RollupPolicy.Result result : results) {
+        List<Measurement> ms = result.measurements();
+        for (int i = 0; i < ms.size(); i += batchSize) {
+          List<Measurement> batch = ms.subList(i, Math.min(ms.size(), i + batchSize));
+          batches.add(new RollupPolicy.Result(result.commonTags(), batch));
+        }
       }
     });
     return batches;
@@ -523,7 +531,18 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     long t = lastCompletedTimestamp(stepMillis);
     pollMeters(t);
     removeExpiredMeters();
-    return getBatches(t).stream().flatMap(List::stream);
+    return getBatches(t).stream().flatMap(this::flatten);
+  }
+
+  private Stream<Measurement> flatten(RollupPolicy.Result result) {
+    if (result.commonTags().isEmpty()) {
+      return result.measurements().stream();
+    } else {
+      return result.measurements().stream().map(m -> {
+        Id id = m.id().withTags(result.commonTags());
+        return new Measurement(id, m.timestamp(), m.value());
+      });
+    }
   }
 
   @Override protected Counter newCounter(Id id) {

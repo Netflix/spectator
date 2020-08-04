@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -377,6 +377,54 @@ public class ArrayTagSetTest {
     List<Tag> tmp = new ArrayList<>();
     expected.forEach((k, v) -> tmp.add(Tag.of(k, v)));
     Assertions.assertEquals(expected, ArrayTagSet.create(tmp));
+  }
+
+  @Test
+  public void tagListFilter() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filter((k, v) -> !v.equals("2"));
+    Assertions.assertEquals(ArrayTagSet.create("a", "1", "c", "3"), filtered);
+  }
+
+  @Test
+  public void tagListFilterMatchAll() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filter((k, v) -> true);
+    Assertions.assertEquals(ArrayTagSet.create("a", "1", "b", "2", "c", "3"), filtered);
+  }
+
+  @Test
+  public void tagListFilterMatchNone() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filter((k, v) -> false);
+    Assertions.assertEquals(ArrayTagSet.EMPTY, filtered);
+  }
+
+  @Test
+  public void tagListFilterByKey() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filterByKey(k -> !k.equals("b"));
+    Assertions.assertEquals(ArrayTagSet.create("a", "1", "c", "3"), filtered);
+  }
+
+  @Test
+  public void tagListFilterByKeyMatchAll() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filterByKey(k -> true);
+    Assertions.assertEquals(ArrayTagSet.create("a", "1", "b", "2", "c", "3"), filtered);
+  }
+
+  @Test
+  public void tagListFilterByKeyMatchNone() {
+    ArrayTagSet filtered = ArrayTagSet
+        .create("a", "1", "b", "2", "c", "3")
+        .filterByKey(k -> false);
+    Assertions.assertEquals(ArrayTagSet.EMPTY, filtered);
   }
 
   @Test

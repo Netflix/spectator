@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * An immutable set of tags sorted by the tag key.
@@ -349,6 +351,25 @@ final class ArrayTagSet implements TagList {
   /** Return the current size of this tag set. */
   @Override public int size() {
     return length / 2;
+  }
+
+  @Override public ArrayTagSet filter(BiPredicate<String, String> predicate) {
+    final int n = size();
+    String[] result = new String[2 * n];
+    int pos = 0;
+    for (int i = 0; i < n; ++i) {
+      final String k = getKey(i);
+      final String v = getValue(i);
+      if (predicate.test(k, v)) {
+        result[pos++] = k;
+        result[pos++] = v;
+      }
+    }
+    return new ArrayTagSet(result, pos);
+  }
+
+  @Override public ArrayTagSet filterByKey(Predicate<String> predicate) {
+    return filter((k, v) -> predicate.test(k));
   }
 
   @Override public boolean equals(Object o) {
