@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
  */
 package com.netflix.spectator.api;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * Identifier for a meter or measurement.
@@ -157,6 +161,22 @@ public interface Id extends TagList {
   /** Return the size, number of tags, for the id including the name. */
   @Override default int size() {
     return Utils.size(tags()) + 1;
+  }
+
+  /** Return a new tag list with only tags that match the predicate. */
+  @Override default Id filter(BiPredicate<String, String> predicate) {
+    List<Tag> filtered = new ArrayList<>();
+    for (Tag tag : tags()) {
+      if (predicate.test(tag.key(), tag.value())) {
+        filtered.add(tag);
+      }
+    }
+    return new DefaultId(name(), ArrayTagSet.create(filtered));
+  }
+
+  /** Return a new tag list with only tags with keys that match the predicate. */
+  @Override default Id filterByKey(Predicate<String> predicate) {
+    return filter((k, v) -> predicate.test(k));
   }
 
   /**

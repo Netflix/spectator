@@ -211,7 +211,7 @@ public interface AtlasConfig extends RegistryConfig {
    * policy.
    */
   default RollupPolicy rollupPolicy() {
-    return RollupPolicy.noop();
+    return RollupPolicy.noop(commonTags());
   }
 
   /**

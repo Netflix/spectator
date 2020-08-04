@@ -17,10 +17,15 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.atlas.impl.Parser;
+import com.netflix.spectator.atlas.impl.Query;
+import com.netflix.spectator.atlas.impl.QueryIndex;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +42,72 @@ final class Rollups {
   }
 
   /**
-   * Aggregate the measurements after appling the mapping function to the ids. Counters types
+   * Create a rollup policy based on a list of rules.
+   */
+  static RollupPolicy fromRules(Map<String, String> commonTags, List<RollupPolicy.Rule> rules) {
+    QueryIndex<RollupPolicy.Rule> index = QueryIndex.newInstance(new NoopRegistry());
+    for (RollupPolicy.Rule rule : rules) {
+      // Apply common tags to simplify the query and avoid needing to merge with the ids
+      // before evaluating the query
+      Query query = Parser.parseQuery(rule.query()).simplify(commonTags);
+      index.add(query, rule);
+    }
+    return ms -> {
+      // Common tags -> aggregated measurements
+      Map<Map<String, String>, Map<Id, Aggregator>> aggregates = new HashMap<>();
+      for (Measurement m : ms) {
+        List<RollupPolicy.Rule> matches = index.findMatches(m.id());
+        if (matches.isEmpty()) {
+          // No matches for the id, but we sill need to treat as an aggregate because
+          // rollup on another id could cause a collision
+          Map<Id, Aggregator> idMap = aggregates.computeIfAbsent(commonTags, k -> new HashMap<>());
+          updateAggregate(idMap, m.id(), m);
+        } else {
+          // For matching rules, find dimensions from common tags and others that are part
+          // of the id
+          Set<String> commonDimensions = new HashSet<>();
+          Set<String> otherDimensions = new HashSet<>();
+          for (RollupPolicy.Rule rule : matches) {
+            for (String dimension : rule.rollup()) {
+              if (commonTags.containsKey(dimension)) {
+                commonDimensions.add(dimension);
+              } else {
+                otherDimensions.add(dimension);
+              }
+            }
+          }
+
+          // Peform rollup by removing the dimensions
+          Map<String, String> tags = commonDimensions.isEmpty()
+              ? commonTags
+              : rollup(commonTags, commonDimensions);
+          Id id = otherDimensions.isEmpty()
+              ? m.id()
+              : m.id().filterByKey(k -> !otherDimensions.contains(k));
+          Map<Id, Aggregator> idMap = aggregates.computeIfAbsent(tags, k -> new HashMap<>());
+          updateAggregate(idMap, id, m);
+        }
+      }
+
+      // Convert to final result type
+      List<RollupPolicy.Result> results = new ArrayList<>();
+      for (Map.Entry<Map<String, String>, Map<Id, Aggregator>> entry : aggregates.entrySet()) {
+        results.add(new RollupPolicy.Result(entry.getKey(), toMeasurements(entry.getValue())));
+      }
+      return results;
+    };
+  }
+
+  private static Map<String, String> rollup(Map<String, String> tags, Set<String> dimensions) {
+    Map<String, String> tmp = new HashMap<>(tags);
+    for (String dimension : dimensions) {
+      tmp.remove(dimension);
+    }
+    return tmp;
+  }
+
+  /**
+   * Aggregate the measurements after applying the mapping function to the ids. Counters types
    * will use a sum aggregation and gauges will use a max aggregation.
    *
    * @param idMapper
@@ -52,16 +122,23 @@ final class Rollups {
     for (Measurement m : measurements) {
       Id id = idMapper.apply(m.id());
       if (id != null) {
-        Aggregator aggregator = aggregates.get(id);
-        if (aggregator == null) {
-          aggregator = newAggregator(id, m);
-          aggregates.put(id, aggregator);
-        } else {
-          aggregator.update(m);
-        }
+        updateAggregate(aggregates, id, m);
       }
     }
+    return toMeasurements(aggregates);
+  }
 
+  private static void updateAggregate(Map<Id, Aggregator> aggregates, Id id, Measurement m) {
+    Aggregator aggregator = aggregates.get(id);
+    if (aggregator == null) {
+      aggregator = newAggregator(id, m);
+      aggregates.put(id, aggregator);
+    } else {
+      aggregator.update(m);
+    }
+  }
+
+  private static List<Measurement> toMeasurements(Map<Id, Aggregator> aggregates) {
     List<Measurement> result = new ArrayList<>(aggregates.size());
     for (Aggregator aggregator : aggregates.values()) {
       result.add(aggregator.toMeasurement());
