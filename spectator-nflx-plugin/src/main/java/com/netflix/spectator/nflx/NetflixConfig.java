@@ -143,7 +143,7 @@ public final class NetflixConfig {
     private static final String CLUSTER = "NETFLIX_CLUSTER";
     private static final String ASG = "NETFLIX_AUTO_SCALE_GROUP";
     private static final String STACK = "NETFLIX_STACK";
-    private static final String SHARD1= "NETFLIX_SHARD1";
+    private static final String SHARD1 = "NETFLIX_SHARD1";
     private static final String SHARD2 = "NETFLIX_SHARD2";
 
     private static final String TASK = "TITUS_TASK_ID";
