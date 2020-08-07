@@ -105,7 +105,10 @@ public final class NetflixConfig {
 
   private static void put(Map<String, String> map, String key, String maybeNullValue) {
     if (maybeNullValue != null) {
-      map.put(key, maybeNullValue);
+      String value = maybeNullValue.trim();
+      if (!value.isEmpty()) {
+        map.put(key, maybeNullValue);
+      }
     }
   }
 

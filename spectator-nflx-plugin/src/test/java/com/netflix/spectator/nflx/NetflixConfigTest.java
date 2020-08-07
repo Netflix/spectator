@@ -20,6 +20,8 @@ import com.netflix.archaius.config.MapConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 public class NetflixConfigTest {
 
   @Test
@@ -41,5 +43,11 @@ public class NetflixConfigTest {
     Assertions.assertEquals("unknown", config.getString("EC2_OWNER_ID"));
     Assertions.assertEquals("us-east-1", config.getString("EC2_REGION"));
     Assertions.assertEquals("prod-unknown", config.getString("substitutions"));
+  }
+
+  @Test
+  public void commonTagsCannotBeEmpty() {
+    Map<String, String> commonTags = NetflixConfig.commonTags();
+    commonTags.forEach((k, v) -> Assertions.assertFalse(v.isEmpty()));
   }
 }
