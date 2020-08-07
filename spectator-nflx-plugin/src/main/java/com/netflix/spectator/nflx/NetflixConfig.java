@@ -122,6 +122,8 @@ public final class NetflixConfig {
     put(commonTags, "nf.cluster", Env.cluster());
     put(commonTags, "nf.asg", Env.asg());
     put(commonTags, "nf.stack", Env.stack());
+    put(commonTags, "nf.shard1", Env.shard1());
+    put(commonTags, "nf.shard2", Env.shard2());
     put(commonTags, "nf.zone", Env.zone());
     put(commonTags, "nf.vmtype", Env.vmtype());
     put(commonTags, "nf.node", Env.instanceId());
@@ -144,6 +146,8 @@ public final class NetflixConfig {
     private static final String CLUSTER = "NETFLIX_CLUSTER";
     private static final String ASG = "NETFLIX_AUTO_SCALE_GROUP";
     private static final String STACK = "NETFLIX_STACK";
+    private static final String SHARD1 = "NETFLIX_SHARD1";
+    private static final String SHARD2 = "NETFLIX_SHARD2";
 
     private static final String TASK = "TITUS_TASK_ID";
     private static final String JOB = "TITUS_JOB_ID";
@@ -192,6 +196,14 @@ public final class NetflixConfig {
 
     private static String stack() {
       return System.getenv(STACK);
+    }
+
+    private static String shard1() {
+      return System.getenv(SHARD1);
+    }
+
+    private static String shard2() {
+      return System.getenv(SHARD2);
     }
 
     private static String vmtype() {
