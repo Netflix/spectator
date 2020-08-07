@@ -531,18 +531,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     long t = lastCompletedTimestamp(stepMillis);
     pollMeters(t);
     removeExpiredMeters();
-    return getBatches(t).stream().flatMap(this::flatten);
-  }
-
-  private Stream<Measurement> flatten(RollupPolicy.Result result) {
-    if (result.commonTags().isEmpty()) {
-      return result.measurements().stream();
-    } else {
-      return result.measurements().stream().map(m -> {
-        Id id = m.id().withTags(result.commonTags());
-        return new Measurement(id, m.timestamp(), m.value());
-      });
-    }
+    // Return the flattened list of measurements. Do not merge common tags into the result
+    // as that is an internal detail and not expected by the user.
+    return getBatches(t).stream().flatMap(r -> r.measurements().stream());
   }
 
   @Override protected Counter newCounter(Id id) {
