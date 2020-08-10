@@ -27,4 +27,13 @@ public class RetryPolicyTest {
     RetryPolicy policy = RetryPolicy.SAFE;
     Assertions.assertTrue(policy.shouldRetry("GET", new SocketTimeoutException(null)));
   }
+
+  @Test
+  public void safeConnectMessageCapitalization() {
+    RetryPolicy policy = RetryPolicy.SAFE;
+    Assertions.assertTrue(policy.shouldRetry("GET", new SocketTimeoutException("connect")));
+    Assertions.assertTrue(policy.shouldRetry("GET", new SocketTimeoutException("Connect")));
+    Assertions.assertTrue(policy.shouldRetry("GET", new SocketTimeoutException("failed to connect")));
+    Assertions.assertTrue(policy.shouldRetry("GET", new SocketTimeoutException("Connection timed out")));
+  }
 }
