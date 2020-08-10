@@ -17,6 +17,7 @@ package com.netflix.spectator.ipc.http;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.util.Locale;
 
 /**
  * Policy that determines if a request can be retried based on the response.
@@ -60,7 +61,7 @@ public interface RetryPolicy {
     private boolean isConnectTimeout(Throwable t) {
       return t instanceof SocketTimeoutException
           && t.getMessage() != null
-          && t.getMessage().contains("connect");
+          && t.getMessage().toLowerCase(Locale.US).contains("connect");
     }
 
     @Override public boolean shouldRetry(String method, HttpResponse response) {
