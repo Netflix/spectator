@@ -76,7 +76,13 @@ public enum IpcStatus implements Tag {
   /**
    * The request was denied access for authentication or authorization reasons.
    */
-  access_denied;
+  access_denied,
+
+  /**
+   * The request had an application level error. Application specific diagnostics would
+   * need to be used to determine the issue.
+   */
+  application_error;
 
   @Override public String key() {
     return IpcTagKey.status.key();
