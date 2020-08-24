@@ -2,7 +2,7 @@
 dependencies {
   testImplementation files("$projectDir/src/test/lib/compatibility-0.68.0.jar")
   jmh "com.google.re2j:re2j:1.4"
-  jmh "com.github.ben-manes.caffeine:caffeine:2.8.4"
+  jmh "com.github.ben-manes.caffeine:caffeine:2.8.5"
 }
 
 javadoc {
