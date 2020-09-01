@@ -54,7 +54,7 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
       final int stop = end - next.minLength();
       for (int pos = start; pos >= 0 && pos <= stop; ++pos) {
         int p = next.matches(str, pos, end - pos);
-        if (p >= 0) {
+        if (p >= start) {
           return p;
         }
       }
@@ -62,15 +62,18 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
     } else if (next != TrueMatcher.INSTANCE) {
       final int stop = end - next.minLength();
       int pos = start;
-      while (pos >= 0 && pos <= stop) {
+      while (pos >= start && pos <= stop) {
         int p = next.matches(str, pos, end - pos);
-        if (p >= 0) {
+        if (p >= start) {
           return p;
         }
-        pos = repeated.matches(str, pos, end - pos);
-        if (pos == start) {
+        // The repeated portion could potentially be an empty string matcher, to avoid an
+        // endless loop we need to ensure that the position has moved forward
+        int tmp = repeated.matches(str, pos, end - pos);
+        if (tmp == pos) {
           return Constants.NO_MATCH;
         }
+        pos = tmp;
       }
       return Constants.NO_MATCH;
     } else {

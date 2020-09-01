@@ -367,4 +367,16 @@ public abstract class AbstractPatternMatcherTest {
     // https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html
     loadTestFile("jdk.dat").forEach(pair -> testRE(pair[0], pair[1]));
   }
+
+  @Test
+  public void zeroOrMoreEmptyOrClause() throws Exception {
+    testRE("foo-h2(prod|)*-bar-*", "foo-h2prod-abc-v123");
+    testRE("foo-h2(prod|)*-bar-*", "foo-h2prod-bar-v123");
+  }
+
+  @Test
+  public void repeatedEmptyOrClause() throws Exception {
+    testRE("foo-h2(prod|)+-bar-*", "foo-h2prod-abc-v123");
+    testRE("foo-h2(prod|)+-bar-*", "foo-h2prod-bar-v123");
+  }
 }
