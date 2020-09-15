@@ -222,7 +222,9 @@ public final class GcLogger {
   private boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
     // So far the only indicator known is that the cause will be reported as "No GC"
     // when using CMS.
-    return "No GC".equals(info.getGcCause());
+    return "No GC".equals(info.getGcCause())         // CMS
+        || "Concurrent GC".equals(info.getGcCause()) // Shenandoah
+        || "ZGC".equals(info.getGcName());
   }
 
   private class GcNotificationListener implements NotificationListener {

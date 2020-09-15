@@ -40,6 +40,9 @@ final class HelperFunctions {
     m.put("PS MarkSweep",         GcType.OLD);
     m.put("PS Scavenge",          GcType.YOUNG);
     m.put("ParNew",               GcType.YOUNG);
+    m.put("ZGC",                  GcType.OLD);
+    m.put("Shenandoah Cycles",    GcType.OLD);
+    m.put("Shenandoah Pauses",    GcType.OLD);
     return Collections.unmodifiableMap(m);
   }
 
