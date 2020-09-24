@@ -161,6 +161,7 @@ public final class GcLogger {
     return logs;
   }
 
+  @SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
   private void updateMetrics(String name, GcInfo info) {
     final Map<String, MemoryUsage> before = info.getMemoryUsageBeforeGc();
     final Map<String, MemoryUsage> after = info.getMemoryUsageAfterGc();
