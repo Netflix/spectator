@@ -163,6 +163,8 @@ public final class GcLogger {
     final Map<String, MemoryUsage> before = info.getMemoryUsageBeforeGc();
     final Map<String, MemoryUsage> after = info.getMemoryUsageAfterGc();
 
+    // Non generational collectors like ZGC and Shenandoah will only have an old
+    // pool name.
     if (oldGenPoolName != null) {
       final long oldBefore = before.get(oldGenPoolName).getUsed();
       final long oldAfter = after.get(oldGenPoolName).getUsed();
@@ -171,10 +173,13 @@ public final class GcLogger {
         PROMOTION_RATE.increment(delta);
       }
 
+      // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
+      // those updates.
+      //
       // Some GCs such as G1 can reduce the old gen size as part of a minor GC. To track the
       // live data size we record the value if we see a reduction in the old gen heap size or
       // after a major GC.
-      if (oldAfter < oldBefore || HelperFunctions.getGcType(name) == GcType.OLD) {
+      if (oldAfter > 0L && (oldAfter < oldBefore || HelperFunctions.isOldGcType(name))) {
         LIVE_DATA_SIZE.set(oldAfter);
         final long oldMaxAfter = after.get(oldGenPoolName).getMax();
         MAX_DATA_SIZE.set(oldMaxAfter);
