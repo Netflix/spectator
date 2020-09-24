@@ -99,6 +99,8 @@ public final class GcLogger {
     }
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
+      // For non-generational collectors the young and old gen pool names will be the
+      // same
       if (HelperFunctions.isYoungGenPool(mbean.getName())) {
         youngGenPoolName = mbean.getName();
       }
@@ -159,6 +161,7 @@ public final class GcLogger {
     return logs;
   }
 
+  @SuppressWarnings("PMD.AvoidDeeplyNestedIfStmts")
   private void updateMetrics(String name, GcInfo info) {
     final Map<String, MemoryUsage> before = info.getMemoryUsageBeforeGc();
     final Map<String, MemoryUsage> after = info.getMemoryUsageAfterGc();
@@ -171,10 +174,13 @@ public final class GcLogger {
         PROMOTION_RATE.increment(delta);
       }
 
+      // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
+      // those updates.
+      //
       // Some GCs such as G1 can reduce the old gen size as part of a minor GC. To track the
       // live data size we record the value if we see a reduction in the old gen heap size or
       // after a major GC.
-      if (oldAfter < oldBefore || HelperFunctions.getGcType(name) == GcType.OLD) {
+      if (oldAfter > 0L && (oldAfter < oldBefore || HelperFunctions.isOldGcType(name))) {
         LIVE_DATA_SIZE.set(oldAfter);
         final long oldMaxAfter = after.get(oldGenPoolName).getMax();
         MAX_DATA_SIZE.set(oldMaxAfter);
@@ -184,10 +190,14 @@ public final class GcLogger {
     if (youngGenPoolName != null) {
       final long youngBefore = before.get(youngGenPoolName).getUsed();
       final long youngAfter = after.get(youngGenPoolName).getUsed();
-      final long delta = youngBefore - youngGenSizeAfter;
-      youngGenSizeAfter = youngAfter;
-      if (delta > 0L) {
-        ALLOCATION_RATE.increment(delta);
+      // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
+      // those updates.
+      if (youngBefore > 0L) {
+        final long delta = youngBefore - youngGenSizeAfter;
+        youngGenSizeAfter = youngAfter;
+        if (delta > 0L) {
+          ALLOCATION_RATE.increment(delta);
+        }
       }
     }
   }

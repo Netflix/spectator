@@ -52,14 +52,24 @@ final class HelperFunctions {
     return (t == null) ? GcType.UNKNOWN : t;
   }
 
+  /** Return true if it is an old GC type. */
+  static boolean isOldGcType(String name) {
+    return getGcType(name) == GcType.OLD;
+  }
+
   /** Returns true if memory pool name matches an old generation pool. */
   static boolean isOldGenPool(String name) {
-    return name.endsWith("Old Gen") || name.endsWith("Tenured Gen");
+    return name.endsWith("Old Gen")
+        || name.endsWith("Tenured Gen")
+        || "Shenandoah".equals(name)
+        || "ZHeap".equals(name);
   }
 
   /** Returns true if memory pool name matches an young generation pool. */
   static boolean isYoungGenPool(String name) {
-    return name.endsWith("Eden Space");
+    return name.endsWith("Eden Space")
+        || "Shenandoah".equals(name)
+        || "ZHeap".equals(name);
   }
 
   /** Compute the total usage across all pools. */
