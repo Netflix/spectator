@@ -67,7 +67,9 @@ final class HelperFunctions {
 
   /** Returns true if memory pool name matches an young generation pool. */
   static boolean isYoungGenPool(String name) {
-    return name.endsWith("Eden Space");
+    return name.endsWith("Eden Space")
+        || "Shenandoah".equals(name)
+        || "ZHeap".equals(name);
   }
 
   /** Compute the total usage across all pools. */

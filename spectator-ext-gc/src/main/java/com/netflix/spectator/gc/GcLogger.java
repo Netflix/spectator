@@ -99,6 +99,8 @@ public final class GcLogger {
     }
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
+      // For non-generational collectors the young and old gen pool names will be the
+      // same
       if (HelperFunctions.isYoungGenPool(mbean.getName())) {
         youngGenPoolName = mbean.getName();
       }
@@ -163,8 +165,6 @@ public final class GcLogger {
     final Map<String, MemoryUsage> before = info.getMemoryUsageBeforeGc();
     final Map<String, MemoryUsage> after = info.getMemoryUsageAfterGc();
 
-    // Non generational collectors like ZGC and Shenandoah will only have an old
-    // pool name.
     if (oldGenPoolName != null) {
       final long oldBefore = before.get(oldGenPoolName).getUsed();
       final long oldAfter = after.get(oldGenPoolName).getUsed();
@@ -189,10 +189,14 @@ public final class GcLogger {
     if (youngGenPoolName != null) {
       final long youngBefore = before.get(youngGenPoolName).getUsed();
       final long youngAfter = after.get(youngGenPoolName).getUsed();
-      final long delta = youngBefore - youngGenSizeAfter;
-      youngGenSizeAfter = youngAfter;
-      if (delta > 0L) {
-        ALLOCATION_RATE.increment(delta);
+      // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
+      // those updates.
+      if (youngBefore > 0L) {
+        final long delta = youngBefore - youngGenSizeAfter;
+        youngGenSizeAfter = youngAfter;
+        if (delta > 0L) {
+          ALLOCATION_RATE.increment(delta);
+        }
       }
     }
   }
