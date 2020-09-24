@@ -198,7 +198,6 @@ public final class GcLogger {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(event.toString());
     }
-    System.out.println(isConcurrentPhase(info) + "==> " + event.toString());
 
     // Update pause timer for the action and cause...
     Id eventId = (isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)
