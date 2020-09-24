@@ -232,9 +232,13 @@ public final class GcLogger {
   private boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
     // So far the only indicator known is that the cause will be reported as "No GC"
     // when using CMS.
+    //
+    // For ZGC, the allocation stall seems to indicate that some thread or threads are
+    // blocked trying to allocate. Even though it is not a true STW pause, counting it
+    // as such seems to be less confusing.
     return "No GC".equals(info.getGcCause())            // CMS
         || "Shenandoah Cycles".equals(info.getGcName()) // Shenandoah
-        || "ZGC".equals(info.getGcName());
+        || ("ZGC".equals(info.getGcName()) && !"Allocation Stall".equals(info.getGcCause()));
   }
 
   private class GcNotificationListener implements NotificationListener {
