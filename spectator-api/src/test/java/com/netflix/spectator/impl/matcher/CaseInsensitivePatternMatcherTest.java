@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,20 @@ import java.util.regex.Pattern;
 
 public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTest {
 
-  @Override
-  protected void testRE(String regex, String value) {
+  private boolean shouldCheckRegex(String regex) {
     // Java regex has inconsistent behavior for POSIX character classes and the literal version
     // of the same character class. For now we skip regex that use POSIX classes.
     // https://bugs.openjdk.java.net/browse/JDK-8214245
-    if (!regex.contains("\\p{") && !regex.contains("\\P{") && !regex.contains("[^")) {
+    // Bug was fixed in jdk15.
+    return JavaVersion.major() < 15
+        && !regex.contains("\\p{")
+        && !regex.contains("\\P{")
+        && !regex.contains("[^");
+  }
+
+  @Override
+  protected void testRE(String regex, String value) {
+    if (shouldCheckRegex(regex)) {
       int flags = Pattern.DOTALL | Pattern.CASE_INSENSITIVE;
       Pattern pattern = Pattern.compile("^.*(" + regex + ")", flags);
       PatternMatcher matcher = PatternMatcher.compile(regex).ignoreCase();
