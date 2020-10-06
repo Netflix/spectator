@@ -53,6 +53,11 @@ interface Matcher extends PatternMatcher {
     return new IgnoreCaseMatcher(m);
   }
 
+  @Override
+  default String toSqlPattern() {
+    return PatternUtils.toSqlPattern(this);
+  }
+
   /** Cast the matcher to type {@code T}. */
   @SuppressWarnings("unchecked")
   default <T> T as() {

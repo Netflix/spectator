@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,15 @@ public interface PatternMatcher {
    */
   default PatternMatcher ignoreCase() {
     return this;
+  }
+
+  /**
+   * Returns a pattern that can be used with a SQL LIKE clause or null if this expression
+   * cannot be expressed as a SQL pattern. Can be used to more optimally map the pattern
+   * to a SQL data store.
+   */
+  default String toSqlPattern() {
+    return null;
   }
 
   /**
