@@ -34,7 +34,6 @@
     <exclude name="ConfusingTernary"/>
     <exclude name="ControlStatementBraces"/>
     <exclude name="CyclomaticComplexity"/>
-    <exclude name="DataflowAnomalyAnalysis"/>
     <exclude name="DefaultPackage"/>
     <exclude name="DoNotUseThreads"/>
     <exclude name="DontImportJavaLang"/> <!-- Incorrectly flags java.lang.invoke.* -->

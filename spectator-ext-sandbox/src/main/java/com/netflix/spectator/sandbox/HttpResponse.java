@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2020 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ public class HttpResponse {
 
   private HttpResponse unzip() throws IOException {
     Map<String, List<String>> newHeaders = headers.entrySet().stream()
-        .filter(e -> !e.getKey().equalsIgnoreCase("Content-Encoding"))
+        .filter(e -> !"Content-Encoding".equalsIgnoreCase(e.getKey()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     if (data.length == 0) {
       return new HttpResponse(status, newHeaders);

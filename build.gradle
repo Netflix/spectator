@@ -1,15 +1,15 @@
 buildscript {
   repositories { jcenter() }
   dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.29.0'
-    classpath 'com.netflix.nebula:nebula-dependency-recommender:9.0.2'
+    classpath 'com.github.ben-manes:gradle-versions-plugin:0.33.0'
+    classpath 'com.netflix.nebula:nebula-dependency-recommender:9.1.1'
     classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.8.1'
   }
 }
 
 plugins {
-  id 'me.champeau.gradle.jmh' version '0.5.0'
-  id "com.github.spotbugs" version "4.5.0" apply false
+  id 'me.champeau.gradle.jmh' version '0.5.2'
+  id "com.github.spotbugs" version "4.5.1" apply false
 }
 
 // Establish version and status
@@ -101,14 +101,14 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '8.32'
+    toolVersion = '8.36.2'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
   
   spotbugs {
-    toolVersion = '4.0.6'
+    toolVersion = '4.1.3'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
@@ -123,7 +123,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '6.23.0'
+    toolVersion = '6.28.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
