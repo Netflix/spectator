@@ -16,9 +16,9 @@
 
 dependencies {
   api project(':spectator-api')
-  implementation 'org.springframework.boot:spring-boot-autoconfigure:2.3.3.RELEASE'
-  implementation 'org.springframework:spring-beans:5.2.8.RELEASE'
-  implementation 'org.springframework:spring-web:5.2.8.RELEASE'
+  implementation 'org.springframework.boot:spring-boot-autoconfigure:2.3.4.RELEASE'
+  implementation 'org.springframework:spring-beans:5.2.9.RELEASE'
+  implementation 'org.springframework:spring-web:5.2.9.RELEASE'
   api 'com.fasterxml.jackson.core:jackson-databind'
 }
 
