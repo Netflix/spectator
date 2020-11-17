@@ -7,9 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [8, 11, 15]
+        java: [8]
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v1
         with:
@@ -28,9 +30,3 @@ jobs:
           key: ${{ runner.os }}-gradlewrapper-${{ hashFiles('gradle/wrapper/*') }}
       - name: Build
         run: ./gradlew build
-  validation:
-    name: "Gradle Validation"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: gradle/wrapper-validation-action@v1
