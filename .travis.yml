@@ -2,7 +2,7 @@ language: java
 matrix:
   include:
   - jdk: openjdk8
-    env: GRADLE_PUBLISH=true
+    env: GRADLE_PUBLISH=false
   - jdk: openjdk11
     env: GRADLE_PUBLISH=false
   - jdk: openjdk15
