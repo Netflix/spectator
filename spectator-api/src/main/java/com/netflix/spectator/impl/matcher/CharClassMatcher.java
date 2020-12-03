@@ -97,6 +97,9 @@ final class CharClassMatcher implements Matcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(set, ignoreCase);
+    int result = 1;
+    result = 31 * result + set.hashCode();
+    result = 31 * result + Boolean.hashCode(ignoreCase);
+    return result;
   }
 }

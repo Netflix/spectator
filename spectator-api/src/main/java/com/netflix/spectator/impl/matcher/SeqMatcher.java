@@ -137,7 +137,7 @@ final class SeqMatcher implements Matcher, Serializable {
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(minLength);
+    int result = minLength;
     result = 31 * result + Arrays.hashCode(matchers);
     return result;
   }

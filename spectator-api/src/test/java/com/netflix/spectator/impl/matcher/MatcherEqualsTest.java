@@ -27,12 +27,18 @@ public class MatcherEqualsTest {
 
   @Test
   public void charClass() {
-    EqualsVerifier.forClass(CharClassMatcher.class).verify();
+    EqualsVerifier
+        .forClass(CharClassMatcher.class)
+        .withNonnullFields("set")
+        .verify();
   }
 
   @Test
   public void charSeq() {
-    EqualsVerifier.forClass(CharSeqMatcher.class).verify();
+    EqualsVerifier
+        .forClass(CharSeqMatcher.class)
+        .withNonnullFields("pattern")
+        .verify();
   }
 
   @Test
@@ -47,17 +53,26 @@ public class MatcherEqualsTest {
 
   @Test
   public void ignoreCase() {
-    EqualsVerifier.forClass(IgnoreCaseMatcher.class).verify();
+    EqualsVerifier
+        .forClass(IgnoreCaseMatcher.class)
+        .withNonnullFields("matcher")
+        .verify();
   }
 
   @Test
   public void indexOf() {
-    EqualsVerifier.forClass(IndexOfMatcher.class).verify();
+    EqualsVerifier
+        .forClass(IndexOfMatcher.class)
+        .withNonnullFields("pattern", "next")
+        .verify();
   }
 
   @Test
   public void negativeLookahead() {
-    EqualsVerifier.forClass(NegativeLookaheadMatcher.class).verify();
+    EqualsVerifier
+        .forClass(NegativeLookaheadMatcher.class)
+        .withNonnullFields("matcher")
+        .verify();
   }
 
   @Test
@@ -67,12 +82,18 @@ public class MatcherEqualsTest {
 
   @Test
   public void positiveLookahead() {
-    EqualsVerifier.forClass(PositiveLookaheadMatcher.class).verify();
+    EqualsVerifier
+        .forClass(PositiveLookaheadMatcher.class)
+        .withNonnullFields("matcher")
+        .verify();
   }
 
   @Test
   public void repeat() {
-    EqualsVerifier.forClass(RepeatMatcher.class).verify();
+    EqualsVerifier
+        .forClass(RepeatMatcher.class)
+        .withNonnullFields("repeated")
+        .verify();
   }
 
   @Test
@@ -87,7 +108,10 @@ public class MatcherEqualsTest {
 
   @Test
   public void startsWith() {
-    EqualsVerifier.forClass(StartsWithMatcher.class).verify();
+    EqualsVerifier
+        .forClass(StartsWithMatcher.class)
+        .withNonnullFields("pattern")
+        .verify();
   }
 
   @Test
@@ -97,6 +121,9 @@ public class MatcherEqualsTest {
 
   @Test
   public void zeroOrMore() {
-    EqualsVerifier.forClass(ZeroOrMoreMatcher.class).verify();
+    EqualsVerifier
+        .forClass(ZeroOrMoreMatcher.class)
+        .withNonnullFields("repeated", "next")
+        .verify();
   }
 }

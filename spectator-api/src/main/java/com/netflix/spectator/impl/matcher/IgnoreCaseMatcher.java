@@ -59,6 +59,8 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(matcher);
+    int result = 1;
+    result = 31 * result + matcher.hashCode();
+    return result;
   }
 }
