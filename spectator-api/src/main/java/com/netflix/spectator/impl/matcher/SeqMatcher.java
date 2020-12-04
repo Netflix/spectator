@@ -18,7 +18,6 @@ package com.netflix.spectator.impl.matcher;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -95,20 +94,20 @@ final class SeqMatcher implements Matcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    List<Matcher> ms = new ArrayList<>();
-    for (Matcher m : matchers) {
-      ms.add(m.rewrite(f));
+    int n = matchers.length;
+    Matcher[] ms = new Matcher[n];
+    for (int i = 0; i < n; ++i) {
+      ms[i] = matchers[i].rewrite(f);
     }
     return f.apply(SeqMatcher.create(ms));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    List<Matcher> ms = new ArrayList<>();
-    for (int i = 0; i < matchers.length - 1; ++i) {
-      ms.add(matchers[i]);
-    }
-    ms.add(matchers[matchers.length - 1].rewriteEnd(f));
+    int n = matchers.length;
+    Matcher[] ms = new Matcher[n];
+    System.arraycopy(matchers, 0, ms, 0, n - 1);
+    ms[n - 1] = matchers[n - 1].rewriteEnd(f);
     return f.apply(SeqMatcher.create(ms));
   }
 

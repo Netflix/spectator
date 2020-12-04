@@ -100,18 +100,20 @@ final class OrMatcher implements GreedyMatcher, Serializable {
     if (after instanceof TrueMatcher) {
       return this;
     }
-    List<Matcher> ms = new ArrayList<>();
-    for (Matcher m : matchers) {
-      ms.add(SeqMatcher.create(m, after));
+    int n = matchers.length;
+    Matcher[] ms = new Matcher[n];
+    for (int i = 0; i < n; ++i) {
+      ms[i] = SeqMatcher.create(matchers[i], after);
     }
     return OrMatcher.create(ms);
   }
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    List<Matcher> ms = new ArrayList<>();
-    for (Matcher m : matchers) {
-      ms.add(m.rewrite(f));
+    int n = matchers.length;
+    Matcher[] ms = new Matcher[n];
+    for (int i = 0; i < n; ++i) {
+      ms[i] = matchers[i].rewrite(f);
     }
     return f.apply(OrMatcher.create(ms));
   }
