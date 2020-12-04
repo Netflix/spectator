@@ -81,6 +81,9 @@ final class CharSeqMatcher implements Matcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(pattern, ignoreCase);
+    int result = 1;
+    result = 31 * result + pattern.hashCode();
+    result = 31 * result + Boolean.hashCode(ignoreCase);
+    return result;
   }
 }

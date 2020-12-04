@@ -88,6 +88,10 @@ final class RepeatMatcher implements Matcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(repeated, min, max);
+    int result = 1;
+    result = 31 * result + repeated.hashCode();
+    result = 31 * result + min;
+    result = 31 * result + max;
+    return result;
   }
 }

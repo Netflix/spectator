@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -137,7 +136,7 @@ final class SeqMatcher implements Matcher, Serializable {
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(minLength);
+    int result = minLength;
     result = 31 * result + Arrays.hashCode(matchers);
     return result;
   }

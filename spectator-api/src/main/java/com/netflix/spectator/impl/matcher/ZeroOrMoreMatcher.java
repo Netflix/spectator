@@ -141,6 +141,9 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(repeated, next);
+    int result = 1;
+    result = 31 * result + repeated.hashCode();
+    result = 31 * result + next.hashCode();
+    return result;
   }
 }

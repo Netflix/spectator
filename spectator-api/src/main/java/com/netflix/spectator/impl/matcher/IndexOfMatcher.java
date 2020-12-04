@@ -158,6 +158,10 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(pattern, next, ignoreCase);
+    int result = 1;
+    result = 31 * result + pattern.hashCode();
+    result = 31 * result + next.hashCode();
+    result = 31 * result + Boolean.hashCode(ignoreCase);
+    return result;
   }
 }

@@ -21,7 +21,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
 /** Matcher that checks if any of the sub-matchers matchers the string. */
@@ -153,7 +152,7 @@ final class OrMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(minLength);
+    int result = minLength;
     result = 31 * result + Arrays.hashCode(matchers);
     return result;
   }
