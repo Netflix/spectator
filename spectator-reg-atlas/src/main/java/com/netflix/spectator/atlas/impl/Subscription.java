@@ -94,8 +94,7 @@ public final class Subscription {
     Subscription that = (Subscription) o;
     return frequency == that.frequency
         && equalsOrNull(id, that.id)
-        && equalsOrNull(expression, that.expression)
-        && equalsOrNull(expr, that.expr);
+        && equalsOrNull(expression, that.expression);
   }
 
   private boolean equalsOrNull(Object a, Object b) {
@@ -106,7 +105,6 @@ public final class Subscription {
     int result = hashCodeOrZero(id);
     result = 31 * result + hashCodeOrZero(expression);
     result = 31 * result + (int) (frequency ^ (frequency >>> 32));
-    result = 31 * result + hashCodeOrZero(expr);
     return result;
   }
 
