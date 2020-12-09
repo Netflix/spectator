@@ -27,6 +27,7 @@ public class SubscriptionTest {
   public void equalsContract() {
     EqualsVerifier.forClass(Subscription.class)
         .suppress(Warning.NONFINAL_FIELDS)
+        .withIgnoredFields("expr")
         .verify();
   }
 
