@@ -188,4 +188,22 @@ public interface Id extends TagList {
   static Id create(String name) {
     return new DefaultId(name);
   }
+
+  /**
+   * <b>Warning:</b> This method can be used to get better performance for some critical
+   * use-cases, but also has increased risk. If there is any doubt, then use
+   * {@link #create(String)} instead.
+   *
+   * <p>Create a new id using the name tag set. The provided array will be used directly so
+   * it should not be modified after. Caller must ensure that:</p>
+   *
+   * <ul>
+   *   <li>Length of tags array is even.</li>
+   *   <li>There are no null values for the first length entries in the array.</li>
+   *   <li>There are no duplicate tag keys.</li>
+   * </ul>
+   */
+  static Id unsafeCreate(String name, String[] tags, int length) {
+    return new DefaultId(name, ArrayTagSet.unsafeCreate(tags, length));
+  }
 }

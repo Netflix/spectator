@@ -53,6 +53,21 @@ public class Ids {
 
   private final Map<String, String> tags = getTags();
 
+  private final String[] tagsArray = new String[] {
+          "nf.app", "test_app",
+      "nf.cluster", "test_app-main",
+          "nf.asg", "test_app-main-v042",
+        "nf.stack", "main",
+          "nf.ami", "ami-0987654321",
+       "nf.region", "us-east-1",
+         "nf.zone", "us-east-1e",
+         "nf.node", "i-1234567890",
+         "country", "US",
+          "device", "xbox",
+          "status", "200",
+          "client", "ab"
+  };
+
   private Map<String, String> getTags() {
     Map<String, String> m = new HashMap<>();
     m.put(    "nf.app", "test_app");
@@ -86,6 +101,12 @@ public class Ids {
   @Benchmark
   public void justName(Blackhole bh) {
     bh.consume(registry.createId("http.req.complete"));
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void unsafeCreate(Blackhole bh) {
+    bh.consume(Id.unsafeCreate("http.req.complete", tagsArray, tagsArray.length));
   }
 
   @Threads(1)
