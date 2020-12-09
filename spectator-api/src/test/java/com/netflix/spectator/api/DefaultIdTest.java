@@ -303,4 +303,11 @@ public class DefaultIdTest {
     DefaultId id = new DefaultId("foo", ArrayTagSet.create("a", "1", "b", "2"));
     Assertions.assertEquals(id, id.filterByKey(k -> !k.equals("name")));
   }
+
+  @Test
+  public void unsafeCreate() {
+    Id id = Id.unsafeCreate("foo", new String[] {"k2", "v2", "k1", "v1", null, null}, 4);
+    Id expected = Id.create("foo").withTags("k2", "v2", "k1", "v1");
+    Assertions.assertEquals(expected, id);
+  }
 }
