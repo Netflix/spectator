@@ -80,8 +80,8 @@ subprojects {
     testImplementation 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
-    jmh "org.openjdk.jmh:jmh-core:1.25"
-    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.25"
+    jmh "org.openjdk.jmh:jmh-core:1.27"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.27"
   }
 
   test {
@@ -89,7 +89,7 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.25'
+    jmhVersion = '1.27'
     warmupIterations = 2
     iterations = 5
     fork = 1
