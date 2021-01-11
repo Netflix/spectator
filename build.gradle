@@ -101,7 +101,7 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '8.36.2'
+    toolVersion = '8.39'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
