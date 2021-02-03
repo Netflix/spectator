@@ -3,7 +3,7 @@ buildscript {
   dependencies {
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.36.0'
     classpath 'com.netflix.nebula:nebula-dependency-recommender:9.1.1'
-    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.8.1'
+    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:8.10.0'
   }
 }
 
@@ -46,13 +46,14 @@ subprojects {
       // Generate java8 bytecode and compile against the java8 class
       // libraries.
       if (JavaVersion.current().isJava9Compatible()) {
-        options.compilerArgs.addAll(['--release', '8'])
+        options.release = 8
       }
     }
     compileTestJava {
       options.encoding = 'UTF-8'
-      sourceCompatibility = JavaVersion.current()
-      targetCompatibility = JavaVersion.current()
+      if (JavaVersion.current().isJava9Compatible()) {
+        options.release = JavaVersion.current().majorVersion.toInteger()
+      }
     }
 
     javadoc {
