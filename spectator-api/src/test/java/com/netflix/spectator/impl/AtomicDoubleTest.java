@@ -110,6 +110,13 @@ public class AtomicDoubleTest {
   }
 
   @Test
+  public void maxNegativeNaN() {
+    AtomicDouble v = new AtomicDouble(Double.NaN);
+    v.max(-42.0);
+    Assertions.assertEquals(-42.0, v.get(), 1e-12);
+  }
+
+  @Test
   public void maxValueInfinity() {
     AtomicDouble v = new AtomicDouble(0.0);
     v.max(Double.POSITIVE_INFINITY);

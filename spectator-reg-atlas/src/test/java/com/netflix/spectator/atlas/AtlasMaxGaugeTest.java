@@ -32,25 +32,25 @@ public class AtlasMaxGaugeTest {
   private final AtlasMaxGauge gauge = new AtlasMaxGauge(registry,
       registry.createId("test"), clock, step, step);
 
-  private void checkValue(long expected) {
+  private void checkValue(double expected) {
     int count = 0;
     for (Measurement m : gauge.measure()) {
       Assertions.assertEquals(gauge.id().withTags(Statistic.max, DsType.gauge), m.id());
       Assertions.assertEquals(expected, m.value(), 1e-12);
       ++count;
     }
-    Assertions.assertEquals(1, count);
+    Assertions.assertEquals(Double.isFinite(expected) ? 1 : 0, count);
   }
 
   @Test
   public void measuredIdHasDsType() {
-    checkValue(0);
+    checkValue(Double.NaN);
   }
 
   @Test
   public void set() {
     gauge.set(42);
-    checkValue(0);
+    checkValue(Double.NaN);
 
     clock.setWallTime(step + 1);
     checkValue(42);
@@ -58,8 +58,9 @@ public class AtlasMaxGaugeTest {
 
   @Test
   public void setNaN() {
+    gauge.set(0);
     gauge.set(Double.NaN);
-    checkValue(0);
+    checkValue(Double.NaN);
 
     clock.setWallTime(step + 1);
     checkValue(0);
@@ -68,19 +69,19 @@ public class AtlasMaxGaugeTest {
   @Test
   public void setInfinity() {
     gauge.set(Double.POSITIVE_INFINITY);
-    checkValue(0);
+    checkValue(Double.NaN);
 
     clock.setWallTime(step + 1);
-    checkValue(0);
+    checkValue(Double.NaN);
   }
 
   @Test
   public void setNegative() {
     gauge.set(-1);
-    checkValue(0);
+    checkValue(Double.NaN);
 
     clock.setWallTime(step + 1);
-    checkValue(0);
+    checkValue(-1);
   }
 
   @Test
@@ -88,7 +89,7 @@ public class AtlasMaxGaugeTest {
     gauge.set(42);
     gauge.set(44);
     gauge.set(43);
-    checkValue(0);
+    checkValue(Double.NaN);
 
     clock.setWallTime(step + 1);
     checkValue(44);
@@ -100,7 +101,7 @@ public class AtlasMaxGaugeTest {
     clock.setWallTime(step + 1);
     checkValue(42);
     clock.setWallTime(step + step + 1);
-    checkValue(0);
+    checkValue(Double.NaN);
   }
 
   @Test
@@ -123,8 +124,11 @@ public class AtlasMaxGaugeTest {
   public void measureTimestamp() {
     long start = clock.wallTime();
 
+    gauge.set(0.0);
     clock.setWallTime(start + step);
     Assertions.assertEquals(start + step, gauge.measure().iterator().next().timestamp());
+
+    gauge.set(0.0);
     clock.setWallTime(start + step * 2);
     Assertions.assertEquals(start + step * 2, gauge.measure().iterator().next().timestamp());
   }

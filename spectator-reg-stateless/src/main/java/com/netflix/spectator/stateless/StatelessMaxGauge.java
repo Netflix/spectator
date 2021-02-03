@@ -35,15 +35,13 @@ class StatelessMaxGauge extends StatelessMeter implements Gauge {
   /** Create a new instance. */
   StatelessMaxGauge(Id id, Clock clock, long ttl) {
     super(id, clock, ttl);
-    value = new AtomicDouble(0.0);
+    value = new AtomicDouble(Double.NaN);
     stat = id.withTag(Statistic.max).withTags(id.tags());
   }
 
   @Override public void set(double v) {
-    if (v > 0.0) {
-      value.max(v);
-      updateLastModTime();
-    }
+    value.max(v);
+    updateLastModTime();
   }
 
   @Override public double value() {
@@ -51,8 +49,8 @@ class StatelessMaxGauge extends StatelessMeter implements Gauge {
   }
 
   @Override public Iterable<Measurement> measure() {
-    final double delta = value.getAndSet(0.0);
-    if (delta > 0.0) {
+    final double delta = value.getAndSet(Double.NaN);
+    if (Double.isFinite(delta)) {
       final Measurement m = new Measurement(stat, clock.wallTime(), delta);
       return Collections.singletonList(m);
     } else {
