@@ -3,7 +3,7 @@ dependencies {
   testImplementation files("$projectDir/src/test/lib/compatibility-0.68.0.jar")
   testImplementation "org.hsqldb:hsqldb:2.5.1"
   jmh "com.google.re2j:re2j:1.5"
-  jmh "com.github.ben-manes.caffeine:caffeine:2.8.6"
+  jmh "com.github.ben-manes.caffeine:caffeine:2.8.8"
 }
 
 javadoc {
