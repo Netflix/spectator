@@ -579,6 +579,13 @@ public class RegistryTest {
   }
 
   @Test
+  public void maxGaugeCanBeNegative() {
+    DefaultRegistry r = newRegistry(false, 10);
+    r.maxGauge("test").set(-42);
+    Assertions.assertEquals(-42.0, r.maxGauge("test").value(), 1e-12);
+  }
+
+  @Test
   public void customIdTags() {
     DefaultRegistry r = newRegistry(false, 10000);
     Id id = new CustomId("test").withTags("b", "2", "a", "1");

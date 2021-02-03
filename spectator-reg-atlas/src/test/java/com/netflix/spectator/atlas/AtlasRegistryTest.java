@@ -16,6 +16,7 @@
 package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.NoopRegistry;
@@ -41,6 +42,7 @@ public class AtlasRegistryTest {
     Map<String, String> props = new LinkedHashMap<>();
     props.put("atlas.enabled", "false");
     props.put("atlas.step", "PT10S");
+    props.put("atlas.lwc.step", "PT10S");
     props.put("atlas.batchSize", "3");
 
     return new AtlasConfig() {
@@ -55,6 +57,7 @@ public class AtlasRegistryTest {
   }
 
   private List<Measurement> getMeasurements() {
+    clock.setWallTime(clock.wallTime() + 10000);
     return registry.measurements().collect(Collectors.toList());
   }
 
@@ -116,6 +119,7 @@ public class AtlasRegistryTest {
   @Test
   public void measurementsWithMaxGauge() {
     registry.maxGauge(registry.createId("test")).set(4.0);
+    Gauge g = registry.maxGauge("test");
     Assertions.assertEquals(1, getMeasurements().size());
   }
 

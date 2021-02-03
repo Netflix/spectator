@@ -74,6 +74,12 @@ public class StatelessRegistryTest {
   }
 
   @Test
+  public void maxGaugeSetNegative() {
+    registry.maxGauge("test").set(-4.0);
+    Assertions.assertEquals(-4.0, registry.maxGauge("test").value(), 1e-12);
+  }
+
+  @Test
   public void batchesEmpty() {
     Assertions.assertEquals(0, registry.getBatches().size());
   }

@@ -35,7 +35,8 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
   /** Create a new instance. */
   AtlasMaxGauge(Registry registry, Id id, Clock clock, long ttl, long step) {
     super(id, clock, ttl);
-    this.value = new StepDouble(0.0, clock, step);
+    // Initialize to NaN so that it can be used with negative values
+    this.value = new StepDouble(Double.NaN, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
     this.stat = registry.createId(id.name())
@@ -49,7 +50,9 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
     // the counters have been rotated if there was no activity in the
     // current interval.
     double v = value.poll();
-    consumer.accept(stat, value.timestamp(), v);
+    if (Double.isFinite(v)) {
+      consumer.accept(stat, value.timestamp(), v);
+    }
   }
 
   @Override public void set(double v) {
