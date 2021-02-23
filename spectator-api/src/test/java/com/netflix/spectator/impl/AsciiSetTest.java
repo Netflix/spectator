@@ -129,6 +129,12 @@ public class AsciiSetTest {
   }
 
   @Test
+  public void replaceNullChar() {
+    AsciiSet s = AsciiSet.fromPattern("*A-Z");
+    Assertions.assertEquals("ABC*DEF", s.replaceNonMembers("ABC\u0000DEF", '*'));
+  }
+
+  @Test
   public void replaceMultiCharUnicode() {
     // http://www.fileformat.info/info/unicode/char/1f701/index.htm
     AsciiSet s = AsciiSet.fromPattern("_");
