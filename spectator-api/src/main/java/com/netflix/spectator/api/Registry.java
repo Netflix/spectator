@@ -19,6 +19,7 @@ import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Config;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Iterator;
@@ -31,7 +32,7 @@ import java.util.stream.StreamSupport;
 /**
  * Registry to manage a set of meters.
  */
-public interface Registry extends Iterable<Meter> {
+public interface Registry extends Iterable<Meter>, Serializable {
 
   /**
    * The clock used by the registry for timing events.
