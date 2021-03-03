@@ -7,6 +7,7 @@ dependencies {
   api project(':spectator-ext-gc')
   api project(':spectator-ext-jvm')
   api project(':spectator-reg-atlas')
+  implementation 'com.netflix.iep:iep-nflxenv'
   implementation 'com.typesafe:config'
   implementation 'org.slf4j:slf4j-simple'
   testImplementation 'com.fasterxml.jackson.core:jackson-databind'

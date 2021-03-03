@@ -7,6 +7,7 @@ dependencies {
   implementation "com.google.inject:guice"
   implementation "com.google.inject.extensions:guice-multibindings"
   implementation "com.netflix.archaius:archaius2-core"
+  implementation 'com.netflix.iep:iep-nflxenv'
   implementation "com.netflix.servo:servo-core"
   testImplementation "com.netflix.governator:governator"
 }

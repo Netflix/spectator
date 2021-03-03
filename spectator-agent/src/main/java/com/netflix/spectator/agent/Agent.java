@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.agent;
 
+import com.netflix.iep.NetflixEnvironment;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.atlas.AtlasConfig;
@@ -31,7 +32,6 @@ import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -188,7 +188,7 @@ public final class Agent {
     }
 
     @Override public Map<String, String> commonTags() {
-      Map<String, String> tags = new HashMap<>();
+      Map<String, String> tags = NetflixEnvironment.commonTagsForAtlas();
       for (Config cfg : config.getConfigList("atlas.tags")) {
         // These are often populated by environment variables that can sometimes be empty
         // rather than not set when missing. Empty strings are not allowed by Atlas.
