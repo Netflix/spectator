@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for the BasicTag class.
- * 
- * Created on 10/1/15.
  */
 public class BasicTagTest {
 
@@ -78,6 +76,8 @@ public class BasicTagTest {
 
   @Test
   public void testNullValue() {
-    Assertions.assertThrows(NullPointerException.class, () -> new BasicTag("k", null));
+    NullPointerException e = Assertions.assertThrows(
+        NullPointerException.class, () -> new BasicTag("k", null));
+    Assertions.assertEquals("parameter 'value' cannot be null (key=k)", e.getMessage());
   }
 }

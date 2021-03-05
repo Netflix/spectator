@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,11 @@ public final class BasicTag implements Tag {
    */
   public BasicTag(String key, String value) {
     this.key = Preconditions.checkNotNull(key, "key");
-    this.value = Preconditions.checkNotNull(value, "value");
+    this.value = value;
+    if (value == null) {
+      String msg = String.format("parameter 'value' cannot be null (key=%s)", key);
+      throw new NullPointerException(msg);
+    }
     this.hc = 31 * key.hashCode() + value.hashCode();
   }
 
