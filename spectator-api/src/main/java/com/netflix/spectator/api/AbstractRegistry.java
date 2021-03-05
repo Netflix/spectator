@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,11 +135,21 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Id createId(String name) {
-    return new DefaultId(name);
+    try {
+      return new DefaultId(name);
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
   }
 
   @Override public final Id createId(String name, Iterable<Tag> tags) {
-    return new DefaultId(name, ArrayTagSet.create(tags));
+    try {
+      return new DefaultId(name, ArrayTagSet.create(tags));
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
   }
 
   /**
@@ -167,6 +177,7 @@ public abstract class AbstractRegistry implements Registry {
     return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
   }
 
+  @Deprecated
   @Override public void register(Meter meter) {
     PolledMeter.monitorMeter(this, meter);
   }
@@ -176,37 +187,32 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Counter counter(Id id) {
-    Id normId = normalizeId(id);
-    Counter c = getOrCreate(normId, Counter.class, NoopCounter.INSTANCE, this::newCounter);
-    return new SwapCounter(this, VERSION, normId, c);
+    Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::newCounter);
+    return new SwapCounter(this, VERSION, c.id(), c);
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
-    Id normId = normalizeId(id);
     DistributionSummary ds = getOrCreate(
-        normId,
+        id,
         DistributionSummary.class,
         NoopDistributionSummary.INSTANCE,
         this::newDistributionSummary);
-    return new SwapDistributionSummary(this, VERSION, normId, ds);
+    return new SwapDistributionSummary(this, VERSION, ds.id(), ds);
   }
 
   @Override public final Timer timer(Id id) {
-    Id normId = normalizeId(id);
-    Timer t = getOrCreate(normId, Timer.class, NoopTimer.INSTANCE, this::newTimer);
-    return new SwapTimer(this, VERSION, normId, t);
+    Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::newTimer);
+    return new SwapTimer(this, VERSION, t.id(), t);
   }
 
   @Override public final Gauge gauge(Id id) {
-    Id normId = normalizeId(id);
-    Gauge g = getOrCreate(normId, Gauge.class, NoopGauge.INSTANCE, this::newGauge);
-    return new SwapGauge(this, VERSION, normId, g);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newGauge);
+    return new SwapGauge(this, VERSION, g.id(), g);
   }
 
   @Override public final Gauge maxGauge(Id id) {
-    Id normId = normalizeId(id);
-    Gauge g = getOrCreate(normId, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);
-    return new SwapMaxGauge(this, VERSION, normId, g);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);
+    return new SwapMaxGauge(this, VERSION, g.id(), g);
   }
 
   /**
@@ -229,11 +235,19 @@ public abstract class AbstractRegistry implements Registry {
    */
   @SuppressWarnings("unchecked")
   protected <T extends Meter> T getOrCreate(Id id, Class<T> cls, T dflt, Function<Id, T> factory) {
+    // Typically means the user had an error with a call to createId when propagateWarnings
+    // is false.
+    if (id == NoopId.INSTANCE) {
+      return dflt;
+    }
+
+    // Handle the normal processing and ensure exceptions are not propagated
     try {
       Preconditions.checkNotNull(id, "id");
-      Meter m = Utils.computeIfAbsent(meters, id, i -> compute(factory.apply(i), dflt));
+      Id normId = normalizeId(id);
+      Meter m = Utils.computeIfAbsent(meters, normId, i -> compute(factory.apply(i), dflt));
       if (!cls.isAssignableFrom(m.getClass())) {
-        logTypeError(id, cls, m.getClass());
+        logTypeError(normId, cls, m.getClass());
         m = dflt;
       }
       return (T) m;
@@ -244,7 +258,12 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Meter get(Id id) {
-    return meters.get(normalizeId(id));
+    try {
+      return meters.get(normalizeId(id));
+    } catch (Exception e) {
+      propagate(e);
+      return null;
+    }
   }
 
   @Override public final Iterator<Meter> iterator() {

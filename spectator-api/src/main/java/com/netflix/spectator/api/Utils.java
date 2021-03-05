@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,8 @@ public final class Utils {
       final String mname = obj.getClass().getName() + "." + method;
       final String msg = "invalid method [" + mname + "], skipping registration of gauge " + id;
       registry.propagate(msg, e);
+    } catch (Exception e) {
+      registry.propagate(e);
     }
     return null;
   }
