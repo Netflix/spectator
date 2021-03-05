@@ -116,6 +116,7 @@ public final class CompositeRegistry implements Registry {
     return new DefaultId(name, ArrayTagSet.create(tags));
   }
 
+  @Deprecated
   @Override public void register(Meter meter) {
     PolledMeter.monitorMeter(this, meter);
   }

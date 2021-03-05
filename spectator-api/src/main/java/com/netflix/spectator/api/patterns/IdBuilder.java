@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,11 @@ public abstract class IdBuilder<T> {
    *     Builder object to allow for method chaining.
    */
   public T withId(Id id) {
-    return createTypeBuilder(id);
+    if (id == null) {
+      registry.propagate(new NullPointerException("parameter 'id' cannot be null"));
+      return createTypeBuilder(registry.createId(null));
+    } else {
+      return createTypeBuilder(id);
+    }
   }
 }

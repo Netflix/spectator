@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.impl.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,8 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
    *     Timer instance.
    */
   public static LongTaskTimer get(Registry registry, Id id) {
+    Preconditions.checkNotNull(registry, "registry");
+    Preconditions.checkNotNull(id, "id");
     ConcurrentMap<Id, Object> state = registry.state();
     Object obj = Utils.computeIfAbsent(state, id, i -> {
       LongTaskTimer timer = new LongTaskTimer(registry, id);

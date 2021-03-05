@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.impl.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -192,7 +193,12 @@ public final class PolledMeter {
      *     of an assignment.
      */
     public <T extends Number> T monitorValue(T number) {
-      return monitorValue(number, Number::doubleValue);
+      try {
+        return monitorValue(number, Number::doubleValue);
+      } catch (Exception e) {
+        registry.propagate(e);
+        return number;
+      }
     }
 
     /**
@@ -420,15 +426,21 @@ public final class PolledMeter {
    */
   @Deprecated
   public static void monitorMeter(Registry registry, Meter meter) {
-    ConcurrentMap<Id, Object> state = registry.state();
-    Object c = Utils.computeIfAbsent(state, meter.id(), MeterState::new);
-    if (!(c instanceof MeterState)) {
-      Utils.propagateTypeError(registry, meter.id(), MeterState.class, c.getClass());
-    } else {
-      MeterState t = (MeterState) c;
-      t.add(meter);
-      long delay = registry.config().gaugePollingFrequency().toMillis();
-      t.schedule(registry, null, delay);
+    Preconditions.checkNotNull(registry, "registry");
+    try {
+      Preconditions.checkNotNull(registry, "meter");
+      ConcurrentMap<Id, Object> state = registry.state();
+      Object c = Utils.computeIfAbsent(state, meter.id(), MeterState::new);
+      if (!(c instanceof MeterState)) {
+        Utils.propagateTypeError(registry, meter.id(), MeterState.class, c.getClass());
+      } else {
+        MeterState t = (MeterState) c;
+        t.add(meter);
+        long delay = registry.config().gaugePollingFrequency().toMillis();
+        t.schedule(registry, null, delay);
+      }
+    } catch (Exception e) {
+      registry.propagate(e);
     }
   }
 

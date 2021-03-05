@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,10 @@ public interface Registry extends Iterable<Meter> {
    * @see #gauge(Id, Object, ToDoubleFunction)
    * @see #collectionSize(Id, Collection)
    * @see #mapSize(Id, Map)
+   *
+   * @deprecated Code outside of Spectator should not implement the Meter interface.
    */
+  @Deprecated
   void register(Meter meter);
 
   /**
@@ -157,7 +160,9 @@ public interface Registry extends Iterable<Meter> {
    */
   @SuppressWarnings("unchecked")
   default <T extends Registry> T underlying(Class<T> c) {
-    if (c.isAssignableFrom(getClass())) {
+    if (c == null) {
+      return null;
+    } else if (c.isAssignableFrom(getClass())) {
       return (T) this;
     } else if (this instanceof CompositeRegistry) {
       return ((CompositeRegistry) this).find(c);
@@ -177,7 +182,12 @@ public interface Registry extends Iterable<Meter> {
    *     Identifier for a meter.
    */
   default Id createId(String name, String... tags) {
-    return createId(name, Utils.toIterable(tags));
+    try {
+      return createId(name, Utils.toIterable(tags));
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
   }
 
   /**
@@ -191,7 +201,12 @@ public interface Registry extends Iterable<Meter> {
    *     Identifier for a meter.
    */
   default Id createId(String name, Map<String, String> tags) {
-    return createId(name).withTags(tags);
+    try {
+      return createId(name).withTags(tags);
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
   }
 
   /**
@@ -231,7 +246,7 @@ public interface Registry extends Iterable<Meter> {
    *     Counter instance with the corresponding id.
    */
   default Counter counter(String name, String... tags) {
-    return counter(createId(name, Utils.toIterable(tags)));
+    return counter(createId(name, tags));
   }
 
   /**
@@ -271,7 +286,7 @@ public interface Registry extends Iterable<Meter> {
    *     Summary instance with the corresponding id.
    */
   default DistributionSummary distributionSummary(String name, String... tags) {
-    return distributionSummary(createId(name, Utils.toIterable(tags)));
+    return distributionSummary(createId(name, tags));
   }
 
   /**
@@ -311,7 +326,7 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    */
   default Timer timer(String name, String... tags) {
-    return timer(createId(name, Utils.toIterable(tags)));
+    return timer(createId(name, tags));
   }
 
   /**
@@ -351,7 +366,7 @@ public interface Registry extends Iterable<Meter> {
    *     Gauge instance with the corresponding id.
    */
   default Gauge gauge(String name, String... tags) {
-    return gauge(createId(name, Utils.toIterable(tags)));
+    return gauge(createId(name, tags));
   }
 
   /**
@@ -391,7 +406,7 @@ public interface Registry extends Iterable<Meter> {
    *     Gauge instance with the corresponding id.
    */
   default Gauge maxGauge(String name, String... tags) {
-    return maxGauge(createId(name, Utils.toIterable(tags)));
+    return maxGauge(createId(name, tags));
   }
 
   /**
@@ -410,7 +425,12 @@ public interface Registry extends Iterable<Meter> {
     // Note: this method is only included in the registry for historical reasons to
     // maintain compatibility. Future patterns should just use the registry not be
     // created by the registry.
-    return com.netflix.spectator.api.patterns.LongTaskTimer.get(this, id);
+    try {
+      return com.netflix.spectator.api.patterns.LongTaskTimer.get(this, id);
+    } catch (Exception e) {
+      propagate(e);
+      return com.netflix.spectator.api.patterns.LongTaskTimer.get(this, NoopId.INSTANCE);
+    }
   }
 
   /**
@@ -462,7 +482,7 @@ public interface Registry extends Iterable<Meter> {
    */
   @Deprecated
   default LongTaskTimer longTaskTimer(String name, String... tags) {
-    return longTaskTimer(createId(name, Utils.toIterable(tags)));
+    return longTaskTimer(createId(name, tags));
   }
 
   /**
@@ -881,6 +901,8 @@ public interface Registry extends Iterable<Meter> {
    *     Exception to log and optionally propagate.
    */
   default void propagate(Throwable t) {
-    propagate(t.getMessage(), t);
+    if (t != null) {
+      propagate(t.getMessage(), t);
+    }
   }
 }
