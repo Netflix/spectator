@@ -104,7 +104,7 @@ public class AtomicDouble extends Number {
     if (Double.isFinite(v)) {
       double max = get();
       while (isGreaterThan(v, max) && !compareAndSet(max, v)) {
-        max = value.get();
+        max = get();
       }
     }
   }
