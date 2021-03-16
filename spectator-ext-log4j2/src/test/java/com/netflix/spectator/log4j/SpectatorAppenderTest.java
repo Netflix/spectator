@@ -111,4 +111,28 @@ public class SpectatorAppenderTest {
     Assertions.assertEquals(0, c.count());
   }
 
+  @Test
+  public void nullFilename() {
+    Counter c = registry.counter("log4j.numStackTraces",
+        "appender", "foo",
+        "loglevel", "2_ERROR",
+        "exception", "RuntimeException",
+        "file", "unknown");
+    Assertions.assertEquals(0, c.count());
+
+    String cname = SpectatorAppender.class.getName();
+    Throwable t = new RuntimeException("test");
+    t.fillInStackTrace();
+    StackTraceElement source = new StackTraceElement(cname, "foo", null, 0);
+    LogEvent event = new Log4jLogEvent.Builder()
+        .setLoggerName(cname)
+        .setLoggerFqcn(cname)
+        .setLevel(Level.ERROR)
+        .setThrown(t)
+        .setSource(source)
+        .setTimeMillis(0L)
+        .build();
+    appender.append(event);
+    Assertions.assertEquals(1, c.count());
+  }
 }

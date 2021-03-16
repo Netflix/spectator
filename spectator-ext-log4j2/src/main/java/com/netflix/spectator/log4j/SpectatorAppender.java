@@ -137,7 +137,7 @@ public final class SpectatorAppender extends AbstractAppender {
       final String file = (event.getSource() == null) ? "unknown" : event.getSource().getFileName();
       Id stackTraceId = numStackTraces[level.ordinal()]
           .withTag("exception", event.getThrown().getClass().getSimpleName())
-          .withTag("file", file);
+          .withTag("file", file == null ? "unknown" : file);
       registry.counter(stackTraceId).increment();
     }
   }
