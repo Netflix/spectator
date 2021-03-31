@@ -1,7 +1,7 @@
 plugins {
-  id 'me.champeau.gradle.jmh' version '0.5.2'
   id 'com.github.ben-manes.versions' version '0.38.0'
   id 'com.github.spotbugs' version '4.7.0' apply false
+  id 'me.champeau.jmh' version '0.6.3'
   id 'nebula.dependency-recommender' version '10.0.1'
   id 'nebula.netflixoss' version '9.3.0'
 }
@@ -12,7 +12,7 @@ ext.githubProjectName = 'spectator'
 allprojects {
   apply plugin: 'nebula.dependency-recommender'
   apply plugin: 'project-report'
-  apply plugin: 'me.champeau.gradle.jmh'
+  apply plugin: 'me.champeau.jmh'
   apply plugin: 'com.github.ben-manes.versions'
   apply plugin: 'nebula.netflixoss'
 }
@@ -84,15 +84,15 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.27'
+    jmhVersion = '1.28'
     warmupIterations = 2
     iterations = 5
     fork = 1
     //threads = 1
     profilers = ['stack', 'gc']
     includeTests = false
-    duplicateClassesStrategy = 'warn'
-    include = ['.*Ids.*']
+    duplicateClassesStrategy = DuplicatesStrategy.WARN
+    includes = ['.*Ids.*']
   }
 
   checkstyle {
