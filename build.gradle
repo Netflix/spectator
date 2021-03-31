@@ -1,14 +1,8 @@
-buildscript {
-  repositories { mavenCentral() }
-  dependencies {
-    classpath 'com.netflix.nebula:nebula-dependency-recommender:9.1.1'
-  }
-}
-
 plugins {
   id 'me.champeau.gradle.jmh' version '0.5.2'
   id 'com.github.ben-manes.versions' version '0.38.0'
   id 'com.github.spotbugs' version '4.7.0' apply false
+  id 'nebula.dependency-recommender' version '10.0.1'
   id 'nebula.netflixoss' version '9.3.0'
 }
 
