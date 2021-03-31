@@ -1,15 +1,9 @@
-buildscript {
-  repositories { mavenCentral() }
-  dependencies {
-    classpath 'com.github.ben-manes:gradle-versions-plugin:0.36.0'
-    classpath 'com.netflix.nebula:nebula-dependency-recommender:9.1.1'
-    classpath 'com.netflix.nebula:gradle-netflixoss-project-plugin:9.1.0'
-  }
-}
-
 plugins {
-  id 'me.champeau.gradle.jmh' version '0.5.2'
-  id "com.github.spotbugs" version "4.6.0" apply false
+  id 'com.github.ben-manes.versions' version '0.38.0'
+  id 'com.github.spotbugs' version '4.7.0' apply false
+  id 'me.champeau.jmh' version '0.6.3'
+  id 'nebula.dependency-recommender' version '10.0.1'
+  id 'nebula.netflixoss' version '9.3.0'
 }
 
 // Establish version and status
@@ -18,7 +12,7 @@ ext.githubProjectName = 'spectator'
 allprojects {
   apply plugin: 'nebula.dependency-recommender'
   apply plugin: 'project-report'
-  apply plugin: 'me.champeau.gradle.jmh'
+  apply plugin: 'me.champeau.jmh'
   apply plugin: 'com.github.ben-manes.versions'
   apply plugin: 'nebula.netflixoss'
 }
@@ -90,26 +84,26 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.27'
+    jmhVersion = '1.28'
     warmupIterations = 2
     iterations = 5
     fork = 1
     //threads = 1
     profilers = ['stack', 'gc']
     includeTests = false
-    duplicateClassesStrategy = 'warn'
-    include = ['.*Ids.*']
+    duplicateClassesStrategy = DuplicatesStrategy.WARN
+    includes = ['.*Ids.*']
   }
 
   checkstyle {
-    toolVersion = '8.39'
+    toolVersion = '8.41.1'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
   
   spotbugs {
-    toolVersion = '4.2.0'
+    toolVersion = '4.2.2'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
@@ -124,7 +118,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '6.30.0'
+    toolVersion = '6.33.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
