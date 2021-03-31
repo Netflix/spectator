@@ -15,22 +15,40 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.atlas.impl.PublishPayload;
+import com.netflix.spectator.ipc.IpcLogger;
+import com.netflix.spectator.ipc.http.HttpClient;
+import com.netflix.spectator.ipc.http.HttpRequestBuilder;
+import com.netflix.spectator.ipc.http.HttpResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 
 public class AtlasRegistryTest {
@@ -224,5 +242,139 @@ public class AtlasRegistryTest {
         Clock.SYSTEM,
         k -> k.equals("atlas.enabled") ? "true" : null);
     r.close();
+  }
+
+  @Test
+  public void flushOnShutdown() {
+    List<PublishPayload> payloads = new ArrayList<>();
+    HttpClient client = uri -> new TestRequestBuilder(uri, payloads);
+    ManualClock c = new ManualClock();
+    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(), client);
+    r.start();
+
+    c.setWallTime(58_000);
+    r.maxGauge("test").set(1.0);
+    c.setWallTime(62_000);
+    r.maxGauge("test").set(2.0);
+    r.close();
+
+    Assertions.assertEquals(2, payloads.size());
+
+    Assertions.assertEquals(1.0, getValue(payloads.get(0)));
+    Assertions.assertEquals(2.0, getValue(payloads.get(1)));
+  }
+
+  private double getValue(PublishPayload payload) {
+    return payload.getMetrics()
+        .stream()
+        .filter(m -> m.id().name().equals("test"))
+        .mapToDouble(Measurement::value)
+        .sum();
+  }
+
+  private static class TestConfig implements AtlasConfig {
+
+    @Override public String get(String k) {
+      return null;
+    }
+
+    @Override public boolean enabled() {
+      return true;
+    }
+
+    @Override public long initialPollingDelay(Clock clock, long stepSize) {
+      // use a long delay to avoid actually sending unless triggered by tests
+      return 6_000_000;
+    }
+  }
+
+  private static class TestRequestBuilder extends HttpRequestBuilder {
+
+    private static final JsonFactory FACTORY = new SmileFactory();
+
+    private final List<PublishPayload> payloads;
+
+    TestRequestBuilder(URI uri, List<PublishPayload> payloads) {
+      super(new IpcLogger(new NoopRegistry()), uri);
+      this.payloads = payloads;
+    }
+
+    private Map<String, String> decodeTags(JsonParser parser) throws IOException {
+      Map<String, String> tags = new HashMap<>();
+      parser.nextToken();
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        String k = parser.getCurrentName();
+        String v = parser.nextTextValue();
+        tags.put(k, v);
+      }
+      return tags;
+    }
+
+    private Measurement decodeMeasurement(JsonParser parser) throws IOException {
+      Map<String, String> tags = Collections.emptyMap();
+      long timestamp = -1L;
+      double value = Double.NaN;
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        String field = parser.getCurrentName();
+        switch (field) {
+          case "tags":
+            tags = decodeTags(parser);
+            break;
+          case "timestamp":
+            timestamp = parser.nextLongValue(-1L);
+            break;
+          case "value":
+            parser.nextToken();
+            value = parser.getDoubleValue();
+            break;
+          default:
+            throw new IllegalArgumentException("unexpected field: " + field);
+        }
+      }
+
+      String name = tags.remove("name");
+      Id id = Id.create(name).withTags(tags);
+      return new Measurement(id, timestamp, value);
+    }
+
+    private PublishPayload decodePayload(JsonParser parser) throws IOException {
+      Map<String, String> tags = Collections.emptyMap();
+      List<Measurement> metrics = new ArrayList<>();
+      parser.nextToken();
+      while (parser.nextToken() == JsonToken.FIELD_NAME) {
+        String field = parser.getCurrentName();
+        switch (field) {
+          case "tags":
+            tags = decodeTags(parser);
+            break;
+          case "metrics":
+            parser.nextToken();
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+              metrics.add(decodeMeasurement(parser));
+            }
+            break;
+          default:
+            throw new IllegalArgumentException("unexpected field: " + field);
+        }
+      }
+      return new PublishPayload(tags, metrics);
+    }
+
+    @Override public HttpRequestBuilder withContent(String type, byte[] content) {
+      try {
+        try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(content));
+             JsonParser parser = FACTORY.createParser(in)) {
+          payloads.add(decodePayload(parser));
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+        throw new UncheckedIOException(e);
+      }
+      return this;
+    }
+
+    @Override protected HttpResponse sendImpl() throws IOException {
+      return new HttpResponse(200, Collections.emptyMap());
+    }
   }
 }

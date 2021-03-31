@@ -112,6 +112,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final Evaluator evaluator;
 
   private long lastPollTimestamp = -1L;
+  private long lastFlushTimestamp = -1L;
   private final Map<Id, Consolidator> atlasMeasurements = new LinkedHashMap<>();
 
   private final StreamHelper streamHelper = new StreamHelper();
@@ -119,6 +120,11 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   /** Create a new instance. */
   @Inject
   public AtlasRegistry(Clock clock, AtlasConfig config) {
+    this(clock, config, null);
+  }
+
+  /** Create a new instance. Should only be used directly in tests. */
+  AtlasRegistry(Clock clock, AtlasConfig config, HttpClient client) {
     super(new OverridableClock(clock), config);
     this.config = config;
     this.stepClock = new StepClock(clock, config.lwcStep().toMillis());
@@ -159,7 +165,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
     this.rollupPolicy = config.rollupPolicy();
 
-    this.client = HttpClient.create(debugRegistry);
+    this.client = client != null ? client : HttpClient.create(debugRegistry);
 
     this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
     this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
@@ -239,9 +245,18 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
     // Flush data to Atlas
     try {
-      logger.info("flushing data for final interval to Atlas");
+      // Get current time at start to avoid drift while flushing
       OverridableClock overridableClock = (OverridableClock) clock();
       long now = clock().wallTime();
+      overridableClock.setWallTime(now); // used set time rather than underlying clock
+
+      // Data for the previous interval may not have already been written, go ahead and
+      // try to write it out
+      logger.info("flushing data for previous interval to Atlas");
+      sendToAtlas();
+
+      // Move to end of next interval and ensure it gets written out
+      logger.info("flushing data for final interval to Atlas");
       overridableClock.setWallTime(now / lwcStepMillis * lwcStepMillis + lwcStepMillis);
       pollMeters(overridableClock.wallTime());
       overridableClock.setWallTime(now / stepMillis * stepMillis + stepMillis);
@@ -267,7 +282,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   /** Returns the timestamp of the last completed interval for the specified step size. */
-  private long lastCompletedTimestamp(long s) {
+  long lastCompletedTimestamp(long s) {
     long now = clock().wallTime();
     return now / s * s;
   }
@@ -317,15 +332,20 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     publishTaskTimer("sendToAtlas").record(() -> {
       if (config.enabled() && senderPool != null) {
         long t = lastCompletedTimestamp(stepMillis);
-        pollMeters(t);
-        logger.debug("sending to Atlas for time: {}", t);
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (RollupPolicy.Result batch : getBatches(t)) {
-          CompletableFuture<Void> future = CompletableFuture.runAsync(
-              () -> sendBatch(batch), senderPool);
-          futures.add(future);
+        if (t > lastFlushTimestamp) {
+          pollMeters(t);
+          logger.debug("sending to Atlas for time: {}", t);
+          List<CompletableFuture<Void>> futures = new ArrayList<>();
+          for (RollupPolicy.Result batch : getBatches(t)) {
+            CompletableFuture<Void> future = CompletableFuture.runAsync(
+                () -> sendBatch(batch), senderPool);
+            futures.add(future);
+          }
+          CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+          lastFlushTimestamp = t;
+        } else {
+          logger.debug("skipping duplicate flush attempt for time: {}", t);
         }
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
       } else {
         logger.debug("publishing is disabled, skipping collection");
       }
