@@ -22,7 +22,6 @@
     <exclude name="AvoidSynchronizedAtMethodLevel"/>
     <exclude name="AvoidThrowingNullPointerException"/>
     <exclude name="AvoidThrowingRawExceptionTypes"/>
-    <exclude name="AvoidUsingShortType"/>
     <exclude name="AvoidUsingVolatile"/>
     <exclude name="BeanMembersShouldSerialize"/>
     <exclude name="ClassNamingConventions"/>
