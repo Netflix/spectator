@@ -30,6 +30,8 @@ import com.netflix.spectator.ipc.http.HttpResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
@@ -80,7 +82,11 @@ public class SubscriptionManagerTest {
   }
 
   private HttpResponse ok(byte[] data) {
-    return new HttpResponse(200, Collections.emptyMap(), data);
+    try {
+      return (new HttpResponse(200, Collections.emptyMap(), data)).compress();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   @Test

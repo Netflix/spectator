@@ -18,7 +18,9 @@ package com.netflix.spectator.ipc.http;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
@@ -80,6 +82,28 @@ public class HttpResponseTest {
   }
 
   @Test
+  public void compressNoChange() throws IOException {
+    Map<String, List<String>> headers = new HashMap<>();
+    headers.put("Content-Type", Collections.singletonList("application/json"));
+    headers.put("Content-Encoding", Collections.singletonList("gzip"));
+    byte[] entity = HttpUtils.gzip("foo bar baz foo bar baz".getBytes(StandardCharsets.UTF_8));
+    HttpResponse res = new HttpResponse(200, headers, entity);
+    Assertions.assertSame(res, res.compress());
+  }
+
+  @Test
+  public void compress() throws IOException {
+    Map<String, List<String>> headers = new HashMap<>();
+    headers.put("Content-Type", Collections.singletonList("application/json"));
+    byte[] entity = "foo bar baz foo bar baz".getBytes(StandardCharsets.UTF_8);
+    HttpResponse res = new HttpResponse(200, headers, entity);
+    String entityString = new String(
+        HttpUtils.gunzip(res.compress().entity()), StandardCharsets.UTF_8);
+    Assertions.assertEquals("foo bar baz foo bar baz", entityString);
+    Assertions.assertEquals("gzip", res.compress().header("Content-Encoding"));
+  }
+
+  @Test
   public void decompressNoChange() throws IOException {
     Map<String, List<String>> headers = new HashMap<>();
     headers.put("Content-Type", Collections.singletonList("application/json"));
@@ -107,5 +131,38 @@ public class HttpResponseTest {
     HttpResponse res = new HttpResponse(200, headers);
     Assertions.assertEquals("", res.decompress().entityAsString());
     Assertions.assertEquals(0, res.decompress().entity().length);
+  }
+
+  @Test
+  public void entityInputStream() throws IOException {
+    Map<String, List<String>> headers = new HashMap<>();
+    headers.put("Content-Type", Collections.singletonList("application/json"));
+    byte[] entity = "foo bar baz foo bar baz".getBytes(StandardCharsets.UTF_8);
+    HttpResponse res = new HttpResponse(200, headers, entity);
+    try (InputStream in = res.entityInputStream()) {
+      Assertions.assertEquals("foo bar baz foo bar baz", toString(in));
+    }
+  }
+
+  @Test
+  public void entityInputStreamCompressed() throws IOException {
+    Map<String, List<String>> headers = new HashMap<>();
+    headers.put("Content-Type", Collections.singletonList("application/json"));
+    headers.put("Content-Encoding", Collections.singletonList("gzip"));
+    byte[] entity = HttpUtils.gzip("foo bar baz foo bar baz".getBytes(StandardCharsets.UTF_8));
+    HttpResponse res = new HttpResponse(200, headers, entity);
+    try (InputStream in = res.entityInputStream()) {
+      Assertions.assertEquals("foo bar baz foo bar baz", toString(in));
+    }
+  }
+
+  private String toString(InputStream in) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    byte[] buffer = new byte[4096];
+    int length;
+    while ((length = in.read(buffer, 0, buffer.length)) > 0) {
+      baos.write(buffer, 0, length);
+    }
+    return new String(baos.toByteArray(), StandardCharsets.UTF_8);
   }
 }

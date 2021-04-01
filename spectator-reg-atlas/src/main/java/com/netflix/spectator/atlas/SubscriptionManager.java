@@ -24,6 +24,7 @@ import com.netflix.spectator.ipc.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,16 +81,18 @@ class SubscriptionManager {
       HttpResponse res = client.get(uri)
           .withConnectTimeout(connectTimeout)
           .withReadTimeout(readTimeout)
+          .acceptGzip()
           .addHeader("If-None-Match", etag)
-          .send()
-          .decompress();
+          .send();
       if (res.status() == 304) {
         LOGGER.debug("no modification to subscriptions");
       } else if (res.status() != 200) {
         LOGGER.warn("failed to update subscriptions, received status {}", res.status());
       } else {
         etag = res.header("ETag");
-        payload = filterByStep(mapper.readValue(res.entity(), Subscriptions.class));
+        try (InputStream in = res.entityInputStream()) {
+          payload = filterByStep(mapper.readValue(in, Subscriptions.class));
+        }
       }
     } catch (Exception e) {
       LOGGER.warn("failed to update subscriptions (uri={})", uri, e);
