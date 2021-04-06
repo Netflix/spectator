@@ -15,22 +15,26 @@
  */
 package com.netflix.spectator.ipc.http;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Response for an HTTP request made via {@link HttpRequestBuilder}.
  */
-public class HttpResponse {
+public final class HttpResponse {
 
   private final int status;
   private final Map<String, List<String>> headers;
@@ -97,13 +101,40 @@ public class HttpResponse {
     return new String(data, StandardCharsets.UTF_8);
   }
 
+  /**
+   * Returns an input stream for consuming the response entity. If the content encoding is
+   * {@code gzip}, then it will automatically wrap with a GZIP stream to decompress. This
+   * can be more efficient than using {@link #decompress()} as it avoids creating an intermediate
+   * copy of the decompressed data. The caller is responsible for ensuring that the returned
+   * stream is closed.
+   */
+  public InputStream entityInputStream() throws IOException {
+    ByteArrayInputStream bais = new ByteArrayInputStream(data);
+    String enc = header("Content-Encoding");
+    return (enc != null && enc.contains("gzip"))
+        ? new GZIPInputStream(bais)
+        : bais;
+  }
+
+  /** Return a copy of the response with the entity compressed. Typically used for testing. */
+  public HttpResponse compress() throws IOException {
+    String enc = header("Content-Encoding");
+    return (enc == null) ? gzip() : this;
+  }
+
+  private HttpResponse gzip() throws IOException {
+    Map<String, List<String>> newHeaders = new HashMap<>(headers);
+    newHeaders.put("Content-Encoding", Collections.singletonList("gzip"));
+    return new HttpResponse(status, newHeaders, HttpUtils.gzip(data));
+  }
+
   /** Return a copy of the response with the entity decompressed. */
   public HttpResponse decompress() throws IOException {
     String enc = header("Content-Encoding");
-    return (enc != null && enc.contains("gzip")) ? unzip() : this;
+    return (enc != null && enc.contains("gzip")) ? gunzip() : this;
   }
 
-  private HttpResponse unzip() throws IOException {
+  private HttpResponse gunzip() throws IOException {
     Map<String, List<String>> newHeaders = headers.entrySet().stream()
         .filter(e -> !"Content-Encoding".equalsIgnoreCase(e.getKey()))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
