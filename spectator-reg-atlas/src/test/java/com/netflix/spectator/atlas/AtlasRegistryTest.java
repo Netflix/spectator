@@ -264,6 +264,26 @@ public class AtlasRegistryTest {
     Assertions.assertEquals(2.0, getValue(payloads.get(1)));
   }
 
+  @Test
+  public void flushOnShutdownCounter() {
+    List<PublishPayload> payloads = new ArrayList<>();
+    HttpClient client = uri -> new TestRequestBuilder(uri, payloads);
+    ManualClock c = new ManualClock();
+    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(), client);
+    r.start();
+
+    c.setWallTime(58_000);
+    r.counter("test").increment();
+    c.setWallTime(62_000);
+    r.counter("test").add(60.0);
+    r.close();
+
+    Assertions.assertEquals(2, payloads.size());
+
+    Assertions.assertEquals(1.0 / 60.0, getValue(payloads.get(0)));
+    Assertions.assertEquals(1.0, getValue(payloads.get(1)));
+  }
+
   private double getValue(PublishPayload payload) {
     return payload.getMetrics()
         .stream()
