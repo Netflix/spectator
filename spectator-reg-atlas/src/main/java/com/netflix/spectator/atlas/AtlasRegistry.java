@@ -167,7 +167,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
     this.client = client != null ? client : HttpClient.create(debugRegistry);
 
-    this.subManager = new SubscriptionManager(jsonMapper, client, clock, config);
+    this.subManager = new SubscriptionManager(jsonMapper, this.client, clock, config);
     this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
 
     if (config.autoStart()) {
