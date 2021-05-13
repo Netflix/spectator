@@ -64,7 +64,7 @@ public class SpectatorExecutionInterceptorTest {
 
   @AfterEach
   public void after() {
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   private void execute(TestContext context, ExecutionAttributes attrs, long latency) {

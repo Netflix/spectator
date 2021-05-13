@@ -82,21 +82,21 @@ public class IpcServletFilterTest {
     checkStatus(registry, "200");
     checkMethod(registry, "GET");
     checkEndpoint(registry, "/test/foo");
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
   public void validateIdApi() throws Exception {
     client.get(baseUri.resolve("/api/v1/asg/12345")).send();
     checkEndpoint(registry, "/api");
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
   public void validateIdRoot() throws Exception {
     client.get(baseUri.resolve("/12345")).send();
     checkEndpoint(registry, "/");
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
@@ -107,7 +107,7 @@ public class IpcServletFilterTest {
     checkStatus(registry, "400");
     checkMethod(registry, "POST");
     checkEndpoint(registry, "/bad");
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
@@ -119,7 +119,7 @@ public class IpcServletFilterTest {
     checkMethod(registry, "GET");
     checkClientEndpoint(registry, "unknown");
     checkServerEndpoint(registry, "/throw");
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
@@ -129,7 +129,7 @@ public class IpcServletFilterTest {
     checkStatus(registry, "200");
     checkMethod(registry, "DELETE");
     checkEndpoint(registry, "/servlet"); // header set in the servlet
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   public static class OkServlet extends HttpServlet {
