@@ -641,15 +641,11 @@ public final class IpcLogEntry {
       putTag(tags, getAttemptFinal());
 
       // Optional for client
-      putTag(tags, IpcTagKey.serverRegion.key(), serverRegion);
-      putTag(tags, IpcTagKey.serverZone.key(), serverZone);
       putTag(tags, IpcTagKey.serverApp.key(), serverApp);
       putTag(tags, IpcTagKey.serverCluster.key(), serverCluster);
       putTag(tags, IpcTagKey.serverAsg.key(), serverAsg);
     } else {
       // Optional for server
-      putTag(tags, IpcTagKey.clientRegion.key(), clientRegion);
-      putTag(tags, IpcTagKey.clientZone.key(), clientZone);
       putTag(tags, IpcTagKey.clientApp.key(), clientApp);
       putTag(tags, IpcTagKey.clientCluster.key(), clientCluster);
       putTag(tags, IpcTagKey.clientAsg.key(), clientAsg);
