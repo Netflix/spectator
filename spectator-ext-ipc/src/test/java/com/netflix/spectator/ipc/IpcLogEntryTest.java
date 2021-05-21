@@ -657,7 +657,7 @@ public class IpcLogEntryTest {
         .markEnd()
         .log();
 
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
@@ -672,7 +672,7 @@ public class IpcLogEntryTest {
         .withHttpStatus(200)
         .log();
 
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test

@@ -75,7 +75,6 @@ This is a [percentile timer] that is recorded for each inbound message to a serv
 * `ipc.status`
 * `ipc.status.detail`
 * `ipc.failure.injected`
-* `ipc.attempt`
 * `ipc.client.app`
 * `ipc.client.cluster`
 * `ipc.client.asg`

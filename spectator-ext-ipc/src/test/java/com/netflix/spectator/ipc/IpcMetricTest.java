@@ -42,7 +42,7 @@ public class IpcMetricTest {
         .withTag(IpcStatus.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test
@@ -53,7 +53,7 @@ public class IpcMetricTest {
         .withTag(IpcStatus.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcAttemptFinal.is_true);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test
@@ -64,7 +64,7 @@ public class IpcMetricTest {
         .withTag(IpcStatus.success)
         .withTag(IpcAttempt.initial)
         .withTag(IpcAttemptFinal.is_false);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test
@@ -76,7 +76,7 @@ public class IpcMetricTest {
           .withTag(IpcStatus.success)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -88,7 +88,7 @@ public class IpcMetricTest {
           .withTag(IpcStatus.success)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -101,7 +101,7 @@ public class IpcMetricTest {
           .withTag(IpcStatus.bad_request)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -113,7 +113,7 @@ public class IpcMetricTest {
         .withTag(IpcStatus.bad_request)
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test
@@ -125,7 +125,7 @@ public class IpcMetricTest {
           .withTag(IpcStatus.success)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -137,7 +137,7 @@ public class IpcMetricTest {
         .withTag(IpcTagKey.statusDetail.tag("foo"))
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class IpcMetricTest {
           .withTag(IpcStatus.success)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -162,7 +162,7 @@ public class IpcMetricTest {
           .withTag(IpcTagKey.status.tag("foo"))
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), true);
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -174,7 +174,20 @@ public class IpcMetricTest {
           .withTag(IpcResult.success)
           .withTag(IpcAttempt.initial)
           .withTag(IpcTagKey.attemptFinal.key(), "foo");
-      IpcMetric.clientCall.validate(id);
+      IpcMetric.clientCall.validate(id, true);
+    });
+  }
+
+  @Test
+  public void validateIdUnspecifiedDimension() {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      Id id = registry.createId(IpcMetric.clientCall.metricName())
+          .withTag(IpcTagKey.owner.tag("test"))
+          .withTag(IpcResult.success)
+          .withTag(IpcAttempt.initial)
+          .withTag(IpcTagKey.attemptFinal.key(), "foo")
+          .withTag(IpcTagKey.clientApp.key(), "app");
+      IpcMetric.clientCall.validate(id, true);
     });
   }
 
@@ -187,7 +200,7 @@ public class IpcMetricTest {
         .withTag(IpcAttempt.initial)
         .withTag(IpcTagKey.attemptFinal.key(), true);
     registry.timer(id).record(Duration.ofSeconds(42));
-    IpcMetric.validate(registry);
+    IpcMetric.validate(registry, true);
   }
 
   @Test
@@ -223,7 +236,7 @@ public class IpcMetricTest {
             .withTag(IpcAttempt.initial)
             .withTag(IpcFailureInjection.none)
             .withTag(IpcTagKey.attemptFinal.key(), true);
-    IpcMetric.clientCall.validate(id);
+    IpcMetric.clientCall.validate(id, true);
   }
 
   @Test

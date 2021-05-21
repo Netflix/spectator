@@ -20,11 +20,14 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Utils;
 
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -36,44 +39,105 @@ public enum IpcMetric {
   /**
    * Timer recording the number and latency of outbound requests.
    */
-  clientCall("ipc.client.call", EnumSet.of(
-      IpcTagKey.owner,
-      IpcTagKey.result,
-      IpcTagKey.status,
-      IpcTagKey.attempt,
-      IpcTagKey.attemptFinal
-  )),
+  clientCall(
+      "ipc.client.call",
+      EnumSet.of(
+          IpcTagKey.attempt,
+          IpcTagKey.attemptFinal,
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.serverApp,
+          IpcTagKey.serverCluster,
+          IpcTagKey.serverAsg,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
 
   /**
    * Timer recording the number and latency of inbound requests.
    */
-  serverCall("ipc.server.call", EnumSet.of(
-      IpcTagKey.owner,
-      IpcTagKey.result,
-      IpcTagKey.status
-  )),
+  serverCall(
+      "ipc.server.call",
+      EnumSet.of(
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.clientApp,
+          IpcTagKey.clientCluster,
+          IpcTagKey.clientAsg,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
 
   /**
    * Number of outbound requests that are currently in flight.
    */
-  clientInflight("ipc.client.inflight", EnumSet.of(
-      IpcTagKey.owner
-  )),
+  clientInflight(
+      "ipc.client.inflight",
+      EnumSet.of(
+          IpcTagKey.owner
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.serverApp,
+          IpcTagKey.serverCluster,
+          IpcTagKey.serverAsg,
+          IpcTagKey.vip
+      )
+  ),
 
   /**
    * Number of inbound requests that are currently in flight.
    */
-  serverInflight("ipc.server.inflight", EnumSet.of(
-      IpcTagKey.owner
-  ));
+  serverInflight(
+      "ipc.server.inflight",
+      EnumSet.of(
+          IpcTagKey.owner
+      ),
+      EnumSet.of(
+          IpcTagKey.clientApp,
+          IpcTagKey.clientCluster,
+          IpcTagKey.clientAsg,
+          IpcTagKey.endpoint,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.vip
+      )
+  );
 
   private final String metricName;
   private final EnumSet<IpcTagKey> requiredDimensions;
+  private final EnumSet<IpcTagKey> optionalDimensions;
 
   /** Create a new instance. */
-  IpcMetric(String metricName, EnumSet<IpcTagKey> requiredDimensions) {
+  IpcMetric(
+      String metricName,
+      EnumSet<IpcTagKey> requiredDimensions,
+      EnumSet<IpcTagKey> optionalDimensions) {
     this.metricName = metricName;
     this.requiredDimensions = requiredDimensions;
+    this.optionalDimensions = optionalDimensions;
   }
 
   /** Returns the metric name to use in the meter id. */
@@ -120,7 +184,8 @@ public enum IpcMetric {
     return "percentile".equals(stat);
   }
 
-  private static void validateIpcMeter(Registry registry, IpcMetric metric, Class<?> type) {
+  private static void validateIpcMeter(
+      Registry registry, IpcMetric metric, Class<?> type, boolean strict) {
     final String name = metric.metricName();
     registry.stream()
         .filter(m -> name.equals(m.id().name()) && !isPercentile(m.id()))
@@ -128,7 +193,7 @@ public enum IpcMetric {
           assertTrue(type.isAssignableFrom(m.getClass()),
               "[%s] has the wrong type, expected %s but found %s",
               m.id(), type.getSimpleName(), getName(m.getClass()));
-          metric.validate(m.id());
+          metric.validate(m.id(), strict);
         });
   }
 
@@ -139,10 +204,24 @@ public enum IpcMetric {
    *     Registry to query for IPC metrics.
    */
   public static void validate(Registry registry) {
-    validateIpcMeter(registry, IpcMetric.clientCall, Timer.class);
-    validateIpcMeter(registry, IpcMetric.serverCall, Timer.class);
-    validateIpcMeter(registry, IpcMetric.clientInflight, DistributionSummary.class);
-    validateIpcMeter(registry, IpcMetric.serverInflight, DistributionSummary.class);
+    validate(registry, false);
+  }
+
+  /**
+   * Validate all of the common IPC metrics contained within the specified registry.
+   *
+   * @param registry
+   *     Registry to query for IPC metrics.
+   * @param strict
+   *     If true, then checks if the ids are strictly compliant with the spec without any
+   *     additions. Otherwise, just checks for minimal compliance. Integrations should be
+   *     strictly compliant to ensure consistency for users.
+   */
+  public static void validate(Registry registry, boolean strict) {
+    validateIpcMeter(registry, IpcMetric.clientCall, Timer.class, strict);
+    validateIpcMeter(registry, IpcMetric.serverCall, Timer.class, strict);
+    validateIpcMeter(registry, IpcMetric.clientInflight, DistributionSummary.class, strict);
+    validateIpcMeter(registry, IpcMetric.serverInflight, DistributionSummary.class, strict);
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
@@ -180,6 +259,20 @@ public enum IpcMetric {
    *     Meter identifier to validate.
    */
   public void validate(Id id) {
+    validate(id, false);
+  }
+
+  /**
+   * Validate that the specified id has the correct tagging for this IPC metric.
+   *
+   * @param id
+   *     Meter identifier to validate.
+   * @param strict
+   *     If true, then checks if the ids are strictly compliant with the spec without any
+   *     additions. Otherwise, just checks for minimal compliance. Integrations should be
+   *     strictly compliant to ensure consistency for users.
+   */
+  public void validate(Id id, boolean strict) {
     assertTrue(metricName.equals(id.name()), "%s != %s", metricName, id.name());
 
     // Check that required dimensions are present
@@ -202,6 +295,20 @@ public enum IpcMetric {
       IpcResult expected = IpcStatus.valueOf(status).result();
       IpcResult actual = IpcResult.valueOf(Utils.getTagValue(id, IpcTagKey.result.key()));
       assertTrue(actual == expected, "[%s] result is inconsistent with status", id);
+    }
+
+    // Check that only allowed dimensions are used on the id
+    if (strict) {
+      Set<String> allowedDimensions = new HashSet<>();
+      allowedDimensions.add("statistic");
+      allowedDimensions.add("percentile");
+      requiredDimensions.forEach(d -> allowedDimensions.add(d.key()));
+      optionalDimensions.forEach(d -> allowedDimensions.add(d.key()));
+      for (Tag tag : id.tags()) {
+        assertTrue(allowedDimensions.contains(tag.key()),
+            "[%s] has unspecified dimension %s",
+            id, tag.key());
+      }
     }
   }
 }
