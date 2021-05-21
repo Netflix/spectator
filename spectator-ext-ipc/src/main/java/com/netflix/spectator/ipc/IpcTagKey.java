@@ -105,12 +105,20 @@ public enum IpcTagKey {
 
   /**
    * Region where the client is located.
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   clientRegion("ipc.client.region"),
 
   /**
    * Availability zone where the client is located.
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   clientZone("ipc.client.zone"),
 
   /**
@@ -130,12 +138,20 @@ public enum IpcTagKey {
 
   /**
    * Region where the server is located.
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   serverRegion("ipc.server.region"),
 
   /**
    * Availability zone where the server is located.
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   serverZone("ipc.server.zone"),
 
   /**
@@ -156,12 +172,20 @@ public enum IpcTagKey {
   /**
    * Instance id for the server. <b>Do not use this unless you know it will not
    * cause a metrics explosion. If there is any doubt, then do not enable it.</b>
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   serverNode("ipc.server.node"),
 
   /**
    * The port number connected to on the server.
+   *
+   * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
+   * across integrations and only use tags that are part of the spec.
    */
+  @Deprecated
   serverPort("ipc.server.port"),
 
   /**
