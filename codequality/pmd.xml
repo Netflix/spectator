@@ -26,6 +26,7 @@
     <exclude name="BeanMembersShouldSerialize"/>
     <exclude name="ClassNamingConventions"/>
     <exclude name="CloseResource"/>
+    <exclude name="CognitiveComplexity"/>
     <exclude name="CommentDefaultAccessModifier"/>
     <exclude name="CommentRequired"/>
     <exclude name="CommentSize"/>
