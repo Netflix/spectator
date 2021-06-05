@@ -1,7 +1,7 @@
 plugins {
   id 'com.github.ben-manes.versions' version '0.39.0'
   id 'com.github.spotbugs' version '4.7.1' apply false
-  id 'me.champeau.jmh' version '0.6.3'
+  id 'me.champeau.jmh' version '0.6.5'
   id 'nebula.dependency-recommender' version '10.0.1'
   id 'nebula.netflixoss' version '9.4.2'
 }
@@ -75,8 +75,8 @@ subprojects {
     testImplementation 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
-    jmh "org.openjdk.jmh:jmh-core:1.27"
-    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.27"
+    jmh "org.openjdk.jmh:jmh-core:1.32"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.32"
   }
 
   test {
@@ -84,7 +84,7 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.28'
+    jmhVersion = '1.32'
     warmupIterations = 2
     iterations = 5
     fork = 1
