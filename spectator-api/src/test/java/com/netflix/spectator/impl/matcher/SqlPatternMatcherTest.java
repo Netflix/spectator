@@ -29,7 +29,8 @@ public class SqlPatternMatcherTest extends AbstractPatternMatcherTest {
   protected void testRE(String regex, String value) {
     PatternMatcher matcher = PatternMatcher.compile(regex);
     String sqlPattern = PatternMatcher.compile(regex).toSqlPattern();
-    if (sqlPattern != null) {
+    // hsqldb 2.6+ requires jdk11+
+    if (sqlPattern != null && JavaVersion.major() >= 11) {
       String desc = "[" + matcher + "] => [" + sqlPattern + "]";
       if (matcher.matches(value)) {
         Assertions.assertTrue(sqlMatches(sqlPattern, value), desc + " should match " + value);
@@ -47,7 +48,7 @@ public class SqlPatternMatcherTest extends AbstractPatternMatcherTest {
           String v = enquoteLiteral(value);
           String p = enquoteLiteral(pattern);
           stmt.executeUpdate("drop table if exists test");
-          stmt.executeUpdate("create table test(v clob)");
+          stmt.executeUpdate("create table test(v varchar(255))");
           stmt.executeUpdate("insert into test (v) values (" + v + ")");
           String query = "select * from test where v like " + p + " escape '\\'";
           try (ResultSet rs = stmt.executeQuery(query)) {
