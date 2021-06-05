@@ -66,4 +66,10 @@
       <Bug pattern="IC_SUPERCLASS_USES_SUBCLASS_DURING_INITIALIZATION"/>
     </And>
   </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.perf.ManyTags"/>
+      <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
+    </And>
+  </Match>
 </FindBugsFilter>

@@ -1,9 +1,9 @@
 plugins {
-  id 'com.github.ben-manes.versions' version '0.38.0'
-  id 'com.github.spotbugs' version '4.7.0' apply false
-  id 'me.champeau.jmh' version '0.6.3'
+  id 'com.github.ben-manes.versions' version '0.39.0'
+  id 'com.github.spotbugs' version '4.7.1' apply false
+  id 'me.champeau.jmh' version '0.6.5'
   id 'nebula.dependency-recommender' version '10.0.1'
-  id 'nebula.netflixoss' version '9.4.1'
+  id 'nebula.netflixoss' version '9.4.2'
 }
 
 // Establish version and status
@@ -75,8 +75,8 @@ subprojects {
     testImplementation 'org.junit.jupiter:junit-jupiter-engine'
     testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
-    jmh "org.openjdk.jmh:jmh-core:1.27"
-    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.27"
+    jmh "org.openjdk.jmh:jmh-core:1.32"
+    jmh "org.openjdk.jmh:jmh-generator-annprocess:1.32"
   }
 
   test {
@@ -84,7 +84,7 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.28'
+    jmhVersion = '1.32'
     warmupIterations = 2
     iterations = 5
     fork = 1
@@ -96,14 +96,14 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '8.41.1'
+    toolVersion = '8.43'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     sourceSets = [sourceSets.main]
   }
   
   spotbugs {
-    toolVersion = '4.2.2'
+    toolVersion = '4.2.3'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
@@ -118,7 +118,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '6.33.0'
+    toolVersion = '6.35.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
