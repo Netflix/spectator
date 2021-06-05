@@ -1,5 +1,5 @@
 plugins {
-  id 'com.github.ben-manes.versions' version '0.38.0'
+  id 'com.github.ben-manes.versions' version '0.39.0'
   id 'com.github.spotbugs' version '4.7.0' apply false
   id 'me.champeau.jmh' version '0.6.3'
   id 'nebula.dependency-recommender' version '10.0.1'
