@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -406,43 +406,15 @@ public class QueryTest {
     Assertions.assertEquals(qs(q), q.dnfList());
   }
 
-  private String randomString(Random r) {
-    char c = (char) ('a' + r.nextInt(26));
-    return "" + c;
-  }
-
-  private Query randomQuery(Random r, int depth) {
-    if (depth > 0) {
-      Query q;
-      switch (r.nextInt(4)) {
-        case 0:
-          q = randomQuery(r, depth - 1).and(randomQuery(r, depth - 1));
-          break;
-        case 1:
-          q = randomQuery(r, depth - 1).or(randomQuery(r, depth - 1));
-          break;
-        case 2:
-          q = randomQuery(r, depth - 1).not();
-          break;
-        default:
-          q = new Query.Has(randomString(r));
-          break;
-      }
-      return q;
-    } else {
-      return new Query.Has(randomString(r));
-    }
-  }
-
   @Test
   public void dnfListSimplifiesToKeyQueries() {
     Random r = new Random(42);
     for (int i = 0; i < 1000; ++i) {
-      Query query = randomQuery(r, 5);
+      Query query = DataGenerator.randomQuery(r, 5);
       for (Query dnfQ : query.dnfList()) {
         for (Query q : dnfQ.andList()) {
           Assertions.assertTrue(
-              q instanceof Query.KeyQuery,
+              q instanceof Query.KeyQuery || q == Query.TRUE || q == Query.FALSE,
               "[" + q + "] is not a KeyQuery, extracted from [" + query + "]"
           );
         }

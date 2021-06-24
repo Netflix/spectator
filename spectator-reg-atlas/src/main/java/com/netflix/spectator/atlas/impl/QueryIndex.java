@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,6 +180,85 @@ public final class QueryIndex<T> {
     }
   }
 
+  /**
+   * Remove the specified value associated with a specific query from the index. Returns
+   * true if a value was successfully removed.
+   */
+  public boolean remove(Query query, T value) {
+    boolean result = false;
+    for (Query q : query.dnfList()) {
+      if (q == Query.TRUE) {
+        result |= matches.remove(value);
+      } else if (q == Query.FALSE) {
+        break;
+      } else {
+        result |= remove(sort(q), 0, value);
+      }
+    }
+    return result;
+  }
+
+  private boolean remove(List<Query.KeyQuery> queries, int i, T value) {
+    boolean result = false;
+    if (i < queries.size()) {
+      Query.KeyQuery kq = queries.get(i);
+
+      // Check for additional queries based on the same key and combine into a
+      // composite if needed
+      Query.CompositeKeyQuery composite = null;
+      int j = i + 1;
+      while (j < queries.size()) {
+        Query.KeyQuery q = queries.get(j);
+        if (kq.key().equals(q.key())) {
+          if (composite == null) {
+            composite = new Query.CompositeKeyQuery(kq);
+            kq = composite;
+          }
+          composite.add(q);
+          ++j;
+        } else {
+          break;
+        }
+      }
+
+      if (key != null && key.equals(kq.key())) {
+        if (kq instanceof Query.Equal) {
+          String v = ((Query.Equal) kq).value();
+          QueryIndex<T> idx = equalChecks.get(v);
+          if (idx != null) {
+            result |= idx.remove(queries, j, value);
+            if (idx.isEmpty())
+              equalChecks.remove(v);
+          }
+        } else {
+          QueryIndex<T> idx = otherChecks.get(kq);
+          if (idx != null && idx.remove(queries, j, value)) {
+            result = true;
+            otherChecksCache.clear();
+            if (idx.isEmpty())
+              otherChecks.remove(kq);
+          }
+
+          // Not queries should match if the key is missing from the id, so they need to
+          // be included in the other keys sub-tree as well
+          if (kq instanceof Query.InvertedKeyQuery && missingKeysIdx != null) {
+            result |= missingKeysIdx.remove(queries, j, value);
+            if (missingKeysIdx.isEmpty())
+              missingKeysIdx = null;
+          }
+        }
+      } else if (otherKeysIdx != null) {
+        result |= otherKeysIdx.remove(queries, i, value);
+        if (otherKeysIdx.isEmpty())
+          otherKeysIdx = null;
+      }
+    } else {
+      result |= matches.remove(value);
+    }
+
+    return result;
+  }
+
   private <K> boolean remove(ConcurrentHashMap<K, QueryIndex<T>> map, T value) {
     boolean removed = false;
     Iterator<Map.Entry<K, QueryIndex<T>>> it = map.entrySet().iterator();
@@ -229,7 +308,9 @@ public final class QueryIndex<T> {
 
   /**
    * Remove the specified value from the index. Returns true if a value was successfully
-   * removed.
+   * removed. <strong>Warning:</strong> this method will search the full index and can be
+   * slow for large indexes. In most cases, {@link #remove(Query, Object)} should be used
+   * instead.
    */
   public boolean remove(T value) {
     // Note, we use | instead of || because a value could get added on multiple paths

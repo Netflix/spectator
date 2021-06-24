@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@ package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 
 public class QueryIndexTest {
@@ -179,6 +182,37 @@ public class QueryIndexTest {
     Assertions.assertEquals(list(SIMPLE_QUERY), idx.findMatches(id1));
   }
 
+  private boolean remove(QueryIndex<Query> idx, Query value) {
+    return idx.remove(value, value);
+  }
+
+  @Test
+  public void removalsUsingQuery() {
+    QueryIndex<Query> idx = QueryIndex.newInstance(registry);
+    idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
+    idx.add(HASKEY_QUERY, HASKEY_QUERY);
+    idx.add(IN_QUERY, IN_QUERY);
+
+    Id id1 = id("a", "key", "b", "c", "12345");
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+
+    Assertions.assertFalse(remove(idx, Parser.parseQuery("name,a,:eq")));
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+
+    Assertions.assertTrue(remove(idx, IN_QUERY));
+    Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+
+    Assertions.assertTrue(remove(idx, SIMPLE_QUERY));
+    Assertions.assertEquals(list(HASKEY_QUERY), idx.findMatches(id1));
+
+    Assertions.assertTrue(remove(idx, HASKEY_QUERY));
+    Assertions.assertTrue(idx.isEmpty());
+    Assertions.assertTrue(idx.findMatches(id1).isEmpty());
+
+    idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
+    Assertions.assertEquals(list(SIMPLE_QUERY), idx.findMatches(id1));
+  }
+
   private Set<String> set(int n) {
     Set<String> tmp = new LinkedHashSet<>();
     for (int i = 0; i < n; ++i) {
@@ -279,8 +313,6 @@ public class QueryIndexTest {
   public void notEqMissingKey() {
     Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
     QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
-    System.out.println(idx);
-    System.out.println(idx.findMatches(id("cpu")));
     Assertions.assertFalse(idx.findMatches(id("cpu")).isEmpty());
   }
 
@@ -338,6 +370,14 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void removalOfNotQueryUsingQuery() {
+    Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+    Assertions.assertTrue(remove(idx, q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
   public void toStringMethod() {
     QueryIndex<Query> idx = QueryIndex.newInstance(registry);
     idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
@@ -369,5 +409,31 @@ public class QueryIndexTest {
     String actual = idx.toString();
 
     Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void addRemoveFuzz() {
+    Registry registry = new NoopRegistry();
+    Random random = new Random(42);
+
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+    for (int i = 0; i < 25; ++i) {
+      int n = 1_000;
+      List<Query> queries = new ArrayList<>(n);
+      for (int j = 0; j < n; ++j) {
+        queries.add(DataGenerator.randomQuery(random, 6));
+      }
+
+      for (int j = 0; j < n; ++j) {
+        Query query = queries.get(j);
+        idx.add(query, j);
+      }
+      for (int j = 0; j < n; ++j) {
+        Query query = queries.get(j);
+        Assertions.assertEquals(query != Query.FALSE, idx.remove(query, j));
+        Assertions.assertFalse(idx.remove(query, j));
+      }
+      Assertions.assertTrue(idx.isEmpty());
+    }
   }
 }
