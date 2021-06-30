@@ -24,7 +24,7 @@ jar {
 
 shadowJar {
   classifier = 'shadow'
-  configurations = [project.configurations.runtime]
+  configurations = [project.configurations.runtimeClasspath]
   relocate('com.netflix.spectator',    'spectator-agent.spectator')
   relocate('com.fasterxml',            'spectator-agent.json')
   relocate('com.typesafe.config',      'spectator-agent.config')
