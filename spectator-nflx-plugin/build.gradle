@@ -4,8 +4,12 @@ dependencies {
   api project(':spectator-ext-jvm')
   api project(':spectator-reg-atlas')
   implementation 'javax.inject:javax.inject'
-  implementation "com.google.inject:guice"
-  implementation "com.google.inject.extensions:guice-multibindings"
+  if (JavaVersion.current().isJava11Compatible()) {
+    implementation "com.google.inject:guice"
+  } else {
+    implementation "com.google.inject:guice:4.1.0"
+    implementation "com.google.inject.extensions:guice-multibindings:4.1.0"
+  }
   implementation "com.netflix.archaius:archaius2-core"
   implementation 'com.netflix.iep:iep-nflxenv'
   implementation "com.netflix.servo:servo-core"

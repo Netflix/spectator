@@ -57,8 +57,18 @@ final class ServletPathHack {
     String servletPath = request.getServletPath();
     if (hackWorks && PACKAGE.equals(request.getClass().getPackage().getName())) {
       try {
-        Object outer = get(request, "this$0");
-        Object servletPipeline = get(outer, "servletPipeline");
+        // In guice 4.1.0, we need to go through a wrapper object to get to the servlet
+        // pipeline
+        Object outer;
+        String pipelineField = "servletPipeline";
+        try {
+          outer = get(request, "this$0");
+        } catch (NoSuchFieldException e) {
+          // For later versions like guice 5.0.1, just use the request and
+          outer = request;
+          pipelineField = "val$" + pipelineField;
+        }
+        Object servletPipeline = get(outer, pipelineField);
         Object servletDefs = get(servletPipeline, "servletDefinitions");
         int length = Array.getLength(servletDefs);
         for (int i = 0; i < length; ++i) {
