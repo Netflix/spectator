@@ -34,10 +34,7 @@
     <exclude name="ConfusingTernary"/>
     <exclude name="ControlStatementBraces"/>
     <exclude name="CyclomaticComplexity"/>
-    <exclude name="DefaultPackage"/>
     <exclude name="DoNotUseThreads"/>
-    <exclude name="DontImportJavaLang"/> <!-- Incorrectly flags java.lang.invoke.* -->
-    <exclude name="DuplicateImports"/>
     <exclude name="EmptyMethodInAbstractClassShouldBeAbstract"/>
     <exclude name="ExcessiveImports"/>
     <exclude name="ExcessivePublicCount"/>
