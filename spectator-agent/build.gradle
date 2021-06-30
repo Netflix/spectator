@@ -1,5 +1,5 @@
 plugins {
-  id 'com.github.johnrengelman.shadow' version '5.2.0'
+  id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
 dependencies {
@@ -24,7 +24,7 @@ jar {
 
 shadowJar {
   classifier = 'shadow'
-  configurations = [project.configurations.runtime]
+  configurations = [project.configurations.runtimeClasspath]
   relocate('com.netflix.spectator',    'spectator-agent.spectator')
   relocate('com.fasterxml',            'spectator-agent.json')
   relocate('com.typesafe.config',      'spectator-agent.config')
