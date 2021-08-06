@@ -174,7 +174,7 @@ class Parser {
     }
   }
 
-  @SuppressWarnings("PMD.MissingBreakInSwitch")
+  @SuppressWarnings("PMD.ImplicitSwitchFallThrough")
   private AsciiSet namedCharClass() {
     boolean invert = false;
     char c = advance();
