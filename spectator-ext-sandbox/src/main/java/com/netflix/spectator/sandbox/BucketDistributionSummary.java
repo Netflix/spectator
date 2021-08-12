@@ -27,6 +27,7 @@ import com.netflix.spectator.api.Spectator;
  * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
  * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
  */
+@Deprecated
 public final class BucketDistributionSummary implements DistributionSummary {
 
   /**

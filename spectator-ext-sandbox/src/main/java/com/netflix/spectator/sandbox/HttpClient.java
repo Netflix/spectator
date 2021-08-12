@@ -38,7 +38,11 @@ import java.net.URI;
  *   }
  * };
  * </pre>
+ *
+ * @deprecated Moved to {@code com.netflix.spectator.ipc.http} package. This is now just a
+ * thin wrapper to preserve compatibility.
  */
+@Deprecated
 public interface HttpClient {
 
   /** Client implementation based on {@link java.net.HttpURLConnection}. */

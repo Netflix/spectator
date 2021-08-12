@@ -35,7 +35,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Helper for logging http request related information.
+ *
+ * @deprecated Moved to {@code com.netflix.spectator.ipc.http} package. This is now just a
+ * thin wrapper to preserve compatibility.
  */
+@Deprecated
 public class HttpLogEntry {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpLogEntry.class);

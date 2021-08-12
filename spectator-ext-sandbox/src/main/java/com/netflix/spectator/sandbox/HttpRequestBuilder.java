@@ -39,7 +39,11 @@ import java.util.zip.Deflater;
  * and logging via {@link HttpLogEntry}. This is mostly used for simple use-cases
  * where it is undesirable to have additional dependencies on a more robust HTTP
  * library.
+ *
+ * @deprecated Moved to {@code com.netflix.spectator.ipc.http} package. This is now just a
+ * thin wrapper to preserve compatibility.
  */
+@Deprecated
 public class HttpRequestBuilder {
   private static final Logger LOGGER = LoggerFactory.getLogger(HttpRequestBuilder.class);
 
