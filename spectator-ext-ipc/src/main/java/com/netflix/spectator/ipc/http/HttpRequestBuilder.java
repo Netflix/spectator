@@ -293,7 +293,7 @@ public class HttpRequestBuilder {
         if (attempt == numAttempts || !retryPolicy.shouldRetry(method, e)) {
           throw e;
         } else {
-          LOGGER.warn("attempt {} of {} failed: {} {}", attempt, numAttempts, method, uri);
+          LOGGER.info("attempt {} of {} failed: {} {}", attempt, numAttempts, method, uri);
         }
       }
     }
