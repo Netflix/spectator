@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 
 /**
@@ -43,14 +44,17 @@ public final class CompositeRegistry implements Registry {
 
   private final List<Registry> registries;
   private final AtomicLong version;
+  private final LongSupplier versionSupplier;
 
   private final ConcurrentHashMap<Id, Object> state;
+
 
   /** Creates a new instance. */
   CompositeRegistry(Clock clock) {
     this.clock = clock;
     this.registries = new ArrayList<>();
     this.version = new AtomicLong();
+    this.versionSupplier = version::get;
     this.state = new ConcurrentHashMap<>();
   }
 
@@ -150,7 +154,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Counter counter(Id id) {
-    return new SwapCounter(this, version::get, id, newCounter(id));
+    return new SwapCounter(this, versionSupplier, id, newCounter(id));
   }
 
   private DistributionSummary newDistributionSummary(Id id) {
@@ -178,7 +182,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
-    return new SwapDistributionSummary(this, version::get, id, newDistributionSummary(id));
+    return new SwapDistributionSummary(this, versionSupplier, id, newDistributionSummary(id));
   }
 
   private Timer newTimer(Id id) {
@@ -206,7 +210,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Timer timer(Id id) {
-    return new SwapTimer(this, version::get, id, newTimer(id));
+    return new SwapTimer(this, versionSupplier, id, newTimer(id));
   }
 
   private Gauge newGauge(Id id) {
@@ -234,7 +238,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge gauge(Id id) {
-    return new SwapGauge(this, version::get, id, newGauge(id));
+    return new SwapGauge(this, versionSupplier, id, newGauge(id));
   }
 
   private Gauge newMaxGauge(Id id) {
@@ -262,7 +266,7 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge maxGauge(Id id) {
-    return new SwapGauge(this, version::get, id, newMaxGauge(id));
+    return new SwapGauge(this, versionSupplier, id, newMaxGauge(id));
   }
 
   @Override public Meter get(Id id) {

@@ -49,6 +49,14 @@ public abstract class AbstractRegistry implements Registry {
 
   private final Cache<Id, Id> idNormalizationCache;
 
+  // The lambdas for creating a new meter are stored as member variables to avoid
+  // allocating a lambda that captures the "this" pointer on every invocation.
+  private final Function<Id, Counter> counterFactory = this::newCounter;
+  private final Function<Id, DistributionSummary> distSummaryFactory = this::newDistributionSummary;
+  private final Function<Id, Timer> timerFactory = this::newTimer;
+  private final Function<Id, Gauge> gaugeFactory = this::newGauge;
+  private final Function<Id, Gauge> maxGaugeFactory = this::newMaxGauge;
+
   /**
    * Create a new instance.
    *
@@ -187,7 +195,7 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   @Override public final Counter counter(Id id) {
-    Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, this::newCounter);
+    Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, counterFactory);
     return new SwapCounter(this, VERSION, c.id(), c);
   }
 
@@ -196,22 +204,22 @@ public abstract class AbstractRegistry implements Registry {
         id,
         DistributionSummary.class,
         NoopDistributionSummary.INSTANCE,
-        this::newDistributionSummary);
+        distSummaryFactory);
     return new SwapDistributionSummary(this, VERSION, ds.id(), ds);
   }
 
   @Override public final Timer timer(Id id) {
-    Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, this::newTimer);
+    Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, timerFactory);
     return new SwapTimer(this, VERSION, t.id(), t);
   }
 
   @Override public final Gauge gauge(Id id) {
-    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newGauge);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, gaugeFactory);
     return new SwapGauge(this, VERSION, g.id(), g);
   }
 
   @Override public final Gauge maxGauge(Id id) {
-    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, this::newMaxGauge);
+    Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, maxGaugeFactory);
     return new SwapMaxGauge(this, VERSION, g.id(), g);
   }
 

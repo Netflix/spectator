@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.LongFunction;
 
 /** Timers that get updated based on the bucket for recorded values. */
@@ -52,6 +53,7 @@ public final class BucketTimer implements Timer {
   private final Id id;
   private final LongFunction<String> f;
   private final ConcurrentHashMap<String, Timer> timers;
+  private final Function<String, Timer> timerFactory;
 
   /** Create a new instance. */
   BucketTimer(Registry registry, Id id, LongFunction<String> f) {
@@ -59,6 +61,7 @@ public final class BucketTimer implements Timer {
     this.id = id;
     this.f = f;
     this.timers = new ConcurrentHashMap<>();
+    this.timerFactory = k -> registry.timer(id.withTag("bucket", k));
   }
 
   @Override public Id id() {
@@ -102,11 +105,7 @@ public final class BucketTimer implements Timer {
 
   /** Return the timer for a given bucket. */
   Timer timer(String bucket) {
-    return Utils.computeIfAbsent(
-        timers,
-        bucket,
-        k -> registry.timer(id.withTag("bucket", k))
-    );
+    return Utils.computeIfAbsent(timers, bucket, timerFactory);
   }
 
   /** Not supported, will always return 0. */
