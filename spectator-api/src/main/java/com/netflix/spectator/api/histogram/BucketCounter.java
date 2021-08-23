@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import com.netflix.spectator.api.Utils;
 
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.LongFunction;
 
 /** Counters that get incremented based on the bucket for recorded values. */
@@ -46,17 +47,17 @@ public final class BucketCounter implements DistributionSummary {
     return new BucketCounter(registry, id, f);
   }
 
-  private final Registry registry;
   private final Id id;
   private final LongFunction<String> f;
   private final ConcurrentHashMap<String, Counter> counters;
+  private final Function<String, Counter> counterFactory;
 
   /** Create a new instance. */
   BucketCounter(Registry registry, Id id, LongFunction<String> f) {
-    this.registry = registry;
     this.id = id;
     this.f = f;
     this.counters = new ConcurrentHashMap<>();
+    this.counterFactory = k -> registry.counter(id.withTag("bucket", k));
   }
 
   @Override public Id id() {
@@ -77,11 +78,7 @@ public final class BucketCounter implements DistributionSummary {
 
   /** Return the count for a given bucket. */
   Counter counter(String bucket) {
-    return Utils.computeIfAbsent(
-        counters,
-        bucket,
-        k -> registry.counter(id.withTag("bucket", k))
-    );
+    return Utils.computeIfAbsent(counters, bucket, counterFactory);
   }
 
   /** Not supported, will always return 0. */
