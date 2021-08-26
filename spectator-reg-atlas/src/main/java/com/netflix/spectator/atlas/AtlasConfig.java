@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
+import com.netflix.spectator.atlas.impl.DefaultPublisher;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -245,5 +246,18 @@ public interface AtlasConfig extends RegistryConfig {
           ? firstTime - now
           : firstTime + stepSize - now;
     }
+  }
+
+  /**
+   * <strong>Alpha:</strong> this method is experimental and may change or be completely
+   * removed with no notice.
+   *
+   * Override to provide a custom publisher for sending data to Atlas. The intended use is
+   * for some cases where it is desirable to send the payload somewhere else or to use an
+   * alternate client. If the return value is null, then the data will be sent via the normal
+   * path.
+   */
+  default Publisher publisher() {
+    return new DefaultPublisher(this);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.netflix.spectator.api.AbstractRegistry;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
@@ -33,20 +30,15 @@ import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.atlas.impl.Consolidator;
 import com.netflix.spectator.atlas.impl.EvalPayload;
 import com.netflix.spectator.atlas.impl.Evaluator;
-import com.netflix.spectator.atlas.impl.MeasurementSerializer;
+import com.netflix.spectator.atlas.impl.JsonUtils;
 import com.netflix.spectator.atlas.impl.PublishPayload;
-import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
-import com.netflix.spectator.ipc.http.HttpResponse;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -56,11 +48,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -87,26 +75,19 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final Duration configRefreshFrequency;
   private final URI evalUri;
 
-  private final int connectTimeout;
-  private final int readTimeout;
   private final int batchSize;
   private final int numThreads;
   private final Map<String, String> commonTags;
 
   private final Function<String, String> fixTagString;
 
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-
   private final Registry debugRegistry;
-  private final ValidationHelper validationHelper;
 
   private final RollupPolicy rollupPolicy;
 
-  private final HttpClient client;
+  private final Publisher publisher;
 
   private Scheduler scheduler;
-  private ExecutorService senderPool;
 
   private final SubscriptionManager subManager;
   private final Evaluator evaluator;
@@ -114,8 +95,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private long lastPollTimestamp = -1L;
   private long lastFlushTimestamp = -1L;
   private final Map<Id, Consolidator> atlasMeasurements = new LinkedHashMap<>();
-
-  private final StreamHelper streamHelper = new StreamHelper();
 
   /** Create a new instance. */
   @Inject
@@ -148,39 +127,26 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.configRefreshFrequency = config.configRefreshFrequency();
     this.evalUri = URI.create(config.evalUri());
 
-    this.connectTimeout = (int) config.connectTimeout().toMillis();
-    this.readTimeout = (int) config.readTimeout().toMillis();
     this.batchSize = config.batchSize();
     this.numThreads = config.numThreads();
     this.commonTags = new TreeMap<>(config.commonTags());
 
-    this.fixTagString = createReplacementFunction(config.validTagCharacters());
-    SimpleModule module = new SimpleModule()
-        .addSerializer(Measurement.class, new MeasurementSerializer(fixTagString));
-    this.jsonMapper = new ObjectMapper(new JsonFactory()).registerModule(module);
-    this.smileMapper = new ObjectMapper(new SmileFactory()).registerModule(module);
+    this.fixTagString = JsonUtils.createReplacementFunction(config.validTagCharacters());
 
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
-    this.validationHelper = new ValidationHelper(logger, jsonMapper, debugRegistry);
 
     this.rollupPolicy = config.rollupPolicy();
+    this.publisher = config.publisher();
 
-    this.client = client != null ? client : HttpClient.create(debugRegistry);
-
-    this.subManager = new SubscriptionManager(jsonMapper, this.client, clock, config);
+    this.subManager = new SubscriptionManager(
+        new ObjectMapper(),
+        client != null ? client : HttpClient.create(debugRegistry),
+        clock,
+        config);
     this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
 
     if (config.autoStart()) {
       start();
-    }
-  }
-
-  private Function<String, String> createReplacementFunction(String pattern) {
-    if (pattern == null) {
-      return Function.identity();
-    } else {
-      AsciiSet set = AsciiSet.fromPattern(pattern);
-      return s -> set.replaceNonMembers(s, '_');
     }
   }
 
@@ -191,18 +157,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     if (scheduler == null) {
       logger.info("common tags: {}", commonTags);
 
-      // Thread pool for encoding the requests and sending
-      ThreadFactory factory = new ThreadFactory() {
-        private final AtomicInteger next = new AtomicInteger();
-
-        @Override public Thread newThread(Runnable r) {
-          final String name = "spectator-atlas-publish-" + next.getAndIncrement();
-          final Thread t = new Thread(r, name);
-          t.setDaemon(true);
-          return t;
-        }
-      };
-      senderPool = Executors.newFixedThreadPool(numThreads, factory);
+      publisher.init();
 
       // Setup main collection for publishing to Atlas
       Scheduler.Options options = new Scheduler.Options()
@@ -265,10 +220,11 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       logger.warn("failed to flush data to Atlas", e);
     }
 
-    // Shutdown pool used for sending metrics
-    if (senderPool != null) {
-      senderPool.shutdown();
-      senderPool = null;
+    // Shutdown publisher used for sending metrics
+    try {
+      publisher.close();
+    } catch (Exception e) {
+      logger.debug("failed to cleanly shutdown publisher");
     }
   }
 
@@ -291,54 +247,17 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return debugRegistry.timer(PUBLISH_TASK_TIMER, "id", id);
   }
 
-  /**
-   * Optimization to reduce the allocations for encoding the payload. The ByteArrayOutputStreams
-   * get reused to avoid the allocations for growing the buffer. In addition, the data is gzip
-   * compressed inline rather than relying on the HTTP client to do it. This reduces the buffer
-   * sizes and avoids another copy step and allocation for creating the compressed buffer.
-   */
-  private byte[] encodeBatch(PublishPayload payload) throws IOException {
-    ByteArrayOutputStream baos = streamHelper.getOrCreateStream();
-    try (GzipLevelOutputStream out = new GzipLevelOutputStream(baos)) {
-      smileMapper.writeValue(out, payload);
-    }
-    return baos.toByteArray();
-  }
-
-  private void sendBatch(RollupPolicy.Result batch) {
-    publishTaskTimer("sendBatch").record(() -> {
-      try {
-        PublishPayload p = new PublishPayload(batch.commonTags(), batch.measurements());
-        if (logger.isTraceEnabled()) {
-          logger.trace("publish payload: {}", jsonMapper.writeValueAsString(p));
-        }
-        HttpResponse res = client.post(uri)
-            .withConnectTimeout(connectTimeout)
-            .withReadTimeout(readTimeout)
-            .addHeader("Content-Encoding", "gzip")
-            .withContent("application/x-jackson-smile", encodeBatch(p))
-            .send();
-        Instant date = res.dateHeader("Date");
-        recordClockSkew((date == null) ? 0L : date.toEpochMilli());
-        validationHelper.recordResults(batch.measurements().size(), res);
-      } catch (Exception e) {
-        logger.warn("failed to send metrics (uri={})", uri, e);
-        validationHelper.incrementDroppedHttp(batch.measurements().size());
-      }
-    });
-  }
-
   void sendToAtlas() {
     publishTaskTimer("sendToAtlas").record(() -> {
-      if (config.enabled() && senderPool != null) {
+      if (config.enabled()) {
         long t = lastCompletedTimestamp(stepMillis);
         if (t > lastFlushTimestamp) {
           pollMeters(t);
           logger.debug("sending to Atlas for time: {}", t);
           List<CompletableFuture<Void>> futures = new ArrayList<>();
           for (RollupPolicy.Result batch : getBatches(t)) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(
-                () -> sendBatch(batch), senderPool);
+            PublishPayload p = new PublishPayload(batch.commonTags(), batch.measurements());
+            CompletableFuture<Void> future = publisher.publish(p);
             futures.add(future);
           }
           CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -353,24 +272,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // Clean up any expired meters, do this regardless of whether it is enabled to avoid
       // a memory leak
       removeExpiredMeters();
-    });
-  }
-
-  private void sendBatchLWC(EvalPayload batch) {
-    publishTaskTimer("sendBatchLWC").record(() -> {
-      try {
-        String json = jsonMapper.writeValueAsString(batch);
-        if (logger.isTraceEnabled()) {
-          logger.trace("eval payload: {}", json);
-        }
-        client.post(evalUri)
-            .withConnectTimeout(connectTimeout)
-            .withReadTimeout(readTimeout)
-            .withJsonContent(json)
-            .send();
-      } catch (Exception e) {
-        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
-      }
     });
   }
 
@@ -393,8 +294,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           if (!payload.getMetrics().isEmpty()) {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (EvalPayload batch : payload.toBatches(batchSize)) {
-              CompletableFuture<Void> future = CompletableFuture.runAsync(
-                  () -> sendBatchLWC(batch), senderPool);
+              CompletableFuture<Void> future = publisher.publish(batch);
               futures.add(future);
             }
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
