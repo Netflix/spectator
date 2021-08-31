@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public class DefaultIdTest {
@@ -302,6 +303,72 @@ public class DefaultIdTest {
     // Name is required and is ignored for filtering
     DefaultId id = new DefaultId("foo", ArrayTagSet.create("a", "1", "b", "2"));
     Assertions.assertEquals(id, id.filterByKey(k -> !k.equals("name")));
+  }
+
+  @Test
+  public void compareToEquals() {
+    Id a = Id.create("foo").withTags("a", "1", "b", "2");
+    Id b = Id.create("foo").withTags("a", "1", "b", "2");
+    Assertions.assertEquals(0, a.compareTo(b));
+  }
+
+  @Test
+  public void compareToDifferentName() {
+    Id a = Id.create("foo").withTags("a", "1", "b", "2");
+    Id b = Id.create("bar").withTags("a", "1", "b", "2");
+    Assertions.assertEquals(4, a.compareTo(b));
+    Assertions.assertEquals(-4, b.compareTo(a));
+  }
+
+  @Test
+  public void compareToDifferentKey() {
+    Id a = Id.create("foo").withTags("a", "1", "b", "2");
+    Id b = Id.create("foo").withTags("a", "1", "d", "2");
+    Assertions.assertEquals(-2, a.compareTo(b));
+    Assertions.assertEquals(2, b.compareTo(a));
+  }
+
+  @Test
+  public void compareToDifferentValue() {
+    Id a = Id.create("foo").withTags("a", "1", "b", "3");
+    Id b = Id.create("foo").withTags("a", "1", "b", "2");
+    Assertions.assertEquals(1, a.compareTo(b));
+    Assertions.assertEquals(-1, b.compareTo(a));
+  }
+
+  private String randomString(Random r) {
+    return "" + ((char) (r.nextInt(26) + 'a'));
+  }
+
+  private Id randomId(Random r) {
+    Id id = Id.create(randomString(r));
+    int n = r.nextInt(10);
+    for (int i = 0; i < n; ++i) {
+      id = id.withTag(randomString(r), randomString(r));
+    }
+    return id;
+  }
+
+  private int normalize(int cmp) {
+    // Force comparison values to be: -1, 0, or 1.
+    return Integer.compare(cmp, 0);
+  }
+
+  @Test
+  public void compareToMatchesToStringOrder() {
+    Random r = new Random(42);
+    for (int i = 0; i < 10_000; ++i) {
+      Id id1 = randomId(r);
+      Id id2 = randomId(r);
+
+      Assertions.assertEquals(0, id1.compareTo(id1));
+      Assertions.assertEquals(0, id2.compareTo(id2));
+
+      int strCmp = normalize(id1.toString().compareTo(id2.toString()));
+      int idCmp = normalize(id1.compareTo(id2));
+
+      Assertions.assertEquals(strCmp, idCmp);
+    }
   }
 
   @Test

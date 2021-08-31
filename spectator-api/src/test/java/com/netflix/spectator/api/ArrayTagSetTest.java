@@ -467,4 +467,40 @@ public class ArrayTagSetTest {
       t2.join();
     }
   }
+
+  @Test
+  public void compareToEmpty() {
+    Assertions.assertEquals(0, ArrayTagSet.EMPTY.compareTo(ArrayTagSet.EMPTY));
+  }
+
+  @Test
+  public void compareToEquals() {
+    ArrayTagSet a = ArrayTagSet.create("a", "1", "b", "2", "c", "3");
+    ArrayTagSet b = ArrayTagSet.create("a", "1", "b", "2", "c", "3");
+    Assertions.assertEquals(0, a.compareTo(b));
+  }
+
+  @Test
+  public void compareToDifferentKeys() {
+    ArrayTagSet a = ArrayTagSet.create("a", "1", "b", "2", "c", "3");
+    ArrayTagSet b = ArrayTagSet.create("a", "1", "d", "2", "c", "3");
+    Assertions.assertEquals(-1, a.compareTo(b));
+    Assertions.assertEquals(1, b.compareTo(a));
+  }
+
+  @Test
+  public void compareToDifferentValues() {
+    ArrayTagSet a = ArrayTagSet.create("a", "1", "b", "3", "c", "3");
+    ArrayTagSet b = ArrayTagSet.create("a", "1", "b", "2", "c", "3");
+    Assertions.assertEquals(1, a.compareTo(b));
+    Assertions.assertEquals(-1, b.compareTo(a));
+  }
+
+  @Test
+  public void compareToDifferentSizes() {
+    ArrayTagSet a = ArrayTagSet.create("a", "1", "b", "2", "c", "3");
+    ArrayTagSet b = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4");
+    Assertions.assertEquals(-1, a.compareTo(b));
+    Assertions.assertEquals(1, b.compareTo(a));
+  }
 }
