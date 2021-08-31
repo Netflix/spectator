@@ -26,6 +26,7 @@ import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.atlas.impl.DefaultPublisher;
 import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.http.HttpClient;
@@ -249,7 +250,7 @@ public class AtlasRegistryTest {
     List<PublishPayload> payloads = new ArrayList<>();
     HttpClient client = uri -> new TestRequestBuilder(uri, payloads);
     ManualClock c = new ManualClock();
-    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(), client);
+    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(client), client);
     r.start();
 
     c.setWallTime(58_000);
@@ -269,7 +270,7 @@ public class AtlasRegistryTest {
     List<PublishPayload> payloads = new ArrayList<>();
     HttpClient client = uri -> new TestRequestBuilder(uri, payloads);
     ManualClock c = new ManualClock();
-    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(), client);
+    AtlasRegistry r = new AtlasRegistry(c, new TestConfig(client), client);
     r.start();
 
     c.setWallTime(58_000);
@@ -294,6 +295,12 @@ public class AtlasRegistryTest {
 
   private static class TestConfig implements AtlasConfig {
 
+    private final HttpClient client;
+
+    TestConfig(HttpClient client) {
+      this.client = client;
+    }
+
     @Override public String get(String k) {
       return null;
     }
@@ -305,6 +312,10 @@ public class AtlasRegistryTest {
     @Override public long initialPollingDelay(Clock clock, long stepSize) {
       // use a long delay to avoid actually sending unless triggered by tests
       return 6_000_000;
+    }
+
+    @Override public Publisher publisher() {
+      return new DefaultPublisher(this, client);
     }
   }
 
