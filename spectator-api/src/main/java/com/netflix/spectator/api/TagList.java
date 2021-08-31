@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  * Base type for a collection of tags. Allows access to the keys and values without allocations
  * if the underlying implementation does not store them as Tag objects.
  */
-public interface TagList extends Iterable<Tag> {
+public interface TagList extends Iterable<Tag>, Comparable<TagList> {
 
   /** Return the key at the specified index. */
   String getKey(int i);
@@ -86,5 +86,28 @@ public interface TagList extends Iterable<Tag> {
         return getTag(i++);
       }
     };
+  }
+
+  @Override default int compareTo(TagList other) {
+    if (this == other) {
+      return 0;
+    } else {
+      int n = Math.min(size(), other.size());
+      for (int i = 0; i < n; ++i) {
+        // Check key
+        int cmp = getKey(i).compareTo(other.getKey(i));
+        if (cmp != 0)
+          return cmp;
+
+        // Check value
+        cmp = getValue(i).compareTo(other.getValue(i));
+        if (cmp != 0)
+          return cmp;
+      }
+
+      // If they are equal up to this point, then remaining items in one list should
+      // put it after the other
+      return size() - other.size();
+    }
   }
 }
