@@ -76,14 +76,21 @@ public class Evaluator {
     for (Subscription sub : subs) {
       boolean alreadyPresent = removed.remove(sub);
       if (!alreadyPresent) {
-        int multiple = (int) (sub.getFrequency() / step);
-        SubscriptionEntry entry = new SubscriptionEntry(sub, multiple);
-        subscriptions.put(sub, entry);
-        Query q = sub.dataExpr().query().simplify(commonTags);
-        LOGGER.trace("query pre-eval: original [{}], simplified [{}], common tags {}",
-            sub.dataExpr().query(), q, commonTags);
-        index.add(q, entry);
-        LOGGER.debug("subscription added: {}", sub);
+        try {
+          // Parse and simplify query
+          Query q = sub.dataExpr().query().simplify(commonTags);
+          LOGGER.trace("query pre-eval: original [{}], simplified [{}], common tags {}",
+              sub.dataExpr().query(), q, commonTags);
+
+          // Update index
+          int multiple = (int) (sub.getFrequency() / step);
+          SubscriptionEntry entry = new SubscriptionEntry(sub, multiple);
+          subscriptions.put(sub, entry);
+          index.add(q, entry);
+          LOGGER.debug("subscription added: {}", sub);
+        } catch (Exception e) {
+          LOGGER.warn("failed to add subscription: {}", sub, e);
+        }
       } else {
         LOGGER.trace("subscription already present: {}", sub);
       }
@@ -188,6 +195,11 @@ public class Evaluator {
   public EvalPayload eval(long t, List<Measurement> ms) {
     ms.forEach(this::update);
     return eval(t);
+  }
+
+  /** Used for tests to ensure expected number of subcriptions in the evaluator. */
+  int subscriptionCount() {
+    return subscriptions.size();
   }
 
   private static class SubscriptionEntry {

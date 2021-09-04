@@ -40,6 +40,6 @@ public class SubscriptionTest {
   @Test
   public void dataExprInvalid() {
     Assertions.assertThrows(IllegalArgumentException.class,
-        () -> new Subscription().withExpression(":true"));
+        () -> new Subscription().withExpression(":true").dataExpr());
   }
 }

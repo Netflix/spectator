@@ -179,4 +179,14 @@ public class EvaluatorTest {
     EvalPayload expected = new EvalPayload(0L, metrics);
     Assertions.assertEquals(expected, payload);
   }
+
+  @Test
+  public void badExpression() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", "invalid expression,:foo"));
+
+    Evaluator evaluator = newEvaluator("app", "www");
+    evaluator.sync(subs);
+    Assertions.assertEquals(0, evaluator.subscriptionCount());
+  }
 }
