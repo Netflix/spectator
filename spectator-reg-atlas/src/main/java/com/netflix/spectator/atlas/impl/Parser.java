@@ -149,12 +149,12 @@ public final class Parser {
         case ":re":
           v = (String) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.Regex(k, v));
+          pushRegex(stack, new Query.Regex(k, v));
           break;
         case ":reic":
           v = (String) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.Regex(k, v, true, ":reic"));
+          pushRegex(stack, new Query.Regex(k, v, true, ":reic"));
           break;
         case ":all":
           q = (Query) stack.pop();
@@ -204,5 +204,13 @@ public final class Parser {
       throw new IllegalArgumentException("too many items remaining on stack: " + stack);
     }
     return obj;
+  }
+
+  private static void pushRegex(Deque<Object> stack, Query.Regex q) {
+    if (q.alwaysMatches()) {
+      stack.push(new Query.Has(q.key()));
+    } else {
+      stack.push(q);
+    }
   }
 }

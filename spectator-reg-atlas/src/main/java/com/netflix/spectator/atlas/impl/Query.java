@@ -805,6 +805,11 @@ public interface Query {
       return value != null && pattern.matches(value);
     }
 
+    /** Returns true if the pattern will always match. */
+    public boolean alwaysMatches() {
+      return pattern.alwaysMatches();
+    }
+
     @Override public String toString() {
       return k + "," + v + "," + name;
     }
