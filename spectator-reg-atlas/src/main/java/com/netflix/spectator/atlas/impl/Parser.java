@@ -18,8 +18,8 @@ package com.netflix.spectator.atlas.impl;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
-import java.util.TreeSet;
 
 /**
  * Parses an Atlas data or query expression.
@@ -124,7 +124,7 @@ public final class Parser {
         case ":in":
           tmp = (List<String>) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.In(k, new TreeSet<>(tmp)));
+          stack.push(new Query.In(k, new HashSet<>(tmp)));
           break;
         case ":lt":
           v = (String) stack.pop();
