@@ -92,7 +92,7 @@ subprojects {
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = DuplicatesStrategy.WARN
-    includes = ['.*PathSanitizerBench.*']
+    includes = ['.*Caching.*']
   }
 
   checkstyle {

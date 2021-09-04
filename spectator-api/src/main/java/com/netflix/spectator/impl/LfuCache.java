@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ package com.netflix.spectator.impl;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Registry;
 
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -42,6 +44,10 @@ class LfuCache<K, V> implements Cache<K, V> {
   private final int baseSize;
   private final int compactionSize;
 
+  // Collections that are reused for each compaction operation
+  private final PriorityQueue<Snapshot<K>> mostFrequentItems;
+  private final List<K> mostFrequentKeys;
+
   private final AtomicInteger size;
 
   private final Lock lock;
@@ -53,22 +59,40 @@ class LfuCache<K, V> implements Cache<K, V> {
     data = new ConcurrentHashMap<>();
     this.baseSize = baseSize;
     this.compactionSize = compactionSize;
+    this.mostFrequentItems = new PriorityQueue<>(baseSize, SNAPSHOT_COMPARATOR);
+    this.mostFrequentKeys = new ArrayList<>(baseSize);
     this.size = new AtomicInteger();
     this.lock = new ReentrantLock();
   }
 
+  private void addIfMoreFrequent(K key, Pair<V> value) {
+    long count = value.snapshot();
+    if (mostFrequentItems.size() >= baseSize) {
+      // Queue is full, add new item if it is more frequently used than the least
+      // frequent item currently in the queue.
+      Snapshot<K> leastFrequentItem = mostFrequentItems.peek();
+      if (leastFrequentItem != null && count > leastFrequentItem.count()) {
+        mostFrequentItems.poll();
+        mostFrequentItems.offer(new Snapshot<>(key, count));
+      }
+    } else {
+      mostFrequentItems.offer(new Snapshot<>(key, count));
+    }
+  }
+
   private void compact() {
-    Map<K, Snapshot<V>> snapshot = new HashMap<>();
-    data.forEach((k, v) -> snapshot.put(k, v.snapshot()));
+    int numToRemove = size.get() - baseSize;
+    if (numToRemove > 0) {
+      mostFrequentItems.clear();
+      mostFrequentKeys.clear();
 
-    snapshot.entrySet()
-        .stream()
-        .sorted(Comparator.comparingLong(e -> e.getValue().negativeCount()))
-        .skip(baseSize)
-        .forEach(e -> data.remove(e.getKey()));
+      data.forEach(this::addIfMoreFrequent);
+      mostFrequentItems.forEach(s -> mostFrequentKeys.add(s.get()));
+      data.keySet().retainAll(mostFrequentKeys);
 
-    size.set(data.size());
-    compactions.increment();
+      size.set(data.size());
+      compactions.increment();
+    }
   }
 
   private void tryCompact() {
@@ -139,8 +163,8 @@ class LfuCache<K, V> implements Cache<K, V> {
   }
 
   private static class Pair<V> {
-    private V value;
-    private LongAdder count;
+    private final V value;
+    private final LongAdder count;
 
     Pair(V value) {
       this.value = value;
@@ -156,26 +180,30 @@ class LfuCache<K, V> implements Cache<K, V> {
       return value;
     }
 
-    Snapshot<V> snapshot() {
-      return new Snapshot<>(value, count.sum());
+    long snapshot() {
+      return count.sum();
     }
   }
 
-  private static class Snapshot<V> {
-    private V value;
-    private long count;
+  private static class Snapshot<K> {
+    private final K key;
+    private final long count;
 
-    Snapshot(V value, long count) {
-      this.value = value;
+    Snapshot(K key, long count) {
+      this.key = key;
       this.count = count;
     }
 
-    V get() {
-      return value;
+    K get() {
+      return key;
     }
 
-    long negativeCount() {
-      return -count;
+    long count() {
+      return count;
     }
   }
+
+  // Comparator for finding the least frequent items with the priority queue
+  private static final Comparator<Snapshot<?>> SNAPSHOT_COMPARATOR =
+      (a, b) -> Long.compare(b.count(), a.count());
 }
