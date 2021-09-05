@@ -69,7 +69,9 @@ final class RepeatMatcher implements Matcher, Serializable {
 
   @Override
   public String toString() {
-    return repeated + "{" + min + "," + max + "}";
+    return min == max
+        ? repeated + "{" + min + "}"
+        : repeated + "{" + min + "," + max + "}";
   }
 
   @Override
