@@ -36,6 +36,9 @@ public final class Subscription {
 
   /** Return the data expression for this subscription. */
   public DataExpr dataExpr() {
+    if (expr == null) {
+      expr = Parser.parseDataExpr(expression);
+    }
     return expr;
   }
 
@@ -63,7 +66,7 @@ public final class Subscription {
   /** Set the expression for the subscription. */
   public void setExpression(String expression) {
     this.expression = expression;
-    this.expr = Parser.parseDataExpr(expression);
+    this.expr = null;
   }
 
   /** Set the expression for the subscription. */
