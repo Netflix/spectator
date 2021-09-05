@@ -179,6 +179,12 @@ public class QueryTest {
   }
 
   @Test
+  public void reQueryAlwaysMatches() {
+    Query q = Parser.parseQuery("name,.*,:re");
+    Assertions.assertEquals(Parser.parseQuery("name,:has"), q);
+  }
+
+  @Test
   public void reicQuery() {
     Query q = parse("name,foO,:reic");
     Assertions.assertTrue(q.matches(registry.createId("fOo")));
