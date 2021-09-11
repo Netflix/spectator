@@ -398,7 +398,6 @@ public class AtlasRegistryTest {
           payloads.add(decodePayload(parser));
         }
       } catch (IOException e) {
-        e.printStackTrace();
         throw new UncheckedIOException(e);
       }
       return this;
