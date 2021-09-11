@@ -48,6 +48,12 @@ public class PathSanitizerTest {
   }
 
   @Test
+  public void requestParameters() {
+    String path = "/api/v1/foo?user=bob&version=1";
+    Assertions.assertEquals("_api_v1_foo", sanitize(path));
+  }
+
+  @Test
   public void decimalNumbers() {
     String path = "/api/v1/foo/1234567890/123";
     Assertions.assertEquals("_api_v1_foo_-_-", sanitize(path));
@@ -239,5 +245,19 @@ public class PathSanitizerTest {
           suppressed < 0.05 * total,
           "suppressed " + suppressed + " of " + total);
     }
+  }
+
+  @Test
+  public void restrictsLength() {
+    // Alternate consonants and vowels to avoid consonant run check
+    String pattern = "abecidofug";
+    StringBuilder path = new StringBuilder().append('/');
+    for (int i = 0; i < 100; ++i) {
+      path.append(pattern);
+    }
+    Assertions.assertEquals("_-", PathSanitizer.sanitize(path.toString()));
+
+    path.append("/foo/bar/baz");
+    Assertions.assertEquals("_-_foo_bar_baz", PathSanitizer.sanitize(path.toString()));
   }
 }
