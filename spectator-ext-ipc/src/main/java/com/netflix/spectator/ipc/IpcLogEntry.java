@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.histogram.PercentileTimer;
+import com.netflix.spectator.ipc.http.PathSanitizer;
 import org.slf4j.Marker;
 import org.slf4j.event.Level;
 
@@ -636,7 +637,9 @@ public final class IpcLogEntry {
   }
 
   private String getEndpoint() {
-    return (endpoint == null) ? "unknown" : endpoint;
+    return (endpoint == null)
+        ? (path == null) ? "unknown" : PathSanitizer.sanitize(path)
+        : endpoint;
   }
 
   private boolean isClient() {
@@ -832,7 +835,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
-        .addField("endpoint", endpoint)
+        .addField("endpoint", getEndpoint())
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
         .addField("clientZone", clientZone)
