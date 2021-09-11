@@ -82,16 +82,18 @@ public final class IpcLogEntry {
 
   private String uri;
   private String path;
+  private long requestContentLength = -1L;
+  private long responseContentLength = -1L;
 
-  private List<Header> requestHeaders = new ArrayList<>();
-  private List<Header> responseHeaders = new ArrayList<>();
+  private final List<Header> requestHeaders = new ArrayList<>();
+  private final List<Header> responseHeaders = new ArrayList<>();
 
   private String remoteAddress;
   private int remotePort;
 
-  private Map<String, String> additionalTags = new HashMap<>();
+  private final Map<String, String> additionalTags = new HashMap<>();
 
-  private StringBuilder builder = new StringBuilder();
+  private final StringBuilder builder = new StringBuilder();
 
   private Id inflightId;
 
@@ -497,6 +499,26 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Set the length for the request entity if it is known at the time of logging. If the size
+   * is not known, e.g. a chunked HTTP entity, then a negative value can be used and the length
+   * will be ignored.
+   */
+  public IpcLogEntry withRequestContentLength(long length) {
+    this.requestContentLength = length;
+    return this;
+  }
+
+  /**
+   * Set the length for the request entity if it is known at the time of logging. If the size
+   * is not known, e.g. a chunked HTTP entity, then a negative value can be used and the length
+   * will be ignored.
+   */
+  public IpcLogEntry withResponseContentLength(long length) {
+    this.responseContentLength = length;
+    return this;
+  }
+
+  /**
    * Add a request header value. For special headers in {@link NetflixHeader} it will
    * automatically fill in the more specific fields based on the header values.
    */
@@ -686,6 +708,18 @@ public final class IpcLogEntry {
         .withId(clientCall)
         .build()
         .record(getLatency(), TimeUnit.NANOSECONDS);
+
+    if (responseContentLength >= 0L) {
+      Id clientCallSizeInbound = registry.createId(
+          IpcMetric.clientCallSizeInbound.metricName(), clientCall.tags());
+      registry.distributionSummary(clientCallSizeInbound).record(responseContentLength);
+    }
+
+    if (requestContentLength >= 0L) {
+      Id clientCallSizeOutbound = registry.createId(
+          IpcMetric.clientCallSizeOutbound.metricName(), clientCall.tags());
+      registry.distributionSummary(clientCallSizeOutbound).record(requestContentLength);
+    }
   }
 
   private void recordServerMetrics() {
@@ -694,6 +728,18 @@ public final class IpcLogEntry {
         .withId(serverCall)
         .build()
         .record(getLatency(), TimeUnit.NANOSECONDS);
+
+    if (requestContentLength >= 0L) {
+      Id serverCallSizeInbound = registry.createId(
+          IpcMetric.serverCallSizeInbound.metricName(), serverCall.tags());
+      registry.distributionSummary(serverCallSizeInbound).record(requestContentLength);
+    }
+
+    if (responseContentLength >= 0L) {
+      Id serverCallSizeOutbound = registry.createId(
+          IpcMetric.clientCallSizeOutbound.metricName(), serverCall.tags());
+      registry.distributionSummary(serverCallSizeOutbound).record(responseContentLength);
+    }
   }
 
   /**
@@ -811,6 +857,8 @@ public final class IpcLogEntry {
         .addField("exceptionMessage", getExceptionMessage())
         .addField("httpMethod", httpMethod)
         .addField("httpStatus", httpStatus)
+        .addField("requestContentLength", requestContentLength)
+        .addField("responseContentLength", responseContentLength)
         .addField("requestHeaders", requestHeaders)
         .addField("responseHeaders", responseHeaders)
         .addField("additionalTags", additionalTags)
@@ -854,6 +902,8 @@ public final class IpcLogEntry {
     httpStatus = -1;
     uri = null;
     path = null;
+    requestContentLength = -1L;
+    responseContentLength = -1L;
     requestHeaders.clear();
     responseHeaders.clear();
     remoteAddress = null;
@@ -885,6 +935,8 @@ public final class IpcLogEntry {
     serverAsg = null;
     serverNode = null;
     httpStatus = -1;
+    requestContentLength = -1L;
+    responseContentLength = -1L;
     requestHeaders.clear();
     responseHeaders.clear();
     remoteAddress = null;

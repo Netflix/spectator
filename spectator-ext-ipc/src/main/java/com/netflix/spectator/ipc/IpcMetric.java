@@ -89,6 +89,110 @@ public enum IpcMetric {
   ),
 
   /**
+   * Distribution summary recording the size of the entity for client responses.
+   */
+  clientCallSizeInbound(
+      "ipc.client.call.size.inbound",
+      EnumSet.of(
+          IpcTagKey.attempt,
+          IpcTagKey.attemptFinal,
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.serverApp,
+          IpcTagKey.serverCluster,
+          IpcTagKey.serverAsg,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
+
+  /**
+   * Distribution summary recording the size of the entity for client requests.
+   */
+  clientCallSizeOutbound(
+      "ipc.client.call.size.outbound",
+      EnumSet.of(
+          IpcTagKey.attempt,
+          IpcTagKey.attemptFinal,
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.serverApp,
+          IpcTagKey.serverCluster,
+          IpcTagKey.serverAsg,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
+
+  /**
+   * Distribution summary recording the size of the entity for server requests.
+   */
+  serverCallSizeInbound(
+      "ipc.server.call.size.inbound",
+      EnumSet.of(
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.clientApp,
+          IpcTagKey.clientCluster,
+          IpcTagKey.clientAsg,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
+
+  /**
+   * Distribution summary recording the size of the entity for server responses.
+   */
+  serverCallSizeOutbound(
+      "ipc.server.call.size.outbound",
+      EnumSet.of(
+          IpcTagKey.owner,
+          IpcTagKey.result,
+          IpcTagKey.status
+      ),
+      EnumSet.of(
+          IpcTagKey.endpoint,
+          IpcTagKey.clientApp,
+          IpcTagKey.clientCluster,
+          IpcTagKey.clientAsg,
+          IpcTagKey.failureInjected,
+          IpcTagKey.httpMethod,
+          IpcTagKey.httpStatus,
+          IpcTagKey.id,
+          IpcTagKey.protocol,
+          IpcTagKey.statusDetail,
+          IpcTagKey.vip
+      )
+  ),
+
+  /**
    * Number of outbound requests that are currently in flight.
    */
   clientInflight(
@@ -220,6 +324,10 @@ public enum IpcMetric {
   public static void validate(Registry registry, boolean strict) {
     validateIpcMeter(registry, IpcMetric.clientCall, Timer.class, strict);
     validateIpcMeter(registry, IpcMetric.serverCall, Timer.class, strict);
+    validateIpcMeter(registry, IpcMetric.clientCallSizeInbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, IpcMetric.clientCallSizeOutbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, IpcMetric.serverCallSizeInbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, IpcMetric.serverCallSizeOutbound, DistributionSummary.class, strict);
     validateIpcMeter(registry, IpcMetric.clientInflight, DistributionSummary.class, strict);
     validateIpcMeter(registry, IpcMetric.serverInflight, DistributionSummary.class, strict);
   }
