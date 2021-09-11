@@ -26,7 +26,8 @@ public final class Spectator {
   /**
    * Returns the global registry.
    *
-   * @deprecated Use injection or {@link #globalRegistry()} instead.
+   * @deprecated Use injection or {@link #globalRegistry()} instead. This method is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   public static ExtendedRegistry registry() {

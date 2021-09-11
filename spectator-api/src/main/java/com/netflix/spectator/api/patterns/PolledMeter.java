@@ -422,7 +422,7 @@ public final class PolledMeter {
    * method. Use the builder created with {@link #using(Registry)} instead.
    *
    * @deprecated This method only exists to allow for backwards compatibility and should
-   * be considered an internal detail. Scheduled to be removed in 2.0.
+   * be considered an internal detail. This method is scheduled for removal in a future release.
    */
   @Deprecated
   public static void monitorMeter(Registry registry, Meter meter) {

@@ -25,7 +25,7 @@ import com.netflix.spectator.api.Spectator;
  * Counters that get incremented based on the bucket for recorded values.
  *
  * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
- * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
+ * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
 public final class BucketCounter implements DistributionSummary {

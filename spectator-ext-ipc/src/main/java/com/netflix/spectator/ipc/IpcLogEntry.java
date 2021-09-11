@@ -227,8 +227,8 @@ public final class IpcLogEntry {
    * Set the high level cause for a request failure. See {@link IpcErrorGroup} for more
    * information.
    *
-   * @deprecated Use {@link #withStatus(IpcStatus)} instead. This method will be removed in
-   * January of 2019.
+   * @deprecated Use {@link #withStatus(IpcStatus)} instead. This method is scheduled for
+   * removal in a future release.
    */
   @Deprecated
   public IpcLogEntry withErrorGroup(IpcErrorGroup errorGroup) {
@@ -240,8 +240,8 @@ public final class IpcLogEntry {
    * is preferable to use {@link #withException(Throwable)} or {@link #withHttpStatus(int)}
    * instead of calling this directly.
    *
-   * @deprecated Use {@link #withStatusDetail(String)} instead. This method will be removed in
-   * January of 2019.
+   * @deprecated Use {@link #withStatusDetail(String)} instead. This method is scheduled for
+   * removal in a future release.
    */
   @Deprecated
   public IpcLogEntry withErrorReason(String errorReason) {
