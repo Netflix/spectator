@@ -24,6 +24,8 @@ import com.netflix.spectator.impl.AsciiSet;
  */
 public final class PathSanitizer {
 
+  private static final int MAX_LENGTH = 120;
+
   private static final AsciiSet ALPHA_CHARS = AsciiSet.fromPattern("a-zA-Z");
 
   private static final AsciiSet DIGITS = AsciiSet.fromPattern("0-9");
@@ -35,11 +37,15 @@ public final class PathSanitizer {
 
   /** Returns a sanitized path string for use as an endpoint tag value. */
   public static String sanitize(String path) {
-    return sanitizeSegments(removeMatixParameters(path));
+    return sanitizeSegments(removeParameters(path));
   }
 
-  private static String removeMatixParameters(String path) {
-    int i = path.indexOf(';');
+  private static String removeParameters(String path) {
+    return removeParameters(removeParameters(path, '?'), ';');
+  }
+
+  private static String removeParameters(String path, char c) {
+    int i = path.indexOf(c);
     return i > 0 ? path.substring(0, i) : path;
   }
 
@@ -62,9 +68,9 @@ public final class PathSanitizer {
 
       if (!segment.isEmpty()) {
         if (shouldSuppressSegment(segment))
-          builder.append("_-");
+          appendIfSpaceAvailable(builder, "-");
         else
-          builder.append('_').append(segment);
+          appendIfSpaceAvailable(builder, segment);
         ++segmentsAdded;
       }
     }
@@ -101,5 +107,14 @@ public final class PathSanitizer {
     }
 
     return !version && n == 2;
+  }
+
+  private static void appendIfSpaceAvailable(StringBuilder builder, String segment) {
+    int spaceRemaining = MAX_LENGTH - builder.length() - 1;
+    if (segment.length() < spaceRemaining) {
+      builder.append('_').append(segment);
+    } else if (spaceRemaining >= 2) {
+      builder.append("_-");
+    }
   }
 }
