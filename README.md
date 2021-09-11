@@ -1,3 +1,6 @@
+[![Snapshot](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/snapshot.yml/badge.svg)](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/snapshot.yml)
+[![Release](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/release.yml/badge.svg)](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/release.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/com.netflix.spectator/spectator-api.svg)](https://search.maven.org/artifact/com.netflix.spectator/spectator-api)
 
 # Spectator
 
@@ -12,7 +15,6 @@ Simple library for instrumenting code to record dimensional time series.
 
 * [Wiki](http://netflix.github.io/spectator/en/latest/)
 * [Javadoc](https://www.javadoc.io/doc/com.netflix.spectator/spectator-api/)
-* [![Build Status](https://travis-ci.org/Netflix/spectator.svg)](https://travis-ci.org/Netflix/spectator/builds)
 
 ## Dependencies
 
@@ -20,7 +22,7 @@ To instrument your code you need to depend on the api library. This provides the
 for you to code against and build test cases. The only dependency is slf4j.
 
 ```
-com.netflix.spectator:spectator-api:0.128.0
+com.netflix.spectator:spectator-api:${version}
 ```
 
 If running at Netflix with the standard platform, see the
