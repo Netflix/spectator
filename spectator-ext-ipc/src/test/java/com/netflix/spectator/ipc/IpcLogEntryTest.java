@@ -620,6 +620,26 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void requestContentLength() {
+    long expected = 42L;
+    Number actual = (Number) entry
+        .withRequestContentLength(expected)
+        .convert(this::toMap)
+        .get("requestContentLength");
+    Assertions.assertEquals(expected, actual.longValue());
+  }
+
+  @Test
+  public void responseContentLength() {
+    long expected = 42L;
+    Number actual = (Number) entry
+        .withResponseContentLength(expected)
+        .convert(this::toMap)
+        .get("responseContentLength");
+    Assertions.assertEquals(expected, actual.longValue());
+  }
+
+  @Test
   public void inflightRequests() {
     Registry registry = new DefaultRegistry();
     DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
@@ -670,6 +690,8 @@ public class IpcLogEntryTest {
         .markStart()
         .markEnd()
         .withHttpStatus(200)
+        .withRequestContentLength(123)
+        .withResponseContentLength(456)
         .log();
 
     IpcMetric.validate(registry, true);
