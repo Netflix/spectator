@@ -40,7 +40,7 @@ import java.net.URI;
  * </pre>
  *
  * @deprecated Moved to {@code com.netflix.spectator.ipc.http} package. This is now just a
- * thin wrapper to preserve compatibility.
+ * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
 public interface HttpClient {

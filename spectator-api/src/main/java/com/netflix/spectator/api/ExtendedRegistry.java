@@ -25,7 +25,8 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @deprecated This class was used prior to java 8 for adding extension methods to the registry
  * without breaking all classes implementing the interface. The extension methods have now been
- * moved to Registry interface as default methods.
+ * moved to Registry interface as default methods. This class is scheduled for removal in a future
+ * release.
  */
 @Deprecated
 public final class ExtendedRegistry implements Registry {

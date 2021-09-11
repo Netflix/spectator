@@ -21,7 +21,7 @@ import java.util.function.LongFunction;
  * Function to map an amount passed to a distribution summary or timer to a bucket.
  *
  * @deprecated Moved to {@code com.netflix.spectator.api.histogram} package. This is now just a
- * thin wrapper to preserve compatibility. Scheduled for removal after in Q3 2016.
+ * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
 public interface BucketFunction extends LongFunction<String> {

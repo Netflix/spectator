@@ -52,8 +52,8 @@ public enum IpcTagKey {
    * services and client implementations. See {@link IpcErrorGroup} for permitted
    * values.
    *
-   * @deprecated Use {@link #status} instead. This value will be removed in
-   * January of 2019.
+   * @deprecated Use {@link #status} instead. This value is scheduled for removal
+   * in a future release.
    */
   @Deprecated
   errorGroup("ipc.error.group"),
@@ -61,8 +61,8 @@ public enum IpcTagKey {
   /**
    * Implementation specific error code.
    *
-   * @deprecated Use {@link #statusDetail} instead. This value will be removed in
-   * January of 2019.
+   * @deprecated Use {@link #statusDetail} instead. This value is scheduled for removal
+   * in a future release.
    */
   @Deprecated
   errorReason("ipc.error.reason"),
@@ -107,7 +107,8 @@ public enum IpcTagKey {
    * Region where the client is located.
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   clientRegion("ipc.client.region"),
@@ -116,7 +117,8 @@ public enum IpcTagKey {
    * Availability zone where the client is located.
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   clientZone("ipc.client.zone"),
@@ -140,7 +142,8 @@ public enum IpcTagKey {
    * Region where the server is located.
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   serverRegion("ipc.server.region"),
@@ -149,7 +152,8 @@ public enum IpcTagKey {
    * Availability zone where the server is located.
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   serverZone("ipc.server.zone"),
@@ -174,7 +178,8 @@ public enum IpcTagKey {
    * cause a metrics explosion. If there is any doubt, then do not enable it.</b>
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   serverNode("ipc.server.node"),
@@ -183,7 +188,8 @@ public enum IpcTagKey {
    * The port number connected to on the server.
    *
    * @deprecated Not included in the spec. Common IPC tags should bias towards consistency
-   * across integrations and only use tags that are part of the spec.
+   * across integrations and only use tags that are part of the spec. This value is scheduled
+   * for removal in a future release.
    */
   @Deprecated
   serverPort("ipc.server.port"),

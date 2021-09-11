@@ -23,8 +23,8 @@ import com.netflix.spectator.api.Tag;
  * services and client implementations. An implementation specific failure can be
  * specified with {@link IpcTagKey#errorReason}.
  *
- * @deprecated Use {@link IpcStatus} instead. This value will be removed in
- * January of 2019.
+ * @deprecated Use {@link IpcStatus} instead. This class is scheduled for removal
+ * in a future release.
  */
 @Deprecated
 public enum IpcErrorGroup implements Tag {

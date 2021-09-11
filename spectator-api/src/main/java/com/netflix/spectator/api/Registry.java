@@ -74,7 +74,8 @@ public interface Registry extends Iterable<Meter> {
    * @see #collectionSize(Id, Collection)
    * @see #mapSize(Id, Map)
    *
-   * @deprecated Code outside of Spectator should not implement the Meter interface.
+   * @deprecated Code outside of Spectator should not implement the Meter interface. This
+   * method is scheduled for removal in a future release.
    */
   @Deprecated
   void register(Meter meter);
@@ -418,7 +419,7 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    * @deprecated
    *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
-   *     instead. Scheduled to be removed in 2.0.
+   *     instead. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default LongTaskTimer longTaskTimer(Id id) {
@@ -442,7 +443,7 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    * @deprecated
    *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
-   *     instead. Scheduled to be removed in 2.0.
+   *     instead. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default LongTaskTimer longTaskTimer(String name) {
@@ -460,7 +461,7 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    * @deprecated
    *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
-   *     instead. Scheduled to be removed in 2.0.
+   *     instead. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default LongTaskTimer longTaskTimer(String name, Iterable<Tag> tags) {
@@ -478,7 +479,7 @@ public interface Registry extends Iterable<Meter> {
    *     Timer instance with the corresponding id.
    * @deprecated
    *     Use {@link com.netflix.spectator.api.patterns.LongTaskTimer#get(Registry, Id)}
-   *     instead. Scheduled to be removed in 2.0.
+   *     instead. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default LongTaskTimer longTaskTimer(String name, String... tags) {
@@ -502,7 +503,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Number> T gauge(Id id, T number) {
@@ -526,7 +527,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Number> T gauge(String name, T number) {
@@ -552,7 +553,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Number> T gauge(String name, Iterable<Tag> tags, T number) {
@@ -577,7 +578,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T> T gauge(Id id, T obj, ToDoubleFunction<T> f) {
@@ -602,7 +603,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T> T gauge(String name, T obj, ToDoubleFunction<T> f) {
@@ -631,7 +632,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Collection<?>> T collectionSize(Id id, T collection) {
@@ -655,7 +656,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Collection<?>> T collectionSize(String name, T collection) {
@@ -684,7 +685,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Map<?, ?>> T mapSize(Id id, T collection) {
@@ -708,7 +709,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default <T extends Map<?, ?>> T mapSize(String name, T collection) {
@@ -741,7 +742,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default void methodValue(Id id, Object obj, String method) {
@@ -768,7 +769,7 @@ public interface Registry extends Iterable<Meter> {
    *     user and passive gauges that are polled in the background. Going forward
    *     the registry methods will only be used for the core types directly updated
    *     by the user. Other patterns such as {@link PolledMeter}s will be handled
-   *     separately. Scheduled to be removed in 2.0.
+   *     separately. This method is scheduled for removal in a future release.
    */
   @Deprecated
   default void methodValue(String name, Object obj, String method) {

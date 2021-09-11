@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * Response for an HTTP request made via {@link HttpRequestBuilder}.
  *
  * @deprecated Moved to {@code com.netflix.spectator.ipc.http} package. This is now just a
- * thin wrapper to preserve compatibility.
+ * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
 public class HttpResponse {
