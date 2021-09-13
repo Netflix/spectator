@@ -343,6 +343,7 @@ public class HttpRequestBuilder {
       entry.addRequestHeader(h.getKey(), h.getValue());
       con.setRequestProperty(h.getKey(), h.getValue());
     }
+    entry.withRequestContentLength(entity.length);
     configureHTTPS(con);
 
     try {
@@ -373,6 +374,7 @@ public class HttpRequestBuilder {
 
       try (InputStream in = (status >= 400) ? con.getErrorStream() : con.getInputStream()) {
         byte[] data = readAll(in);
+        entry.withResponseContentLength(data.length);
         return new HttpResponse(status, headers, data);
       }
     } catch (IOException e) {
