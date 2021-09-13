@@ -740,7 +740,7 @@ public final class IpcLogEntry {
 
     if (responseContentLength >= 0L) {
       Id serverCallSizeOutbound = registry.createId(
-          IpcMetric.clientCallSizeOutbound.metricName(), serverCall.tags());
+          IpcMetric.serverCallSizeOutbound.metricName(), serverCall.tags());
       registry.distributionSummary(serverCallSizeOutbound).record(responseContentLength);
     }
   }
