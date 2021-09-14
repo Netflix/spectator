@@ -189,42 +189,42 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * Stop the scheduler reporting Atlas data.
    */
   public void stop() {
-    // Shutdown backround tasks to collect data
-    if (scheduler != null) {
+    if (scheduler == null) {
+      logger.warn("registry stopped, but was never started");
+    } else {
+      // Shutdown background tasks to collect data
       scheduler.shutdown();
       scheduler = null;
       logger.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
-    } else {
-      logger.warn("registry stopped, but was never started");
-    }
 
-    // Flush data to Atlas
-    try {
-      // Get current time at start to avoid drift while flushing
-      OverridableClock overridableClock = (OverridableClock) clock();
-      long now = clock().wallTime();
-      overridableClock.setWallTime(now); // used set time rather than underlying clock
+      // Flush data to Atlas
+      try {
+        // Get current time at start to avoid drift while flushing
+        OverridableClock overridableClock = (OverridableClock) clock();
+        long now = clock().wallTime();
+        overridableClock.setWallTime(now); // use set time rather than underlying clock
 
-      // Data for the previous interval may not have already been written, go ahead and
-      // try to write it out
-      logger.info("flushing data for previous interval to Atlas");
-      sendToAtlas();
+        // Data for the previous interval may not have already been written, go ahead and
+        // try to write it out
+        logger.info("flushing data for previous interval to Atlas");
+        sendToAtlas();
 
-      // Move to end of next interval and ensure it gets written out
-      logger.info("flushing data for final interval to Atlas");
-      overridableClock.setWallTime(now / lwcStepMillis * lwcStepMillis + lwcStepMillis);
-      pollMeters(overridableClock.wallTime());
-      overridableClock.setWallTime(now / stepMillis * stepMillis + stepMillis);
-      sendToAtlas();
-    } catch (Exception e) {
-      logger.warn("failed to flush data to Atlas", e);
-    }
+        // Move to end of next interval and ensure it gets written out
+        logger.info("flushing data for final interval to Atlas");
+        overridableClock.setWallTime(now / lwcStepMillis * lwcStepMillis + lwcStepMillis);
+        pollMeters(overridableClock.wallTime());
+        overridableClock.setWallTime(now / stepMillis * stepMillis + stepMillis);
+        sendToAtlas();
+      } catch (Exception e) {
+        logger.warn("failed to flush data to Atlas", e);
+      }
 
-    // Shutdown publisher used for sending metrics
-    try {
-      publisher.close();
-    } catch (Exception e) {
-      logger.debug("failed to cleanly shutdown publisher");
+      // Shutdown publisher used for sending metrics
+      try {
+        publisher.close();
+      } catch (Exception e) {
+        logger.debug("failed to cleanly shutdown publisher");
+      }
     }
   }
 
