@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ final class HelperFunctions {
     m.put("PS Scavenge",          GcType.YOUNG);
     m.put("ParNew",               GcType.YOUNG);
     m.put("ZGC",                  GcType.OLD);
+    m.put("ZGC Cycles",           GcType.OLD);
+    m.put("ZGC Pauses",           GcType.OLD);
     m.put("Shenandoah Cycles",    GcType.OLD);
     m.put("Shenandoah Pauses",    GcType.OLD);
     return Collections.unmodifiableMap(m);

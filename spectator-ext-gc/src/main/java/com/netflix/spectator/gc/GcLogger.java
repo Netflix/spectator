@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2021 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,11 +233,16 @@ public final class GcLogger {
     // So far the only indicator known is that the cause will be reported as "No GC"
     // when using CMS.
     //
-    // For ZGC, the allocation stall seems to indicate that some thread or threads are
-    // blocked trying to allocate. Even though it is not a true STW pause, counting it
-    // as such seems to be less confusing.
+    // For ZGC, behavior was changed in JDK17:
+    // https://bugs.openjdk.java.net/browse/JDK-8265136
+    //
+    // For ZGC in older versions, there is no way to accurately get the amount of time
+    // in STW pauses. The allocation stall seems to indicate that some thread
+    // or threads are blocked trying to allocate. Even though it is not a true STW pause,
+    // counting it as such seems to be less confusing.
     return "No GC".equals(info.getGcCause())            // CMS
         || "Shenandoah Cycles".equals(info.getGcName()) // Shenandoah
+        || "ZGC Cycles".equals(info.getGcName())        // ZGC in jdk17+
         || ("ZGC".equals(info.getGcName()) && !"Allocation Stall".equals(info.getGcCause()));
   }
 
