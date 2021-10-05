@@ -40,6 +40,7 @@ shadowJar {
   }
   minimize()
   exclude('module-info.class')
+  exclude('META-INF/versions/**')
   exclude('META-INF/maven/com.fasterxml.jackson.*/**')
   exclude('META-INF/services/com.fasterxml.*')
   relocate('com.fasterxml.jackson', 'com.netflix.spectator.atlas.shaded.spectator-atlas.json')
