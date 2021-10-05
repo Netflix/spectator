@@ -2,7 +2,7 @@ plugins {
   id 'com.github.ben-manes.versions' version '0.39.0'
   id 'com.github.spotbugs' version '4.7.3' apply false
   id 'me.champeau.jmh' version '0.6.6'
-  id 'nebula.dependency-recommender' version '10.0.1'
+  id 'nebula.dependency-recommender' version '11.0.0'
   id 'nebula.netflixoss' version '10.3.0'
 }
 
