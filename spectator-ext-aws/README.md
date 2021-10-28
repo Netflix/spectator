@@ -44,15 +44,18 @@ tag             | description
 aWSErrorCode    | the aws specific error code
 exception       | the exception type that occurred (e.g. `IOException`)
 
-If a tag value is not available, `UNKNOWN` is used. 
+If a tag value is not available, `UNKNOWN` is used.
 
 The following request metrics are captured as counters:
 
-metric name                      | SDK metric
----------------------------------|-----------
-aws.request.bytesProcessed       | AWSRequestMetrics.Field.BytesProcessed,
-aws.request.httpClientRetryCount | AWSRequestMetrics.Field.HttpClientRetryCount,
-aws.request.requestCount         | AWSRequestMetrics.Field.RequestCount
+metric name                              | SDK metric
+-----------------------------------------|-----------
+aws.request.bytesProcessed               | AWSRequestMetrics.Field.BytesProcessed,
+aws.request.httpClientPoolAvailableCount | AWSRequestMetrics.Field.HttpClientPoolAvailableCount,
+aws.request.httpClientPoolLeasedCount    | AWSRequestMetrics.Field.HttpClientPoolLeasedCount,
+aws.request.httpClientPoolPendingCount   | AWSRequestMetrics.Field.HttpClientPoolPendingCount,
+aws.request.httpClientRetryCount         | AWSRequestMetrics.Field.HttpClientRetryCount,
+aws.request.requestCount                 | AWSRequestMetrics.Field.RequestCount
 
 The following request metrics are captured as timers:
 

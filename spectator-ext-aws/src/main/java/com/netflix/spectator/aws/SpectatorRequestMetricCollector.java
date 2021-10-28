@@ -62,6 +62,9 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static final Field[] COUNTERS = {
       Field.BytesProcessed,
+      Field.HttpClientPoolAvailableCount,
+      Field.HttpClientPoolLeasedCount,
+      Field.HttpClientPoolPendingCount,
       Field.HttpClientRetryCount,
       Field.RequestCount
   };
