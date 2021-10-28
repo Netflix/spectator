@@ -48,14 +48,11 @@ If a tag value is not available, `UNKNOWN` is used.
 
 The following request metrics are captured as counters:
 
-metric name                              | SDK metric
------------------------------------------|-----------
-aws.request.bytesProcessed               | AWSRequestMetrics.Field.BytesProcessed,
-aws.request.httpClientPoolAvailableCount | AWSRequestMetrics.Field.HttpClientPoolAvailableCount,
-aws.request.httpClientPoolLeasedCount    | AWSRequestMetrics.Field.HttpClientPoolLeasedCount,
-aws.request.httpClientPoolPendingCount   | AWSRequestMetrics.Field.HttpClientPoolPendingCount,
-aws.request.httpClientRetryCount         | AWSRequestMetrics.Field.HttpClientRetryCount,
-aws.request.requestCount                 | AWSRequestMetrics.Field.RequestCount
+metric name                      | SDK metric
+---------------------------------|-----------
+aws.request.bytesProcessed       | AWSRequestMetrics.Field.BytesProcessed,
+aws.request.httpClientRetryCount | AWSRequestMetrics.Field.HttpClientRetryCount,
+aws.request.requestCount         | AWSRequestMetrics.Field.RequestCount
 
 The following request metrics are captured as timers:
 
@@ -70,6 +67,14 @@ aws.request.RequestMarshallTime           | Field.RequestMarshallTime,
 aws.request.RequestSigningTime            | Field.RequestSigningTime,
 aws.request.responseProcessingTime        | Field.ResponseProcessingTime,
 aws.request.retryPauseTime                | Field.RetryPauseTime
+
+The following request metrics are captured as gauges:
+
+metric name                              | SDK metric
+-----------------------------------------|-----------
+aws.request.httpClientPoolAvailableCount | AWSRequestMetrics.Field.HttpClientPoolAvailableCount,
+aws.request.httpClientPoolLeasedCount    | AWSRequestMetrics.Field.HttpClientPoolLeasedCount,
+aws.request.httpClientPoolPendingCount   | AWSRequestMetrics.Field.HttpClientPoolPendingCount
 
 Any throttling exception that occurs is tracked in a timer `aws.request.throttling` with the same
 set of tags as the other metrics, and one additional tag `throttleException` containing the exception

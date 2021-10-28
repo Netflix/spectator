@@ -58,8 +58,11 @@ public class SpectatorRequestMetricCollectorTest {
     }
     String counterName = "BytesProcessed";
     String timerName = "ClientExecuteTime";
+    String gaugeName = "HttpClientPoolAvailableCount";
+
     metrics.setCounter(counterName, 12345);
     metrics.getTimingInfo().addSubMeasurement(timerName, TimingInfo.unmodifiableTimingInfo(100000L, 200000L));
+    metrics.setCounter(gaugeName, -5678);
 
     Request<?> req = new DefaultRequest(new ListMetricsRequest(), "AmazonCloudWatch");
     req.setAWSRequestMetrics(metrics);
@@ -130,7 +133,7 @@ public class SpectatorRequestMetricCollectorTest {
     List<Meter> allMetrics = new ArrayList<>();
     registry.iterator().forEachRemaining(allMetrics::add);
 
-    assertEquals(2, allMetrics.size());
+    assertEquals(3, allMetrics.size());
     Optional<Timer> expectedTimer = registry.timers().findFirst();
     assertTrue(expectedTimer.isPresent());
     Timer timer = expectedTimer.get();
@@ -140,6 +143,10 @@ public class SpectatorRequestMetricCollectorTest {
     Optional<Counter> expectedCounter = registry.counters().findFirst();
     assertTrue(expectedCounter.isPresent());
     assertEquals(12345L, expectedCounter.get().count());
+
+    Optional<Gauge> expectedGauge = registry.gauges().findFirst();
+    assertTrue(expectedGauge.isPresent());
+    assertEquals(-5678d, expectedGauge.get().value());
   }
 
   @Test

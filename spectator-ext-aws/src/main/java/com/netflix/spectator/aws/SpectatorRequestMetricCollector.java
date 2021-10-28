@@ -62,11 +62,14 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private static final Field[] COUNTERS = {
       Field.BytesProcessed,
+      Field.HttpClientRetryCount,
+      Field.RequestCount
+  };
+
+  private static final Field[] GAUGES = {
       Field.HttpClientPoolAvailableCount,
       Field.HttpClientPoolLeasedCount,
       Field.HttpClientPoolPendingCount,
-      Field.HttpClientRetryCount,
-      Field.RequestCount
   };
 
   private static final TagField[] TAGS = {
@@ -133,6 +136,11 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
             .filter(TimingInfo::isEndTimeKnown)
             .ifPresent(t -> registry.timer(metricId(timer, allTags))
                 .record(t.getEndTimeNano() - t.getStartTimeNano(), TimeUnit.NANOSECONDS));
+      }
+
+      for (Field gauge : GAUGES) {
+        Optional.ofNullable(timing.getCounter(gauge.name()))
+            .ifPresent(v -> registry.gauge(metricId(gauge, allTags)).set(v.doubleValue()));
       }
 
       notEmpty(metrics.getProperty(Field.ThrottleException)).ifPresent(throttleExceptions -> {
