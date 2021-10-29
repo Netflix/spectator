@@ -17,6 +17,7 @@ package com.netflix.spectator.aws;
 
 import com.amazonaws.Request;
 import com.amazonaws.Response;
+import com.amazonaws.handlers.HandlerContextKey;
 import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.util.AWSRequestMetrics;
 import com.amazonaws.util.AWSRequestMetrics.Field;
@@ -91,6 +92,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private final Registry registry;
   private final Map<String, String> customTags;
+  private final HandlerContextKey<String> handlerContextKey;
 
   /**
    * Constructs a new instance.
@@ -100,10 +102,29 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
   }
 
   /**
-   * Constructs a new instance. Custom tags provided by the user will be applied to every metric.
-   * Overriding built-in tags is not allowed.
+   * Constructs a new instance using the specified handler context key and no
+   * custom tags.
+   */
+  public SpectatorRequestMetricCollector(Registry registry, HandlerContextKey<String> handlerContextKey) {
+    this(registry, Collections.emptyMap(), handlerContextKey);
+  }
+
+  /**
+   * Constructs a new instance using no handler context key and custom tags.
    */
   public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags) {
+    this(registry, customTags, null);
+  }
+
+  /**
+   * Constructs a new instance using the optional handler context key. If
+   * present, and a request context has a value for this key, the key/value pair
+   * is an additional tag on every metric for that request.  Custom tags
+   * provided by the user will be applied to every metric.  Overriding built-in
+   * tags is not allowed.
+   */
+  public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags,
+                                         HandlerContextKey<String> handlerContextKey) {
     super();
     this.registry = Preconditions.checkNotNull(registry, "registry");
     Preconditions.checkNotNull(customTags, "customTags");
@@ -116,6 +137,13 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
         this.customTags.put(key, value);
       }
     });
+    this.handlerContextKey = handlerContextKey;
+    if ((this.handlerContextKey != null)
+        && ALL_DEFAULT_TAGS.contains(this.handlerContextKey.getName())) {
+      registry.propagate(new IllegalArgumentException("Invalid handler context key "
+                                                      + this.handlerContextKey.getName()
+                                                      + " - cannot override built-in tag"));
+    }
   }
 
   @Override
@@ -167,6 +195,10 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       allTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
     }
     allTags.put(TAG_REQUEST_TYPE, request.getOriginalRequest().getClass().getSimpleName());
+    String contextTagValue = request.getHandlerContext(handlerContextKey);
+    if (contextTagValue != null) {
+      allTags.put(handlerContextKey.getName(), contextTagValue);
+    }
     final boolean error = isError(metrics);
     if (error) {
       for (TagField tag : ERRORS) {

@@ -79,3 +79,37 @@ aws.request.httpClientPoolPendingCount   | AWSRequestMetrics.Field.HttpClientPoo
 Any throttling exception that occurs is tracked in a timer `aws.request.throttling` with the same
 set of tags as the other metrics, and one additional tag `throttleException` containing the exception
 that caused the throttling to occur.
+
+# Tag via handler context
+
+To help distinguish metrics from multiple clients, it's possible to specify a
+[HandlerContextKey](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/handlers/HandlerContextKey.html)
+for a SpectatorRequestMetricCollector.  When specified, the
+SpectatorRequestMetricCollector looks for a value from each request's handler
+context for the given key, and, if there's a value for that key, adds a tag to
+each metric of the form
+
+`handlerContextKey.getName()`:value
+
+One way to put information into the handler context that's the same for all
+requests from a particular client is:
+
+`````java
+class MyRequestHandler extends RequestHandler2 {
+  @Override
+  public void beforeRequest(Request<?> request) {
+    request.addHandlerContext(HandlerContextKey.OPERATION_NAME, "myValue");
+  }
+}
+`````
+and then, for an s3 client for example:
+
+`````java
+MyRequestHandler myRequestHandler = new MyRequestHandler();
+AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
+builder.setRequestHandlers(myRequestHandler);
+`````
+
+Note that a custom handler context key (e.g. new
+HandlerContextKey<String>("myContextKey") works in addition to the predefined
+ones in HandlerContextKey.

@@ -18,6 +18,7 @@ package com.netflix.spectator.aws;
 import com.amazonaws.DefaultRequest;
 import com.amazonaws.Request;
 import com.amazonaws.Response;
+import com.amazonaws.handlers.HandlerContextKey;
 import com.amazonaws.http.HttpResponse;
 import com.amazonaws.services.cloudwatch.model.ListMetricsRequest;
 import com.amazonaws.util.AWSRequestMetrics;
@@ -49,6 +50,12 @@ public class SpectatorRequestMetricCollectorTest {
   }
 
   private void execRequest(String endpoint, int status) {
+    execRequest(endpoint, status, null, null);
+  }
+
+  private void execRequest(String endpoint, int status,
+                           HandlerContextKey<String> handlerContextKey,
+                           String handlerContextValue) {
     AWSRequestMetrics metrics = new AWSRequestMetricsFullSupport();
     metrics.addProperty(AWSRequestMetrics.Field.ServiceName, "AmazonCloudWatch");
     metrics.addProperty(AWSRequestMetrics.Field.ServiceEndpoint, endpoint);
@@ -68,6 +75,9 @@ public class SpectatorRequestMetricCollectorTest {
     req.setAWSRequestMetrics(metrics);
     req.setEndpoint(URI.create(endpoint));
 
+    if ((handlerContextKey != null) && (handlerContextValue != null)) {
+      req.addHandlerContext(handlerContextKey, handlerContextValue);
+    }
     HttpResponse hr = new HttpResponse(req, new HttpPost(endpoint));
     hr.setStatusCode(status);
     Response<?> resp = new Response<>(null, new HttpResponse(req, new HttpPost(endpoint)));
@@ -174,5 +184,15 @@ public class SpectatorRequestMetricCollectorTest {
     RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
     assertThrows(IllegalArgumentException.class, () ->
         new SpectatorRequestMetricCollector(new DefaultRegistry(Clock.SYSTEM, config), customTags));
+  }
+
+  @Test
+  public void testHandlerContextKey() {
+    String contextKeyName = "myContextKey";
+    HandlerContextKey<String> handlerContextKey = new HandlerContextKey<>(contextKeyName);
+    collector = new SpectatorRequestMetricCollector(registry, handlerContextKey);
+    String handlerContextValue = "some-value";
+    execRequest("http://monitoring", 503, handlerContextKey, handlerContextValue);
+    assertEquals(set(handlerContextValue), valueSet(contextKeyName));
   }
 }
