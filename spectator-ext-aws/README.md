@@ -84,10 +84,10 @@ that caused the throttling to occur.
 
 To help distinguish metrics from multiple clients, it's possible to specify a
 [HandlerContextKey](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/handlers/HandlerContextKey.html)
-for a SpectatorRequestMetricCollector.  When specified, the
-SpectatorRequestMetricCollector looks for a value from each request's handler
-context for the given key, and, if there's a value for that key, adds a tag to
-each metric of the form
+for a SpectatorRequestMetricCollector (HandlerContextKey.OPERATION_NAME by
+default).  The SpectatorRequestMetricCollector looks for a value from each
+request's handler context for the given key, and, if there's a value for that
+key, adds a tag to each metric of the form
 
 `handlerContextKey.getName()`:value
 
