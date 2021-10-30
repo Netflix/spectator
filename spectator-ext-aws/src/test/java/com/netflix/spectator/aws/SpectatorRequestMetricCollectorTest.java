@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.stream.Collectors;
 
+import static com.netflix.spectator.aws.SpectatorRequestMetricCollector.DEFAULT_HANDLER_CONTEXT_KEY;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SpectatorRequestMetricCollectorTest {
@@ -194,5 +195,13 @@ public class SpectatorRequestMetricCollectorTest {
     String handlerContextValue = "some-value";
     execRequest("http://monitoring", 503, handlerContextKey, handlerContextValue);
     assertEquals(set(handlerContextValue), valueSet(contextKeyName));
+  }
+
+  @Test
+  public void testDefaultHandlerContextKey() {
+    collector = new SpectatorRequestMetricCollector(registry);
+    String handlerContextValue = "some-value";
+    execRequest("http://monitoring", 503, DEFAULT_HANDLER_CONTEXT_KEY, handlerContextValue);
+    assertEquals(set(handlerContextValue), valueSet(DEFAULT_HANDLER_CONTEXT_KEY.getName()));
   }
 }

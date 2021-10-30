@@ -40,6 +40,13 @@ import java.util.stream.Stream;
  */
 public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
+  /**
+   * The default handler context key.  If none is specified, and a value exists
+   * at this key in a request, that key/value pair is an additional tag on each
+   * metrics for that request.
+   */
+  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = HandlerContextKey.OPERATION_NAME;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
 
   private static final Set<String> ALL_DEFAULT_TAGS = new HashSet<>();
@@ -95,10 +102,10 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
   private final HandlerContextKey<String> handlerContextKey;
 
   /**
-   * Constructs a new instance.
+   * Constructs a new instance using no custom tags and the default handler context key.
    */
   public SpectatorRequestMetricCollector(Registry registry) {
-    this(registry, Collections.emptyMap());
+    this(registry, Collections.emptyMap(), DEFAULT_HANDLER_CONTEXT_KEY);
   }
 
   /**
@@ -110,10 +117,11 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
   }
 
   /**
-   * Constructs a new instance using no handler context key and custom tags.
+   * Constructs a new instance. Custom tags provided by the user will be applied to every metric.
+   * Overriding built-in tags is not allowed.  Uses the default handler context key.
    */
   public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags) {
-    this(registry, customTags, null);
+    this(registry, customTags, DEFAULT_HANDLER_CONTEXT_KEY);
   }
 
   /**
@@ -137,9 +145,9 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
         this.customTags.put(key, value);
       }
     });
+    Preconditions.checkNotNull(handlerContextKey, "handlerContextKey");
     this.handlerContextKey = handlerContextKey;
-    if ((this.handlerContextKey != null)
-        && ALL_DEFAULT_TAGS.contains(this.handlerContextKey.getName())) {
+    if (ALL_DEFAULT_TAGS.contains(this.handlerContextKey.getName())) {
       registry.propagate(new IllegalArgumentException("Invalid handler context key "
                                                       + this.handlerContextKey.getName()
                                                       + " - cannot override built-in tag"));
