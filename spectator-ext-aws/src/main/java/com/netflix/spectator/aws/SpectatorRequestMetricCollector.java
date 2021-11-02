@@ -17,6 +17,7 @@ package com.netflix.spectator.aws;
 
 import com.amazonaws.Request;
 import com.amazonaws.Response;
+import com.amazonaws.handlers.HandlerContextKey;
 import com.amazonaws.metrics.RequestMetricCollector;
 import com.amazonaws.util.AWSRequestMetrics;
 import com.amazonaws.util.AWSRequestMetrics.Field;
@@ -38,6 +39,13 @@ import java.util.stream.Stream;
  * A {@link RequestMetricCollector} that captures request level metrics for AWS clients.
  */
 public class SpectatorRequestMetricCollector extends RequestMetricCollector {
+
+  /**
+   * The default handler context key.  If none is specified, and a value exists
+   * at this key in a request, that key/value pair is an additional tag on each
+   * metrics for that request.
+   */
+  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = HandlerContextKey.OPERATION_NAME;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
 
@@ -66,6 +74,12 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       Field.RequestCount
   };
 
+  private static final Field[] GAUGES = {
+      Field.HttpClientPoolAvailableCount,
+      Field.HttpClientPoolLeasedCount,
+      Field.HttpClientPoolPendingCount,
+  };
+
   private static final TagField[] TAGS = {
       new TagField(Field.ServiceEndpoint, SpectatorRequestMetricCollector::getHost),
       new TagField(Field.ServiceName),
@@ -85,19 +99,40 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   private final Registry registry;
   private final Map<String, String> customTags;
+  private final HandlerContextKey<String> handlerContextKey;
 
   /**
-   * Constructs a new instance.
+   * Constructs a new instance using no custom tags and the default handler context key.
    */
   public SpectatorRequestMetricCollector(Registry registry) {
-    this(registry, Collections.emptyMap());
+    this(registry, Collections.emptyMap(), DEFAULT_HANDLER_CONTEXT_KEY);
+  }
+
+  /**
+   * Constructs a new instance using the specified handler context key and no
+   * custom tags.
+   */
+  public SpectatorRequestMetricCollector(Registry registry, HandlerContextKey<String> handlerContextKey) {
+    this(registry, Collections.emptyMap(), handlerContextKey);
   }
 
   /**
    * Constructs a new instance. Custom tags provided by the user will be applied to every metric.
-   * Overriding built-in tags is not allowed.
+   * Overriding built-in tags is not allowed.  Uses the default handler context key.
    */
   public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags) {
+    this(registry, customTags, DEFAULT_HANDLER_CONTEXT_KEY);
+  }
+
+  /**
+   * Constructs a new instance using the optional handler context key. If
+   * present, and a request context has a value for this key, the key/value pair
+   * is an additional tag on every metric for that request.  Custom tags
+   * provided by the user will be applied to every metric.  Overriding built-in
+   * tags is not allowed.
+   */
+  public SpectatorRequestMetricCollector(Registry registry, Map<String, String> customTags,
+                                         HandlerContextKey<String> handlerContextKey) {
     super();
     this.registry = Preconditions.checkNotNull(registry, "registry");
     Preconditions.checkNotNull(customTags, "customTags");
@@ -110,6 +145,13 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
         this.customTags.put(key, value);
       }
     });
+    Preconditions.checkNotNull(handlerContextKey, "handlerContextKey");
+    this.handlerContextKey = handlerContextKey;
+    if (ALL_DEFAULT_TAGS.contains(this.handlerContextKey.getName())) {
+      registry.propagate(new IllegalArgumentException("Invalid handler context key "
+                                                      + this.handlerContextKey.getName()
+                                                      + " - cannot override built-in tag"));
+    }
   }
 
   @Override
@@ -130,6 +172,17 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
             .filter(TimingInfo::isEndTimeKnown)
             .ifPresent(t -> registry.timer(metricId(timer, allTags))
                 .record(t.getEndTimeNano() - t.getStartTimeNano(), TimeUnit.NANOSECONDS));
+      }
+
+      // Only include gauge metrics if there is a value in the context handler
+      // key.  Without that, it's likely that guage metrics from multiple
+      // connection pools don't make sense.  This assumes that all gauge metrics
+      // are about connection pools.
+      if (request.getHandlerContext(handlerContextKey) != null) {
+        for (Field gauge : GAUGES) {
+          Optional.ofNullable(timing.getCounter(gauge.name()))
+            .ifPresent(v -> registry.gauge(metricId(gauge, allTags)).set(v.doubleValue()));
+        }
       }
 
       notEmpty(metrics.getProperty(Field.ThrottleException)).ifPresent(throttleExceptions -> {
@@ -156,6 +209,10 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       allTags.put(tag.getName(), tag.getValue(metrics).orElse(UNKNOWN));
     }
     allTags.put(TAG_REQUEST_TYPE, request.getOriginalRequest().getClass().getSimpleName());
+    String contextTagValue = request.getHandlerContext(handlerContextKey);
+    if (contextTagValue != null) {
+      allTags.put(handlerContextKey.getName(), contextTagValue);
+    }
     final boolean error = isError(metrics);
     if (error) {
       for (TagField tag : ERRORS) {

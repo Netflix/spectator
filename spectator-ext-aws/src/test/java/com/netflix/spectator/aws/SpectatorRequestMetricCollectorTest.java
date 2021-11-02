@@ -18,6 +18,7 @@ package com.netflix.spectator.aws;
 import com.amazonaws.DefaultRequest;
 import com.amazonaws.Request;
 import com.amazonaws.Response;
+import com.amazonaws.handlers.HandlerContextKey;
 import com.amazonaws.http.HttpResponse;
 import com.amazonaws.services.cloudwatch.model.ListMetricsRequest;
 import com.amazonaws.util.AWSRequestMetrics;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.stream.Collectors;
 
+import static com.netflix.spectator.aws.SpectatorRequestMetricCollector.DEFAULT_HANDLER_CONTEXT_KEY;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SpectatorRequestMetricCollectorTest {
@@ -49,6 +51,12 @@ public class SpectatorRequestMetricCollectorTest {
   }
 
   private void execRequest(String endpoint, int status) {
+    execRequest(endpoint, status, null, null);
+  }
+
+  private void execRequest(String endpoint, int status,
+                           HandlerContextKey<String> handlerContextKey,
+                           String handlerContextValue) {
     AWSRequestMetrics metrics = new AWSRequestMetricsFullSupport();
     metrics.addProperty(AWSRequestMetrics.Field.ServiceName, "AmazonCloudWatch");
     metrics.addProperty(AWSRequestMetrics.Field.ServiceEndpoint, endpoint);
@@ -58,13 +66,19 @@ public class SpectatorRequestMetricCollectorTest {
     }
     String counterName = "BytesProcessed";
     String timerName = "ClientExecuteTime";
+    String gaugeName = "HttpClientPoolAvailableCount";
+
     metrics.setCounter(counterName, 12345);
     metrics.getTimingInfo().addSubMeasurement(timerName, TimingInfo.unmodifiableTimingInfo(100000L, 200000L));
+    metrics.setCounter(gaugeName, -5678);
 
     Request<?> req = new DefaultRequest(new ListMetricsRequest(), "AmazonCloudWatch");
     req.setAWSRequestMetrics(metrics);
     req.setEndpoint(URI.create(endpoint));
 
+    if ((handlerContextKey != null) && (handlerContextValue != null)) {
+      req.addHandlerContext(handlerContextKey, handlerContextValue);
+    }
     HttpResponse hr = new HttpResponse(req, new HttpPost(endpoint));
     hr.setStatusCode(status);
     Response<?> resp = new Response<>(null, new HttpResponse(req, new HttpPost(endpoint)));
@@ -130,7 +144,10 @@ public class SpectatorRequestMetricCollectorTest {
     List<Meter> allMetrics = new ArrayList<>();
     registry.iterator().forEachRemaining(allMetrics::add);
 
+    // We didn't provide a handler context value, so don't expect any gauges.
+    // That leaves 2 metrics.
     assertEquals(2, allMetrics.size());
+
     Optional<Timer> expectedTimer = registry.timers().findFirst();
     assertTrue(expectedTimer.isPresent());
     Timer timer = expectedTimer.get();
@@ -140,6 +157,10 @@ public class SpectatorRequestMetricCollectorTest {
     Optional<Counter> expectedCounter = registry.counters().findFirst();
     assertTrue(expectedCounter.isPresent());
     assertEquals(12345L, expectedCounter.get().count());
+
+    // Again, don't expect any gauges.
+    Optional<Gauge> expectedGauge = registry.gauges().findFirst();
+    assertFalse(expectedGauge.isPresent());
   }
 
   @Test
@@ -167,5 +188,29 @@ public class SpectatorRequestMetricCollectorTest {
     RegistryConfig config = k -> "propagateWarnings".equals(k) ? "true" : null;
     assertThrows(IllegalArgumentException.class, () ->
         new SpectatorRequestMetricCollector(new DefaultRegistry(Clock.SYSTEM, config), customTags));
+  }
+
+  @Test
+  public void testHandlerContextKey() {
+    String contextKeyName = "myContextKey";
+    HandlerContextKey<String> handlerContextKey = new HandlerContextKey<>(contextKeyName);
+    collector = new SpectatorRequestMetricCollector(registry, handlerContextKey);
+    String handlerContextValue = "some-value";
+    execRequest("http://monitoring", 503, handlerContextKey, handlerContextValue);
+    assertEquals(set(handlerContextValue), valueSet(contextKeyName));
+  }
+
+  @Test
+  public void testDefaultHandlerContextKey() {
+    collector = new SpectatorRequestMetricCollector(registry);
+    String handlerContextValue = "some-value";
+    execRequest("http://monitoring", 503, DEFAULT_HANDLER_CONTEXT_KEY, handlerContextValue);
+    assertEquals(set(handlerContextValue), valueSet(DEFAULT_HANDLER_CONTEXT_KEY.getName()));
+
+    // With a value in the handler context key, make sure there is a gauge
+    // metric.
+    Optional<Gauge> expectedGauge = registry.gauges().findFirst();
+    assertTrue(expectedGauge.isPresent());
+    assertEquals(-5678d, expectedGauge.get().value());
   }
 }
