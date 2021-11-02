@@ -144,7 +144,10 @@ public class SpectatorRequestMetricCollectorTest {
     List<Meter> allMetrics = new ArrayList<>();
     registry.iterator().forEachRemaining(allMetrics::add);
 
-    assertEquals(3, allMetrics.size());
+    // We didn't provide a handler context value, so don't expect any gauges.
+    // That leaves 2 metrics.
+    assertEquals(2, allMetrics.size());
+
     Optional<Timer> expectedTimer = registry.timers().findFirst();
     assertTrue(expectedTimer.isPresent());
     Timer timer = expectedTimer.get();
@@ -155,9 +158,9 @@ public class SpectatorRequestMetricCollectorTest {
     assertTrue(expectedCounter.isPresent());
     assertEquals(12345L, expectedCounter.get().count());
 
+    // Again, don't expect any gauges.
     Optional<Gauge> expectedGauge = registry.gauges().findFirst();
-    assertTrue(expectedGauge.isPresent());
-    assertEquals(-5678d, expectedGauge.get().value());
+    assertFalse(expectedGauge.isPresent());
   }
 
   @Test
@@ -203,5 +206,11 @@ public class SpectatorRequestMetricCollectorTest {
     String handlerContextValue = "some-value";
     execRequest("http://monitoring", 503, DEFAULT_HANDLER_CONTEXT_KEY, handlerContextValue);
     assertEquals(set(handlerContextValue), valueSet(DEFAULT_HANDLER_CONTEXT_KEY.getName()));
+
+    // With a value in the handler context key, make sure there is a gauge
+    // metric.
+    Optional<Gauge> expectedGauge = registry.gauges().findFirst();
+    assertTrue(expectedGauge.isPresent());
+    assertEquals(-5678d, expectedGauge.get().value());
   }
 }

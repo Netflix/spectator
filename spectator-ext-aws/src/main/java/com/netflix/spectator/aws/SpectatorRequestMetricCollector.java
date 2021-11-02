@@ -174,9 +174,15 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
                 .record(t.getEndTimeNano() - t.getStartTimeNano(), TimeUnit.NANOSECONDS));
       }
 
-      for (Field gauge : GAUGES) {
-        Optional.ofNullable(timing.getCounter(gauge.name()))
+      // Only include gauge metrics if there is a value in the context handler
+      // key.  Without that, it's likely that guage metrics from multiple
+      // connection pools don't make sense.  This assumes that all gauge metrics
+      // are about connection pools.
+      if (request.getHandlerContext(handlerContextKey) != null) {
+        for (Field gauge : GAUGES) {
+          Optional.ofNullable(timing.getCounter(gauge.name()))
             .ifPresent(v -> registry.gauge(metricId(gauge, allTags)).set(v.doubleValue()));
+        }
       }
 
       notEmpty(metrics.getProperty(Field.ThrottleException)).ifPresent(throttleExceptions -> {

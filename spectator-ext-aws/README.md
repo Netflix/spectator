@@ -68,7 +68,9 @@ aws.request.RequestSigningTime            | Field.RequestSigningTime,
 aws.request.responseProcessingTime        | Field.ResponseProcessingTime,
 aws.request.retryPauseTime                | Field.RetryPauseTime
 
-The following request metrics are captured as gauges:
+The following request metrics are captured as gauges, only when the handler
+context has a value for the relevant handler context key (see
+[below](#tag-via-handler-context)).
 
 metric name                              | SDK metric
 -----------------------------------------|-----------
