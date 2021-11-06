@@ -31,7 +31,7 @@ static boolean shouldBeShaded(String name) {
 }
 
 shadowJar {
-  classifier = null
+  archiveClassifier.set('')
   configurations = [project.configurations.runtimeClasspath]
   dependencies {
     exclude(dependency {
@@ -66,7 +66,7 @@ afterEvaluate {
 }
 
 
-// Sanity check the shadow jar to ensure something hasn't creeped in that is
+// Sanity check the shadow jar to ensure something hasn't crept in that is
 // not properly relocated.
 task checkShadowJar {
   doLast {
