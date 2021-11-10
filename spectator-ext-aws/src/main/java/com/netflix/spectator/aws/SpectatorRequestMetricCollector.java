@@ -45,7 +45,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
    * at this key in a request, that key/value pair is an additional tag on each
    * metrics for that request.
    */
-  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = HandlerContextKey.OPERATION_NAME;
+  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = new HandlerContextKey("ClientIdKey");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
 
@@ -175,7 +175,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
       }
 
       // Only include gauge metrics if there is a value in the context handler
-      // key.  Without that, it's likely that guage metrics from multiple
+      // key.  Without that, it's likely that gauge metrics from multiple
       // connection pools don't make sense.  This assumes that all gauge metrics
       // are about connection pools.
       if (request.getHandlerContext(handlerContextKey) != null) {

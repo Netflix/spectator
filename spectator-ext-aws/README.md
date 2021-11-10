@@ -86,10 +86,10 @@ that caused the throttling to occur.
 
 To help distinguish metrics from multiple clients, it's possible to specify a
 [HandlerContextKey](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/handlers/HandlerContextKey.html)
-for a SpectatorRequestMetricCollector (HandlerContextKey.OPERATION_NAME by
-default).  The SpectatorRequestMetricCollector looks for a value from each
-request's handler context for the given key, and, if there's a value for that
-key, adds a tag to each metric of the form
+for a SpectatorRequestMetricCollector ("ClientIdKey" by default).  The
+SpectatorRequestMetricCollector looks for a value from each request's handler
+context for the given key, and, if there's a value for that key, adds a tag to
+each metric of the form
 
 `handlerContextKey.getName()`:value
 
@@ -100,7 +100,7 @@ requests from a particular client is:
 class MyRequestHandler extends RequestHandler2 {
   @Override
   public void beforeRequest(Request<?> request) {
-    request.addHandlerContext(HandlerContextKey.OPERATION_NAME, "myValue");
+    request.addHandlerContext(SpectatorRequestMetricCollector.DEFAULT_HANDLER_CONTEXT_KEY, "myValue");
   }
 }
 `````
@@ -112,6 +112,6 @@ AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
 builder.setRequestHandlers(myRequestHandler);
 `````
 
-Note that a custom handler context key (e.g. new
-HandlerContextKey<String>("myContextKey") works in addition to the predefined
-ones in HandlerContextKey.
+Note that it's possible to use a predefined handler context key
+(e.g. HandlerContextKey.OPERATION_NAME), but the aws sdk may assign a value to
+it outside what a custom request handler does.
