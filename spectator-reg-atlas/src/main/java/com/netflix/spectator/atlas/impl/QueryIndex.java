@@ -396,8 +396,11 @@ public final class QueryIndex<T> {
               otherChecksCache.put(v, tmp);
             }
           } else {
-            for (QueryIndex<T> idx : otherMatches) {
-              idx.forEachMatch(tags, i + 1, consumer);
+            // Enhanced for loop typically results in iterator being allocated. Using
+            // size/get avoids the allocation and has better throughput.
+            int n = otherMatches.size();
+            for (int p = 0; p < n; ++p) {
+              otherMatches.get(p).forEachMatch(tags, i + 1, consumer);
             }
           }
         } else if (cmp > 0) {
