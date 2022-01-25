@@ -1,8 +1,0 @@
-/* Avoid showing first header, i.e., the page title in the sidebar.
- * See:
- *
- * https://github.com/mkdocs/mkdocs/issues/318#issuecomment-98520139
- */
-li.toctree-l3:first-child {
-  display: none;
-}
