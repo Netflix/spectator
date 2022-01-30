@@ -12,6 +12,8 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: Gradle wrapper validation
+        uses: gradle/wrapper-validation-action@v1
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@v2
         with:
@@ -20,9 +22,3 @@ jobs:
           cache: 'gradle'
       - name: Build
         run: ./gradlew build
-  validation:
-    name: "Gradle Validation"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: gradle/wrapper-validation-action@v1
