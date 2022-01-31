@@ -13,7 +13,7 @@ Simple library for instrumenting code to record dimensional time series.
 
 ## Documentation
 
-* [Wiki](http://netflix.github.io/spectator/en/latest/)
+* [Wiki](https://netflix.github.io/atlas-docs/spectator/)
 * [Javadoc](https://www.javadoc.io/doc/com.netflix.spectator/spectator-api/)
 
 ## Dependencies
