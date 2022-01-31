@@ -51,8 +51,9 @@ class AtlasCounter extends AtlasMeter implements Counter {
 
   @Override public void add(double amount) {
     if (Double.isFinite(amount) && amount > 0.0) {
-      value.getCurrent().addAndGet(amount);
-      updateLastModTime();
+      long now = clock.wallTime();
+      value.getCurrent(now).addAndGet(amount);
+      updateLastModTime(now);
     }
   }
 

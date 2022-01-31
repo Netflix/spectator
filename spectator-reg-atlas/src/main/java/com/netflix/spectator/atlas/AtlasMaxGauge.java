@@ -56,8 +56,9 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
   }
 
   @Override public void set(double v) {
-    value.getCurrent().max(v);
-    updateLastModTime();
+    long now = clock.wallTime();
+    value.getCurrent(now).max(v);
+    updateLastModTime(now);
   }
 
   @Override public double value() {

@@ -100,7 +100,7 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
       totalOfSquares.getCurrent(now).addAndGet((double) amount * amount);
       updateMax(max.getCurrent(now), amount);
     }
-    updateLastModTime();
+    updateLastModTime(now);
   }
 
   private void updateMax(AtomicLong maxValue, long v) {

@@ -103,7 +103,7 @@ class AtlasTimer extends AtlasMeter implements Timer {
       totalOfSquares.getCurrent(now).addAndGet((double) nanos * nanos);
       updateMax(max.getCurrent(now), nanos);
     }
-    updateLastModTime();
+    updateLastModTime(now);
   }
 
   private void updateMax(AtomicLong maxValue, long v) {

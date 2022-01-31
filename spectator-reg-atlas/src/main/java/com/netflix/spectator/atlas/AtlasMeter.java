@@ -50,8 +50,8 @@ abstract class AtlasMeter implements Meter {
    * Updates the last updated timestamp for the meter to indicate it is active and should
    * not be considered expired.
    */
-  void updateLastModTime() {
-    lastUpdated = clock.wallTime();
+  void updateLastModTime(long now) {
+    lastUpdated = now;
   }
 
   @Override public Id id() {
