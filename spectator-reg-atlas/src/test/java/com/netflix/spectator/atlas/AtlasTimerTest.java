@@ -244,6 +244,18 @@ public class AtlasTimerTest {
   }
 
   @Test
+  public void recordBatchPollsClockOnce() {
+    long[] amounts = new long[10000];
+    Arrays.fill(amounts, 1L);
+
+    long countPollsBefore = clock.countPolled();
+    dist.record(amounts, amounts.length, TimeUnit.NANOSECONDS);
+    long actualPolls = clock.countPolled() - countPollsBefore;
+
+    Assertions.assertEquals(1, actualPolls);
+  }
+
+  @Test
   public void recordRunnable() {
     dist.record(() -> clock.setMonotonicTime(clock.monotonicTime() + 2));
     clock.setWallTime(step + 1);

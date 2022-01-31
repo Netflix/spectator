@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.atlas;
 
+import java.util.Arrays;
+
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
@@ -162,6 +164,18 @@ public class AtlasDistributionSummaryTest {
 
     clock.setWallTime(step + 1);
     checkValue(10, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchPollsClockOnce() {
+    long[] amounts = new long[10000];
+    Arrays.fill(amounts, 1L);
+
+    long countPollsBefore = clock.countPolled();
+    dist.record(amounts, amounts.length);
+    long actualPolls = clock.countPolled() - countPollsBefore;
+
+    Assertions.assertEquals(1, actualPolls);
   }
 
   @Test

@@ -25,6 +25,7 @@ public class ManualClock implements Clock {
 
   private final AtomicLong wall;
   private final AtomicLong monotonic;
+  private final AtomicLong countPolled;
 
   /** Create a new instance. */
   public ManualClock() {
@@ -42,14 +43,21 @@ public class ManualClock implements Clock {
   public ManualClock(long wallInit, long monotonicInit) {
     wall = new AtomicLong(wallInit);
     monotonic = new AtomicLong(monotonicInit);
+    countPolled = new AtomicLong(0);
   }
 
   @Override public long wallTime() {
+    countPolled.incrementAndGet();
     return wall.get();
   }
 
   @Override public long monotonicTime() {
+    countPolled.incrementAndGet();
     return monotonic.get();
+  }
+
+  public long countPolled() {
+    return countPolled.get();
   }
 
   /** Set the wall time to the value {@code t}. */
