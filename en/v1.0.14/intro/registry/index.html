@@ -1,0 +1,1036 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="canonical" href="http://netflix.github.io/spectator/intro/registry/">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-6.2.8">
+    
+    
+      
+        <title>Registry - Spectator Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.cb6bc1d0.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#registry" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-header-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            Spectator Docs
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Registry
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Spectator Docs
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
+      
+      <label class="md-nav__link" for="nav-2">
+        Getting Started
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="1">
+        <label class="md-nav__title" for="nav-2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Registry
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Registry
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-an-implementation" class="md-nav__link">
+    Choosing an Implementation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-ids" class="md-nav__link">
+    Working With Ids
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-measurements" class="md-nav__link">
+    Collecting Measurements
+  </a>
+  
+    <nav class="md-nav" aria-label="Collecting Measurements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#active" class="md-nav__link">
+    Active
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#passive" class="md-nav__link">
+    Passive
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-registry" class="md-nav__link">
+    Global Registry
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2" >
+      
+      <label class="md-nav__link" for="nav-2-2">
+        Meter Types
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Meter Types" data-md-level="2">
+        <label class="md-nav__title" for="nav-2-2">
+          <span class="md-nav__icon md-icon"></span>
+          Meter Types
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../counter/" class="md-nav__link">
+        Counters
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timer/" class="md-nav__link">
+        Timers
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gauge/" class="md-nav__link">
+        Gauges
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dist-summary/" class="md-nav__link">
+        Distribution Summaries
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clock/" class="md-nav__link">
+        Clock
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conventions/" class="md-nav__link">
+        Naming Conventions
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        Testing
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netflix/" class="md-nav__link">
+        Netflix Integration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../servo-comparison/" class="md-nav__link">
+        Servo Comparison
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3" >
+      
+      <label class="md-nav__link" for="nav-3">
+        Extensions
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Extensions" data-md-level="1">
+        <label class="md-nav__title" for="nav-3">
+          <span class="md-nav__icon md-icon"></span>
+          Extensions
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/ipc/" class="md-nav__link">
+        IPC
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3-2" type="checkbox" id="nav-3-2" >
+      
+      <label class="md-nav__link" for="nav-3-2">
+        JVM Stats
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="JVM Stats" data-md-level="2">
+        <label class="md-nav__title" for="nav-3-2">
+          <span class="md-nav__icon md-icon"></span>
+          JVM Stats
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-buffer-pools/" class="md-nav__link">
+        Buffer Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-gc/" class="md-nav__link">
+        Garbage Collection
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-gc-causes/" class="md-nav__link">
+        GC Causes
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-memory-pools/" class="md-nav__link">
+        Memory Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/thread-pools/" class="md-nav__link">
+        Thread Pools
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/log4j2/" class="md-nav__link">
+        Log4j2 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/log4j1/" class="md-nav__link">
+        Log4j1 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/placeholders/" class="md-nav__link">
+        Placeholders
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" >
+      
+      <label class="md-nav__link" for="nav-4">
+        Registries
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Registries" data-md-level="1">
+        <label class="md-nav__title" for="nav-4">
+          <span class="md-nav__icon md-icon"></span>
+          Registries
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/metrics3/" class="md-nav__link">
+        Metrics3
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/servo/" class="md-nav__link">
+        Servo
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#choosing-an-implementation" class="md-nav__link">
+    Choosing an Implementation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-ids" class="md-nav__link">
+    Working With Ids
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-measurements" class="md-nav__link">
+    Collecting Measurements
+  </a>
+  
+    <nav class="md-nav" aria-label="Collecting Measurements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#active" class="md-nav__link">
+    Active
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#passive" class="md-nav__link">
+    Passive
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-registry" class="md-nav__link">
+    Global Registry
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/Netflix/spectator/edit/master/docs/intro/registry.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Docs have been moved to the <a href="https://netflix.github.io/atlas-docs/">atlas-docs</a> site. This page is no longer
+maintained.</p>
+</div>
+<h1 id="registry">Registry<a class="headerlink" href="#registry" title="Permanent link">&para;</a></h1>
+<p>There are a few basic concepts you need to learn to use Spectator.
+The <a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/Registry.html">registry</a>
+is the main class for managing a set of meters. A meter is a class for collecting a set of
+measurements about your application.</p>
+<h2 id="choosing-an-implementation">Choosing an Implementation<a class="headerlink" href="#choosing-an-implementation" title="Permanent link">&para;</a></h2>
+<p>The core spectator library, <code>spectator-api</code>, comes with the following registry implementations:</p>
+<table>
+   <thead>
+     <th>Class</th>
+     <th>Dependency</th>
+     <th>Description</th>
+   </thead>
+   <tbody>
+     <tr>
+       <td>
+       [DefaultRegistry](http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/DefaultRegistry.html)
+       </td>
+       <td>spectator-api</td>
+       <td>
+       Updates local counters, frequently used with [unit tests](testing.md).
+       </td>
+     </tr>
+     <tr>
+       <td>
+       [NoopRegistry](http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/NoopRegistry.html)
+       </td>
+       <td>spectator-api</td>
+       <td>
+       Does nothing, tries to make operations as cheap as possible. This implementation is
+       typically used to help understand the overhead being created due to instrumentation.
+       It can also be useful in testing to help ensure that no side effects were introduced
+       where the instrumentation is now needed in order for the application for function
+       properly.
+       </td>
+     </tr>
+     <tr>
+       <td>
+       [ServoRegistry](http://netflix.github.io/spectator/en/latest/javadoc/spectator-reg-servo/com/netflix/spectator/servo/ServoRegistry.html)
+       </td>
+       <td>[spectator-reg-servo](../registry/servo.md)</td>
+       <td>
+       Map to [servo library](https://github.com/Netflix/servo). ServoRegistry is deprecated;
+       consider use of another implementation.
+       </td>
+     </tr>
+     <tr>
+       <td>
+       [MetricsRegistry](http://netflix.github.io/spectator/en/latest/javadoc/spectator-reg-metrics3/com/netflix/spectator/metrics3/MetricsRegistry.html)
+       </td>
+       <td>[spectator-reg-metrics3](../registry/metrics3.md)</td>
+       <td>
+       Map to [metrics3 library](http://metrics.dropwizard.io/3.1.0/). This implementation
+       is typically used for reporting to local files, JMX, or other backends like Graphite.
+       Note that it uses a hierarchical naming scheme rather than the dimensional naming
+       used by Spectator, so the names will get flattened when mapped to this registry.
+       </td>
+     </tr>
+   </tbody>
+ </table>
+
+<p>It is recommended for libraries to write code against the
+<a href="http://netflix.github.io/spectator/en/latest/javadoc/spectator-api/com/netflix/spectator/api/Registry.html">Registry</a>
+interface and allow the implementation to get injected by the user of the library. The
+simplest way is to accept the registry via the constructor, for example:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HttpServer</span> <span class="p">{</span>
+  <span class="kd">public</span> <span class="nf">HttpServer</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// use registry to collect measurements</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The user of the class can then provide the implementation:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Registry</span> <span class="n">registry</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DefaultRegistry</span><span class="p">();</span>
+<span class="n">HttpServer</span> <span class="n">server</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HttpServer</span><span class="p">(</span><span class="n">registry</span><span class="p">);</span>
+</code></pre></div>
+
+<p>More complete examples can be found on the <a href="../testing/">testing page</a> or in the
+<a href="https://github.com/brharrington/spectator-examples">spectator-examples repo</a>.</p>
+<h2 id="working-with-ids">Working With Ids<a class="headerlink" href="#working-with-ids" title="Permanent link">&para;</a></h2>
+<p>Spectator is primarily intended for collecting data for dimensional time series
+backends like <a href="https://github.com/Netflix/atlas">Atlas</a>. The ids used for looking
+up a meter in the registry consist of a name and set of tags. Ids will be consumed
+many times by users after the data has been reported so they should be chosen with
+some care and thought about how they will get used. See the <a href="../conventions/">conventions page</a>
+for some general guidelines.</p>
+<p>Ids are created via the registry, for example:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Id</span> <span class="n">id</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;server.requestCount&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+<p>The ids are immutable so they can be freely passed around and used in a concurrent
+context. Tags can be added when an id is created:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Id</span> <span class="n">id</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;server.requestCount&quot;</span><span class="p">,</span> <span class="s">&quot;status&quot;</span><span class="p">,</span> <span class="s">&quot;2xx&quot;</span><span class="p">,</span> <span class="s">&quot;method&quot;</span><span class="p">,</span> <span class="s">&quot;GET&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+<p>Or by using <code>withTag</code> and <code>withTags</code> on an existing id:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">HttpServer</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Id</span> <span class="n">baseId</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">HttpServer</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">baseId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;server.requestCount&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">handleRequestComplete</span><span class="p">(</span><span class="n">HttpRequest</span> <span class="n">req</span><span class="p">,</span> <span class="n">HttpResponse</span> <span class="n">res</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Remember Id is immutable, withTags will return a copy with the</span>
+    <span class="c1">// the additional metadata</span>
+    <span class="n">Id</span> <span class="n">reqId</span> <span class="o">=</span> <span class="n">baseId</span><span class="p">.</span><span class="na">withTags</span><span class="p">(</span>
+      <span class="s">&quot;status&quot;</span><span class="p">,</span> <span class="n">res</span><span class="p">.</span><span class="na">getStatus</span><span class="p">(),</span>
+      <span class="s">&quot;method&quot;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="na">getMethod</span><span class="p">().</span><span class="na">name</span><span class="p">());</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="n">reqId</span><span class="p">).</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">handleRequestError</span><span class="p">(</span><span class="n">HttpRequest</span> <span class="n">req</span><span class="p">,</span> <span class="n">Throwable</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Can also be added individually using `withTag`. However, it is better</span>
+    <span class="c1">// for performance to batch modifications using `withTags`.</span>
+    <span class="n">Id</span> <span class="n">reqId</span> <span class="o">=</span> <span class="n">baseId</span>
+      <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;error&quot;</span><span class="p">,</span>  <span class="n">t</span><span class="p">.</span><span class="na">getClass</span><span class="p">().</span><span class="na">getSimpleName</span><span class="p">())</span>
+      <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;method&quot;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="na">getMethod</span><span class="p">().</span><span class="na">name</span><span class="p">());</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="n">reqId</span><span class="p">).</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="collecting-measurements">Collecting Measurements<a class="headerlink" href="#collecting-measurements" title="Permanent link">&para;</a></h2>
+<p>Once you have an id, the registry can be used to get an instance of a meter to
+record a measurement. Meters can roughly be categorized in two groups:</p>
+<h3 id="active">Active<a class="headerlink" href="#active" title="Permanent link">&para;</a></h3>
+<p>Active meters are ones that are called directly when some event occurs. There are
+three basic types supported:</p>
+<ul>
+<li><a href="../counter/">Counters</a>: measures how often something is occuring. This will be
+  reported to backend systems as a rate per second. For example, number of requests
+  processed by web server.</li>
+<li><a href="../timer/">Timers</a>: measures how long something took. For example, latency of
+  requests processed by a web server.</li>
+<li><a href="../dist-summary/">Distribution Summaries</a>: measures the size of something. For
+  example, entity sizes for requests processed by a web server.</li>
+</ul>
+<h3 id="passive">Passive<a class="headerlink" href="#passive" title="Permanent link">&para;</a></h3>
+<p>Passive meters are ones where the registry just has a reference to get the value
+when needed. For example, the number of current connections on a web server or
+the number threads that are currently in use. These will be <a href="../gauge/">gauges</a>.</p>
+<h2 id="global-registry">Global Registry<a class="headerlink" href="#global-registry" title="Permanent link">&para;</a></h2>
+<p>There are some use-cases where injecting the registry is not possible or is too
+cumbersome. The main example from the core spectator libraries is the
+<a href="../../ext/log4j2/">log4j appender</a>. The global registry is useful there because
+logging is often initialized before any other systems and Spectator itself uses
+logging via the slf4j api which is quite likely being bound to log4j when that
+the appender is being used. By using the global registry the logging initialization
+can proceed before the spectator initialization in the application. Though any
+measurements taken before a registry instance has been added will be lost.</p>
+<p>The global registry is accessed using:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Registry</span> <span class="n">registry</span> <span class="o">=</span> <span class="n">Spectator</span><span class="p">.</span><span class="na">globalRegistry</span><span class="p">();</span>
+</code></pre></div>
+
+<p>By default it will not record anything. For a specific registry instance you can
+choose to configure it to work with the global registry by calling <code>add</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kt">void</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">Registry</span> <span class="n">registry</span> <span class="o">=</span> <span class="c1">// Choose an appropriate implementation</span>
+
+  <span class="c1">// Add it to the global registry so it will receive</span>
+  <span class="c1">// any activity on the global registry</span>
+  <span class="n">Spectator</span><span class="p">.</span><span class="na">globalRegistry</span><span class="p">().</span><span class="na">add</span><span class="p">(</span><span class="n">registry</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Any measurements taken while no registries are added to the global instance will
+be lost. If multiple registries are added, all will recieve updates made to the global
+registry.</p>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../.." class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Home
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../counter/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Counters
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.18f0862e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.994580cf.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.9c0e82ba.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

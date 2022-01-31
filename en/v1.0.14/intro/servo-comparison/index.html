@@ -1,0 +1,1835 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="canonical" href="http://netflix.github.io/spectator/intro/servo-comparison/">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-6.2.8">
+    
+    
+      
+        <title>Servo Comparison - Spectator Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.cb6bc1d0.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#servo-comparison" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-header-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            Spectator Docs
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              Servo Comparison
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Spectator Docs
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" checked>
+      
+      <label class="md-nav__link" for="nav-2">
+        Getting Started
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="1">
+        <label class="md-nav__title" for="nav-2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../registry/" class="md-nav__link">
+        Registry
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2" >
+      
+      <label class="md-nav__link" for="nav-2-2">
+        Meter Types
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Meter Types" data-md-level="2">
+        <label class="md-nav__title" for="nav-2-2">
+          <span class="md-nav__icon md-icon"></span>
+          Meter Types
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../counter/" class="md-nav__link">
+        Counters
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../timer/" class="md-nav__link">
+        Timers
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gauge/" class="md-nav__link">
+        Gauges
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dist-summary/" class="md-nav__link">
+        Distribution Summaries
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clock/" class="md-nav__link">
+        Clock
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conventions/" class="md-nav__link">
+        Naming Conventions
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        Testing
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netflix/" class="md-nav__link">
+        Netflix Integration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Servo Comparison
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Servo Comparison
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#differences" class="md-nav__link">
+    Differences
+  </a>
+  
+    <nav class="md-nav" aria-label="Differences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simpler-api" class="md-nav__link">
+    Simpler API
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#more-focused" class="md-nav__link">
+    More Focused
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#di-friendly" class="md-nav__link">
+    DI Friendly
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    Migration
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registration" class="md-nav__link">
+    Registration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotations" class="md-nav__link">
+    Annotations
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basiccounter" class="md-nav__link">
+    BasicCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicgauge" class="md-nav__link">
+    BasicGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basictimer" class="md-nav__link">
+    BasicTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicdistributionsummary" class="md-nav__link">
+    BasicDistributionSummary
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicinformational" class="md-nav__link">
+    BasicInformational
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicstopwatch" class="md-nav__link">
+    BasicStopwatch
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buckettimer" class="md-nav__link">
+    BucketTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contextualcounter" class="md-nav__link">
+    ContextualCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contextualtimer" class="md-nav__link">
+    ContextualTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#doublegauge" class="md-nav__link">
+    DoubleGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationtimer" class="md-nav__link">
+    DurationTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamiccounter" class="md-nav__link">
+    DynamicCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamictimer" class="md-nav__link">
+    DynamicTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longgauge" class="md-nav__link">
+    LongGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitorconfig" class="md-nav__link">
+    MonitorConfig
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoredcache" class="md-nav__link">
+    MonitoredCache
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numbergauge" class="md-nav__link">
+    NumberGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statstimer" class="md-nav__link">
+    StatsTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stepcounter" class="md-nav__link">
+    StepCounter
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3" >
+      
+      <label class="md-nav__link" for="nav-3">
+        Extensions
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Extensions" data-md-level="1">
+        <label class="md-nav__title" for="nav-3">
+          <span class="md-nav__icon md-icon"></span>
+          Extensions
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/ipc/" class="md-nav__link">
+        IPC
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3-2" type="checkbox" id="nav-3-2" >
+      
+      <label class="md-nav__link" for="nav-3-2">
+        JVM Stats
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="JVM Stats" data-md-level="2">
+        <label class="md-nav__title" for="nav-3-2">
+          <span class="md-nav__icon md-icon"></span>
+          JVM Stats
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-buffer-pools/" class="md-nav__link">
+        Buffer Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-gc/" class="md-nav__link">
+        Garbage Collection
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-gc-causes/" class="md-nav__link">
+        GC Causes
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/jvm-memory-pools/" class="md-nav__link">
+        Memory Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/thread-pools/" class="md-nav__link">
+        Thread Pools
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/log4j2/" class="md-nav__link">
+        Log4j2 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/log4j1/" class="md-nav__link">
+        Log4j1 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ext/placeholders/" class="md-nav__link">
+        Placeholders
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" >
+      
+      <label class="md-nav__link" for="nav-4">
+        Registries
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Registries" data-md-level="1">
+        <label class="md-nav__title" for="nav-4">
+          <span class="md-nav__icon md-icon"></span>
+          Registries
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/metrics3/" class="md-nav__link">
+        Metrics3
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/servo/" class="md-nav__link">
+        Servo
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#differences" class="md-nav__link">
+    Differences
+  </a>
+  
+    <nav class="md-nav" aria-label="Differences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simpler-api" class="md-nav__link">
+    Simpler API
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#more-focused" class="md-nav__link">
+    More Focused
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#di-friendly" class="md-nav__link">
+    DI Friendly
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration" class="md-nav__link">
+    Migration
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registration" class="md-nav__link">
+    Registration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#annotations" class="md-nav__link">
+    Annotations
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basiccounter" class="md-nav__link">
+    BasicCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicgauge" class="md-nav__link">
+    BasicGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basictimer" class="md-nav__link">
+    BasicTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicdistributionsummary" class="md-nav__link">
+    BasicDistributionSummary
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicinformational" class="md-nav__link">
+    BasicInformational
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basicstopwatch" class="md-nav__link">
+    BasicStopwatch
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buckettimer" class="md-nav__link">
+    BucketTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contextualcounter" class="md-nav__link">
+    ContextualCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contextualtimer" class="md-nav__link">
+    ContextualTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#doublegauge" class="md-nav__link">
+    DoubleGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#durationtimer" class="md-nav__link">
+    DurationTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamiccounter" class="md-nav__link">
+    DynamicCounter
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamictimer" class="md-nav__link">
+    DynamicTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#longgauge" class="md-nav__link">
+    LongGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitorconfig" class="md-nav__link">
+    MonitorConfig
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitoredcache" class="md-nav__link">
+    MonitoredCache
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#numbergauge" class="md-nav__link">
+    NumberGauge
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#statstimer" class="md-nav__link">
+    StatsTimer
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stepcounter" class="md-nav__link">
+    StepCounter
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/Netflix/spectator/edit/master/docs/intro/servo-comparison.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Docs have been moved to the <a href="https://netflix.github.io/atlas-docs/">atlas-docs</a> site. This page is no longer
+maintained.</p>
+</div>
+<h1 id="servo-comparison">Servo Comparison<a class="headerlink" href="#servo-comparison" title="Permanent link">&para;</a></h1>
+<p><a href="https://github.com/Netflix/servo">Servo</a> is an alternative client monitoring
+library that is also developed by Netflix. Originally spectator was an
+experiment for a simpler API that wrapped servo. It was done as a separate
+project to avoid breaking backwards compatibility for servo.</p>
+<p>From a user perspective, both will be supported for a long time, but most
+of our efforts for future improvement will go to spectator. For new code it
+is recommended to use the spectator API. If running
+<a href="../netflix/">at Netflix</a> the correct bindings will be in place
+for both servo and spectator.</p>
+<h2 id="differences">Differences<a class="headerlink" href="#differences" title="Permanent link">&para;</a></h2>
+<p>This section provides a quick summary of the differences.</p>
+<h3 id="simpler-api">Simpler API<a class="headerlink" href="#simpler-api" title="Permanent link">&para;</a></h3>
+<p>Servo gives the user a lot of control, but this makes it hard to use
+correctly. For example, to create a counter the user needs to understand
+the tradeoffs and choose between:</p>
+<ul>
+<li><a href="#basiccounter">BasicCounter</a></li>
+<li><a href="#dynamiccounter">DynamicCounter</a></li>
+<li><a href="#contextualcounter">ContextualCounter</a></li>
+<li><a href="#stepcounter">StepCounter</a></li>
+</ul>
+<p>Further each of these can impact how data is reported to observers. The
+spectator API focuses on the constructs a user needs to instrument the
+code. In spectator the user would always use the registry to create a
+<a href="../counter/">Counter</a>. The implementation details are left up to the
+registry.</p>
+<p>The <a href="#registration">registration</a> is simpler as well to avoid common pitfalls
+when using servo like overwriting a registered object.</p>
+<h3 id="more-focused">More Focused<a class="headerlink" href="#more-focused" title="Permanent link">&para;</a></h3>
+<p>The goal of spectator is instrumenting code to send to a dimensional
+time-series system like <a href="https://github.com/Netflix/atlas/wiki">Atlas</a>.
+Servo has goals of staying compatible with a number of legacy libraries
+and naming formats, exposing data to JMX, etc. Examples of how this
+influences decisions:</p>
+<ul>
+<li>No support for non-numeric data. Servo supported this for exposing to JMX.
+  Exposing the numeric data registered in spectator to JMX can be done
+  using a registry that supports it, but there is no goal to be a general
+  interface for exposing arbitrary data in JMX.</li>
+<li>No support for customizeable time units when reporting timer data. Base
+  units should always be used for reporting and conversions can be performed
+  in the presentation layer if needed. It also avoids a lot of the confusion
+  around the timer unit for the data and issues like creating aggregates that
+  are meaningless because of mixed units.</li>
+</ul>
+<p>It is better to have a simple way to get correct and easy to reason about
+data to the backend than many options. If you want more knobs, then you can use
+Servo.</p>
+<h3 id="di-friendly">DI Friendly<a class="headerlink" href="#di-friendly" title="Permanent link">&para;</a></h3>
+<p>When servo was originally written dependency injection was not heavily used
+at Netflix. Further servo needed to stay compatible with a number of use-cases
+that were heavily static.</p>
+<p>While spectator does have a static registry that can be used, the recommended
+way is to create a registry and inject it either manually or via a framework
+into the classes that need it. This also makes it much easier to
+<a href="../testing/">test in isolation</a>.</p>
+<h2 id="migration">Migration<a class="headerlink" href="#migration" title="Permanent link">&para;</a></h2>
+<p>If you want to migrate from the servo API to the spectator API, then this
+section provides some guides on how servo constructs can be ported over. The
+sub-sections are the class names of monitor types supported by servo.</p>
+<p>For users at Netflix, note we are not actively pushing teams to migrate
+or do any additional work. Servo is still supported and if it works for your
+use-cases feel free to continue using it. </p>
+<h3 id="registration">Registration<a class="headerlink" href="#registration" title="Permanent link">&para;</a></h3>
+<p>First read through the <a href="https://github.com/Netflix/servo/wiki/Getting-Started#registration-of-metrics">servo docs on registration</a>.
+In servo if you have a class like:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+
+  <span class="kd">private</span> <span class="n">AtomicInteger</span> <span class="n">gauge</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="n">Counter</span> <span class="n">counter</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">gauge</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicInteger</span><span class="p">();</span>
+    <span class="n">counter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BasicCounter</span><span class="p">(</span><span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;counter&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="nd">@Monitor</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;gauge&quot;</span><span class="p">,</span> <span class="n">type</span> <span class="o">=</span> <span class="n">DataSourceType</span><span class="p">.</span><span class="na">GAUGE</span><span class="p">)</span>
+  <span class="kd">private</span> <span class="kt">int</span> <span class="nf">gauge</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">gauge</span><span class="p">.</span><span class="na">get</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>The state of the class is in the member variables of an instance of <code>Foo</code>.
+If multiple instances of class <code>Foo</code> are created with the same value for <code>id</code>,
+then the last one will overwrite the others for the registration. So the
+values getting reported will only be from the last instance registered. Also
+the registry has a reference to the instance of <code>Foo</code> so it will never go
+away.</p>
+<p>For counters and timers one way to get around this is to use
+<a href="#dynamiccounter">DynamicCounter</a> and <a href="#dynamictimer">DynamicTimer</a>
+respectively. Those classes will automatically handle the registration and
+expire if there is no activity. They also get used for cases where the set
+of dimensions is not known up front.</p>
+<p>Gauges need to sample the state of something so they need to have a reference
+to an object that contains the state. So the user would need to ensure that
+only a single copy was registered leading to patterns like:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">FooStats</span> <span class="p">{</span>
+
+    <span class="kd">private</span> <span class="n">AtomicInteger</span> <span class="n">gauge</span><span class="p">;</span>
+    <span class="kd">private</span> <span class="n">Counter</span> <span class="n">counter</span><span class="p">;</span>
+
+    <span class="kd">public</span> <span class="nf">FooStats</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">gauge</span> <span class="o">=</span> <span class="k">new</span> <span class="n">AtomicInteger</span><span class="p">();</span>
+      <span class="n">counter</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BasicCounter</span><span class="p">(</span><span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;counter&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+      <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="nd">@Monitor</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;gauge&quot;</span><span class="p">,</span> <span class="n">type</span> <span class="o">=</span> <span class="n">DataSourceType</span><span class="p">.</span><span class="na">GAUGE</span><span class="p">)</span>
+    <span class="kd">private</span> <span class="kt">int</span> <span class="nf">gauge</span><span class="p">()</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="n">gauge</span><span class="p">.</span><span class="na">get</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="kd">private</span> <span class="kd">static</span> <span class="n">ConcurrentHashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="p">,</span> <span class="n">FooStats</span><span class="o">&gt;</span> <span class="n">STATS</span> <span class="o">=</span>
+    <span class="k">new</span> <span class="n">ConcurrentHashMap</span><span class="o">&lt;&gt;</span><span class="p">();</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">FooStats</span> <span class="n">stats</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">STATS</span><span class="p">.</span><span class="na">computeIfAbsent</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="k">new</span> <span class="n">FooStats</span><span class="p">(</span><span class="n">i</span><span class="p">));</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">stats</span><span class="p">.</span><span class="na">update</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>This ensures that there is a single copy for a given id. In spectator this
+example would look like: </p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+
+  <span class="kd">private</span> <span class="n">AtomicInteger</span> <span class="n">gauge</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="n">Counter</span> <span class="n">counter</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">gaugeId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;gauge&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">gauge</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">gauge</span><span class="p">(</span><span class="n">gaugeId</span><span class="p">,</span> <span class="k">new</span> <span class="n">AtomicInteger</span><span class="p">());</span>
+    <span class="n">counter</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="s">&quot;counter&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Everything using the same registry will get the same counter
+instance if the same id is used. For the gauge the registry will
+keep a weak reference and will sum the values if multiple instances are
+present. Since it is a weak reference, nothing will prevent an instance of
+<code>Foo</code> from getting garbage collected.</p>
+<h3 id="annotations">Annotations<a class="headerlink" href="#annotations" title="Permanent link">&para;</a></h3>
+<p>Annotations are not supported, use the appropriate meter type:</p>
+<table>
+<thead>
+<tr>
+<th>DataSourceType</th>
+<th>Spectator Alternative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>COUNTER</td>
+<td><a href="../counter/">Counter Usage</a></td>
+</tr>
+<tr>
+<td>GAUGE</td>
+<td><a href="../gauge/">Gauge Usage</a></td>
+</tr>
+<tr>
+<td>INFORMATIONAL</td>
+<td>Not supported</td>
+</tr>
+</tbody>
+</table>
+<h3 id="basiccounter">BasicCounter<a class="headerlink" href="#basiccounter" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../counter/">counter usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Counter</span> <span class="n">c</span> <span class="o">=</span>
+    <span class="k">new</span> <span class="n">BasicCounter</span><span class="p">(</span><span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">c</span><span class="p">.</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Counter</span> <span class="n">c</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">c</span><span class="p">.</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="basicgauge">BasicGauge<a class="headerlink" href="#basicgauge" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../gauge/">gauge usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">BasicGauge</span> <span class="n">g</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BasicGauge</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">(),</span>
+    <span class="k">this</span><span class="p">::</span><span class="n">getCurrentValue</span><span class="p">);</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">gaugeId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">gauge</span><span class="p">(</span><span class="n">gaugeId</span><span class="p">,</span> <span class="k">this</span><span class="p">,</span> <span class="n">Foo</span><span class="p">::</span><span class="n">getCurrentValue</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="basictimer">BasicTimer<a class="headerlink" href="#basictimer" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../timer/">timer usage</a>. Note in spectator the reported unit
+for timers is always seconds and cannot be changed. Seconds is the base unit
+and other units should only be used as a presentation detail. Servo allows
+the unit to be customized and defaults to milliseconds.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Timer</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BasicTimer</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">(),</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">);</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">Stopwatch</span> <span class="n">s</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+      <span class="n">s</span><span class="p">.</span><span class="na">stop</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Timer</span> <span class="n">t</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">timer</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">t</span><span class="p">.</span><span class="na">record</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="basicdistributionsummary">BasicDistributionSummary<a class="headerlink" href="#basicdistributionsummary" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../dist-summary/">distribution summary usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">BasicDistributionSummary</span> <span class="n">s</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BasicDistributionSummary</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">s</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">getValue</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">DistributionSummary</span> <span class="n">s</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">distributionSummary</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="n">s</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">getValue</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="basicinformational">BasicInformational<a class="headerlink" href="#basicinformational" title="Permanent link">&para;</a></h3>
+<p>Not supported, see <a href="#differences">overview of differences</a>.</p>
+<h3 id="basicstopwatch">BasicStopwatch<a class="headerlink" href="#basicstopwatch" title="Permanent link">&para;</a></h3>
+<p>There isn't an explicit stopwatch class in spectator. Just use a timing
+call directly. </p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">Stopwatch</span> <span class="n">s</span> <span class="o">=</span> <span class="n">timer</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+      <span class="n">s</span><span class="p">.</span><span class="na">stop</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code>  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="kd">final</span> <span class="kt">long</span> <span class="n">s</span> <span class="o">=</span> <span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+      <span class="n">timer</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="na">nanoTime</span><span class="p">()</span> <span class="o">-</span> <span class="n">s</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">NANOSECONDS</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div>
+
+<h3 id="buckettimer">BucketTimer<a class="headerlink" href="#buckettimer" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="Sandbox">sandbox documentation</a>. Note in spectator BucketTimer is
+provided in the sandbox extension library and may change in future as we
+gain more experience using it.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Timer</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BucketTimer</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">(),</span>
+    <span class="k">new</span> <span class="n">BucketConfig</span><span class="p">.</span><span class="na">Builder</span><span class="p">()</span>
+      <span class="p">.</span><span class="na">withTimeUnit</span><span class="p">(</span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">)</span>
+      <span class="p">.</span><span class="na">withBuckets</span><span class="p">(</span><span class="k">new</span> <span class="kt">long</span><span class="o">[]</span> <span class="p">{</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">2500</span><span class="p">,</span> <span class="mi">5000</span><span class="p">,</span> <span class="mi">10000</span> <span class="p">})</span>
+      <span class="p">.</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">Stopwatch</span> <span class="n">s</span> <span class="o">=</span> <span class="n">t</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+    <span class="k">try</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+      <span class="n">s</span><span class="p">.</span><span class="na">stop</span><span class="p">();</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Timer</span> <span class="n">t</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">timerId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">BucketFunction</span> <span class="n">f</span> <span class="o">=</span> <span class="n">BucketFunctions</span><span class="p">.</span><span class="na">latency</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">);</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">BucketTimer</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="n">timerId</span><span class="p">,</span> <span class="n">f</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">t</span><span class="p">.</span><span class="na">record</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="p">{</span>
+      <span class="p">...</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="contextualcounter">ContextualCounter<a class="headerlink" href="#contextualcounter" title="Permanent link">&para;</a></h3>
+<p>Not supported. A fixed tag list for the context is too rigid and this class
+was never used much at Netflix. Future work being looked at in
+<a href="https://github.com/Netflix/spectator/issues/180">issue-180</a>.</p>
+<h3 id="contextualtimer">ContextualTimer<a class="headerlink" href="#contextualtimer" title="Permanent link">&para;</a></h3>
+<p>Not supported. A fixed tag list for the context is too rigid and this class
+was never used much at Netflix. Future work being looked at in
+<a href="https://github.com/Netflix/spectator/issues/180">issue-180</a>.</p>
+<h3 id="doublegauge">DoubleGauge<a class="headerlink" href="#doublegauge" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../gauge/">gauge usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">DoubleGauge</span> <span class="n">g</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DoubleGauge</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span> <span class="nn">com.google.common.util.concurrent.AtomicDouble</span><span class="p">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicDouble</span> <span class="n">v</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">gaugeId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">gauge</span><span class="p">(</span><span class="n">gaugeId</span><span class="p">,</span> <span class="k">new</span> <span class="n">AtomicDouble</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="durationtimer">DurationTimer<a class="headerlink" href="#durationtimer" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../timer/#longtasktimer">timer usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">DurationTimer</span> <span class="n">t</span> <span class="o">=</span> <span class="k">new</span> <span class="n">DurationTimer</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">LongTaskTimer</span> <span class="n">t</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">longTaskTimer</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="dynamiccounter">DynamicCounter<a class="headerlink" href="#dynamiccounter" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../counter/">counter usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">id</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="n">Context</span> <span class="n">ctxt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">DynamicCounter</span><span class="p">.</span><span class="na">increment</span><span class="p">(</span><span class="s">&quot;staticId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">DynamicCounter</span><span class="p">.</span><span class="na">increment</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Registry</span> <span class="n">registry</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">id</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Counter</span> <span class="n">staticCounter</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Id</span> <span class="n">dynamicId</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">registry</span> <span class="o">=</span> <span class="n">registry</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
+    <span class="n">staticCounter</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="s">&quot;staticId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">dynamicId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="n">Context</span> <span class="n">ctxt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Keeping the reference to the counter avoids additional allocations</span>
+    <span class="c1">// to create the id object and the lookup cost</span>
+    <span class="n">staticCounter</span><span class="p">.</span><span class="na">increment</span><span class="p">();</span>
+
+    <span class="c1">// If the id is dynamic it must be looked up</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">()).</span><span class="na">increment</span><span class="p">();</span>
+
+    <span class="c1">// This will update the same counter as the line above, but the base part</span>
+    <span class="c1">// of the id is precomputed to make it cheaper to construct the id.</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="n">dynamicId</span><span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">())).</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="dynamictimer">DynamicTimer<a class="headerlink" href="#dynamictimer" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../timer/">timer usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">id</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">MonitorConfig</span> <span class="n">staticId</span><span class="p">;</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
+    <span class="n">staticId</span> <span class="o">=</span> <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;staticId&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">).</span><span class="na">build</span><span class="p">();</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="n">Context</span> <span class="n">ctxt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">final</span> <span class="kt">long</span> <span class="n">d</span> <span class="o">=</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getDurationMillis</span><span class="p">();</span>
+    <span class="n">DynamicTimer</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">staticId</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span>
+
+    <span class="n">MonitorConfig</span> <span class="n">dynamicId</span> <span class="o">=</span> <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">)</span>
+      <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">)</span>
+      <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">())</span>
+      <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+    <span class="n">DynamicTimer</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">dynamicId</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Registry</span> <span class="n">registry</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">id</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Timer</span> <span class="n">staticTimer</span><span class="p">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Id</span> <span class="n">dynamicId</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">registry</span> <span class="o">=</span> <span class="n">registry</span><span class="p">;</span>
+    <span class="k">this</span><span class="p">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="p">;</span>
+    <span class="n">staticTimer</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">timer</span><span class="p">(</span><span class="s">&quot;staticId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">dynamicId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">(</span><span class="n">Context</span> <span class="n">ctxt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">final</span> <span class="kt">long</span> <span class="n">d</span> <span class="o">=</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getDurationMillis</span><span class="p">();</span>
+
+    <span class="c1">// Keeping the reference to the timer avoids additional allocations</span>
+    <span class="c1">// to create the id object and the lookup cost</span>
+    <span class="n">staticTimer</span><span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span>
+
+    <span class="c1">// If the id is dynamic it must be looked up</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">timer</span><span class="p">(</span><span class="s">&quot;dynamicId&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">,</span> <span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">())</span>
+      <span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span>
+
+    <span class="c1">// This will update the same timer as the line above, but the base part</span>
+    <span class="c1">// of the id is precomputed to make it cheaper to construct the id.</span>
+    <span class="n">registry</span><span class="p">.</span><span class="na">timer</span><span class="p">(</span><span class="n">dynamicId</span><span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">ctxt</span><span class="p">.</span><span class="na">getFoo</span><span class="p">()))</span>
+      <span class="p">.</span><span class="na">record</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">TimeUnit</span><span class="p">.</span><span class="na">MILLISECONDS</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="longgauge">LongGauge<a class="headerlink" href="#longgauge" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../gauge/">gauge usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">LongGauge</span> <span class="n">g</span> <span class="o">=</span> <span class="k">new</span> <span class="n">LongGauge</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicLong</span> <span class="n">v</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">gaugeId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">gauge</span><span class="p">(</span><span class="n">gaugeId</span><span class="p">,</span> <span class="k">new</span> <span class="n">AtomicLong</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="monitorconfig">MonitorConfig<a class="headerlink" href="#monitorconfig" title="Permanent link">&para;</a></h3>
+<p>See the documentation on <a href="../conventions/">naming</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">MonitorConfig</span> <span class="n">id</span> <span class="o">=</span> <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;country&quot;</span><span class="p">,</span> <span class="s">&quot;US&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;device&quot;</span><span class="p">,</span>  <span class="s">&quot;xbox&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Id</span> <span class="n">id</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;country&quot;</span><span class="p">,</span> <span class="s">&quot;US&quot;</span><span class="p">)</span>
+  <span class="p">.</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;device&quot;</span><span class="p">,</span>  <span class="s">&quot;xbox&quot;</span><span class="p">);</span>
+
+<span class="c1">// or</span>
+
+<span class="n">Id</span> <span class="n">id</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;country&quot;</span><span class="p">,</span> <span class="s">&quot;US&quot;</span><span class="p">,</span> <span class="s">&quot;device&quot;</span><span class="p">,</span> <span class="s">&quot;xbox&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="monitoredcache">MonitoredCache<a class="headerlink" href="#monitoredcache" title="Permanent link">&para;</a></h3>
+<p>Not supported because spectator does not have a direct dependency on guava.
+If there is enough demand an extension can be created.</p>
+<h3 id="numbergauge">NumberGauge<a class="headerlink" href="#numbergauge" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../gauge/">gauge usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">NumberGauge</span> <span class="n">g</span> <span class="o">=</span> <span class="k">new</span> <span class="n">NumberGauge</span><span class="p">(</span>
+    <span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">(),</span> <span class="k">new</span> <span class="n">AtomicLong</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">AtomicLong</span> <span class="n">v</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Id</span> <span class="n">gaugeId</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">createId</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">withTag</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">gauge</span><span class="p">(</span><span class="n">gaugeId</span><span class="p">,</span> <span class="k">new</span> <span class="n">AtomicLong</span><span class="p">());</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="statstimer">StatsTimer<a class="headerlink" href="#statstimer" title="Permanent link">&para;</a></h3>
+<p>Not supported, see <a href="#differences">overview of differences</a>.</p>
+<h3 id="stepcounter">StepCounter<a class="headerlink" href="#stepcounter" title="Permanent link">&para;</a></h3>
+<p>See the general overview of <a href="#registration">registration differences</a> and
+summary of <a href="../counter/">counter usage</a>.</p>
+<p>Servo:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Counter</span> <span class="n">c</span> <span class="o">=</span>
+    <span class="k">new</span> <span class="n">StepCounter</span><span class="p">(</span><span class="n">MonitorConfig</span><span class="p">.</span><span class="na">builder</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">).</span><span class="na">build</span><span class="p">());</span>
+
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Monitors</span><span class="p">.</span><span class="na">registerObject</span><span class="p">(</span><span class="n">id</span><span class="p">,</span> <span class="k">this</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">c</span><span class="p">.</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>Spectator:</p>
+<div class="codehilite"><pre><span></span><code><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foo</span> <span class="p">{</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="n">Counter</span> <span class="n">c</span><span class="p">;</span>
+
+  <span class="nd">@Inject</span>
+  <span class="kd">public</span> <span class="nf">Foo</span><span class="p">(</span><span class="n">Registry</span> <span class="n">registry</span><span class="p">,</span> <span class="n">String</span> <span class="n">id</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">registry</span><span class="p">.</span><span class="na">counter</span><span class="p">(</span><span class="s">&quot;name&quot;</span><span class="p">,</span> <span class="s">&quot;id&quot;</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">doSomething</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">c</span><span class="p">.</span><span class="na">increment</span><span class="p">();</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../netflix/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Netflix Integration
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../../ext/ipc/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                IPC
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.18f0862e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.994580cf.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.9c0e82ba.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>

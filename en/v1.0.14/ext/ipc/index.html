@@ -1,0 +1,1168 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="canonical" href="http://netflix.github.io/spectator/ext/ipc/">
+      
+      <link rel="shortcut icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-6.2.8">
+    
+    
+      
+        <title>IPC - Spectator Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.cb6bc1d0.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.39b8e14a.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../../css/custom.css">
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="none" data-md-color-accent="none">
+      
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ipc" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-header-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      <div class="md-header-nav__ellipsis">
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            Spectator Docs
+          </span>
+        </div>
+        <div class="md-header-nav__topic">
+          <span class="md-ellipsis">
+            
+              IPC
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="http://netflix.github.io/spectator/" title="Spectator Docs" class="md-nav__button md-logo" aria-label="Spectator Docs">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Spectator Docs
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/Netflix/spectator/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Home
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2" >
+      
+      <label class="md-nav__link" for="nav-2">
+        Getting Started
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="1">
+        <label class="md-nav__title" for="nav-2">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/registry/" class="md-nav__link">
+        Registry
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2-2" type="checkbox" id="nav-2-2" >
+      
+      <label class="md-nav__link" for="nav-2-2">
+        Meter Types
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Meter Types" data-md-level="2">
+        <label class="md-nav__title" for="nav-2-2">
+          <span class="md-nav__icon md-icon"></span>
+          Meter Types
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/counter/" class="md-nav__link">
+        Counters
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/timer/" class="md-nav__link">
+        Timers
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/gauge/" class="md-nav__link">
+        Gauges
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/dist-summary/" class="md-nav__link">
+        Distribution Summaries
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/clock/" class="md-nav__link">
+        Clock
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/conventions/" class="md-nav__link">
+        Naming Conventions
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/testing/" class="md-nav__link">
+        Testing
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/netflix/" class="md-nav__link">
+        Netflix Integration
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intro/servo-comparison/" class="md-nav__link">
+        Servo Comparison
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3" checked>
+      
+      <label class="md-nav__link" for="nav-3">
+        Extensions
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Extensions" data-md-level="1">
+        <label class="md-nav__title" for="nav-3">
+          <span class="md-nav__icon md-icon"></span>
+          Extensions
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          IPC
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        IPC
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dimensions-common-to-all-metrics" class="md-nav__link">
+    Dimensions Common to All Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Dimensions Common to All Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allowed-values-for-ipcstatus-dimension" class="md-nav__link">
+    Allowed Values for ipc.status Dimension
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-metrics" class="md-nav__link">
+    Server Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercall" class="md-nav__link">
+    ipc.server.call
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercallsizeinbound" class="md-nav__link">
+    ipc.server.call.size.inbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercallsizeoutbound" class="md-nav__link">
+    ipc.server.call.size.outbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcserverinflight" class="md-nav__link">
+    ipc.server.inflight
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-metrics" class="md-nav__link">
+    Client Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Client Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcall" class="md-nav__link">
+    ipc.client.call
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcallsizeinbound" class="md-nav__link">
+    ipc.client.call.size.inbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcallsizeoutbound" class="md-nav__link">
+    ipc.client.call.size.outbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientinflight" class="md-nav__link">
+    ipc.client.inflight
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+            
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3-2" type="checkbox" id="nav-3-2" >
+      
+      <label class="md-nav__link" for="nav-3-2">
+        JVM Stats
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="JVM Stats" data-md-level="2">
+        <label class="md-nav__title" for="nav-3-2">
+          <span class="md-nav__icon md-icon"></span>
+          JVM Stats
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jvm-buffer-pools/" class="md-nav__link">
+        Buffer Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jvm-gc/" class="md-nav__link">
+        Garbage Collection
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jvm-gc-causes/" class="md-nav__link">
+        GC Causes
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../jvm-memory-pools/" class="md-nav__link">
+        Memory Pools
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../thread-pools/" class="md-nav__link">
+        Thread Pools
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../log4j2/" class="md-nav__link">
+        Log4j2 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../log4j1/" class="md-nav__link">
+        Log4j1 Appender
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../placeholders/" class="md-nav__link">
+        Placeholders
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="nav-4" type="checkbox" id="nav-4" >
+      
+      <label class="md-nav__link" for="nav-4">
+        Registries
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Registries" data-md-level="1">
+        <label class="md-nav__title" for="nav-4">
+          <span class="md-nav__icon md-icon"></span>
+          Registries
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/metrics3/" class="md-nav__link">
+        Metrics3
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../registry/servo/" class="md-nav__link">
+        Servo
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#dimensions-common-to-all-metrics" class="md-nav__link">
+    Dimensions Common to All Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Dimensions Common to All Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#allowed-values-for-ipcstatus-dimension" class="md-nav__link">
+    Allowed Values for ipc.status Dimension
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-metrics" class="md-nav__link">
+    Server Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercall" class="md-nav__link">
+    ipc.server.call
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercallsizeinbound" class="md-nav__link">
+    ipc.server.call.size.inbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcservercallsizeoutbound" class="md-nav__link">
+    ipc.server.call.size.outbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcserverinflight" class="md-nav__link">
+    ipc.server.inflight
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#client-metrics" class="md-nav__link">
+    Client Metrics
+  </a>
+  
+    <nav class="md-nav" aria-label="Client Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcall" class="md-nav__link">
+    ipc.client.call
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcallsizeinbound" class="md-nav__link">
+    ipc.client.call.size.inbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientcallsizeoutbound" class="md-nav__link">
+    ipc.client.call.size.outbound
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ipcclientinflight" class="md-nav__link">
+    ipc.client.inflight
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/Netflix/spectator/edit/master/docs/ext/ipc.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                <div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Docs have been moved to the <a href="https://netflix.github.io/atlas-docs/">atlas-docs</a> site. This page is no longer
+maintained.</p>
+</div>
+<h1 id="ipc">IPC<a class="headerlink" href="#ipc" title="Permanent link">&para;</a></h1>
+<p>This is a description of the <strong>Common IPC Metrics</strong> that can be published by various IPC
+libraries, with the goal of allowing consolidated monitoring and analysis across differing
+IPC implementations.</p>
+<h2 id="dimensions-common-to-all-metrics">Dimensions Common to All Metrics<a class="headerlink" href="#dimensions-common-to-all-metrics" title="Permanent link">&para;</a></h2>
+<p>Not all dimensions are applicable for all of the metrics, and later in the sections 
+for each specific metric, the applicable dimensions are specified.</p>
+<p>Also note that not all dimensions have been implemented or are applicable for <em>all</em>
+implementations.</p>
+<ul>
+<li><code>ipc.protocol</code>: A short name of the network protocol in use, eg. <code>grpc</code>, <code>http_1</code>,
+  <code>http_2</code>, <code>udp</code>, etc ...</li>
+<li><code>ipc.vip</code>: The Eureka VIP address used to find the the server.</li>
+<li><code>ipc.result</code>: Was this considered by the implementation to be successful. Allowed Values =
+  [<code>success</code>, <code>failure</code>].</li>
+<li><code>ipc.status</code>: One of a predefined list of status values indicating the general result, eg.
+  success, bad_request, timeout, etc… See the <em>ipc.status values section below</em>.</li>
+<li><code>ipc.status.detail</code>: For cases where the ipc.status needs to be further subdivided, this tag
+  can hold an additional more specific detail, likely ipc-implementation specific. eg status of
+  connection_error and detail of no_servers / connect_timeout / ssl_handshake_failure.</li>
+<li><code>ipc.failure.injected</code>: Indicates that an artificial failure was injected into the request
+  processing for testing purposes. The outcome of that failure will be reflected in the other
+  error tags. Allowed Values = [<code>none</code>,<code>failure</code>,<code>delay</code>,<code>delay_and_failure</code>]</li>
+<li><code>ipc.endpoint</code>: The name of the endpoint/function/feature the message was sent to within
+  the server (eg. the URL path prefix for a java servlet, or the grpc endpoint name).</li>
+<li><code>ipc.attempt</code>: Which attempt at sending this message is this. Allowed Values =
+  [<code>initial</code>, <code>second</code>, <code>third_up</code>] (<code>initial</code> is the first attempt, <code>second</code> is 2nd attempt
+  but first <em>retry</em>, <code>third_up</code> means third or higher attempt).</li>
+<li><code>ipc.attempt.final</code>: Indicates if this request was the final attempt of potentially multiple
+  retry attempts. Allowed Values = [<code>true</code>, <code>false</code>].</li>
+<li><code>ipc.server.app</code>: The <code>nf.app</code> of the server the message is being sent <em>to</em>.</li>
+<li><code>ipc.server.cluster</code>: The <code>nf.cluster</code> of the server the message is being sent <em>to</em>.</li>
+<li><code>ipc.server.asg</code>: The <code>nf.asg</code> of the server the message is being sent <em>to</em>.</li>
+<li><code>ipc.client.app</code>: The <code>nf.app</code> of the server the message is being sent <em>from</em>.</li>
+<li><code>ipc.client.cluster</code>: The <code>nf.cluster</code> of the server the message is being sent <em>from</em>.</li>
+<li><code>ipc.client.asg</code>: The <code>nf.asg</code> of the server the message is being sent <em>from</em>.</li>
+<li><code>owner</code>: The library/impl publishing the metrics, eg. evcache, zuul, grpc, nodequark,
+  platform_1_ipc, geoclient, etc ...</li>
+<li><code>id</code>: Conceptual name of service. Equivalent of RestClient name in NIWS.</li>
+</ul>
+<h3 id="allowed-values-for-ipcstatus-dimension">Allowed Values for <code>ipc.status</code> Dimension<a class="headerlink" href="#allowed-values-for-ipcstatus-dimension" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>success</code>: The request was successfully processed and responded to, as far as the client or
+  server know.</li>
+<li><code>bad_request</code>: There was a problem with the clients' request causing it not to be fulfilled.</li>
+<li><code>unexpected_error</code>: The client or server encountered an unexpected error processing the request.</li>
+<li><code>connection_error</code>: There was an error with the underlying network connection either during
+  establishment or while in use.</li>
+<li><code>unavailable</code>: There were no servers available to process the request.</li>
+<li><code>throttled</code>: The request was rejected due to the client or server considering the server to
+  be above capacity.</li>
+<li><code>timeout</code>: The request could not or would not be complete within the configured threshold
+  (either on client or server).</li>
+<li><code>cancelled</code>: The client cancelled the request before it was completed.</li>
+<li><code>access_denied</code>: The request was denied access for authentication or authorization reasons.</li>
+</ul>
+<h2 id="server-metrics">Server Metrics<a class="headerlink" href="#server-metrics" title="Permanent link">&para;</a></h2>
+<h3 id="ipcservercall">ipc.server.call<a class="headerlink" href="#ipcservercall" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="https://www.javadoc.io/page/com.netflix.spectator/spectator-api/latest/com/netflix/spectator/api/histogram/PercentileTimer.html">percentile timer</a> that is recorded for each inbound message to a server.</p>
+<p><strong>Unit:</strong> seconds</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.failure.injected</code></li>
+<li><code>ipc.client.app</code></li>
+<li><code>ipc.client.cluster</code></li>
+<li><code>ipc.client.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcservercallsizeinbound">ipc.server.call.size.inbound<a class="headerlink" href="#ipcservercallsizeinbound" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> of the size in bytes of inbound messages received by a server.</p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.client.app</code></li>
+<li><code>ipc.client.cluster</code></li>
+<li><code>ipc.client.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcservercallsizeoutbound">ipc.server.call.size.outbound<a class="headerlink" href="#ipcservercallsizeoutbound" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> of the size in bytes of outbound messages sent from a server.</p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.client.app</code></li>
+<li><code>ipc.client.cluster</code></li>
+<li><code>ipc.client.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcserverinflight">ipc.server.inflight<a class="headerlink" href="#ipcserverinflight" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> that shows the number of inbound IPC messages currently being
+processed in a server.</p>
+<p><strong>Unit:</strong> inflight message count</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.client.app</code></li>
+<li><code>ipc.client.cluster</code></li>
+<li><code>ipc.client.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h2 id="client-metrics">Client Metrics<a class="headerlink" href="#client-metrics" title="Permanent link">&para;</a></h2>
+<h3 id="ipcclientcall">ipc.client.call<a class="headerlink" href="#ipcclientcall" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="https://www.javadoc.io/page/com.netflix.spectator/spectator-api/latest/com/netflix/spectator/api/histogram/PercentileTimer.html">percentile timer</a> that is recorded for each outbound message from a client.</p>
+<p><strong>Unit:</strong> seconds</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.failure.injected</code></li>
+<li><code>ipc.attempt</code></li>
+<li><code>ipc.attempt.final</code></li>
+<li><code>ipc.server.app</code></li>
+<li><code>ipc.server.cluster</code></li>
+<li><code>ipc.server.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcclientcallsizeinbound">ipc.client.call.size.inbound<a class="headerlink" href="#ipcclientcallsizeinbound" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> of the size in bytes of inbound messages received by a client.</p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.server.app</code></li>
+<li><code>ipc.server.cluster</code></li>
+<li><code>ipc.server.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcclientcallsizeoutbound">ipc.client.call.size.outbound<a class="headerlink" href="#ipcclientcallsizeoutbound" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> of the size in bytes of outbound messages sent from a client.</p>
+<p><strong>Unit:</strong> bytes</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.result</code></li>
+<li><code>ipc.status</code></li>
+<li><code>ipc.status.detail</code></li>
+<li><code>ipc.server.app</code></li>
+<li><code>ipc.server.cluster</code></li>
+<li><code>ipc.server.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+<h3 id="ipcclientinflight">ipc.client.inflight<a class="headerlink" href="#ipcclientinflight" title="Permanent link">&para;</a></h3>
+<p>This is a <a href="../../intro/dist-summary/">distribution summary</a> that shows the number of currently outstanding outbound
+IPC messages from a client.</p>
+<p><strong>Unit:</strong> inflight message count</p>
+<p><strong>Dimensions:</strong></p>
+<ul>
+<li><code>ipc.protocol</code></li>
+<li><code>ipc.vip</code></li>
+<li><code>ipc.endpoint</code></li>
+<li><code>ipc.server.app</code></li>
+<li><code>ipc.server.cluster</code></li>
+<li><code>ipc.server.asg</code></li>
+<li><code>owner</code></li>
+<li><code>id</code></li>
+</ul>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="../../intro/servo-comparison/" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+            </div>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                Servo Comparison
+              </div>
+            </div>
+          </a>
+        
+        
+          <a href="../jvm-buffer-pools/" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Buffer Pools
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    </div>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../assets/javascripts/vendor.18f0862e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.994580cf.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../..",
+          features: [],
+          search: Object.assign({
+            worker: "../../assets/javascripts/worker/search.9c0e82ba.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
