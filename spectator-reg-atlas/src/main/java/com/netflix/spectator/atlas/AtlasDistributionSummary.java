@@ -93,11 +93,12 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
   }
 
   @Override public void record(long amount) {
-    count.getCurrent().incrementAndGet();
+    long now = clock.wallTime();
+    count.getCurrent(now).incrementAndGet();
     if (amount > 0) {
-      total.getCurrent().addAndGet(amount);
-      totalOfSquares.getCurrent().addAndGet((double) amount * amount);
-      updateMax(max.getCurrent(), amount);
+      total.getCurrent(now).addAndGet(amount);
+      totalOfSquares.getCurrent(now).addAndGet((double) amount * amount);
+      updateMax(max.getCurrent(now), amount);
     }
     updateLastModTime();
   }

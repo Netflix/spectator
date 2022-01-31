@@ -95,12 +95,13 @@ class AtlasTimer extends AtlasMeter implements Timer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    count.getCurrent().incrementAndGet();
+    long now = clock.wallTime();
+    count.getCurrent(now).incrementAndGet();
     if (amount > 0) {
       final long nanos = unit.toNanos(amount);
-      total.getCurrent().addAndGet(nanos);
-      totalOfSquares.getCurrent().addAndGet((double) nanos * nanos);
-      updateMax(max.getCurrent(), nanos);
+      total.getCurrent(now).addAndGet(nanos);
+      totalOfSquares.getCurrent(now).addAndGet((double) nanos * nanos);
+      updateMax(max.getCurrent(now), nanos);
     }
     updateLastModTime();
   }
