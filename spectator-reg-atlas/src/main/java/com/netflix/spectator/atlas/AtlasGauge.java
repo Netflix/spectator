@@ -51,7 +51,7 @@ class AtlasGauge extends AtlasMeter implements Gauge {
 
   @Override public void set(double v) {
     value.set(v);
-    updateLastModTime();
+    updateLastModTime(clock.wallTime());
   }
 
   @Override public double value() {
