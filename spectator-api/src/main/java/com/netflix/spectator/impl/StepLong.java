@@ -63,19 +63,34 @@ public class StepLong implements StepValue {
 
   /** Get the AtomicLong for the current bucket. */
   public AtomicLong getCurrent() {
-    rollCount(clock.wallTime());
+    return getCurrent(clock.wallTime());
+  }
+
+  /** Get the AtomicLong for the current bucket. */
+  public AtomicLong getCurrent(long now) {
+    rollCount(now);
     return current;
   }
 
   /** Get the value for the last completed interval. */
   public long poll() {
-    rollCount(clock.wallTime());
+    return poll(clock.wallTime());
+  }
+
+  /** Get the value for the last completed interval. */
+  public long poll(long now) {
+    rollCount(now);
     return previous;
   }
 
   /** Get the value for the last completed interval as a rate per second. */
   @Override public double pollAsRate() {
-    final long amount = poll();
+    return pollAsRate(clock.wallTime());
+  }
+
+  /** Get the value for the last completed interval as a rate per second. */
+  @Override public double pollAsRate(long now) {
+    final long amount = poll(now);
     final double period = step / 1000.0;
     return amount / period;
   }

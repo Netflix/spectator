@@ -63,19 +63,34 @@ public class StepDouble implements StepValue {
 
   /** Get the AtomicDouble for the current bucket. */
   public AtomicDouble getCurrent() {
-    rollCount(clock.wallTime());
+    return getCurrent(clock.wallTime());
+  }
+
+  /** Get the AtomicDouble for the current bucket. */
+  public AtomicDouble getCurrent(long now) {
+    rollCount(now);
     return current;
   }
 
   /** Get the value for the last completed interval. */
   public double poll() {
-    rollCount(clock.wallTime());
+    return poll(clock.wallTime());
+  }
+
+  /** Get the value for the last completed interval. */
+  public double poll(long now) {
+    rollCount(now);
     return previous;
   }
 
   /** Get the value for the last completed interval as a rate per second. */
   @Override public double pollAsRate() {
-    final double amount = poll();
+    return pollAsRate(clock.wallTime());
+  }
+
+  /** Get the value for the last completed interval as a rate per second. */
+  @Override public double pollAsRate(long now) {
+    final double amount = poll(now);
     final double period = step / 1000.0;
     return amount / period;
   }
