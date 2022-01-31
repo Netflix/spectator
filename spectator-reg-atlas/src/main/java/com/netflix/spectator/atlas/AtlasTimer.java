@@ -23,6 +23,7 @@ import com.netflix.spectator.impl.StepDouble;
 import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
+import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -103,6 +104,58 @@ class AtlasTimer extends AtlasMeter implements Timer {
       totalOfSquares.getCurrent(now).addAndGet((double) nanos * nanos);
       updateMax(max.getCurrent(now), nanos);
     }
+    updateLastModTime(now);
+  }
+
+  @Override public void record(long[] amounts, int n, TimeUnit unit) {
+    final int limit = Math.min(Math.max(0, n), amounts.length);
+
+    double accumulatedTotal = 0.0;
+    long accumulatedMax = Long.MIN_VALUE;
+    double accumulatedTotalOfSquares = 0.0;
+
+    // accumulate results
+    for (int i = 0; i < limit; i++) {
+      final long nanos = unit.toNanos(amounts[i]);
+      if (nanos > 0) {
+        accumulatedTotal += nanos;
+        accumulatedTotalOfSquares += ((double) nanos * nanos);
+        accumulatedMax = Math.max(nanos, accumulatedMax);
+      }
+    }
+
+    // issue updates as a batch
+    final long now = clock.wallTime();
+    count.getCurrent(now).addAndGet(limit);
+    total.getCurrent(now).addAndGet(accumulatedTotal);
+    totalOfSquares.getCurrent(now).addAndGet(accumulatedTotalOfSquares);
+    updateMax(max.getCurrent(now), accumulatedMax);
+    updateLastModTime(now);
+  }
+
+  @Override public void record(Duration[] amounts, int n) {
+    final int limit = Math.min(Math.max(0, n), amounts.length);
+
+    double accumulatedTotal = 0.0;
+    long accumulatedMax = Long.MIN_VALUE;
+    double accumulatedTotalOfSquares = 0.0;
+
+    // accumulate results
+    for (int i = 0; i < limit; i++) {
+      final long nanos = amounts[i].toNanos();
+      if (nanos > 0) {
+        accumulatedTotal += nanos;
+        accumulatedTotalOfSquares += ((double) nanos * nanos);
+        accumulatedMax = Math.max(nanos, accumulatedMax);
+      }
+    }
+
+    // issue updates as a batch
+    final long now = clock.wallTime();
+    count.getCurrent(now).addAndGet(limit);
+    total.getCurrent(now).addAndGet(accumulatedTotal);
+    totalOfSquares.getCurrent(now).addAndGet(accumulatedTotalOfSquares);
+    updateMax(max.getCurrent(now), accumulatedMax);
     updateLastModTime(now);
   }
 

@@ -39,6 +39,10 @@ final class SwapDistributionSummary extends SwapMeter<DistributionSummary> imple
     get().record(amount);
   }
 
+  @Override public void record(long[] amounts, int n) {
+    get().record(amounts, n);
+  }
+
   @Override
   public long count() {
     return get().count();

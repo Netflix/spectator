@@ -103,6 +103,31 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
     updateLastModTime(now);
   }
 
+  @Override public void record(long[] amounts, int n) {
+    final int limit = Math.min(Math.max(0, n), amounts.length);
+
+    long accumulatedTotal = 0;
+    long accumulatedMax = Long.MIN_VALUE;
+    double accumulatedTotalOfSquares = 0.0;
+
+    // accumulate results
+    for (int i = 0; i < limit; i++) {
+      if (amounts[i] > 0) {
+        accumulatedTotal += amounts[i];
+        accumulatedTotalOfSquares += ((double) amounts[i] * amounts[i]);
+        accumulatedMax = Math.max(amounts[i], accumulatedMax);
+      }
+    }
+
+    // issue updates as a batch
+    final long now = clock.wallTime();
+    count.getCurrent(now).addAndGet(limit);
+    total.getCurrent(now).addAndGet(accumulatedTotal);
+    totalOfSquares.getCurrent(now).addAndGet(accumulatedTotalOfSquares);
+    updateMax(max.getCurrent(now), accumulatedMax);
+    updateLastModTime(now);
+  }
+
   private void updateMax(AtomicLong maxValue, long v) {
     long p = maxValue.get();
     while (v > p && !maxValue.compareAndSet(p, v)) {

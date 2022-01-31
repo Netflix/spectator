@@ -52,6 +52,50 @@ public interface Timer extends Meter {
   }
 
   /**
+   * Updates the statistics kept by the counter with the specified amount. Behaves as if
+   * `record()` was called in a loop, but may be faster in some cases.
+   *
+   * @param amounts
+   *     Duration of events being measured by this timer. If the amount is less than 0
+   *     for a value, the value will be dropped.
+   * @param n
+   *     The number of elements to write from the amounts array (starting from 0). If n is
+   *     <= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
+   *     will be recorded.
+   * @param unit
+   *     Time unit for the amounts being recorded.
+   *
+   * @see #record(long, TimeUnit)
+   */
+  default void record(long[] amounts, int n, TimeUnit unit) {
+    final int limit = Math.min(amounts.length, n);
+    for (int i = 0; i < limit; i++) {
+      record(amounts[i], unit);
+    }
+  }
+
+  /**
+   * Updates the statistics kept by the counter with the specified amount. Behaves as if
+   * `record()` was called in a loop, but may be faster in some cases.
+   *
+   * @param amounts
+   *     Duration of events being measured by this timer. If the amount is less than 0
+   *     for a value, the value will be dropped.
+   * @param n
+   *     The number of elements to write from the amounts array (starting from 0). If n is
+   *     <= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
+   *     will be recorded.
+   *
+   * @see #record(Duration)
+   */
+  default void record(Duration[] amounts, int n) {
+    final int limit = Math.min(amounts.length, n);
+    for (int i = 0; i < limit; i++) {
+      record(amounts[i]);
+    }
+  }
+
+  /**
    * Executes the callable `f` and records the time taken.
    *
    * @param f

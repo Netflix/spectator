@@ -110,6 +110,61 @@ public class AtlasDistributionSummaryTest {
   }
 
   @Test
+  public void recordBatchMismatchedLengths() {
+    dist.record(new long[0], 1);
+    clock.setWallTime(1 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], 0);
+    clock.setWallTime(2 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], -1);
+    clock.setWallTime(3 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[]{ 0, 0 }, 2);
+    clock.setWallTime(4 * step + 1);
+    checkValue(2, 0, 0, 0);
+  }
+
+  @Test
+  public void recordBatchOne() {
+    dist.record(new long[]{ 1 }, 1);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 1, 1, 1);
+  }
+
+  @Test
+  public void recordBatchTwo() {
+    dist.record(new long[]{ 2 }, 1);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 2, 4, 2);
+  }
+
+  @Test
+  public void recordBatchSeveralValues() {
+    dist.record(new long[]{ 1, 2, 3, 1 }, 4);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchWithIgnoredValuesMixed() {
+    dist.record(new long[]{ 1, -1, 0, 2, -1, 0, 3, 0, -1, 1 }, 10);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(10, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
   public void rollForward() {
     dist.record(42);
     clock.setWallTime(step + 1);

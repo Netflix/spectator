@@ -24,6 +24,7 @@ import com.netflix.spectator.api.Utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 
@@ -140,6 +141,104 @@ public class AtlasTimerTest {
     dist.record(2, TimeUnit.NANOSECONDS);
     dist.record(3, TimeUnit.NANOSECONDS);
     dist.record(1, TimeUnit.NANOSECONDS);
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchMismatchedLengths() {
+    dist.record(new long[0], 1, TimeUnit.NANOSECONDS);
+    clock.setWallTime(1 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], 0, TimeUnit.NANOSECONDS);
+    clock.setWallTime(2 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], -1, TimeUnit.NANOSECONDS);
+    clock.setWallTime(3 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[]{ 0, 0 }, 2, TimeUnit.NANOSECONDS);
+    clock.setWallTime(4 * step + 1);
+    checkValue(2, 0, 0, 0);
+  }
+
+  @Test
+  public void recordBatchZero() {
+    dist.record(new long[]{ 0 }, 1, TimeUnit.NANOSECONDS);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 0, 0, 0);
+  }
+
+  @Test
+  public void recordBatchOne() {
+    dist.record(new long[]{ 1 }, 1, TimeUnit.NANOSECONDS);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 1, 1, 1);
+  }
+
+  @Test
+  public void recordBatchTwo() {
+    dist.record(new long[]{ 2 }, 1, TimeUnit.NANOSECONDS);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 2, 4, 2);
+  }
+
+
+  @Test
+  public void recordBatchOverflowSingle()
+  {
+    // Simulate case where we have old items in a queue and when processing again we record
+    // the ages of many of those items in a short span
+    long amount = TimeUnit.DAYS.toNanos(14);
+    double square = 0.0;
+    for (int i = 0; i < 10000; ++i) {
+      dist.record(new long[]{ amount }, 1, TimeUnit.NANOSECONDS);
+      square += (double) amount * amount;
+    }
+    clock.setWallTime(step + 1);
+    checkValue(10000, 10e3 * amount, square, amount);
+  }
+
+  @Test
+  public void recordBatchOverflowBatch()
+  {
+    // Simulate case where we have old items in a queue and when processing again we record
+    // the ages of many of those items in a short span
+    long amount = TimeUnit.DAYS.toNanos(14);
+    double square = 0.0;
+
+    int COUNT = 10000;
+    long[] amounts = new long[COUNT];
+    Arrays.fill(amounts, amount);
+
+    dist.record(amounts, COUNT, TimeUnit.NANOSECONDS);
+
+    for (int i = 0; i < 10000; i++) {
+      square += (double) amount * amount;
+    }
+
+    clock.setWallTime(step + 1);
+    checkValue(10000, 10e3 * amount, square, amount);
+  }
+
+  @Test
+  public void recordBatchMixedPositiveNegativeValues() {
+    dist.record(new long[]{ 1, 0, 2, -1, 3, -4, 1}, 7, TimeUnit.NANOSECONDS);
+    clock.setWallTime(step + 1);
+    checkValue(7, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchSeveralValues() {
+    dist.record(new long[]{ 1, 2, 3, 1}, 4, TimeUnit.NANOSECONDS);
     clock.setWallTime(step + 1);
     checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
   }
