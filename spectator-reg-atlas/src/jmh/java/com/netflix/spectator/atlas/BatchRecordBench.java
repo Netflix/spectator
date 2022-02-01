@@ -54,12 +54,32 @@ public class BatchRecordBench {
    * BatchRecordBench.distributionOneAtATime  thrpt   25  43.896 ± 0.789  ops/s
    *
    * As of this commit:
-   * Benchmark                                  (clock)   Mode  Cnt     Score   Error  Units
-   * BatchRecordBench.distributionBatch       fastclock  thrpt   25  3849.495 ± 2.079  ops/s
-   * BatchRecordBench.distributionBatch          system  thrpt   25  3847.196 ± 3.770  ops/s
-   * BatchRecordBench.distributionOneAtATime  fastclock  thrpt   25   105.432 ± 0.187  ops/s
-   * BatchRecordBench.distributionOneAtATime     system  thrpt   25   105.436 ± 0.111  ops/s
-   *
+   * Benchmark                                (batchSize)    (clock)   Mode  Cnt         Score       Error  Units
+   * BatchRecordBench.distributionBatch                 1  fastclock  thrpt   25  10653757.154 ± 28278.785  ops/s
+   * BatchRecordBench.distributionBatch                 1     system  thrpt   25  10698329.757 ± 32951.571  ops/s
+   * BatchRecordBench.distributionBatch                10  fastclock  thrpt   25   9522092.321 ± 28014.036  ops/s
+   * BatchRecordBench.distributionBatch                10     system  thrpt   25   9559843.855 ±  6779.719  ops/s
+   * BatchRecordBench.distributionBatch               100  fastclock  thrpt   25   2897853.712 ±  8733.913  ops/s
+   * BatchRecordBench.distributionBatch               100     system  thrpt   25   2893252.879 ±  7187.279  ops/s
+   * BatchRecordBench.distributionBatch              1000  fastclock  thrpt   25    366835.739 ±   208.298  ops/s
+   * BatchRecordBench.distributionBatch              1000     system  thrpt   25    367808.344 ±   781.413  ops/s
+   * BatchRecordBench.distributionBatch             10000  fastclock  thrpt   25     38245.067 ±    33.743  ops/s
+   * BatchRecordBench.distributionBatch             10000     system  thrpt   25     38303.265 ±    33.823  ops/s
+   * BatchRecordBench.distributionBatch            100000  fastclock  thrpt   25      3846.227 ±     3.359  ops/s
+   * BatchRecordBench.distributionBatch            100000     system  thrpt   25      3847.573 ±     2.944  ops/s
+   * BatchRecordBench.distributionOneAtATime            1  fastclock  thrpt   25  11087902.444 ± 18214.743  ops/s
+   * BatchRecordBench.distributionOneAtATime            1     system  thrpt   25  11132286.157 ± 33009.169  ops/s
+   * BatchRecordBench.distributionOneAtATime           10  fastclock  thrpt   25   1089841.847 ±  1166.172  ops/s
+   * BatchRecordBench.distributionOneAtATime           10     system  thrpt   25   1090766.388 ±  1124.590  ops/s
+   * BatchRecordBench.distributionOneAtATime          100  fastclock  thrpt   25    109084.262 ±   498.868  ops/s
+   * BatchRecordBench.distributionOneAtATime          100     system  thrpt   25    108806.769 ±   109.836  ops/s
+   * BatchRecordBench.distributionOneAtATime         1000  fastclock  thrpt   25     11547.783 ±    28.136  ops/s
+   * BatchRecordBench.distributionOneAtATime         1000     system  thrpt   25     11548.784 ±    37.187  ops/s
+   * BatchRecordBench.distributionOneAtATime        10000  fastclock  thrpt   25      1051.379 ±     1.347  ops/s
+   * BatchRecordBench.distributionOneAtATime        10000     system  thrpt   25      1054.978 ±     2.069  ops/s
+   * BatchRecordBench.distributionOneAtATime       100000  fastclock  thrpt   25       105.588 ±     0.366  ops/s
+   * BatchRecordBench.distributionOneAtATime       100000     system  thrpt   25       105.453 ±     0.186  ops/s
+   * 
    * =======
    * For an r5.xlarge
    * Base AMI: bionic-classicbase-x86_64-202201262157-ebs
@@ -68,11 +88,31 @@ public class BatchRecordBench {
    * BatchRecordBench.distributionOneAtATime  thrpt   25  40.099 ± 0.539  ops/s
    *
    * As of this commit:
-   * Benchmark                                  (clock)   Mode  Cnt     Score    Error  Units
-   * BatchRecordBench.distributionBatch       fastclock  thrpt   25  3484.762 ± 23.742  ops/s
-   * BatchRecordBench.distributionBatch          system  thrpt   25  3531.986 ± 20.345  ops/s
-   * BatchRecordBench.distributionOneAtATime  fastclock  thrpt   25    91.483 ±  0.985  ops/s
-   * BatchRecordBench.distributionOneAtATime     system  thrpt   25    92.787 ±  1.798  ops/s
+   * Benchmark                                (batchSize)    (clock)   Mode  Cnt        Score        Error  Units
+   * BatchRecordBench.distributionBatch                 1  fastclock  thrpt   25  9385655.567 ± 340778.340  ops/s
+   * BatchRecordBench.distributionBatch                 1     system  thrpt   25  9668568.661 ± 289469.212  ops/s
+   * BatchRecordBench.distributionBatch                10  fastclock  thrpt   25  8364336.008 ± 379818.726  ops/s
+   * BatchRecordBench.distributionBatch                10     system  thrpt   25  8291598.971 ± 335957.214  ops/s
+   * BatchRecordBench.distributionBatch               100  fastclock  thrpt   25  2690204.344 ±  71589.264  ops/s
+   * BatchRecordBench.distributionBatch               100     system  thrpt   25  2655837.607 ±  84584.223  ops/s
+   * BatchRecordBench.distributionBatch              1000  fastclock  thrpt   25   337184.218 ±  10589.541  ops/s
+   * BatchRecordBench.distributionBatch              1000     system  thrpt   25   338195.706 ±   8983.223  ops/s
+   * BatchRecordBench.distributionBatch             10000  fastclock  thrpt   25    35384.994 ±    940.235  ops/s
+   * BatchRecordBench.distributionBatch             10000     system  thrpt   25    35098.662 ±    898.807  ops/s
+   * BatchRecordBench.distributionBatch            100000  fastclock  thrpt   25     3544.591 ±    106.967  ops/s
+   * BatchRecordBench.distributionBatch            100000     system  thrpt   25     3481.677 ±     92.268  ops/s
+   * BatchRecordBench.distributionOneAtATime            1  fastclock  thrpt   25  9101177.222 ± 327727.423  ops/s
+   * BatchRecordBench.distributionOneAtATime            1     system  thrpt   25  9215129.213 ± 450134.957  ops/s
+   * BatchRecordBench.distributionOneAtATime           10  fastclock  thrpt   25   898688.979 ±  47922.252  ops/s
+   * BatchRecordBench.distributionOneAtATime           10     system  thrpt   25   928435.778 ±  29301.506  ops/s
+   * BatchRecordBench.distributionOneAtATime          100  fastclock  thrpt   25    96247.965 ±   3416.122  ops/s
+   * BatchRecordBench.distributionOneAtATime          100     system  thrpt   25    95073.152 ±   3232.757  ops/s
+   * BatchRecordBench.distributionOneAtATime         1000  fastclock  thrpt   25     9977.180 ±    263.313  ops/s
+   * BatchRecordBench.distributionOneAtATime         1000     system  thrpt   25    10139.411 ±    351.895  ops/s
+   * BatchRecordBench.distributionOneAtATime        10000  fastclock  thrpt   25      921.888 ±     28.627  ops/s
+   * BatchRecordBench.distributionOneAtATime        10000     system  thrpt   25      893.432 ±     27.858  ops/s
+   * BatchRecordBench.distributionOneAtATime       100000  fastclock  thrpt   25       91.880 ±      3.205  ops/s
+   * BatchRecordBench.distributionOneAtATime       100000     system  thrpt   25       92.206 ±      3.617  ops/s
    * =======
    */
 
@@ -83,6 +123,9 @@ public class BatchRecordBench {
 
   @Param({ "fastclock", "system" })
   public String clock;
+
+  @Param({ "1", "10", "100", "1000", "10000", "100000" })
+  public String batchSize;
 
   private Clock clockInstance;
 
@@ -100,7 +143,7 @@ public class BatchRecordBench {
     registry = new AtlasRegistry(clockInstance, System::getProperty);
     dist = new AtlasDistributionSummary(registry.createId("test"), Clock.SYSTEM, 10_000, 10_000);
 
-    amounts = new long[100_000];
+    amounts = new long[Integer.parseInt(batchSize)];
     Random r = new Random(42);
     for (int i = 0; i < amounts.length; i++) {
       amounts[i] = r.nextInt(2000);
