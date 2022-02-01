@@ -328,7 +328,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         logger.debug("collecting measurements for time: {}", t);
         publishTaskTimer("pollMeasurements").record(() -> {
           for (Meter meter : this) {
-            ((AtlasMeter) meter).measure(consumer);
+            ((AtlasMeter) meter).measure(t, consumer);
           }
         });
         lastPollTimestamp = t;

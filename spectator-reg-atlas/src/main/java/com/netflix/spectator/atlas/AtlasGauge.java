@@ -42,7 +42,7 @@ class AtlasGauge extends AtlasMeter implements Gauge {
         .withTags(id.tags());
   }
 
-  @Override void measure(MeasurementConsumer consumer) {
+  @Override void measure(long now, MeasurementConsumer consumer) {
     final double v = value();
     if (Double.isFinite(v)) {
       consumer.accept(stat, clock.wallTime(), v);

@@ -67,27 +67,27 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
     };
   }
 
-  @Override void measure(MeasurementConsumer consumer) {
-    reportMeasurement(consumer, stats[0], count);
-    reportMeasurement(consumer, stats[1], total);
-    reportMeasurement(consumer, stats[2], totalOfSquares);
-    reportMaxMeasurement(consumer, stats[3], max);
+  @Override void measure(long now, MeasurementConsumer consumer) {
+    reportMeasurement(now, consumer, stats[0], count);
+    reportMeasurement(now, consumer, stats[1], total);
+    reportMeasurement(now, consumer, stats[2], totalOfSquares);
+    reportMaxMeasurement(now, consumer, stats[3], max);
   }
 
-  private void reportMeasurement(MeasurementConsumer consumer, Id mid, StepValue v) {
+  private void reportMeasurement(long now, MeasurementConsumer consumer, Id mid, StepValue v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
-    double rate = v.pollAsRate();
+    double rate = v.pollAsRate(now);
     long timestamp = v.timestamp();
     consumer.accept(mid, timestamp, rate);
   }
 
-  private void reportMaxMeasurement(MeasurementConsumer consumer, Id mid, StepLong v) {
+  private void reportMaxMeasurement(long now, MeasurementConsumer consumer, Id mid, StepLong v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
-    double maxValue = v.poll();
+    double maxValue = v.poll(now);
     long timestamp = v.timestamp();
     consumer.accept(mid, timestamp, maxValue);
   }

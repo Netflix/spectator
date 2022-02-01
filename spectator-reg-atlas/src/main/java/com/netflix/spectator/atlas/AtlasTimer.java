@@ -69,27 +69,27 @@ class AtlasTimer extends AtlasMeter implements Timer {
     };
   }
 
-  @Override void measure(MeasurementConsumer consumer) {
-    reportMeasurement(consumer, stats[0], count, 1.0);
-    reportMeasurement(consumer, stats[1], total, 1e-9);
-    reportMeasurement(consumer, stats[2], totalOfSquares, 1e-18);
-    reportMaxMeasurement(consumer, stats[3], max);
+  @Override void measure(long now, MeasurementConsumer consumer) {
+    reportMeasurement(now, consumer, stats[0], count, 1.0);
+    reportMeasurement(now, consumer, stats[1], total, 1e-9);
+    reportMeasurement(now, consumer, stats[2], totalOfSquares, 1e-18);
+    reportMaxMeasurement(now, consumer, stats[3], max);
   }
 
-  private void reportMeasurement(MeasurementConsumer consumer, Id mid, StepValue v, double f) {
+  private void reportMeasurement(long now, MeasurementConsumer consumer, Id mid, StepValue v, double f) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
-    double rate = v.pollAsRate() * f;
+    double rate = v.pollAsRate(now) * f;
     long timestamp = v.timestamp();
     consumer.accept(mid, timestamp, rate);
   }
 
-  private void reportMaxMeasurement(MeasurementConsumer consumer, Id mid, StepLong v) {
+  private void reportMaxMeasurement(long now, MeasurementConsumer consumer, Id mid, StepLong v) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
-    double maxValue = v.poll() / 1e9;
+    double maxValue = v.poll(now) / 1e9;
     long timestamp = v.timestamp();
     consumer.accept(mid, timestamp, maxValue);
   }
