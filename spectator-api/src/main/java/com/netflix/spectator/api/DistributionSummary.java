@@ -36,6 +36,27 @@ public interface DistributionSummary extends Meter {
   void record(long amount);
 
   /**
+   * Updates the statistics kept by the summary with the specified amounts as a batch. Behaves
+   * as if `record()` was called in a loop, but may be faster in some cases.
+   *
+   * @param amounts
+   *     Amounts for an event being measured. For example, if the size in bytes of responses
+   *     from a server. If the amount is less than 0 the value will be dropped.
+   * @param n
+   *     The number of elements to write from the amounts array (starting from 0). If n is
+   *     <= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
+   *     will be recorded.
+   *
+   * @see #record(long)
+   */
+  default void record(long[] amounts, int n) {
+    final int limit = Math.min(amounts.length, n);
+    for (int i = 0; i < limit; i++) {
+      record(amounts[i]);
+    }
+  }
+
+  /**
    * The number of times that record has been called since this timer was last reset.
    * How often a timer is reset depends on the underlying registry implementation.
    */

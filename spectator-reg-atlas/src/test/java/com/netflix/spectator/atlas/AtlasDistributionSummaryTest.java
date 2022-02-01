@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package com.netflix.spectator.atlas;
 
+import java.util.Arrays;
+
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 public class AtlasDistributionSummaryTest {
 
-  private final ManualClock clock = new ManualClock();
+  private final CountingManualClock clock = new CountingManualClock();
   private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
   private final AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);
@@ -107,6 +108,73 @@ public class AtlasDistributionSummaryTest {
     dist.record(1);
     clock.setWallTime(step + 1);
     checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchMismatchedLengths() {
+    dist.record(new long[0], 1);
+    clock.setWallTime(1 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], 0);
+    clock.setWallTime(2 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[1], -1);
+    clock.setWallTime(3 * step + 1);
+    checkValue(0, 0, 0, 0);
+
+    dist.record(new long[]{ 0, 0 }, 2);
+    clock.setWallTime(4 * step + 1);
+    checkValue(2, 0, 0, 0);
+  }
+
+  @Test
+  public void recordBatchOne() {
+    dist.record(new long[]{ 1 }, 1);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 1, 1, 1);
+  }
+
+  @Test
+  public void recordBatchTwo() {
+    dist.record(new long[]{ 2 }, 1);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(1, 2, 4, 2);
+  }
+
+  @Test
+  public void recordBatchSeveralValues() {
+    dist.record(new long[]{ 1, 2, 3, 1 }, 4);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchWithIgnoredValuesMixed() {
+    dist.record(new long[]{ 1, -1, 0, 2, -1, 0, 3, 0, -1, 1 }, 10);
+    checkValue(0, 0, 0, 0);
+
+    clock.setWallTime(step + 1);
+    checkValue(10, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordBatchPollsClockOnce() {
+    long[] amounts = new long[10000];
+    Arrays.fill(amounts, 1L);
+
+    long countPollsBefore = clock.countPolled();
+    dist.record(amounts, amounts.length);
+    long actualPolls = clock.countPolled() - countPollsBefore;
+
+    Assertions.assertEquals(1, actualPolls);
   }
 
   @Test
