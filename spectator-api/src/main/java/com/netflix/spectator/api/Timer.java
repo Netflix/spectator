@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Updates the statistics kept by the counter with the specified amount. Behaves as if
+   * Updates the statistics kept by the timer with the specified amounts. Behaves as if
    * `record()` was called in a loop, but may be faster in some cases.
    *
    * @param amounts
@@ -75,7 +75,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Updates the statistics kept by the counter with the specified amount. Behaves as if
+   * Updates the statistics kept by the timer with the specified amounts. Behaves as if
    * `record()` was called in a loop, but may be faster in some cases.
    *
    * @param amounts

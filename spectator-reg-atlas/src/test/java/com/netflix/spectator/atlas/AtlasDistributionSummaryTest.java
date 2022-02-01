@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import java.util.Arrays;
 
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
@@ -29,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 public class AtlasDistributionSummaryTest {
 
-  private final ManualClock clock = new ManualClock();
+  private final CountingManualClock clock = new CountingManualClock();
   private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
   private final AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);

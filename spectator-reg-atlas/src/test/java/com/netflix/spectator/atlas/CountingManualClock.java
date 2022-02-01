@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2022-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.netflix.spectator.api;
+package com.netflix.spectator.atlas;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Clock implementation that allows the user to explicitly control the time. Typically used for
- * unit tests.
- */
-public class ManualClock implements Clock {
+import com.netflix.spectator.api.ManualClock;
 
-  private final AtomicLong wall;
-  private final AtomicLong monotonic;
+/**
+ * Clock implementation that allows the user to explicitly control the time, and also
+ * keeps a count of the number of times it was polled. Used in tests to assert the count of
+ * times the clock has been called.
+ */
+public class CountingManualClock extends ManualClock {
+  private final AtomicLong countPolled;
 
   /** Create a new instance. */
-  public ManualClock() {
+  public CountingManualClock() {
     this(0L, 0L);
   }
 
@@ -39,26 +40,22 @@ public class ManualClock implements Clock {
    * @param monotonicInit
    *     Initial value for the monotonic time.
    */
-  public ManualClock(long wallInit, long monotonicInit) {
-    wall = new AtomicLong(wallInit);
-    monotonic = new AtomicLong(monotonicInit);
+  public CountingManualClock(long wallInit, long monotonicInit) {
+    super(wallInit, monotonicInit);
+    countPolled = new AtomicLong(0);
   }
 
   @Override public long wallTime() {
-    return wall.get();
+    countPolled.incrementAndGet();
+    return super.wallTime();
   }
 
   @Override public long monotonicTime() {
-    return monotonic.get();
+    countPolled.incrementAndGet();
+    return super.monotonicTime();
   }
 
-  /** Set the wall time to the value {@code t}. */
-  public void setWallTime(long t) {
-    wall.set(t);
-  }
-
-  /** Set the monotonic time to the value {@code t}. */
-  public void setMonotonicTime(long t) {
-    monotonic.set(t);
+  public long countPolled() {
+    return countPolled.get();
   }
 }
