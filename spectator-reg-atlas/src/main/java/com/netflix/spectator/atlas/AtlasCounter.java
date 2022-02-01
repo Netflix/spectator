@@ -44,8 +44,8 @@ class AtlasCounter extends AtlasMeter implements Counter {
         .withTags(id.tags());
   }
 
-  @Override void measure(MeasurementConsumer consumer) {
-    final double rate = value.pollAsRate();
+  @Override void measure(long now, MeasurementConsumer consumer) {
+    final double rate = value.pollAsRate(now);
     consumer.accept(stat, value.timestamp(), rate);
   }
 

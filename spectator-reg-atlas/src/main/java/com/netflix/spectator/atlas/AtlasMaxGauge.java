@@ -45,11 +45,11 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
         .withTags(id.tags());
   }
 
-  @Override void measure(MeasurementConsumer consumer) {
+  @Override void measure(long now, MeasurementConsumer consumer) {
     // poll needs to be called before accessing the timestamp to ensure
     // the counters have been rotated if there was no activity in the
     // current interval.
-    double v = value.poll();
+    double v = value.poll(now);
     if (Double.isFinite(v)) {
       consumer.accept(stat, value.timestamp(), v);
     }
