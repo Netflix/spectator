@@ -1,9 +1,9 @@
 plugins {
-  id 'com.github.ben-manes.versions' version '0.40.0'
-  id 'com.github.spotbugs' version '4.7.6' apply false
+  id 'com.github.ben-manes.versions' version '0.41.0'
+  id 'com.github.spotbugs' version '5.0.5' apply false
   id 'me.champeau.jmh' version '0.6.6'
   id 'nebula.dependency-recommender' version '11.0.0'
-  id 'nebula.netflixoss' version '10.4.0'
+  id 'nebula.netflixoss' version '10.5.1'
 }
 
 // Establish version and status
@@ -103,7 +103,7 @@ subprojects {
   }
   
   spotbugs {
-    toolVersion = '4.4.1'
+    toolVersion = '4.5.3'
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
