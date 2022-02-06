@@ -1,0 +1,13 @@
+dependencies {
+  api project(':spectator-api')
+  api 'io.dropwizard.metrics5:metrics-core:5.0.0-rc11'
+  jmh project(':spectator-api')
+}
+
+jar {
+  manifest {
+    attributes(
+      "Automatic-Module-Name": "com.netflix.spectator.metrics5"
+    )
+  }
+}
