@@ -19,6 +19,7 @@ import io.dropwizard.metrics5.Gauge;
 import io.dropwizard.metrics5.MetricName;
 import io.dropwizard.metrics5.MetricRegistry;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,11 @@ public class MetricsRegistryTest {
     MetricRegistry dwRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, dwRegistry);
     r.counter("foo", "id", "bar", "a", "b", "a", "c").increment();
-    Assertions.assertTrue(dwRegistry.getMeters().containsKey(new MetricName("foo.a-c.id-bar", Collections.EMPTY_MAP)));
+    final Map<String, String> expectedTags = new HashMap<String, String>();
+    expectedTags.put("a", "c");
+    expectedTags.put("id", "bar");
+    Assertions.assertTrue(dwRegistry.getMeters()
+            .containsKey(new MetricName("foo", expectedTags)));
   }
 
   @Test
@@ -117,10 +122,34 @@ public class MetricsRegistryTest {
     // Try to register the same gauge via spectator
     AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
 
-    // Should be registered with the coda
+    // Should be registered with the Dropwizard registry
     Assertions.assertEquals(42.0, (Double) dwRegistry.getGauges().get(new MetricName("foo", Collections.EMPTY_MAP)).getValue(), 1e-12);
 
     // Should not be registered with spectator
     Assertions.assertNull(r.get(r.createId("foo")));
+  }
+
+  @Test
+  public void iterator() {
+    MetricRegistry dwRegistry = new MetricRegistry();
+    MetricsRegistry r = new MetricsRegistry(clock, dwRegistry);
+
+    r.counter("c");
+    r.timer("t");
+    r.distributionSummary("s");
+    r.gauge("g");
+
+    Set<String> actual = new HashSet<>();
+    for (Meter m : r) {
+      Assertions.assertFalse(m.hasExpired());
+      actual.add(m.id().name());
+    }
+
+    Set<String> expected = new HashSet<>();
+    expected.add("c");
+    expected.add("t");
+    expected.add("s");
+    expected.add("g");
+    Assertions.assertEquals(expected, actual);
   }
 }

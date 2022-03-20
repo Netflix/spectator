@@ -23,18 +23,18 @@ import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
-import com.netflix.spectator.api.Utils;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+
+import io.dropwizard.metrics5.MetricName;
 
 /** Registry implementation that maps spectator types to the metrics5 library. */
 public class MetricsRegistry extends AbstractRegistry {
 
   private final io.dropwizard.metrics5.MetricRegistry impl;
-  private final Map<String, DoubleGauge> registeredGauges;
-  private final Function<Id, String> formatNameFn;
+  private final Map<MetricName, DoubleGauge> registeredGauges;
 
   /** Create a new instance. */
   public MetricsRegistry() {
@@ -43,46 +43,29 @@ public class MetricsRegistry extends AbstractRegistry {
 
   /** Create a new instance. */
   public MetricsRegistry(Clock clock, io.dropwizard.metrics5.MetricRegistry impl) {
-    this(clock, impl, id -> {
-      Id normalized = Utils.normalize(id);
-      StringBuilder buf = new StringBuilder();
-      buf.append(normalized.name());
-      for (Tag t : normalized.tags()) {
-        buf.append('.').append(t.key()).append('-').append(t.value());
-      }
-      return buf.toString();
-    });
-  }
-
-  /** Create a new instance. */
-  public MetricsRegistry(Clock clock, io.dropwizard.metrics5.MetricRegistry impl, Function<Id, String> formatNameFn) {
     super(clock);
     this.impl = impl;
     this.registeredGauges = new ConcurrentHashMap<>();
-    this.formatNameFn = formatNameFn;
   }
 
-  private String toMetricName(Id id) {
-    return formatNameFn.apply(id);
+  private MetricName toMetricName(final Id id) {
+    return new MetricName(id.name(), buildTagMap(id));
   }
 
   @Override protected Counter newCounter(Id id) {
-    final String name = toMetricName(id);
-    return new MetricsCounter(clock(), id, impl.meter(name));
+    return new MetricsCounter(clock(), id, impl.meter(toMetricName(id)));
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
-    final String name = toMetricName(id);
-    return new MetricsDistributionSummary(clock(), id, impl.histogram(name));
+    return new MetricsDistributionSummary(clock(), id, impl.histogram(toMetricName(id)));
   }
 
   @Override protected Timer newTimer(Id id) {
-    final String name = toMetricName(id);
-    return new MetricsTimer(clock(), id, impl.timer(name));
+    return new MetricsTimer(clock(), id, impl.timer(toMetricName(id)));
   }
 
   @Override protected Gauge newGauge(Id id) {
-    final String name = toMetricName(id);
+    final MetricName name = toMetricName(id);
     DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -> {
       DoubleGauge g = new DoubleGauge();
       impl.register(name, g);
@@ -92,7 +75,7 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
-    final String name = toMetricName(id);
+    final MetricName name = toMetricName(id);
     DoubleGauge gauge = registeredGauges.computeIfAbsent(name, n -> {
       DoubleMaxGauge g = new DoubleMaxGauge();
       impl.register(name, g);
@@ -100,4 +83,13 @@ public class MetricsRegistry extends AbstractRegistry {
     });
     return new MetricsGauge(clock(), id, gauge);
   }
+
+  private static Map<String, String> buildTagMap(final Id id) {
+    Map<String, String> result = new HashMap<String, String>();
+    for (Tag tag : id.tags()) {
+      result.put(tag.key(), tag.value());
+    }
+    return result;
+  }
+
 }
