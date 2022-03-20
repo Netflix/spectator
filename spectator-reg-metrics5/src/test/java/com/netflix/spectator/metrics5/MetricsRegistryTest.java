@@ -37,7 +37,7 @@ public class MetricsRegistryTest {
     MetricRegistry dwRegistry = new MetricRegistry();
     MetricsRegistry r = new MetricsRegistry(clock, dwRegistry);
     r.counter("foo", "id", "bar", "a", "b", "a", "c").increment();
-    final Map<String, String> expectedTags = new HashMap<String, String>();
+    final Map<String, String> expectedTags = new HashMap<>();
     expectedTags.put("a", "c");
     expectedTags.put("id", "bar");
     Assertions.assertTrue(dwRegistry.getMeters()

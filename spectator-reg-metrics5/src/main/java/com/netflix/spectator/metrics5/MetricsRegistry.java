@@ -85,7 +85,7 @@ public class MetricsRegistry extends AbstractRegistry {
   }
 
   private static Map<String, String> buildTagMap(final Id id) {
-    Map<String, String> result = new HashMap<String, String>();
+    Map<String, String> result = new HashMap<>();
     for (Tag tag : id.tags()) {
       result.put(tag.key(), tag.value());
     }
