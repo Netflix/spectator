@@ -48,10 +48,6 @@ public class MetricsRegistry extends AbstractRegistry {
     this.registeredGauges = new ConcurrentHashMap<>();
   }
 
-  private MetricName toMetricName(final Id id) {
-    return new MetricName(id.name(), buildTagMap(id));
-  }
-
   @Override protected Counter newCounter(Id id) {
     return new MetricsCounter(clock(), id, impl.meter(toMetricName(id)));
   }
@@ -82,6 +78,10 @@ public class MetricsRegistry extends AbstractRegistry {
       return g;
     });
     return new MetricsGauge(clock(), id, gauge);
+  }
+
+  private static MetricName toMetricName(final Id id) {
+    return new MetricName(id.name(), buildTagMap(id));
   }
 
   private static Map<String, String> buildTagMap(final Id id) {
