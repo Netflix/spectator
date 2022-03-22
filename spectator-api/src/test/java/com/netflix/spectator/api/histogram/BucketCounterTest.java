@@ -49,4 +49,20 @@ public class BucketCounterTest {
     Assertions.assertEquals(3, sum(r, "test"));
   }
 
+
+  @Test
+  public void increment() {
+    Registry r = new DefaultRegistry();
+    BucketCounter c = BucketCounter.get(
+        r, r.createId("test"), BucketFunctions.latency(4, TimeUnit.SECONDS));
+
+    c.record(TimeUnit.MILLISECONDS.toNanos(3750));
+    Assertions.assertEquals(1, r.counters().count());
+    Assertions.assertEquals(1, sum(r, "test"));
+
+    c.increment(TimeUnit.MILLISECONDS.toNanos(3750), 5);
+    Assertions.assertEquals(1, r.counters().count());
+    Assertions.assertEquals(6, sum(r, "test"));
+  }
+
 }
