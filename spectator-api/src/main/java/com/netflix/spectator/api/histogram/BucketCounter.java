@@ -76,6 +76,18 @@ public final class BucketCounter implements DistributionSummary {
     counter(f.apply(amount)).increment();
   }
 
+  /**
+   * Update the counter associated with the amount by {@code n}.
+   *
+   * @param amount
+   *     Amount to use for determining the bucket.
+   * @param n
+   *     The delta to apply to the counter.
+   */
+  public void increment(long amount, int n) {
+    counter(f.apply(amount)).increment(n);
+  }
+
   /** Return the count for a given bucket. */
   Counter counter(String bucket) {
     return Utils.computeIfAbsent(counters, bucket, counterFactory);
