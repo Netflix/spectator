@@ -16,11 +16,15 @@
 package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
 
 import java.lang.management.BufferPoolMXBean;
+import java.lang.management.ClassLoadingMXBean;
+import java.lang.management.CompilationMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.ThreadMXBean;
 
 /**
  * Helpers for working with JMX mbeans.
@@ -36,12 +40,48 @@ public final class Jmx {
    * mbeans from the local jvm.
    */
   public static void registerStandardMXBeans(Registry registry) {
+    monitorClassLoadingMXBean(registry);
+    monitorThreadMXBean(registry);
+    monitorCompilationMXBean(registry);
+
     for (MemoryPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(MemoryPoolMXBean.class)) {
       registry.register(new MemoryPoolMeter(registry, mbean));
     }
-
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       registry.register(new BufferPoolMeter(registry, mbean));
+    }
+  }
+
+  private static void monitorClassLoadingMXBean(Registry registry) {
+    ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getPlatformMXBean(ClassLoadingMXBean.class);
+    PolledMeter.using(registry)
+      .withName("jvm.classloading.classesLoaded")
+      .monitorMonotonicCounter(classLoadingMXBean, ClassLoadingMXBean::getTotalLoadedClassCount);
+    PolledMeter.using(registry)
+      .withName("jvm.classloading.classesUnloaded")
+      .monitorMonotonicCounter(classLoadingMXBean, ClassLoadingMXBean::getUnloadedClassCount);
+  }
+
+  private static void monitorThreadMXBean(Registry registry) {
+    ThreadMXBean threadMXBean = ManagementFactory.getPlatformMXBean(ThreadMXBean.class);
+    PolledMeter.using(registry)
+      .withName("jvm.thread.startedThreadCount")
+      .monitorMonotonicCounter(threadMXBean, ThreadMXBean::getTotalStartedThreadCount);
+    PolledMeter.using(registry)
+      .withName("jvm.thread.threadCount")
+      .monitorValue(threadMXBean, ThreadMXBean::getThreadCount);
+    PolledMeter.using(registry)
+      .withName("jvm.thread.daemonThreadCount")
+      .monitorValue(threadMXBean, ThreadMXBean::getDaemonThreadCount);
+  }
+
+  private static void monitorCompilationMXBean(Registry registry) {
+    CompilationMXBean compilationMXBean = ManagementFactory.getPlatformMXBean(CompilationMXBean.class);
+    if (compilationMXBean.isCompilationTimeMonitoringSupported()) {
+      PolledMeter.using(registry)
+        .withName("jvm.compilation.compilationTime")
+        .withTag("compiler", compilationMXBean.getName())
+        .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
     }
   }
 
