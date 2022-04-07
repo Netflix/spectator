@@ -334,8 +334,41 @@ public final class PolledMeter {
      *     The object that was passed in so the registration can be done as part of an assignment
      *     statement.
      */
-    @SuppressWarnings("unchecked")
     public <T> T monitorMonotonicCounter(T obj, ToLongFunction<T> f) {
+      return monitorMonotonicCounterDouble(obj, o -> (double) f.applyAsLong(o));
+    }
+
+    /**
+     * Map a monotonically increasing double value to a counter. Monotonic counters
+     * are frequently used as a simple way for exposing the amount of change. In order to be
+     * useful, they need to be polled frequently so the change can be measured regularly over
+     * time.
+     *
+     * <p>The value is polled by executing {@code f(obj)} and a counter will be updated with
+     * the delta since the last time the value was sampled. The provided function must be
+     * thread safe and cheap to execute. Expensive operations, including any IO or network
+     * calls, should not be performed inline unless using a custom executor by calling
+     * {@link #scheduleOn(ScheduledExecutorService)}. Assume that the function will be called
+     * frequently and may be called concurrently.</p>
+     *
+     * <p>A weak reference will be kept to {@code obj} so that monitoring the object will
+     * not prevent garbage collection. The meter will go away when {@code obj} is collected.
+     * If {@code obj} is null, then it will be treated as an already collected object and a
+     * warning will be logged.</p>
+     *
+     * <p>To explicitly disable polling call {@link #remove(Registry, Id)} with the same id used
+     * with this builder.</p>
+     *
+     * @param obj
+     *     Object used to compute a value.
+     * @param f
+     *     Function that is applied on the value for the number.
+     * @return
+     *     The object that was passed in so the registration can be done as part of an assignment
+     *     statement.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T monitorMonotonicCounterDouble(T obj, ToDoubleFunction<T> f) {
       final Id id = baseId.withTags(extraTags);
       if (obj == null) {
         registry.propagate(new IllegalArgumentException(
@@ -628,7 +661,7 @@ public final class PolledMeter {
       this.entries = new ConcurrentLinkedQueue<>();
     }
 
-    private void add(T obj, ToLongFunction<T> f) {
+    private void add(T obj, ToDoubleFunction<T> f) {
       entries.add(new CounterEntry<>(obj, f));
     }
 
@@ -659,24 +692,24 @@ public final class PolledMeter {
   /** State for counter entry. */
   static final class CounterEntry<T> {
     private final WeakReference<T> ref;
-    private final ToLongFunction<T> f;
-    private long previous;
+    private final ToDoubleFunction<T> f;
+    private double previous;
 
     /** Create new instance. */
-    CounterEntry(T obj, ToLongFunction<T> f) {
+    CounterEntry(T obj, ToDoubleFunction<T> f) {
       this.ref = new WeakReference<>(obj);
       this.f = f;
-      this.previous = f.applyAsLong(obj);
+      this.previous = f.applyAsDouble(obj);
     }
 
     private void update(Counter counter) {
       T obj = ref.get();
       if (obj != null) {
-        long current = f.applyAsLong(obj);
+        double current = f.applyAsDouble(obj);
         if (current > previous) {
-          final long delta = current - previous;
+          final double delta = current - previous;
           LOGGER.trace("incrementing counter [{}] by {}", counter.id(), delta);
-          counter.increment(delta);
+          counter.add(delta);
         } else {
           LOGGER.trace("no update to counter [{}]: previous = {}, current = {}",
               counter.id(), previous, current);
