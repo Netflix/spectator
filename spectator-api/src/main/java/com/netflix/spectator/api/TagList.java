@@ -18,6 +18,7 @@ package com.netflix.spectator.api;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
@@ -28,6 +29,11 @@ import java.util.function.Predicate;
  * if the underlying implementation does not store them as Tag objects.
  */
 public interface TagList extends Iterable<Tag>, Comparable<TagList> {
+
+  /** Create a new tag list from a map. */
+  static TagList create(Map<String, String> tags) {
+    return ArrayTagSet.create(tags);
+  }
 
   /** Return the key at the specified index. */
   String getKey(int i);
