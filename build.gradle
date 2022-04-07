@@ -84,7 +84,7 @@ subprojects {
   }
 
   jmh {
-    jmhVersion = '1.33'
+    jmhVersion = '1.35'
     warmupIterations = 2
     iterations = 5
     fork = 1
