@@ -20,6 +20,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
+import com.netflix.spectator.impl.AtomicDouble;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -117,6 +118,31 @@ public class PolledMeterTest {
             .<AtomicLong>monitorValue(null, n -> v.get())
     );
     Assertions.assertTrue(e.getMessage().startsWith("obj is null"));
+  }
+
+  @Test
+  public void monitorMonotonicCounterDouble() {
+    Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    Id id = r.createId("test");
+
+    AtomicDouble v = PolledMeter.using(r)
+        .withName("test")
+        .monitorMonotonicCounterDouble(new AtomicDouble(), AtomicDouble::doubleValue);
+
+    Assertions.assertEquals(0.0, r.counter(id).actualCount());
+
+    v.set(42.5);
+    PolledMeter.update(r);
+    Assertions.assertEquals(42.5, r.counter(id).actualCount());
+
+    // No change, value unexpectedly decreased
+    v.set(1.0);
+    PolledMeter.update(r);
+    Assertions.assertEquals(42.5, r.counter(id).actualCount());
+
+    v.set(5.0);
+    PolledMeter.update(r);
+    Assertions.assertEquals(46.5, r.counter(id).actualCount());
   }
 
   @Test
