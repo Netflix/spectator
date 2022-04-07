@@ -16,7 +16,9 @@
 package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PolledMeterTest {
@@ -150,5 +153,22 @@ public class PolledMeterTest {
     }
 
     Assertions.assertEquals(9.0, r.gauge("test").value(), 1e-12);
+  }
+
+  @Test
+  public void poll() {
+    Registry r = new DefaultRegistry();
+    Gauge g = r.gauge("g");
+    Counter c = r.counter("c");
+    Assertions.assertTrue(Double.isNaN(g.value()));
+    Assertions.assertEquals(0, c.count());
+
+    ScheduledFuture<?> future = PolledMeter.poll(r, () -> {
+      g.set(1.0);
+      c.increment();
+    });
+    future.cancel(true);
+    Assertions.assertEquals(1.0, g.value(), 1e-12);
+    Assertions.assertEquals(1, c.count());
   }
 }

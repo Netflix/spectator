@@ -19,6 +19,7 @@ import java.lang.ref.WeakReference;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,6 +47,10 @@ final class GaugePoller {
 
   private static final ScheduledExecutorService DEFAULT_EXECUTOR =
       Executors.newSingleThreadScheduledExecutor(FACTORY);
+
+  static ScheduledFuture<?> schedule(long delay, Runnable task) {
+    return DEFAULT_EXECUTOR.scheduleWithFixedDelay(task, delay, delay, TimeUnit.MILLISECONDS);
+  }
 
   /** Schedule collection of gauges for a registry. */
   static <T> Future<?> schedule(WeakReference<T> ref, long delay, Consumer<T> poll) {
