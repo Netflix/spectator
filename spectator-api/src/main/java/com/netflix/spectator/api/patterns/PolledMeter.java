@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.ToDoubleFunction;
@@ -130,6 +131,33 @@ public final class PolledMeter {
     if (obj instanceof AbstractMeterState) {
       ((AbstractMeterState) obj).cleanup(registry);
     }
+  }
+
+  /**
+   * Poll by executing {@code f.accept(registry)} using the default thread pool for polling
+   * gauges at the default frequency configured for the registry. If more customization is
+   * needed, then it can be done by using a {@code ScheduledExecutorService} directly and
+   * updating meters in the registry. The common use-case is being able to update multiple
+   * meters based on sampling a single time.
+   *
+   * <p>The provided function must be thread safe and cheap to execute. Expensive operations,
+   * including any IO or network calls, should not be performed inline. Assume that the function
+   * will be called frequently and may be called concurrently.
+   *
+   * @param registry
+   *     Registry that will maintain the state and receive the sampled values for the
+   *     configured meter.
+   * @param f
+   *     Function to call to update the registry.
+   * @return
+   *     Future that can be used to cancel the polling.
+   */
+  public static ScheduledFuture<?> poll(Registry registry, Runnable f) {
+    // Call once to initialize meters and quickly fail if something is broken
+    // with the function
+    f.run();
+    long delay = registry.config().gaugePollingFrequency().toMillis();
+    return GaugePoller.schedule(delay, f);
   }
 
   /**
