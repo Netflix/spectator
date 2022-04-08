@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -38,8 +39,17 @@ public class QueryIndexTest {
     return registry.createId(name, tags);
   }
 
+  private List<Query> sort(List<Query> vs) {
+    vs.sort(Comparator.comparing(Object::toString));
+    return vs;
+  }
+
   private List<Query> list(Query... vs) {
-    return Arrays.asList(vs);
+    return sort(Arrays.asList(vs));
+  }
+
+  private List<Query> findMatches(QueryIndex<Query> idx, Id id) {
+    return sort(idx.findMatches(id));
   }
 
   @Test
@@ -194,16 +204,16 @@ public class QueryIndexTest {
     idx.add(IN_QUERY, IN_QUERY);
 
     Id id1 = id("a", "key", "b", "c", "12345");
-    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertFalse(remove(idx, Parser.parseQuery("name,a,:eq")));
-    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(remove(idx, IN_QUERY));
-    Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(remove(idx, SIMPLE_QUERY));
-    Assertions.assertEquals(list(HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(remove(idx, HASKEY_QUERY));
     Assertions.assertTrue(idx.isEmpty());
@@ -391,9 +401,9 @@ public class QueryIndexTest {
         "    equal checks:\n" +
         "    - [b]\n" +
         "        matches:\n" +
+        "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "        - [name,a,:eq,key,b,:eq,:and]\n" +
-        "    other checks:\n" +
-        "    - [key,(,b,c,),:in]\n" +
+        "    - [c]\n" +
         "        matches:\n" +
         "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "    other keys:\n" +

@@ -19,6 +19,7 @@ include 'spectator-api',
         'spectator-reg-metrics5',
         'spectator-reg-micrometer',
         'spectator-reg-servo',
+        'spectator-reg-sidecar',
         'spectator-reg-stateless',
         'spectator-web-spring'
 

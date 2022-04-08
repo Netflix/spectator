@@ -1,5 +1,5 @@
-[![Snapshot](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/snapshot.yml/badge.svg)](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/snapshot.yml)
-[![Release](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/release.yml/badge.svg)](https://github.com/Netflix-Skunkworks/iep-apps/actions/workflows/release.yml)
+[![Snapshot](https://github.com/Netflix/spectator/actions/workflows/snapshot.yml/badge.svg)](https://github.com/Netflix/spectator/actions/workflows/snapshot.yml)
+[![Release](https://github.com/Netflix/spectator/actions/workflows/release.yml/badge.svg)](https://github.com/Netflix/spectator/actions/workflows/release.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/com.netflix.spectator/spectator-api.svg)](https://search.maven.org/artifact/com.netflix.spectator/spectator-api)
 
 # Spectator

@@ -587,6 +587,22 @@ public interface Query {
       return value != null && vs.contains(value);
     }
 
+    @Override public List<Query> dnfList() {
+      // For smaller sets expand to a disjunction of equal clauses. This allows them
+      // to be indexed more efficiently. The size is limited because if there are
+      // multiple large in clauses in an expression the cross product can become really
+      // large.
+      if (vs.size() <= 5) {
+        List<Query> queries = new ArrayList<>(vs.size());
+        for (String v : vs) {
+          queries.add(new Query.Equal(k, v));
+        }
+        return queries;
+      } else {
+        return Collections.singletonList(this);
+      }
+    }
+
     @Override public String toString() {
       String values = String.join(",", vs);
       return k + ",(," + values + ",),:in";
