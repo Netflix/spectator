@@ -22,12 +22,16 @@ import nl.jqno.equalsverifier.Warning;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 
 
 public class QueryTest {
@@ -88,6 +92,12 @@ public class QueryTest {
   @Test
   public void inQueryEmpty() {
     Assertions.assertThrows(IllegalArgumentException.class, () -> parse("name,(,),:in"));
+  }
+
+  @Test
+  public void inQuerySingle() {
+    Query q = Parser.parseQuery("name,(,bar,),:in");
+    Assertions.assertEquals(new Query.Equal("name", "bar"), q);
   }
 
   @Test
@@ -350,6 +360,22 @@ public class QueryTest {
   public void dnfListA() {
     Query a = new Query.Has("a");
     Assertions.assertEquals(Collections.singletonList(a), a.dnfList());
+  }
+
+  @Test
+  public void dnfListIn() {
+    List<Query> expected = new ArrayList<>();
+    Set<String> values = new TreeSet<>();
+    for (int i = 0; i < 5; ++i) {
+      values.add("" + i);
+      expected.add(new Query.Equal("k", "" + i));
+    }
+    Query q = new Query.In("k", values);
+    Assertions.assertEquals(expected, q.dnfList());
+
+    values.add("5");
+    Assertions.assertEquals(Collections.singletonList(q), q.dnfList());
+
   }
 
   @Test

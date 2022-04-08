@@ -124,7 +124,7 @@ public final class Parser {
         case ":in":
           tmp = (List<String>) stack.pop();
           k = (String) stack.pop();
-          stack.push(new Query.In(k, new HashSet<>(tmp)));
+          pushIn(stack, k, tmp);
           break;
         case ":lt":
           v = (String) stack.pop();
@@ -212,5 +212,12 @@ public final class Parser {
     } else {
       stack.push(q);
     }
+  }
+
+  private static void pushIn(Deque<Object> stack, String k, List<String> values) {
+    if (values.size() == 1)
+      stack.push(new Query.Equal(k, values.get(0)));
+    else
+      stack.push(new Query.In(k, new HashSet<>(values)));
   }
 }
