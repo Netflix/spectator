@@ -42,18 +42,19 @@ abstract class SidecarWriter implements Closeable {
       if ("none".equals(location)) {
         return new NoopWriter();
       } else if ("stderr".equals(location)) {
-        return new PrintStreamWriter(System.err);
+        return new PrintStreamWriter(location, System.err);
       } else if ("stdout".equals(location)) {
-        return new PrintStreamWriter(System.out);
+        return new PrintStreamWriter(location, System.out);
       } else if (location.startsWith("file://")) {
         OutputStream out = Files.newOutputStream(Paths.get(URI.create(location)));
-        return new PrintStreamWriter(new PrintStream(out, false, "UTF-8"));
+        PrintStream stream = new PrintStream(out, false, "UTF-8");
+        return new PrintStreamWriter(location, stream);
       } else if (location.startsWith("udp://")) {
         URI uri = URI.create(location);
         String host = uri.getHost();
         int port = uri.getPort();
         SocketAddress address = new InetSocketAddress(host, port);
-        return new UdpWriter(address);
+        return new UdpWriter(location, address);
       } else {
         throw new IllegalArgumentException("unsupported location: " + location);
       }
@@ -62,14 +63,20 @@ abstract class SidecarWriter implements Closeable {
     }
   }
 
+  private final String location;
+
+  SidecarWriter(String location) {
+    this.location = location;
+  }
+
   abstract void writeImpl(String line) throws IOException;
 
   void write(String line) {
     try {
-      LOGGER.trace("writing: {}", line);
+      LOGGER.trace("writing to {}: {}", location, line);
       writeImpl(line);
     } catch (IOException e) {
-      LOGGER.warn("write failed: {}", line, e);
+      LOGGER.warn("write to {} failed: {}", location, line, e);
     }
   }
 

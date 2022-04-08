@@ -22,7 +22,7 @@ final class NoopWriter extends SidecarWriter {
 
   /** Create a new instance. */
   NoopWriter() {
-    super();
+    super("none");
   }
 
   @Override void writeImpl(String line) throws IOException {

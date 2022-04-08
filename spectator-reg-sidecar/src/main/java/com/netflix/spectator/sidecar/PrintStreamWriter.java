@@ -24,8 +24,8 @@ final class PrintStreamWriter extends SidecarWriter {
   private final PrintStream stream;
 
   /** Create a new instance. */
-  PrintStreamWriter(PrintStream stream) {
-    super();
+  PrintStreamWriter(String location, PrintStream stream) {
+    super(location);
     this.stream = stream;
   }
 

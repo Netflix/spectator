@@ -24,6 +24,7 @@ class MemoryWriter extends SidecarWriter {
   private final List<String> messages;
 
   MemoryWriter() {
+    super("memory");
     messages = new ArrayList<>();
   }
 

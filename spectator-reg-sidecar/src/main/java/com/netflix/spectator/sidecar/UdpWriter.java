@@ -27,8 +27,8 @@ final class UdpWriter extends SidecarWriter {
   private final DatagramChannel channel;
 
   /** Create a new instance. */
-  UdpWriter(SocketAddress address) throws IOException {
-    super();
+  UdpWriter(String location, SocketAddress address) throws IOException {
+    super(location);
     this.channel = DatagramChannel.open();
     this.channel.connect(address);
   }
