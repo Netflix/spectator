@@ -19,10 +19,42 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.function.Function;
 
 
 public class SidecarConfigTest {
 
+  @Test
+  public void outputLocationDefault() {
+    SidecarConfig config = s -> null;
+    Assertions.assertEquals("udp://127.0.0.1:1234", config.outputLocation());
+  }
+
+  @Test
+  public void outputLocationSet() {
+    SidecarConfig config = s -> "sidecar.output-location".equals(s) ? "none" : null;
+    Assertions.assertEquals("none", config.outputLocation());
+  }
+
+  @Test
+  public void commonTagsEmpty() {
+    SidecarConfig config = s -> null;
+    Assertions.assertEquals(Collections.emptyMap(), config.commonTags());
+  }
+
+  @Test
+  public void commonTagsProcess() {
+    Function<String, String> getenv = s -> "NETFLIX_PROCESS_NAME".equals(s) ? "test" : null;
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.process", "test"),
+        CommonTags.commonTags(getenv));
+  }
+
+  @Test
+  public void commonTagsContainer() {
+    Function<String, String> getenv = s -> "TITUS_CONTAINER_NAME".equals(s) ? "test" : null;
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.container", "test"),
+        CommonTags.commonTags(getenv));
+  }
 }
