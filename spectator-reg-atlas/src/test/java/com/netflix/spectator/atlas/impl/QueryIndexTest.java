@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -87,7 +86,7 @@ public class QueryIndexTest {
   @Test
   public void simpleRemoveValue() {
     QueryIndex<Query> idx = simpleIdx();
-    Assertions.assertTrue(idx.remove(SIMPLE_QUERY));
+    Assertions.assertTrue(idx.remove(SIMPLE_QUERY, SIMPLE_QUERY));
     Assertions.assertTrue(idx.isEmpty());
 
     Id id = id("a", "key", "b");
@@ -175,16 +174,17 @@ public class QueryIndexTest {
     Id id1 = id("a", "key", "b", "c", "12345");
     Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
 
-    Assertions.assertFalse(idx.remove(Parser.parseQuery("name,a,:eq")));
+    Query q = Parser.parseQuery("name,a,:eq");
+    Assertions.assertFalse(idx.remove(q, q));
     Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
 
-    Assertions.assertTrue(idx.remove(IN_QUERY));
+    Assertions.assertTrue(idx.remove(IN_QUERY, IN_QUERY));
     Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), idx.findMatches(id1));
 
-    Assertions.assertTrue(idx.remove(SIMPLE_QUERY));
+    Assertions.assertTrue(idx.remove(SIMPLE_QUERY, SIMPLE_QUERY));
     Assertions.assertEquals(list(HASKEY_QUERY), idx.findMatches(id1));
 
-    Assertions.assertTrue(idx.remove(HASKEY_QUERY));
+    Assertions.assertTrue(idx.remove(HASKEY_QUERY, HASKEY_QUERY));
     Assertions.assertTrue(idx.isEmpty());
     Assertions.assertTrue(idx.findMatches(id1).isEmpty());
 
@@ -375,7 +375,7 @@ public class QueryIndexTest {
   public void removalOfNotQuery() {
     Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
     QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
-    Assertions.assertTrue(idx.remove(q));
+    Assertions.assertTrue(idx.remove(q, q));
     Assertions.assertTrue(idx.isEmpty());
   }
 
@@ -408,8 +408,7 @@ public class QueryIndexTest {
         "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "    other keys:\n" +
         "        key: [c]\n" +
-        "        other checks:\n" +
-        "        - [c,:has]\n" +
+        "        has key:\n" +
         "            key: [key]\n" +
         "            equal checks:\n" +
         "            - [b]\n" +

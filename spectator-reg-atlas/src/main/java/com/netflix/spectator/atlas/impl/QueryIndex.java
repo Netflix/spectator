@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.impl.Cache;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -32,6 +30,7 @@ import java.util.function.Consumer;
  * queries that are known in advance. The index is thread safe for queries. Updates to the
  * index should be done from a single thread at a time.
  */
+@SuppressWarnings("PMD.LinguisticNaming")
 public final class QueryIndex<T> {
 
   /**
@@ -73,8 +72,10 @@ public final class QueryIndex<T> {
   private final ConcurrentHashMap<String, QueryIndex<T>> equalChecks;
 
   private final ConcurrentHashMap<Query.KeyQuery, QueryIndex<T>> otherChecks;
+  private final PrefixTree<Query.KeyQuery> otherChecksTree;
   private final Cache<String, List<QueryIndex<T>>> otherChecksCache;
 
+  private volatile QueryIndex<T> hasKeyIdx;
   private volatile QueryIndex<T> otherKeysIdx;
   private volatile QueryIndex<T> missingKeysIdx;
 
@@ -86,7 +87,9 @@ public final class QueryIndex<T> {
     this.key = key;
     this.equalChecks = new ConcurrentHashMap<>();
     this.otherChecks = new ConcurrentHashMap<>();
+    this.otherChecksTree = new PrefixTree<>();
     this.otherChecksCache = Cache.lfu(registry, "QueryIndex", 100, 1000);
+    this.hasKeyIdx = null;
     this.otherKeysIdx = null;
     this.missingKeysIdx = null;
     this.matches = ConcurrentHashMap.newKeySet();
@@ -155,9 +158,20 @@ public final class QueryIndex<T> {
           String v = ((Query.Equal) kq).value();
           QueryIndex<T> idx = equalChecks.computeIfAbsent(v, id -> QueryIndex.empty(registry));
           idx.add(queries, j, value);
+        } else if (kq instanceof Query.Has) {
+          if (hasKeyIdx == null) {
+            hasKeyIdx = QueryIndex.empty(registry);
+          }
+          hasKeyIdx.add(queries, j, value);
         } else {
           QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(registry));
           idx.add(queries, j, value);
+          if (kq instanceof Query.Regex) {
+            Query.Regex re = (Query.Regex) kq;
+            otherChecksTree.put(re.pattern().prefix(), kq);
+          } else {
+            otherChecksTree.put(null, kq);
+          }
           otherChecksCache.clear();
 
           // Not queries should match if the key is missing from the id, so they need to
@@ -230,7 +244,19 @@ public final class QueryIndex<T> {
             if (idx.isEmpty())
               equalChecks.remove(v);
           }
+        } else if (kq instanceof Query.Has) {
+          if (hasKeyIdx != null) {
+            result |= hasKeyIdx.remove(queries, j, value);
+            if (hasKeyIdx.isEmpty())
+              hasKeyIdx = null;
+          }
         } else {
+          if (kq instanceof Query.Regex) {
+            Query.Regex re = (Query.Regex) kq;
+            otherChecksTree.remove(re.pattern().prefix(), kq);
+          } else {
+            otherChecksTree.remove(null, kq);
+          }
           QueryIndex<T> idx = otherChecks.get(kq);
           if (idx != null && idx.remove(queries, j, value)) {
             result = true;
@@ -259,69 +285,6 @@ public final class QueryIndex<T> {
     return result;
   }
 
-  private <K> boolean remove(ConcurrentHashMap<K, QueryIndex<T>> map, T value) {
-    boolean removed = false;
-    Iterator<Map.Entry<K, QueryIndex<T>>> it = map.entrySet().iterator();
-    while (it.hasNext()) {
-      Map.Entry<K, QueryIndex<T>> entry = it.next();
-      QueryIndex<T> idx = entry.getValue();
-      if (idx.remove(value)) {
-        removed = true;
-        if (idx.isEmpty()) {
-          it.remove();
-        }
-      }
-    }
-    return removed;
-  }
-
-  private boolean removeFromOtherChecks(T value) {
-    if (remove(otherChecks, value)) {
-      otherChecksCache.clear();
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private boolean removeFromOtherKeysIdx(T value) {
-    if (otherKeysIdx != null && otherKeysIdx.remove(value)) {
-      if (otherKeysIdx.isEmpty()) {
-        otherKeysIdx = null;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private boolean removeFromMissingKeysIdx(T value) {
-    if (missingKeysIdx != null && missingKeysIdx.remove(value)) {
-      if (missingKeysIdx.isEmpty()) {
-        missingKeysIdx = null;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Remove the specified value from the index. Returns true if a value was successfully
-   * removed. <strong>Warning:</strong> this method will search the full index and can be
-   * slow for large indexes. In most cases, {@link #remove(Query, Object)} should be used
-   * instead.
-   */
-  public boolean remove(T value) {
-    // Note, we use | instead of || because a value could get added on multiple paths
-    // and so the short circuiting behavior is not desirable here.
-    return matches.remove(value)
-        | remove(equalChecks, value)
-        | removeFromOtherChecks(value)
-        | removeFromOtherKeysIdx(value)
-        | removeFromMissingKeysIdx(value);
-  }
-
   /**
    * Returns true if this index is empty and wouldn't match any ids.
    */
@@ -329,6 +292,7 @@ public final class QueryIndex<T> {
     return matches.isEmpty()
         && equalChecks.values().stream().allMatch(QueryIndex::isEmpty)
         && otherChecks.values().stream().allMatch(QueryIndex::isEmpty)
+        && (hasKeyIdx == null || hasKeyIdx.isEmpty())
         && (otherKeysIdx == null || otherKeysIdx.isEmpty())
         && (missingKeysIdx == null || missingKeysIdx.isEmpty());
   }
@@ -387,10 +351,13 @@ public final class QueryIndex<T> {
             // this level
             if (!otherChecks.isEmpty()) {
               List<QueryIndex<T>> tmp = new ArrayList<>();
-              otherChecks.forEach((kq, idx) -> {
+              otherChecksTree.forEach(v, kq -> {
                 if (kq.matches(v)) {
-                  tmp.add(idx);
-                  idx.forEachMatch(tags, i + 1, consumer);
+                  QueryIndex<T> idx = otherChecks.get(kq);
+                  if (idx != null) {
+                    tmp.add(idx);
+                    idx.forEachMatch(tags, i + 1, consumer);
+                  }
                 }
               });
               otherChecksCache.put(v, tmp);
@@ -402,6 +369,11 @@ public final class QueryIndex<T> {
             for (int p = 0; p < n; ++p) {
               otherMatches.get(p).forEachMatch(tags, i + 1, consumer);
             }
+          }
+
+          // Check matches for has key
+          if (hasKeyIdx != null) {
+            hasKeyIdx.forEachMatch(tags, i, consumer);
           }
         } else if (cmp > 0) {
           break;
@@ -450,6 +422,10 @@ public final class QueryIndex<T> {
         indent(builder, n).append("- [").append(kq).append("]\n");
         idx.buildString(builder, n + 1);
       });
+    }
+    if (hasKeyIdx != null) {
+      indent(builder, n).append("has key:\n");
+      hasKeyIdx.buildString(builder, n + 1);
     }
     if (otherKeysIdx != null) {
       indent(builder, n).append("other keys:\n");
