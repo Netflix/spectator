@@ -123,7 +123,10 @@ final class PrefixTree<T> {
           boolean result = child.remove(prefix, pos + 1, value);
           if (result && child.isEmpty()) {
             synchronized (this) {
-              if (child.isEmpty()) {
+              // Check that the children array still has the reference to the
+              // same child object. The entry may have been replaced by another
+              // thread.
+              if (child == children.get(i) && child.isEmpty()) {
                 children.set(i, null);
               }
             }
