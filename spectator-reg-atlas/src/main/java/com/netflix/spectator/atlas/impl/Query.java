@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -815,6 +815,11 @@ public interface Query {
 
     @Override public String key() {
       return k;
+    }
+
+    /** Returns the pattern matcher for checking the values. */
+    public PatternMatcher pattern() {
+      return pattern;
     }
 
     @Override public boolean matches(String value) {
