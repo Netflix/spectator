@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.jvm;
 
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
@@ -65,14 +66,17 @@ public final class Jmx {
   private static void monitorThreadMXBean(Registry registry) {
     ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
     PolledMeter.using(registry)
-      .withName("jvm.thread.startedThreadCount")
+      .withName("jvm.thread.threadsStarted")
       .monitorMonotonicCounter(threadMXBean, ThreadMXBean::getTotalStartedThreadCount);
-    PolledMeter.using(registry)
-      .withName("jvm.thread.threadCount")
-      .monitorValue(threadMXBean, ThreadMXBean::getThreadCount);
-    PolledMeter.using(registry)
-      .withName("jvm.thread.daemonThreadCount")
-      .monitorValue(threadMXBean, ThreadMXBean::getDaemonThreadCount);
+
+    Gauge nonDaemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "non-daemon");
+    Gauge daemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "daemon");
+    PolledMeter.poll(registry, () -> {
+      int threads = threadMXBean.getThreadCount();
+      int daemonThreads = threadMXBean.getDaemonThreadCount();
+      nonDaemonThreadCount.set(Math.max(0, threads - daemonThreads));
+      daemonThreadCount.set(daemonThreads);
+    });
   }
 
   private static void monitorCompilationMXBean(Registry registry) {
