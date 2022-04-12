@@ -44,7 +44,7 @@ public final class Jmx {
     monitorThreadMXBean(registry);
     monitorCompilationMXBean(registry);
 
-    for (MemoryPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(MemoryPoolMXBean.class)) {
+    for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
     }
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
@@ -53,7 +53,7 @@ public final class Jmx {
   }
 
   private static void monitorClassLoadingMXBean(Registry registry) {
-    ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getPlatformMXBean(ClassLoadingMXBean.class);
+    ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getClassLoadingMXBean();
     PolledMeter.using(registry)
       .withName("jvm.classloading.classesLoaded")
       .monitorMonotonicCounter(classLoadingMXBean, ClassLoadingMXBean::getTotalLoadedClassCount);
@@ -63,7 +63,7 @@ public final class Jmx {
   }
 
   private static void monitorThreadMXBean(Registry registry) {
-    ThreadMXBean threadMXBean = ManagementFactory.getPlatformMXBean(ThreadMXBean.class);
+    ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
     PolledMeter.using(registry)
       .withName("jvm.thread.startedThreadCount")
       .monitorMonotonicCounter(threadMXBean, ThreadMXBean::getTotalStartedThreadCount);
@@ -76,7 +76,7 @@ public final class Jmx {
   }
 
   private static void monitorCompilationMXBean(Registry registry) {
-    CompilationMXBean compilationMXBean = ManagementFactory.getPlatformMXBean(CompilationMXBean.class);
+    CompilationMXBean compilationMXBean = ManagementFactory.getCompilationMXBean();
     if (compilationMXBean.isCompilationTimeMonitoringSupported()) {
       PolledMeter.using(registry)
         .withName("jvm.compilation.compilationTime")
