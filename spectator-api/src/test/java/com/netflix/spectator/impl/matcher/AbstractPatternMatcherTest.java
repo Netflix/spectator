@@ -301,6 +301,16 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void charSeqRepeat() {
+    testRE("(abc){2,5}", "abc");
+    testRE("(abc){2,5}", "abcabc");
+    testRE("(abc){2,5}", "abcc");
+    testRE("(abc){2}", "abc");
+    testRE("(abc){2}", "abcabc");
+    testRE("(abc){2}", "abcc");
+  }
+
+  @Test
   public void unclosedNamedCapturingGroup() {
     Assertions.assertThrows(IllegalArgumentException.class,
         () -> PatternMatcher.compile("(?<foo)"));
