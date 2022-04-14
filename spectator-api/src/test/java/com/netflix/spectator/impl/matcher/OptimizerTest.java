@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,20 @@ public class OptimizerTest {
   @Test
   public void zeroOrMoreFalse_Next() {
     Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, FalseMatcher.INSTANCE);
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void zeroOrOneFalse_Repeated() {
+    Matcher input = new ZeroOrOneMatcher(FalseMatcher.INSTANCE, AnyMatcher.INSTANCE);
+    Matcher expected = AnyMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void zeroOrOneFalse_Next() {
+    Matcher input = new ZeroOrOneMatcher(AnyMatcher.INSTANCE, FalseMatcher.INSTANCE);
     Matcher expected = FalseMatcher.INSTANCE;
     Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
   }
@@ -413,8 +427,8 @@ public class OptimizerTest {
   public void optimizeOptionValue() {
     PatternMatcher actual = PatternMatcher.compile("^a?a");
     PatternMatcher expected = SeqMatcher.create(
-        new StartsWithMatcher("a"),
-        OrMatcher.create(new CharSeqMatcher("a"), TrueMatcher.INSTANCE)
+        StartMatcher.INSTANCE,
+        new ZeroOrOneMatcher(new CharSeqMatcher("a"), new CharSeqMatcher("a"))
     );
     Assertions.assertEquals(expected, actual);
   }

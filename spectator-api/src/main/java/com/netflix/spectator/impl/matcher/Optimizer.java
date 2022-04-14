@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,6 +157,11 @@ final class Optimizer {
   static Matcher zeroOrMoreFalse(Matcher matcher) {
     if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher zm = matcher.as();
+      if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
+        return zm.next();
+      }
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher zm = matcher.as();
       if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
         return zm.next();
       }
