@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -332,7 +332,7 @@ class Parser {
         }
       case "??":
       case "?+":
-        return OrMatcher.create(matcher, TrueMatcher.INSTANCE);
+        return new ZeroOrOneMatcher(matcher, term());
       case "*":
       case "*?":
         return new ZeroOrMoreMatcher(matcher, term());

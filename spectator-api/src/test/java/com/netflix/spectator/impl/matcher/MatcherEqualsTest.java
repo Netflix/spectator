@@ -126,4 +126,12 @@ public class MatcherEqualsTest {
         .withNonnullFields("repeated", "next")
         .verify();
   }
+
+  @Test
+  public void zeroOrOne() {
+    EqualsVerifier
+        .forClass(ZeroOrOneMatcher.class)
+        .withNonnullFields("repeated", "next")
+        .verify();
+  }
 }
