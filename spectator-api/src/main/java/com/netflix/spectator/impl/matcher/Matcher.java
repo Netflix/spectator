@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -51,6 +53,18 @@ interface Matcher extends PatternMatcher {
   default PatternMatcher ignoreCase() {
     Matcher m = rewrite(PatternUtils::ignoreCase);
     return new IgnoreCaseMatcher(m);
+  }
+
+  @Override
+  default List<PatternMatcher> expandOrClauses(int max) {
+    List<Matcher> ms = PatternUtils.expandOrClauses(this, max);
+    if (ms == null)
+      return null;
+    List<PatternMatcher> results = new ArrayList<>(ms.size());
+    for (Matcher m : ms) {
+      results.add(Optimizer.optimize(m));
+    }
+    return results;
   }
 
   @Override

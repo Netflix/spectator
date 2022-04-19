@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,10 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Helper functions for working with patterns.
@@ -205,6 +208,108 @@ public final class PatternUtils {
     } else {
       return matcher;
     }
+  }
+
+  /**
+   * Expand OR clauses in the provided matcher up to the max limit. If expanding would exceed
+   * the max, then null will be returned.
+   */
+  static List<Matcher> expandOrClauses(Matcher matcher, int max) {
+    if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher m = matcher.as();
+      return map(expandOrClauses(m.next(), max), n -> new IndexOfMatcher(m.pattern(), n), max);
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      return map(expandOrClauses(m.next(), max), n -> new ZeroOrMoreMatcher(m.repeated(), n), max);
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      List<Matcher> rs = expandOrClauses(m.repeated(), max);
+      List<Matcher> ns = expandOrClauses(m.next(), max);
+      if (rs == null || ns == null || ns.size() * (rs.size() + 1) > max) {
+        return null;
+      } else if (rs.size() == 1 && ns.size() == 1) {
+        return Collections.singletonList(matcher);
+      } else {
+        List<Matcher> results = new ArrayList<>(ns);
+        for (Matcher r : rs) {
+          for (Matcher n : ns) {
+            results.add(new ZeroOrOneMatcher(r, n));
+          }
+        }
+        return results;
+      }
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      PositiveLookaheadMatcher m = matcher.as();
+      return map(expandOrClauses(m.matcher(), max), PositiveLookaheadMatcher::new, max);
+    } else if (matcher instanceof SeqMatcher) {
+      return expandSeq(matcher.as(), max);
+    } else if (matcher instanceof OrMatcher) {
+      return expandOr(matcher.as(), max);
+    } else {
+      return Collections.singletonList(matcher);
+    }
+  }
+
+  private static List<Matcher> map(List<Matcher> ms, Function<Matcher, Matcher> f, int max) {
+    if (ms == null || ms.size() > max) {
+      return null;
+    }
+    List<Matcher> results = new ArrayList<>(ms.size());
+    for (Matcher m : ms) {
+      results.add(f.apply(m));
+    }
+    return results;
+  }
+
+  private static List<Matcher> expandSeq(SeqMatcher seqMatcher, int max) {
+    List<List<Matcher>> results = new ArrayList<>();
+    for (Matcher matcher : seqMatcher.matchers()) {
+      if (results.isEmpty()) {
+        List<Matcher> rs = expandOrClauses(matcher, max);
+        if (rs == null)
+          return null;
+        for (Matcher m : rs) {
+          List<Matcher> tmp = new ArrayList<>();
+          tmp.add(m);
+          results.add(tmp);
+        }
+      } else {
+        List<Matcher> rs = expandOrClauses(matcher, max);
+        if (rs == null || results.size() * rs.size() > max)
+          return null;
+        List<List<Matcher>> tmp = new ArrayList<>(results.size() * rs.size());
+        for (List<Matcher> ms : results) {
+          for (Matcher r : rs) {
+            List<Matcher> seq = new ArrayList<>(ms);
+            seq.add(r);
+            tmp.add(seq);
+          }
+        }
+        results = tmp;
+      }
+    }
+
+    List<Matcher> tmp = new ArrayList<>(results.size());
+    for (List<Matcher> ms : results) {
+      tmp.add(SeqMatcher.create(ms));
+    }
+    return tmp;
+  }
+
+  private static List<Matcher> expandOr(OrMatcher matcher, int max) {
+    List<Matcher> ms = matcher.matchers();
+    if (ms.size() > max) {
+      return null;
+    }
+    List<Matcher> results = new ArrayList<>();
+    for (Matcher m : ms) {
+      List<Matcher> tmp = expandOrClauses(m, max);
+      if (tmp == null || results.size() + tmp.size() > max) {
+        return null;
+      }
+      results.addAll(tmp);
+    }
+    return results;
   }
 
   /** Convert a matcher to a SQL pattern or return null if not possible. */

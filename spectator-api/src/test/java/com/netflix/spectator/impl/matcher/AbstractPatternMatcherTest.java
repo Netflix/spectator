@@ -389,4 +389,43 @@ public abstract class AbstractPatternMatcherTest {
     testRE("foo-h2(prod|)+-bar-*", "foo-h2prod-abc-v123");
     testRE("foo-h2(prod|)+-bar-*", "foo-h2prod-bar-v123");
   }
+
+  @Test
+  public void negativeLookaheadWithOr() {
+    testRE("foo-(?!b|c|d)", "foo-a");
+    testRE("foo-(?!b|c|d)", "foo-b");
+    testRE("foo-(?!b|c|d)", "foo-f");
+  }
+
+  @Test
+  public void positiveLookaheadWithOr() {
+    testRE("foo-(?=b|c|d)", "foo-a");
+    testRE("foo-(?=b|c|d)", "foo-b");
+    testRE("foo-(?=b|c|d)", "foo-f");
+  }
+
+  @Test
+  public void zeroOrMoreThenOr() {
+    testRE("a*(b|c|d)", "aaa");
+    testRE("a*(b|c|d)", "aab");
+    testRE("a*(b|c|d)", "ac");
+    testRE("a*(b|c|d)", "b");
+    testRE("a*(b|c|d)", "af");
+    testRE("a*(b|c|d)", "f");
+  }
+
+  @Test
+  public void zeroOrMoreWithOr() {
+    testRE("(a|b|c)*d", "aaad");
+    testRE("(a|b|c)*d", "aaa");
+    testRE("(a|b|c)*d", "ababcd");
+  }
+
+  @Test
+  public void repeatWithOr() {
+    testRE("(a|b|c){1,3}d", "aaad");
+    testRE("(a|b|c){1,3}d", "aaa");
+    testRE("(a|b|c){1,3}d", "ababcd");
+    testRE("(a|b|c){1,5}d", "ababcd");
+  }
 }
