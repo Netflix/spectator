@@ -86,7 +86,16 @@ final class Optimizer {
       List<Matcher> ms = new ArrayList<>();
       for (int i = 0; i < matchers.size(); ++i) {
         Matcher m = matchers.get(i);
-        if (m instanceof GreedyMatcher) {
+        if (m instanceof OrMatcher) {
+          // Don't merge sequential OR clauses
+          if (i + 1 < matchers.size() && matchers.get(i + 1) instanceof OrMatcher) {
+            ms.add(m);
+          } else {
+            List<Matcher> after = matchers.subList(i + 1, matchers.size());
+            ms.add(m.<GreedyMatcher>as().mergeNext(SeqMatcher.create(after)));
+            break;
+          }
+        } else if (m instanceof GreedyMatcher) {
           List<Matcher> after = matchers.subList(i + 1, matchers.size());
           ms.add(m.<GreedyMatcher>as().mergeNext(SeqMatcher.create(after)));
           break;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 package com.netflix.spectator.impl;
 
 import com.netflix.spectator.impl.matcher.PatternUtils;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Efficient alternative to using {@link java.util.regex.Pattern} for use cases that just
@@ -96,6 +99,21 @@ public interface PatternMatcher {
    */
   default PatternMatcher ignoreCase() {
     return this;
+  }
+
+  /**
+   * Split OR clauses in the pattern to separate matchers. Logically the original pattern
+   * will match if at least one of the patterns in the expanded list matches.
+   *
+   * @param max
+   *     Maximum size of the expanded list. This can be used to stop early for some expressions
+   *     that may expand to a really large set.
+   * @return
+   *     List of expanded patterns or null if this pattern cannot be expanded due to exceeding
+   *     the maximum limit.
+   */
+  default List<PatternMatcher> expandOrClauses(int max) {
+    return Collections.singletonList(this);
   }
 
   /**
