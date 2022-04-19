@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -225,7 +225,7 @@ public final class PatternUtils {
       ZeroOrOneMatcher m = matcher.as();
       List<Matcher> rs = expandOrClauses(m.repeated(), max);
       List<Matcher> ns = expandOrClauses(m.next(), max);
-      if (rs == null || ns == null) {
+      if (rs == null || ns == null || ns.size() * (rs.size() + 1) > max) {
         return null;
       } else if (rs.size() == 1 && ns.size() == 1) {
         return Collections.singletonList(matcher);

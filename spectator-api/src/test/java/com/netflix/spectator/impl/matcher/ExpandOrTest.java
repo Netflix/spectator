@@ -88,6 +88,14 @@ public class ExpandOrTest {
   }
 
   @Test
+  public void expandZeroOrOneMatcherExceedsLimit() {
+    List<PatternMatcher> rs = PatternMatcher
+        .compile("^(ABC|abc)?(DEF|def)")
+        .expandOrClauses(5);
+    Assertions.assertNull(rs);
+  }
+
+  @Test
   public void expandZeroOrOneMatcherNoChange() {
     List<String> rs = expand("ab?c");
     List<String> expected = list(".*a(?:b)?c");
