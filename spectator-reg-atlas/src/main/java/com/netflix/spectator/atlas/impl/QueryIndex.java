@@ -251,18 +251,19 @@ public final class QueryIndex<T> {
               hasKeyIdx = null;
           }
         } else {
-          if (kq instanceof Query.Regex) {
-            Query.Regex re = (Query.Regex) kq;
-            otherChecksTree.remove(re.pattern().prefix(), kq);
-          } else {
-            otherChecksTree.remove(null, kq);
-          }
           QueryIndex<T> idx = otherChecks.get(kq);
           if (idx != null && idx.remove(queries, j, value)) {
             result = true;
             otherChecksCache.clear();
-            if (idx.isEmpty())
+            if (idx.isEmpty()) {
               otherChecks.remove(kq);
+              if (kq instanceof Query.Regex) {
+                Query.Regex re = (Query.Regex) kq;
+                otherChecksTree.remove(re.pattern().prefix(), kq);
+              } else {
+                otherChecksTree.remove(null, kq);
+              }
+            }
           }
 
           // Not queries should match if the key is missing from the id, so they need to

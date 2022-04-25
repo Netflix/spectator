@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -385,6 +386,26 @@ public class QueryIndexTest {
     QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
     Assertions.assertTrue(remove(idx, q));
     Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
+  public void removalPrefixRegexSubtree() {
+    Query q1 = Parser.parseQuery("name,test,:eq,a,foo,:re,:and,b,bar,:eq,:and");
+    Query q2 = Parser.parseQuery("name,test,:eq,a,foo,:re,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry)
+        .add(q1, q1)
+        .add(q2, q2);
+
+    Id id = id("test", "a", "foo", "b", "bar");
+
+    Set<Query> expected = new HashSet<>();
+    expected.add(q1);
+    expected.add(q2);
+    Assertions.assertEquals(expected, new HashSet<>(idx.findMatches(id)));
+
+    idx.remove(q1, q1);
+    expected.remove(q1);
+    Assertions.assertEquals(expected, new HashSet<>(idx.findMatches(id)));
   }
 
   @Test
