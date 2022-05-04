@@ -79,6 +79,12 @@ public final class PathSanitizer {
   }
 
   private static boolean shouldSuppressSegment(String segment) {
+    // GraphQL is a common endpoint, but hits the consonants check to detect strings
+    // that are likely to be random. Special case it for now.
+    if ("graphql".equals(segment)) {
+      return false;
+    }
+
     final int maxSequentialConsonants = 4;
     int sequentialConsonants = 0;
 

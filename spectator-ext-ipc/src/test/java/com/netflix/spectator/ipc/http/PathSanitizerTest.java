@@ -102,6 +102,12 @@ public class PathSanitizerTest {
   }
 
   @Test
+  public void graphql() {
+    String path = "/graphql";
+    Assertions.assertEquals("_graphql", sanitize(path));
+  }
+
+  @Test
   public void randomLookingString() {
     String path = "/random/AOTV16LMT2";
     Assertions.assertEquals("_random_-", sanitize(path));
