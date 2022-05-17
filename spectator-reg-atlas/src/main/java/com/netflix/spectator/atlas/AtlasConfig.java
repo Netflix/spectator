@@ -18,7 +18,6 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.RegistryConfig;
-import com.netflix.spectator.atlas.impl.DefaultPublisher;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -258,6 +257,6 @@ public interface AtlasConfig extends RegistryConfig {
    * path.
    */
   default Publisher publisher() {
-    return new DefaultPublisher(this);
+    return null;
   }
 }
