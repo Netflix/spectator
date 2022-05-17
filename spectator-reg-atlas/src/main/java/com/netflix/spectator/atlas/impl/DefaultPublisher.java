@@ -72,12 +72,18 @@ public final class DefaultPublisher implements Publisher {
   }
 
   public DefaultPublisher(final AtlasConfig config, final HttpClient client) {
+    this(config, client, config.debugRegistry());
+  }
+
+  public DefaultPublisher(
+      final AtlasConfig config, final HttpClient client, final Registry registry) {
+
     this.uri = URI.create(config.uri());
     this.evalUri = URI.create(config.evalUri());
     this.connectTimeout = (int) config.connectTimeout().toMillis();
     this.readTimeout = (int) config.readTimeout().toMillis();
     this.numThreads = config.numThreads();
-    this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(new NoopRegistry());
+    this.debugRegistry = Optional.ofNullable(registry).orElse(new NoopRegistry());
 
     this.client = client != null ? client : HttpClient.create(debugRegistry);
 

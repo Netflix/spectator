@@ -28,6 +28,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.atlas.impl.Consolidator;
+import com.netflix.spectator.atlas.impl.DefaultPublisher;
 import com.netflix.spectator.atlas.impl.EvalPayload;
 import com.netflix.spectator.atlas.impl.Evaluator;
 import com.netflix.spectator.atlas.impl.JsonUtils;
@@ -136,13 +137,13 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
 
     this.rollupPolicy = config.rollupPolicy();
-    this.publisher = config.publisher();
 
-    this.subManager = new SubscriptionManager(
-        new ObjectMapper(),
-        client != null ? client : HttpClient.create(debugRegistry),
-        clock,
-        config);
+    HttpClient httpClient = client != null ? client : HttpClient.create(debugRegistry);
+
+    Publisher pub = config.publisher();
+    this.publisher = pub == null ? new DefaultPublisher(config, httpClient, debugRegistry) : pub;
+
+    this.subManager = new SubscriptionManager(new ObjectMapper(), httpClient, clock, config);
     this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
 
     if (config.autoStart()) {
