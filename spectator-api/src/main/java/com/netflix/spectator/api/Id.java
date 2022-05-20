@@ -200,7 +200,6 @@ public interface Id extends TagList {
    * <ul>
    *   <li>Length of tags array is even.</li>
    *   <li>There are no null values for the first length entries in the array.</li>
-   *   <li>There are no duplicate tag keys.</li>
    * </ul>
    */
   static Id unsafeCreate(String name, String[] tags, int length) {
