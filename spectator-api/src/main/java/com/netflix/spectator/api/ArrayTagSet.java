@@ -64,12 +64,12 @@ final class ArrayTagSet implements TagList {
    * <ul>
    *   <li>Length of tags array is even.</li>
    *   <li>There are no null values for the first length entries in the array.</li>
-   *   <li>There are no duplicate tag keys.</li>
    * </ul>
    */
   static ArrayTagSet unsafeCreate(String[] tags, int length) {
     insertionSort(tags, length);
-    return new ArrayTagSet(tags, length);
+    int len = dedupInPlace(tags, length);
+    return new ArrayTagSet(tags, len);
   }
 
   private final String[] tags;
@@ -283,7 +283,7 @@ final class ArrayTagSet implements TagList {
    * Merge and dedup any entries in {@code ts} that have the same key. The last entry
    * with a given key will get selected.
    */
-  private int merge(String[] dst, String[] srcA, int lengthA, String[] srcB, int lengthB) {
+  private static int merge(String[] dst, String[] srcA, int lengthA, String[] srcB, int lengthB) {
     int i = 0;
     int ai = 0;
     int bi = 0;
@@ -332,7 +332,7 @@ final class ArrayTagSet implements TagList {
    * key will get selected. Input data must already be sorted by the tag key. Returns the
    * length of the overall deduped array.
    */
-  private int dedup(String[] src, int ss, String[] dst, int ds, int len) {
+  private static int dedup(String[] src, int ss, String[] dst, int ds, int len) {
     if (len == 0) {
       return ds;
     } else {
@@ -350,6 +350,34 @@ final class ArrayTagSet implements TagList {
           k = src[i];
           dst[j] = k;
           dst[j + 1] = src[i + 1];
+        }
+      }
+      return j + 2;
+    }
+  }
+
+  /**
+   * Dedup any entries in {@code data} that have the same key. The last entry with a given
+   * key will get selected. Input data must already be sorted by the tag key. Returns the
+   * length of the overall deduped array.
+   */
+  private static int dedupInPlace(String[] data, int len) {
+    if (len == 0) {
+      return 0;
+    } else {
+      String k = data[0];
+      int j = 0;
+      for (int i = 2; i < len; i += 2) {
+        if (k.equals(data[i])) {
+          data[j] = data[i];
+          data[j + 1] = data[i + 1];
+        } else {
+          j += 2; // Not deduping, skip over previous entry
+          k = data[i];
+          if (i > j) {
+            data[j] = k;
+            data[j + 1] = data[i + 1];
+          }
         }
       }
       return j + 2;

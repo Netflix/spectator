@@ -377,4 +377,11 @@ public class DefaultIdTest {
     Id expected = Id.create("foo").withTags("k2", "v2", "k1", "v1");
     Assertions.assertEquals(expected, id);
   }
+
+  @Test
+  public void unsafeCreateDuplicates() {
+    Id id = Id.unsafeCreate("foo", new String[] {"k1", "_", "k2", "v2", "k1", "v1", null, null}, 6);
+    Id expected = Id.create("foo").withTags("k1", "_", "k1", "v1", "k2", "v2");
+    Assertions.assertEquals(expected, id);
+  }
 }
