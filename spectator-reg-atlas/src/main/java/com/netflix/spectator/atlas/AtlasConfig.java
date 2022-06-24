@@ -169,8 +169,9 @@ public interface AtlasConfig extends RegistryConfig {
   }
 
   /**
-   * Returns the common tags to apply to all metrics reported to Atlas.
-   * The default is an empty map.
+   * Returns the common tags to apply to all metrics reported to Atlas. The returned tags
+   * must only use valid characters as defined by {@link #validTagCharacters()}. The default
+   * is an empty map.
    */
   default Map<String, String> commonTags() {
     return Collections.emptyMap();
