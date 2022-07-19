@@ -19,7 +19,11 @@ import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.management.MBeanServer;
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ClassLoadingMXBean;
 import java.lang.management.CompilationMXBean;
@@ -31,6 +35,8 @@ import java.lang.management.ThreadMXBean;
  * Helpers for working with JMX mbeans.
  */
 public final class Jmx {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(Jmx.class);
 
   private Jmx() {
   }
@@ -44,6 +50,7 @@ public final class Jmx {
     monitorClassLoadingMXBean(registry);
     monitorThreadMXBean(registry);
     monitorCompilationMXBean(registry);
+    maybeRegisterHotspotInternal(registry);
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
@@ -86,6 +93,24 @@ public final class Jmx {
         .withName("jvm.compilation.compilationTime")
         .withTag("compiler", compilationMXBean.getName())
         .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
+    }
+  }
+
+  @SuppressWarnings("PMD.AvoidCatchingThrowable")
+  private static void maybeRegisterHotspotInternal(Registry registry) {
+    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+    try {
+      sun.management.HotspotInternal hotspotInternal = new sun.management.HotspotInternal();
+      server.registerMBean(hotspotInternal, null);
+    } catch (Throwable t) {
+      // Not Hotspot or IllegalAccessError from JDK 16+ due sun.management package being inaccessible
+      LOGGER.trace("Unable to register HotspotInternal MBean", t);
+      return;
+    }
+    for (Config config : ConfigFactory.parseResources("hotspot.conf")
+            .resolve()
+            .getConfigList("netflix.spectator.agent.jmx.mappings")) {
+      registerMappingsFromConfig(registry, config);
     }
   }
 
