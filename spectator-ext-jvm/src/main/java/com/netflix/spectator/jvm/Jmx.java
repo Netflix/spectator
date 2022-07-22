@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,10 @@ package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.management.MBeanServer;
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ClassLoadingMXBean;
 import java.lang.management.CompilationMXBean;
@@ -35,8 +32,6 @@ import java.lang.management.ThreadMXBean;
  * Helpers for working with JMX mbeans.
  */
 public final class Jmx {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(Jmx.class);
 
   private Jmx() {
   }
@@ -96,21 +91,30 @@ public final class Jmx {
     }
   }
 
-  @SuppressWarnings("PMD.AvoidCatchingThrowable")
   private static void maybeRegisterHotspotInternal(Registry registry) {
-    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-    try {
-      sun.management.HotspotInternal hotspotInternal = new sun.management.HotspotInternal();
-      server.registerMBean(hotspotInternal, null);
-    } catch (Throwable t) {
-      // Not Hotspot or IllegalAccessError from JDK 16+ due sun.management package being inaccessible
-      LOGGER.trace("Unable to register HotspotInternal MBean", t);
-      return;
-    }
-    for (Config config : ConfigFactory.parseResources("hotspot.conf")
-            .resolve()
-            .getConfigList("netflix.spectator.agent.jmx.mappings")) {
-      registerMappingsFromConfig(registry, config);
+    if (HotspotRuntime.isSupported()) {
+      // The safepointCount is reported as the count for both the safepointTime and
+      // safepointSyncTime. This should allow the metrics to work as normal timers and
+      // for the user to compute the average time spent per operation.
+      Object mbean = HotspotRuntime.getRuntimeMBean();
+
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointTime")
+          .withTag(Statistic.count)
+          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointTime")
+          .withTag(Statistic.totalTime)
+          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointTime() / 1000.0);
+
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointSyncTime")
+          .withTag(Statistic.count)
+          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointSyncTime")
+          .withTag(Statistic.totalTime)
+          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointSyncTime() / 1000.0);
     }
   }
 
