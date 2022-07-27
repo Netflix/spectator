@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
 
@@ -44,6 +45,7 @@ public final class Jmx {
     monitorClassLoadingMXBean(registry);
     monitorThreadMXBean(registry);
     monitorCompilationMXBean(registry);
+    maybeRegisterHotspotInternal(registry);
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
@@ -86,6 +88,33 @@ public final class Jmx {
         .withName("jvm.compilation.compilationTime")
         .withTag("compiler", compilationMXBean.getName())
         .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
+    }
+  }
+
+  private static void maybeRegisterHotspotInternal(Registry registry) {
+    if (HotspotRuntime.isSupported()) {
+      // The safepointCount is reported as the count for both the safepointTime and
+      // safepointSyncTime. This should allow the metrics to work as normal timers and
+      // for the user to compute the average time spent per operation.
+      Object mbean = HotspotRuntime.getRuntimeMBean();
+
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointTime")
+          .withTag(Statistic.count)
+          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointTime")
+          .withTag(Statistic.totalTime)
+          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointTime() / 1000.0);
+
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointSyncTime")
+          .withTag(Statistic.count)
+          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
+      PolledMeter.using(registry)
+          .withName("jvm.hotspot.safepointSyncTime")
+          .withTag(Statistic.totalTime)
+          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointSyncTime() / 1000.0);
     }
   }
 
