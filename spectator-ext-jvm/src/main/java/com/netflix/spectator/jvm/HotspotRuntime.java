@@ -31,6 +31,7 @@ final class HotspotRuntime {
   private HotspotRuntime() {
   }
 
+  private static Class<?> runtimeMBeanType;
   private static Object runtimeMBean;
 
   private static Method safepointCount;
@@ -39,6 +40,14 @@ final class HotspotRuntime {
 
   static {
     try {
+      // The implementation class, sun.management.HotspotRuntime, is package private and
+      // thus the methods cannot be accessed without setAccessible(true). Use the interface
+      // type for getting the method handles so all reflective access is via public classes and
+      // methods. That allows this approach will work with either:
+      //
+      // --add-exports java.management/sun.management=ALL-UNNAMED OR
+      // --add-opens java.management/sun.management=ALL-UNNAMED
+      runtimeMBeanType = Class.forName("sun.management.HotspotRuntimeMBean");
       runtimeMBean = Class.forName("sun.management.ManagementFactoryHelper")
           .getMethod("getHotspotRuntimeMBean")
           .invoke(null);
@@ -55,8 +64,7 @@ final class HotspotRuntime {
 
   /** Get method and double check that we have permissions to invoke it. */
   private static Method getMethod(String name) throws Exception {
-    Method method = runtimeMBean.getClass().getMethod(name);
-    method.setAccessible(true);
+    Method method = runtimeMBeanType.getMethod(name);
     method.invoke(runtimeMBean); // ignore result, just checking access
     return method;
   }
