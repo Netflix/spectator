@@ -117,6 +117,23 @@ public interface PatternMatcher {
   }
 
   /**
+   * Attempts to rewrite this pattern to a set of simple pattern matches that can be combined
+   * with AND, OR, and NOT to have the same matching behavior as the original regex pattern.
+   * This can be useful when working with data stores that have more restricted pattern matching
+   * support such as RE2.
+   *
+   * @param max
+   *     Maximum size of the expanded OR list which is needed as part of simplifying the
+   *     overall expression. See {@link #expandOrClauses(int)} for more details.
+   * @return
+   *     Expression that represents a set of simple pattern matches, or null if it is not
+   *     possible to simplify the expression.
+   */
+  default PatternExpr toPatternExpr(int max) {
+    return null;
+  }
+
+  /**
    * Returns a pattern that can be used with a SQL LIKE clause or null if this expression
    * cannot be expressed as a SQL pattern. Can be used to more optimally map the pattern
    * to a SQL data store.

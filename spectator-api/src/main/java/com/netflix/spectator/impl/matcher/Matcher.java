@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.util.ArrayList;
@@ -65,6 +66,11 @@ interface Matcher extends PatternMatcher {
       results.add(Optimizer.optimize(m));
     }
     return results;
+  }
+
+  @Override
+  default PatternExpr toPatternExpr(int max) {
+    return PatternUtils.toPatternExpr(this, max);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -427,5 +427,40 @@ public abstract class AbstractPatternMatcherTest {
     testRE("(a|b|c){1,3}d", "aaa");
     testRE("(a|b|c){1,3}d", "ababcd");
     testRE("(a|b|c){1,5}d", "ababcd");
+  }
+
+  @Test
+  public void indexOfLookahead() {
+    testRE("foo-(?!bar)", "foo-bar");
+    testRE("foo-(?!bar)", "foo-baz");
+    testRE("foo-(?=bar)", "foo-bar");
+    testRE("foo-(?=bar)", "foo-baz");
+  }
+
+  @Test
+  public void seqLookahead() {
+    testRE("^[fF]oo-(?!bar)$", "foo-bar");
+    testRE("^[fF]oo-(?!bar)$", "foo-baz");
+    testRE("^[fF]oo-(?=bar)$", "foo-bar");
+    testRE("^[fF]oo-(?=bar)$", "foo-baz");
+  }
+
+  @Test
+  public void repeatLookahead() {
+    testRE("^((?!1234)[0-9]{4}-){2,5}", "4321-1234-");
+  }
+
+  @Test
+  public void repeatInvalid() {
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> PatternMatcher.compile("a{-1,2}"));
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> PatternMatcher.compile("a{4,3}"));
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> PatternMatcher.compile("a{1000,-5}"));
+    testRE("a{0,100000}", "a");
   }
 }

@@ -316,6 +316,12 @@ class Parser {
     String[] numbers = tokens.subSequence(start, current - 1).toString().split(",");
     int min = Integer.parseInt(numbers[0]);
     int max = (numbers.length > 1) ? Integer.parseInt(numbers[1]) : min;
+    if (min < 0) {
+      throw error("illegal repetition, min < 0");
+    }
+    if (min > max) {
+      throw error("illegal repetition, min > max");
+    }
     return new RepeatMatcher(matcher, min, max);
   }
 

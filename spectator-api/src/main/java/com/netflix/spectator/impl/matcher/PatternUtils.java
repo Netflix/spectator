@@ -15,12 +15,15 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Helper functions for working with patterns.
@@ -310,6 +313,186 @@ public final class PatternUtils {
       results.addAll(tmp);
     }
     return results;
+  }
+
+  static PatternExpr toPatternExpr(Matcher matcher, int max) {
+    List<Matcher> matchers = expandOrClauses(matcher, max);
+    if (matchers == null) {
+      return null;
+    } else {
+      List<PatternExpr> exprs = matchers
+          .stream()
+          .map(PatternUtils::expandLookahead)
+          .collect(Collectors.toList());
+      return PatternExpr.or(exprs);
+    }
+  }
+
+  private static PatternExpr expandLookahead(Matcher matcher) {
+    List<PatternExpr> exprs = new ArrayList<>();
+    // 0 - positive matcher to append
+    // 1 - negative matcher to append
+    // 2 - remaining matcher to keep processing
+    Matcher[] results = new Matcher[3];
+
+    // Keep processing until no lookaheads remain
+    removeNextLookahead(matcher, results);
+    while (results[2] != null) {
+      if (results[0] != null)
+        exprs.add(PatternExpr.simple(results[0]));
+      if (results[1] != null)
+        exprs.add(PatternExpr.not(PatternExpr.simple(results[1])));
+      removeNextLookahead(results[2], results);
+    }
+
+    // If the results array is all null, then something was incompatible, return null
+    // to indicate this regex cannot be simplified
+    if (results[0] == null && results[1] == null) {
+      return null;
+    }
+
+    // Add final expression
+    if (results[0] != null)
+      exprs.add(PatternExpr.simple(results[0]));
+    if (results[1] != null)
+      exprs.add(PatternExpr.not(PatternExpr.simple(results[1])));
+    return PatternExpr.and(exprs);
+  }
+
+  private static void removeNextLookahead(Matcher matcher, Matcher[] results) {
+    Arrays.fill(results, null);
+    rewriteNextLookahead(matcher, results);
+  }
+
+  @SuppressWarnings("PMD")
+  private static void rewriteNextLookahead(Matcher matcher, Matcher[] results) {
+    if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher m = matcher.as();
+      rewriteNextLookahead(m.next(), results);
+      for (int i = 0; i < results.length; ++i) {
+        if (results[i] != null) {
+          results[i] = new IndexOfMatcher(m.pattern(), results[i]);
+        }
+      }
+    } else if (matcher instanceof SeqMatcher) {
+      SeqMatcher m = matcher.as();
+      Matcher[] ms = m.matchers().toArray(new Matcher[0]);
+      for (int i = 0; i < ms.length; ++i) {
+        results[0] = null;
+        rewriteNextLookahead(ms[i], results);
+        if (results[2] != null) {
+          // Truncated sequence with lookahead match at the end
+          List<Matcher> matchers = new ArrayList<>(i + 1);
+          matchers.addAll(Arrays.asList(ms).subList(0, i));
+          if (results[0] != null) {
+            matchers.add(results[0]);
+            results[0] = SeqMatcher.create(matchers);
+          } else {
+            matchers.add(results[1]);
+            results[1] = SeqMatcher.create(matchers);
+          }
+
+          // Matcher with lookahead removed
+          ms[i] = results[2];
+          results[2] = SeqMatcher.create(ms);
+          break;
+        } else if (results[0] == null) {
+          // Indicates this entry of the sequence cannot be simplified
+          return;
+        } else {
+          results[0] = m;
+        }
+      }
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      if (containsLookahead(m.repeated())) {
+        return;
+      }
+      removeNextLookahead(m.next(), results);
+      for (int i = 0; i < results.length; ++i) {
+        if (results[i] != null) {
+          results[i] = new ZeroOrMoreMatcher(m.repeated(), results[i]);
+        }
+      }
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      if (containsLookahead(m.repeated())) {
+        return;
+      }
+      removeNextLookahead(m.next(), results);
+      for (int i = 0; i < results.length; ++i) {
+        if (results[i] != null) {
+          results[i] = new ZeroOrOneMatcher(m.repeated(), results[i]);
+        }
+      }
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      if (m.max() > 1000 || containsLookahead(m.repeated())) {
+        // Some engines like RE2 have limitations on the number of repetitions. Treat
+        // those as failures to match to the expression.
+        return;
+      } else {
+        results[0] = matcher;
+      }
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      PositiveLookaheadMatcher m = matcher.as();
+      if (containsLookahead(m.matcher())) {
+        return;
+      }
+      results[0] = m.matcher();
+      results[2] = TrueMatcher.INSTANCE;
+    } else if (matcher instanceof NegativeLookaheadMatcher) {
+      NegativeLookaheadMatcher m = matcher.as();
+      if (containsLookahead(m.matcher())) {
+        return;
+      }
+      results[1] = m.matcher();
+      results[2] = TrueMatcher.INSTANCE;
+    } else if (!containsLookahead(matcher)) {
+      results[0] = matcher;
+    }
+
+    for (int i = 0; i < results.length; ++i) {
+      if (results[i] != null) {
+        results[i] = Optimizer.optimize(results[i]);
+      }
+    }
+  }
+
+  private static boolean containsLookahead(Matcher matcher) {
+    if (matcher instanceof NegativeLookaheadMatcher) {
+      return true;
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      return true;
+    } else if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher m = matcher.as();
+      return containsLookahead(m.next());
+    } else if (matcher instanceof OrMatcher) {
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        if (containsLookahead(m)) {
+          return true;
+        }
+      }
+      return false;
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      return containsLookahead(m.repeated());
+    } else if (matcher instanceof SeqMatcher) {
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (containsLookahead(m)) {
+          return true;
+        }
+      }
+      return false;
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      return containsLookahead(m.repeated()) || containsLookahead(m.next());
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      return containsLookahead(m.repeated()) || containsLookahead(m.next());
+    } else {
+      return false;
+    }
   }
 
   /** Convert a matcher to a SQL pattern or return null if not possible. */
