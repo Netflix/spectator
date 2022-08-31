@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.CardinalityLimiters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 import org.slf4j.event.Level;
@@ -151,7 +152,9 @@ public class IpcLogger {
     }
 
     if (enabled.test(entry.getMarker())) {
+      entry.populateMDC();
       log.accept(entry.getMarker(), entry.toString());
+      MDC.clear();
     }
 
     // For successful responses we can reuse the entry to avoid additional allocations. Failed

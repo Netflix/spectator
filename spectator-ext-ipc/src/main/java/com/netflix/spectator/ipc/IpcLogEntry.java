@@ -21,6 +21,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.histogram.PercentileTimer;
 import com.netflix.spectator.ipc.http.PathSanitizer;
+import org.slf4j.MDC;
 import org.slf4j.Marker;
 import org.slf4j.event.Level;
 
@@ -823,6 +824,57 @@ public final class IpcLogEntry {
     return (exception == null)
         ? null
         : exception.getMessage();
+  }
+
+  private void putInMDC(String key, String value) {
+    if (value != null && !value.isEmpty()) {
+      MDC.put(key, value);
+    }
+  }
+
+  private void putInMDC(Tag tag) {
+    if (tag != null) {
+      putInMDC(tag.key(), tag.value());
+    }
+  }
+
+  void populateMDC() {
+    putInMDC("marker", marker.getName());
+
+    putInMDC("uri", uri);
+    putInMDC("path", path);
+    putInMDC(IpcTagKey.endpoint.key(), endpoint);
+
+    putInMDC(IpcTagKey.owner.key(), owner);
+    putInMDC(IpcTagKey.protocol.key(), protocol);
+    putInMDC(IpcTagKey.vip.key(), vip);
+
+    putInMDC("ipc.client.region", clientRegion);
+    putInMDC("ipc.client.zone", clientZone);
+    putInMDC("ipc.client.node", clientNode);
+    putInMDC(IpcTagKey.clientApp.key(), clientApp);
+    putInMDC(IpcTagKey.clientCluster.key(), clientCluster);
+    putInMDC(IpcTagKey.clientAsg.key(), clientAsg);
+
+    putInMDC("ipc.server.region", serverRegion);
+    putInMDC("ipc.server.zone", serverZone);
+    putInMDC("ipc.server.node", serverNode);
+    putInMDC(IpcTagKey.serverApp.key(), serverApp);
+    putInMDC(IpcTagKey.serverCluster.key(), serverCluster);
+    putInMDC(IpcTagKey.serverAsg.key(), serverAsg);
+
+    putInMDC("ipc.remote.address", remoteAddress);
+    putInMDC("ipc.remote.port", Integer.toString(remotePort));
+
+    putInMDC(attempt);
+    putInMDC(attemptFinal);
+
+    putInMDC(result);
+    putInMDC(status);
+    putInMDC(IpcTagKey.statusDetail.key(), statusDetail);
+
+    putInMDC(IpcTagKey.httpMethod.key(), httpMethod);
+    putInMDC(IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
   }
 
   @Override
