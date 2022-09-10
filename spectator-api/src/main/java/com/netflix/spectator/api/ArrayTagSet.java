@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -150,6 +151,11 @@ final class ArrayTagSet implements TagList {
         checkForNullValues(newTags);
         return addAll(newTags, newTags.length);
       }
+    } else if (ts instanceof TagList) {
+      if (ts instanceof ArrayTagSet) {
+        return addAll((ArrayTagSet) ts);
+      }
+     return addAll((TagList) ts);
     } else {
       List<Tag> data = new ArrayList<>();
       for (Tag t : ts) {
@@ -208,6 +214,33 @@ final class ArrayTagSet implements TagList {
       int newLength = merge(newTags, tags, length, ts, tsLength);
       return new ArrayTagSet(newTags, newLength);
     }
+  }
+
+  private ArrayTagSet addAll(ArrayTagSet ts) {
+    if (ts == this || ts.isEmpty()) {
+      return this;
+    }
+    if (isEmpty()) {
+      return ts;
+    }
+    String[] newTags = new String[length + ts.length];
+    int newLength = merge(newTags, tags, length, ts.tags, ts.length);
+    return new ArrayTagSet(newTags, newLength);
+  }
+
+  private ArrayTagSet addAll(TagList ts) {
+    int size = ts.size();
+
+    if (size == 0) {
+      return this;
+    }
+    String[] newTags = new String[size * 2];
+    int j = 0;
+    for (int i = 0; i < size; i++) {
+      newTags[j++] = Objects.requireNonNull(ts.getKey(i), "tag keys cannot be null");
+      newTags[j++] = Objects.requireNonNull(ts.getValue(i), "tag values cannot be null");
+    }
+    return addAll(newTags, newTags.length);
   }
 
   /** Add a collection of tags to the set. */
