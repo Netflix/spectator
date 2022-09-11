@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -572,5 +573,17 @@ public class ArrayTagSetTest {
     ArrayTagSet updated = tags.addAll(empty);
 
     Assertions.assertSame(tags, updated);
+  }
+
+  @Test
+  public void spliteratorSizeAndCharacteristics() {
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1", "k2", "v2", "k3", "v3");
+    Spliterator<Tag> spliterator = tags.spliterator();
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.IMMUTABLE));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.ORDERED));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.SORTED));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.NONNULL));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.SIZED));
+    Assertions.assertEquals(3L, spliterator.getExactSizeIfKnown());
   }
 }
