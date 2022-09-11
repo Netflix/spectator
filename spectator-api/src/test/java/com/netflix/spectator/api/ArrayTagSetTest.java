@@ -227,6 +227,27 @@ public class ArrayTagSetTest {
   }
 
   @Test
+  public void testMergeWithSelf() {
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet updated = tags.addAll(tags);
+    Assertions.assertSame(tags, updated);
+  }
+
+  @Test
+  public void testMergeWithEmpty() {
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet updated = tags.addAll(ArrayTagSet.EMPTY);
+    Assertions.assertSame(tags, updated);
+  }
+
+  @Test
+  public void testEmptyMergeWithNonEmpty() {
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet updated = ArrayTagSet.EMPTY.addAll(tags);
+    Assertions.assertSame(tags, updated);
+  }
+
+  @Test
   public void testMergeTagWithSameKey() {
     ArrayTagSet initial = ArrayTagSet.create("k1", "v1");
     ArrayTagSet expected = ArrayTagSet.create("k1", "v2");
@@ -502,5 +523,54 @@ public class ArrayTagSetTest {
     ArrayTagSet b = ArrayTagSet.create("a", "1", "b", "2", "c", "3", "d", "4");
     Assertions.assertEquals(-1, a.compareTo(b));
     Assertions.assertEquals(1, b.compareTo(a));
+  }
+
+  @Test
+  public void mergeTagList() {
+    TagList tagList = new TagList() {
+      @Override
+      public String getKey(int i) {
+        return "k" + ++i;
+      }
+
+      @Override
+      public String getValue(int i) {
+        return "v" + ++i;
+      }
+
+      @Override
+      public int size() {
+        return 3;
+      }
+    };
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1", "k2", "v2");
+    ArrayTagSet updated = tags.addAll(tagList);
+    ArrayTagSet expected = ArrayTagSet.create("k1", "v1", "k2", "v2", "k3", "v3");
+    Assertions.assertEquals(expected, updated);
+  }
+
+  @Test
+  public void mergeEmptyTagList() {
+    TagList empty = new TagList() {
+      @Override
+      public String getKey(int i) {
+        throw new IndexOutOfBoundsException();
+      }
+
+      @Override
+      public String getValue(int i) {
+        throw new IndexOutOfBoundsException();
+      }
+
+      @Override
+      public int size() {
+        return 0;
+      }
+    };
+
+    ArrayTagSet tags = ArrayTagSet.create("k1", "v1", "k2", "v2");
+    ArrayTagSet updated = tags.addAll(empty);
+
+    Assertions.assertSame(tags, updated);
   }
 }
