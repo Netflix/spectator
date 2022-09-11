@@ -17,6 +17,8 @@ package com.netflix.spectator.api;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -75,7 +77,12 @@ public final class NoopRegistry implements Registry {
   }
 
   @Override public Iterator<Meter> iterator() {
-    return Collections.<Meter>emptyList().iterator();
+    return Collections.emptyIterator();
+  }
+
+  @Override
+  public Spliterator<Meter> spliterator() {
+    return Spliterators.emptySpliterator();
   }
 
   @Override public void propagate(String msg, Throwable t) {
