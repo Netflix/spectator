@@ -209,7 +209,7 @@ final class ArrayTagSet implements TagList {
       int len = dedup(ts, 0, ts, 0, tsLength);
       return new ArrayTagSet(ts, len);
     } else {
-      String[] newTags = new String[(length + tsLength) * 2];
+      String[] newTags = new String[length + tsLength];
       insertionSort(ts, tsLength);
       int newLength = merge(newTags, tags, length, ts, tsLength);
       return new ArrayTagSet(newTags, newLength);
