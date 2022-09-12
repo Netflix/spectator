@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -481,5 +483,12 @@ final class ArrayTagSet implements TagList {
       builder.append(':').append(tags[i]).append('=').append(tags[i + 1]);
     }
     return builder.toString();
+  }
+
+  @Override
+  public Spliterator<Tag> spliterator() {
+    return Spliterators.spliterator(iterator(), size(),
+            (Spliterator.ORDERED | Spliterator.SORTED | Spliterator.NONNULL
+                    | Spliterator.DISTINCT | Spliterator.IMMUTABLE));
   }
 }
