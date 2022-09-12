@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.Spliterator;
 
 public class DefaultIdTest {
 
@@ -383,5 +384,15 @@ public class DefaultIdTest {
     Id id = Id.unsafeCreate("foo", new String[] {"k1", "_", "k2", "v2", "k1", "v1", null, null}, 6);
     Id expected = Id.create("foo").withTags("k1", "_", "k1", "v1", "k2", "v2");
     Assertions.assertEquals(expected, id);
+  }
+
+  @Test
+  public void spliteratorSizeAndCharacteristics() {
+    Id id = Id.create("foo").withTags("k1", "v1", "k2", "v2");
+    Spliterator<Tag> spliterator = id.spliterator();
+
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.ORDERED));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.SIZED));
+    Assertions.assertEquals(3, spliterator.getExactSizeIfKnown());
   }
 }

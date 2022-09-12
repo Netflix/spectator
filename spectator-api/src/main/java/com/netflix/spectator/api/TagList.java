@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -115,5 +117,10 @@ public interface TagList extends Iterable<Tag>, Comparable<TagList> {
       // put it after the other
       return size() - other.size();
     }
+  }
+
+  @Override
+  default Spliterator<Tag> spliterator() {
+    return Spliterators.spliterator(iterator(), size(), Spliterator.ORDERED);
   }
 }
