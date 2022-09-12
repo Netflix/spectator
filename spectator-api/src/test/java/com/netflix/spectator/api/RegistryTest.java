@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -583,6 +584,20 @@ public class RegistryTest {
     DefaultRegistry r = newRegistry(false, 10);
     r.maxGauge("test").set(-42);
     Assertions.assertEquals(-42.0, r.maxGauge("test").value(), 1e-12);
+  }
+
+  @Test
+  public void spliteratorCharacteristicsAndEstimatedSize() {
+    Registry registry = newRegistry(false, 20);
+    registry.counter("foo").increment();
+    registry.counter("bar").increment();
+    registry.counter("baz").increment();
+
+    Spliterator<Meter> spliterator = registry.spliterator();
+
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.NONNULL));
+    Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.CONCURRENT));
+    Assertions.assertEquals(3, spliterator.estimateSize());
   }
 
   @Test

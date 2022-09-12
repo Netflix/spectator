@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -276,6 +277,11 @@ public abstract class AbstractRegistry implements Registry {
 
   @Override public final Iterator<Meter> iterator() {
     return meters.values().iterator();
+  }
+
+  @Override
+  public final Spliterator<Meter> spliterator() {
+    return meters.values().spliterator();
   }
 
   /**
