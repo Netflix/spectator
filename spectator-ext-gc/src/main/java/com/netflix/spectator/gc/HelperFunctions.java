@@ -74,6 +74,10 @@ final class HelperFunctions {
         || "ZHeap".equals(name);
   }
 
+  static boolean isSurvivorPool(String name) {
+    return name.endsWith("Survivor Space");
+  }
+
   /** Compute the total usage across all pools. */
   static long getTotalUsage(Map<String, MemoryUsage> usages) {
     long sum = 0L;
@@ -101,4 +105,5 @@ final class HelperFunctions {
     long totalAfter = getTotalUsage(info.getMemoryUsageAfterGc());
     return totalAfter - totalBefore;
   }
+
 }

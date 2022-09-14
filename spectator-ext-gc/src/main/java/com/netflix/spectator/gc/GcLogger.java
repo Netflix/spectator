@@ -70,6 +70,11 @@ public final class GcLogger {
   private static final Counter ALLOCATION_RATE =
     Spectator.globalRegistry().counter("jvm.gc.allocationRate");
 
+  // Incremented for any positive increases in the size of the survivor memory pool
+  // before GC to after GC
+  private static final Counter SURVIVOR_RATE =
+          Spectator.globalRegistry().counter("jvm.gc.survivorRate");
+
   // Pause time due to GC event
   private static final Id PAUSE_TIME = Spectator.globalRegistry().createId("jvm.gc.pause");
 
@@ -84,6 +89,9 @@ public final class GcLogger {
   private long youngGenSizeAfter = 0L;
 
   private String youngGenPoolName = null;
+
+  private String survivorPoolName = null;
+
   private String oldGenPoolName = null;
 
   private GcNotificationListener notifListener = null;
@@ -99,13 +107,17 @@ public final class GcLogger {
     }
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
+      String poolName = mbean.getName();
       // For non-generational collectors the young and old gen pool names will be the
       // same
-      if (HelperFunctions.isYoungGenPool(mbean.getName())) {
-        youngGenPoolName = mbean.getName();
+      if (HelperFunctions.isYoungGenPool(poolName)) {
+        youngGenPoolName = poolName;
       }
-      if (HelperFunctions.isOldGenPool(mbean.getName())) {
-        oldGenPoolName = mbean.getName();
+      if (HelperFunctions.isSurvivorPool(poolName)) {
+        survivorPoolName = poolName;
+      }
+      if (HelperFunctions.isOldGenPool(poolName)) {
+        oldGenPoolName = poolName;
       }
     }
   }
@@ -184,6 +196,15 @@ public final class GcLogger {
         LIVE_DATA_SIZE.set(oldAfter);
         final long oldMaxAfter = after.get(oldGenPoolName).getMax();
         MAX_DATA_SIZE.set(oldMaxAfter);
+      }
+    }
+
+    if (survivorPoolName != null) {
+      final long survivorBefore = before.get(survivorPoolName).getUsed();
+      final long survivorAfter = after.get(survivorPoolName).getUsed();
+      final long delta = survivorAfter - survivorBefore;
+      if (delta > 0L) {
+        SURVIVOR_RATE.increment(delta);
       }
     }
 
