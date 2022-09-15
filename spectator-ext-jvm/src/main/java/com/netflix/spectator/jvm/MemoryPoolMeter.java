@@ -20,6 +20,7 @@ import com.netflix.spectator.api.*;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,19 +47,21 @@ class MemoryPoolMeter extends AbstractMeter<MemoryPoolMXBean> {
     maxId = registry.createId("jvm.memory.max").withTag("id", mbean.getName());
   }
 
-  @Override public Iterable<Measurement> measure() {
-    final long timestamp = clock.wallTime();
+  @Override
+  public Iterable<Measurement> measure() {
     final MemoryPoolMXBean mbean = ref.get();
-    final List<Measurement> ms = new ArrayList<>();
-    if (mbean != null) {
-      final String typeKey = "memtype";
-      final String type = mbean.getType().name();
-
-      final MemoryUsage usage = mbean.getUsage();
-      ms.add(new Measurement(usedId.withTag(typeKey, type), timestamp, usage.getUsed()));
-      ms.add(new Measurement(committedId.withTag(typeKey, type), timestamp, usage.getCommitted()));
-      ms.add(new Measurement(maxId.withTag(typeKey, type), timestamp, usage.getMax()));
+    if (mbean == null) {
+      return Collections.emptyList();
     }
+    final long timestamp = clock.wallTime();
+    final List<Measurement> ms = new ArrayList<>(3);
+    final String typeKey = "memtype";
+    final String type = mbean.getType().name();
+
+    final MemoryUsage usage = mbean.getUsage();
+    ms.add(new Measurement(usedId.withTag(typeKey, type), timestamp, usage.getUsed()));
+    ms.add(new Measurement(committedId.withTag(typeKey, type), timestamp, usage.getCommitted()));
+    ms.add(new Measurement(maxId.withTag(typeKey, type), timestamp, usage.getMax()));
     return ms;
   }
 }
