@@ -160,7 +160,7 @@ public final class PatternUtils {
    * as a regular expression.
    */
   @SuppressWarnings("PMD.NcssCount")
-  static String escape(String str) {
+  public static String escape(String str) {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < str.length(); ++i) {
       char c = str.charAt(i);
