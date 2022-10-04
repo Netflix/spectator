@@ -34,7 +34,7 @@ public final class BasicTag implements Tag {
 
   private final String key;
   private final String value;
-  private final int hc;
+  private int hc;
 
   /**
    * Construct a new instance.
@@ -46,7 +46,6 @@ public final class BasicTag implements Tag {
       String msg = String.format("parameter 'value' cannot be null (key=%s)", key);
       throw new NullPointerException(msg);
     }
-    this.hc = 31 * key.hashCode() + value.hashCode();
   }
 
   @Override
@@ -66,16 +65,14 @@ public final class BasicTag implements Tag {
     return key.equals(other.key) && value.equals(other.value);
   }
 
-  /**
-   * This object is immutable and the hash code is precomputed in the constructor. The id object
-   * is typically created to lookup a Meter based on dynamic dimensions so we assume that it is
-   * highly likely that the hash code method will be called and that it could be in a fairly
-   * high volume execution path.
-   *
-   * {@inheritDoc}
-   */
-  @Override public int hashCode() {
-    return hc;
+  @Override
+  public int hashCode() {
+    int h = hc;
+    if (h == 0) {
+      h = 31 * key.hashCode() + value.hashCode();
+      hc = h;
+    }
+    return h;
   }
 
   @Override
