@@ -467,14 +467,15 @@ final class ArrayTagSet implements TagList {
   }
 
   @Override public int hashCode() {
-    if (cachedHashCode == 0) {
-      int result = length;
+    int hc = cachedHashCode;
+    if (hc == 0) {
+      hc = 1;
       for (int i = 0; i < length; ++i) {
-        result = 31 * result + tags[i].hashCode();
+        hc = 31 * hc + tags[i].hashCode();
       }
-      cachedHashCode = result;
+      cachedHashCode = hc;
     }
-    return cachedHashCode;
+    return hc;
   }
 
   @Override public String toString() {
