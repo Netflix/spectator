@@ -49,6 +49,12 @@ public class ArrayTagSetTest {
   }
 
   @Test
+  public void testHashCode() {
+    Assertions.assertEquals(1, ArrayTagSet.EMPTY.hashCode());
+    Assertions.assertEquals(ArrayTagSet.create("k1", "v1", "k2", "v2"), ArrayTagSet.create("k2", "v2", "k1", "v1"));
+  }
+
+  @Test
   public void testToString() {
     ArrayTagSet ts1 = ArrayTagSet.create("k1", "v1");
     ArrayTagSet ts2 = ArrayTagSet.create("k2", "v2").addAll(ts1);
