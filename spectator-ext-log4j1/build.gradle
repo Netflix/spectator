@@ -1,6 +1,6 @@
 dependencies {
   api project(':spectator-api')
-  api "ch.qos.reload4j:reload4j:1.2.21"
+  api "ch.qos.reload4j:reload4j:1.2.22"
 }
 
 jar {
