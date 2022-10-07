@@ -42,7 +42,10 @@ public class QueryTest {
     Query q1 = Parser.parseQuery(expr);
     Query q2 = Parser.parseQuery(expr);
     Assertions.assertEquals(q1, q2);
-    Assertions.assertEquals(expr, q1.toString());
+
+    Query q3 = Parser.parseQuery(q1.toString());
+    Assertions.assertEquals(q1, q3);
+    Assertions.assertEquals(q1.toString(), q3.toString());
     return q1;
   }
 
@@ -208,6 +211,63 @@ public class QueryTest {
         .forClass(Query.Regex.class)
         .suppress(Warning.NULL_FIELDS, Warning.ALL_FIELDS_SHOULD_BE_USED)
         .verify();
+  }
+
+  @Test
+  public void containsQuery() {
+    Query q = parse("name,foo,:contains");
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("foo_")));
+    Assertions.assertTrue(q.matches(registry.createId("_foo_")));
+    Assertions.assertTrue(q.matches(registry.createId("_foo")));
+    Assertions.assertFalse(q.matches(registry.createId("_Foo_")));
+  }
+
+  @Test
+  public void containsQueryEscape() {
+    Query q = parse("name,^$.?*+[](){}\\#&!%,:contains");
+    Assertions.assertEquals(
+        "name,.*\\^\\$\\.\\?\\*\\+\\[\\]\\(\\)\\{\\}\\\\#&!%,:re",
+        q.toString());
+    Assertions.assertTrue(q.matches(registry.createId("^$.?*+[](){}\\#&!%")));
+  }
+
+  @Test
+  public void startsQuery() {
+    Query q = parse("name,foo,:starts");
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("foo_")));
+    Assertions.assertFalse(q.matches(registry.createId("_foo_")));
+    Assertions.assertFalse(q.matches(registry.createId("_foo")));
+    Assertions.assertFalse(q.matches(registry.createId("Foo_")));
+  }
+
+  @Test
+  public void startsQueryEscape() {
+    Query q = parse("name,^$.?*+[](){}\\#&!%,:starts");
+    Assertions.assertEquals(
+        "name,\\^\\$\\.\\?\\*\\+\\[\\]\\(\\)\\{\\}\\\\#&!%,:re",
+        q.toString());
+    Assertions.assertTrue(q.matches(registry.createId("^$.?*+[](){}\\#&!%")));
+  }
+
+  @Test
+  public void endsQuery() {
+    Query q = parse("name,foo,:ends");
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertFalse(q.matches(registry.createId("foo_")));
+    Assertions.assertFalse(q.matches(registry.createId("_foo_")));
+    Assertions.assertTrue(q.matches(registry.createId("_foo")));
+    Assertions.assertFalse(q.matches(registry.createId("_Foo")));
+  }
+
+  @Test
+  public void endsQueryEscape() {
+    Query q = parse("name,^$.?*+[](){}\\#&!%,:ends");
+    Assertions.assertEquals(
+        "name,.*\\^\\$\\.\\?\\*\\+\\[\\]\\(\\)\\{\\}\\\\#&!%$,:re",
+        q.toString());
+    Assertions.assertTrue(q.matches(registry.createId("^$.?*+[](){}\\#&!%")));
   }
 
   @Test
