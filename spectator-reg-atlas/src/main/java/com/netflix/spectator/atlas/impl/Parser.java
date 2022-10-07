@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.atlas.impl;
 
+import com.netflix.spectator.impl.matcher.PatternUtils;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -56,7 +58,7 @@ public final class Parser {
     }
   }
 
-  @SuppressWarnings({"unchecked", "PMD"})
+  @SuppressWarnings({"unchecked", "checkstyle:MethodLength", "PMD"})
   private static Object parse(String expr) {
     DataExpr.AggregateFunction af;
     Query q, q1, q2;
@@ -155,6 +157,21 @@ public final class Parser {
           v = (String) stack.pop();
           k = (String) stack.pop();
           pushRegex(stack, new Query.Regex(k, v, true, ":reic"));
+          break;
+        case ":contains":
+          v = (String) stack.pop();
+          k = (String) stack.pop();
+          pushRegex(stack, new Query.Regex(k, ".*" + PatternUtils.escape(v)));
+          break;
+        case ":starts":
+          v = (String) stack.pop();
+          k = (String) stack.pop();
+          pushRegex(stack, new Query.Regex(k, PatternUtils.escape(v)));
+          break;
+        case ":ends":
+          v = (String) stack.pop();
+          k = (String) stack.pop();
+          pushRegex(stack, new Query.Regex(k, ".*" + PatternUtils.escape(v) + "$"));
           break;
         case ":all":
           q = (Query) stack.pop();
