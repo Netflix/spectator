@@ -19,16 +19,22 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.SortedMap;
 import java.util.Spliterator;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ArrayTagSetTest {
 
@@ -591,5 +597,47 @@ public class ArrayTagSetTest {
     Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.NONNULL));
     Assertions.assertTrue(spliterator.hasCharacteristics(Spliterator.SIZED));
     Assertions.assertEquals(3L, spliterator.getExactSizeIfKnown());
+  }
+
+  @Test
+  public void testCreateWithSortedMap() {
+    SortedMap<String, String> tagMap = new TreeMap<>();
+    tagMap.put("a", "v1");
+    tagMap.put("b", "v2");
+    tagMap.put("c", "v3");
+    tagMap.put("d", "v4");
+
+    ArrayTagSet tags = ArrayTagSet.create(tagMap);
+
+    List<Tag> tagList = StreamSupport.stream(tags.spliterator(), false).collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList(Tag.of("a", "v1"), Tag.of("b", "v2"), Tag.of("c", "v3"), Tag.of("d", "v4")), tagList);
+  }
+
+  @Test
+  public void testCreateWithSortedMapCustomComparator() {
+    SortedMap<String, String> tagMap = new TreeMap<>(Comparator.reverseOrder());
+    tagMap.put("a", "v1");
+    tagMap.put("b", "v2");
+    tagMap.put("c", "v3");
+    tagMap.put("d", "v4");
+
+    ArrayTagSet tags = ArrayTagSet.create(tagMap);
+
+    List<Tag> tagList = StreamSupport.stream(tags.spliterator(), false).collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList(Tag.of("a", "v1"), Tag.of("b", "v2"), Tag.of("c", "v3"), Tag.of("d", "v4")), tagList);
+  }
+
+  @Test
+  public void testCreateWithSortedMapCustomComparatorNaturalOrder() {
+    SortedMap<String, String> tagMap = new TreeMap<>(Comparator.naturalOrder());
+    tagMap.put("a", "v1");
+    tagMap.put("b", "v2");
+    tagMap.put("c", "v3");
+    tagMap.put("d", "v4");
+
+    ArrayTagSet tags = ArrayTagSet.create(tagMap);
+
+    List<Tag> tagList = StreamSupport.stream(tags.spliterator(), false).collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList(Tag.of("a", "v1"), Tag.of("b", "v2"), Tag.of("c", "v3"), Tag.of("d", "v4")), tagList);
   }
 }

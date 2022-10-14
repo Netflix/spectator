@@ -20,9 +20,11 @@ import com.netflix.spectator.impl.Preconditions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.SortedMap;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.ConcurrentMap;
@@ -184,11 +186,12 @@ final class ArrayTagSet implements TagList {
       String[] newTags = new String[2 * ts.size()];
       int i = 0;
       for (Map.Entry<String, String> entry : ts.entrySet()) {
-        newTags[i++] = entry.getKey();
-        newTags[i++] = entry.getValue();
+        newTags[i++] = Objects.requireNonNull(entry.getKey(), "tag keys cannot be null");
+        newTags[i++] = Objects.requireNonNull(entry.getValue(), "tag values cannot be null");
       }
-      checkForNullValues(newTags);
-      return addAll(newTags, newTags.length);
+
+      boolean sorted = ts instanceof SortedMap && isNaturallyOrdered((SortedMap<String, String>) ts);
+      return addAll(newTags, newTags.length, sorted, true);
     }
   }
 
@@ -202,17 +205,28 @@ final class ArrayTagSet implements TagList {
     return addAll(copy, copy.length);
   }
 
-  /** Add a collection of tags to the set. */
   private ArrayTagSet addAll(String[] ts, int tsLength) {
+    return addAll(ts, tsLength, false, false);
+  }
+
+  /** Add a collection of tags to the set. */
+  private ArrayTagSet addAll(String[] ts, int tsLength, boolean sorted, boolean distinct) {
     if (tsLength == 0) {
       return this;
     } else if (length == 0) {
-      insertionSort(ts, tsLength);
-      int len = dedup(ts, 0, ts, 0, tsLength);
+      if (!sorted) {
+        insertionSort(ts, tsLength);
+      }
+      int len = tsLength;
+      if (!distinct) {
+        len = dedup(ts, 0, ts, 0, tsLength);
+      }
       return new ArrayTagSet(ts, len);
     } else {
       String[] newTags = new String[length + tsLength];
-      insertionSort(ts, tsLength);
+      if (!sorted) {
+        insertionSort(ts, tsLength);
+      }
       int newLength = merge(newTags, tags, length, ts, tsLength);
       return new ArrayTagSet(newTags, newLength);
     }
@@ -491,5 +505,9 @@ final class ArrayTagSet implements TagList {
     return Spliterators.spliterator(iterator(), size(),
             (Spliterator.ORDERED | Spliterator.SORTED | Spliterator.NONNULL
                     | Spliterator.DISTINCT | Spliterator.IMMUTABLE));
+  }
+
+  private static boolean isNaturallyOrdered(SortedMap<?, ?> map) {
+    return map.comparator() == null || Comparator.naturalOrder().equals(map.comparator());
   }
 }
