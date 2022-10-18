@@ -640,4 +640,39 @@ public class ArrayTagSetTest {
     List<Tag> tagList = StreamSupport.stream(tags.spliterator(), false).collect(Collectors.toList());
     Assertions.assertEquals(Arrays.asList(Tag.of("a", "v1"), Tag.of("b", "v2"), Tag.of("c", "v3"), Tag.of("d", "v4")), tagList);
   }
+
+  @Test
+  public void testAddBeginning() {
+    ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
+    ArrayTagSet updated = tags.add("0", "v0");
+    Assertions.assertEquals(ArrayTagSet.create("0", "v0", "a", "v1", "b", "v2", "c", "v3"), updated);
+  }
+
+  @Test
+  public void testAddEnd() {
+    ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
+    ArrayTagSet updated = tags.add("d", "v4");
+    Assertions.assertEquals(ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3", "d", "v4"), updated);
+  }
+
+  @Test
+  public void testAddMiddle() {
+    ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "d", "v4");
+    ArrayTagSet updated = tags.add("c", "v3");
+    Assertions.assertEquals(ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3", "d", "v4"), updated);
+  }
+
+  @Test
+  public void testAddUpdatesExisting() {
+    ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
+    ArrayTagSet updated = tags.add("c", "v3-updated");
+    Assertions.assertEquals(ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3-updated"), updated);
+  }
+
+  @Test
+  public void testAddUpdatesExistingWithSameTag() {
+    ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
+    ArrayTagSet updated = tags.add("c", "v3");
+    Assertions.assertSame(tags, updated);
+  }
 }
