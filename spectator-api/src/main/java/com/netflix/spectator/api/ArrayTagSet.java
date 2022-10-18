@@ -104,34 +104,40 @@ final class ArrayTagSet implements TagList {
   }
 
   /** Add a new tag to the set. */
-  @SuppressWarnings("PMD.AvoidArrayLoops")
   ArrayTagSet add(String k, String v) {
     Preconditions.checkNotNull(k, "key");
     Preconditions.checkNotNull(v, "value");
     if (length == 0) {
       return new ArrayTagSet(new String[] {k, v});
-    } else {
-      String[] newTags = new String[length + 2];
-      int i = 0;
-      for (; i < length && tags[i].compareTo(k) < 0; i += 2) {
-        newTags[i] = tags[i];
-        newTags[i + 1] = tags[i + 1];
-      }
-      if (i < length && tags[i].equals(k)) {
-        // Override
-        newTags[i++] = k;
-        newTags[i++] = v;
-        System.arraycopy(tags, i, newTags, i, length - i);
-        i = length;
-      } else {
-        // Insert
-        newTags[i] = k;
-        newTags[i + 1] = v;
-        System.arraycopy(tags, i, newTags, i + 2, length - i);
-        i = newTags.length;
-      }
-      return new ArrayTagSet(newTags, i);
     }
+
+    int idx = 0;
+    int cmp = -1;
+    while (idx < length) {
+      cmp = tags[idx].compareTo(k);
+      if (cmp >= 0) {
+        break;
+      }
+      idx += 2;
+    }
+
+    // Update an existing tag
+    if (cmp == 0) {
+      if (tags[idx + 1].equals(v)) {
+        return this;
+      }
+      String[] newTags = Arrays.copyOf(tags, length);
+      newTags[idx + 1] = v;
+      return new ArrayTagSet(newTags);
+    }
+
+    String[] newTags = new String[length + 2];
+    newTags[idx] = k;
+    newTags[idx + 1] = v;
+
+    System.arraycopy(tags, 0, newTags, 0, idx);
+    System.arraycopy(tags, idx, newTags, idx + 2, length - idx);
+    return new ArrayTagSet(newTags);
   }
 
   /** Add a new tag to the set. */
