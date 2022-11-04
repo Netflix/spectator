@@ -2,22 +2,22 @@ plugins {
   id 'com.github.ben-manes.versions' version '0.42.0'
   id 'com.github.spotbugs' version '5.0.13' apply false
   id 'me.champeau.jmh' version '0.6.8'
-  id 'nebula.dependency-recommender' version '11.0.0'
-  id 'nebula.netflixoss' version '10.6.0'
+  id 'com.netflix.nebula.dependency-recommender' version '12.0.0'
+  id 'com.netflix.nebula.netflixoss' version '11.0.0'
 }
 
 // Establish version and status
 ext.githubProjectName = 'spectator'
 
 allprojects {
-  apply plugin: 'nebula.dependency-recommender'
   apply plugin: 'project-report'
   apply plugin: 'me.champeau.jmh'
   apply plugin: 'com.github.ben-manes.versions'
-  apply plugin: 'nebula.netflixoss'
 }
 
 subprojects {
+  apply plugin: 'com.netflix.nebula.dependency-recommender'
+  apply plugin: 'com.netflix.nebula.netflixoss'
   apply plugin: 'java-library'
   apply plugin: 'build-dashboard'
   apply plugin: 'com.github.spotbugs'
