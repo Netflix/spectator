@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,9 +42,33 @@ public class DefaultTimerTest {
   }
 
   @Test
+  public void testRecordBatch() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    try (Timer.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(42, TimeUnit.MILLISECONDS);
+      b.record(42, TimeUnit.MILLISECONDS);
+      Assertions.assertEquals(t.count(), 2L);
+      Assertions.assertEquals(t.totalTime(), 84000000L);
+      b.record(1, TimeUnit.MILLISECONDS);
+    }
+    Assertions.assertEquals(t.count(), 3L);
+    Assertions.assertEquals(t.totalTime(), 85000000L);
+  }
+
+  @Test
   public void testRecordDuration() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     t.record(Duration.ofMillis(42));
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 42000000L);
+  }
+
+  @Test
+  public void testRecordDurationBatch() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    try (Timer.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(Duration.ofMillis(42));
+    }
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalTime(), 42000000L);
   }
@@ -58,9 +82,29 @@ public class DefaultTimerTest {
   }
 
   @Test
+  public void testRecordNegativeBatch() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    try (Timer.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(-42, TimeUnit.MILLISECONDS);
+    }
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalTime(), 0L);
+  }
+
+  @Test
   public void testRecordZero() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     t.record(0, TimeUnit.MILLISECONDS);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 0L);
+  }
+
+  @Test
+  public void testRecordZeroBatch() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    try (Timer.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(0, TimeUnit.MILLISECONDS);
+    }
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalTime(), 0L);
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ final class DefaultTimer extends AbstractTimer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    if (amount >= 0) {
+    if (amount >= 0L) {
       final long nanos = TimeUnit.NANOSECONDS.convert(amount, unit);
       totalTime.addAndGet(nanos);
       count.incrementAndGet();

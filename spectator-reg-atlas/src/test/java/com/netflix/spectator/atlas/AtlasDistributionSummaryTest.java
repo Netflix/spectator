@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import java.util.Arrays;
 
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
@@ -108,6 +109,26 @@ public class AtlasDistributionSummaryTest {
     dist.record(1);
     clock.setWallTime(step + 1);
     checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  public void recordSeveralValuesBatch(int batchSize) throws Exception {
+    try (DistributionSummary.BatchUpdater b = dist.batchUpdater(batchSize)) {
+      b.record(1);
+      b.record(2);
+      b.record(3);
+      b.record(1);
+    }
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordSeveralValuesBatch() throws Exception {
+    recordSeveralValuesBatch(1);
+    recordSeveralValuesBatch(2);
+    recordSeveralValuesBatch(3);
+    recordSeveralValuesBatch(4);
+    recordSeveralValuesBatch(5);
   }
 
   @Test

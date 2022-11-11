@@ -19,6 +19,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -142,6 +143,26 @@ public class AtlasTimerTest {
     dist.record(1, TimeUnit.NANOSECONDS);
     clock.setWallTime(step + 1);
     checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  public void recordSeveralValuesBatch(int batchSize) throws Exception {
+    try (Timer.BatchUpdater b = dist.batchUpdater(batchSize)) {
+      b.record(1, TimeUnit.NANOSECONDS);
+      b.record(2, TimeUnit.NANOSECONDS);
+      b.record(3, TimeUnit.NANOSECONDS);
+      b.record(1, TimeUnit.NANOSECONDS);
+    }
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordSeveralValuesBatch() throws Exception {
+    recordSeveralValuesBatch(1);
+    recordSeveralValuesBatch(2);
+    recordSeveralValuesBatch(3);
+    recordSeveralValuesBatch(4);
+    recordSeveralValuesBatch(5);
   }
 
   @Test

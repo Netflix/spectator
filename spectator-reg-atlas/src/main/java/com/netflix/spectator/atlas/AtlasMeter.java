@@ -22,6 +22,7 @@ import com.netflix.spectator.api.Meter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Base class for core meter types used by AtlasRegistry. */
 abstract class AtlasMeter implements Meter {
@@ -38,12 +39,19 @@ abstract class AtlasMeter implements Meter {
   /** Last time this meter was updated. */
   private volatile long lastUpdated;
 
+  /**
+   * Reference count for batch updaters. The meter cannot be expired while a batch updater
+   * instance is around.
+   */
+  private AtomicInteger batchUpdaterRefCount;
+
   /** Create a new instance. */
   AtlasMeter(Id id, Clock clock, long ttl) {
     this.id = id;
     this.clock = clock;
     this.ttl = ttl;
     lastUpdated = clock.wallTime();
+    batchUpdaterRefCount = new AtomicInteger(0);
   }
 
   /**
@@ -54,12 +62,19 @@ abstract class AtlasMeter implements Meter {
     lastUpdated = now;
   }
 
+  /**
+   * Updates the reference count for the number of batch updaters.
+   */
+  void updateRefCount(int amount) {
+    batchUpdaterRefCount.addAndGet(amount);
+  }
+
   @Override public Id id() {
     return id;
   }
 
   @Override public boolean hasExpired() {
-    return clock.wallTime() - lastUpdated > ttl;
+    return clock.wallTime() - lastUpdated > ttl && batchUpdaterRefCount.get() <= 0;
   }
 
   @Override public Iterable<Measurement> measure() {

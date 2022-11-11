@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,5 +37,9 @@ final class SwapCounter extends SwapMeter<Counter> implements Counter {
 
   @Override public double actualCount() {
     return get().actualCount();
+  }
+
+  @Override public BatchUpdater batchUpdater(int batchSize) {
+    return get().batchUpdater(batchSize);
   }
 }

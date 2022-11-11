@@ -194,4 +194,19 @@ class AtlasTimer extends AtlasMeter implements Timer {
     // unit tests so it is rarely a problem in practice. API can be revisited in 2.0.
     return (long) total.poll();
   }
+
+  @Override public BatchUpdater batchUpdater(int batchSize) {
+    return new AtlasTimerBatchUpdater(this, batchSize);
+  }
+
+  /**
+   * Helper to allow the batch updater to directly update the individual stats.
+   */
+  void update(long count, double total, double totalOfSquares, long max) {
+    long now = clock.wallTime();
+    this.count.getCurrent(now).addAndGet(count);
+    this.total.getCurrent(now).addAndGet(total);
+    this.totalOfSquares.getCurrent(now).addAndGet(totalOfSquares);
+    updateMax(this.max.getCurrent(now), max);
+  }
 }

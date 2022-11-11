@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,32 @@ public class DefaultCounterTest {
   }
 
   @Test
+  public void testIncrementBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.increment();
+      Assertions.assertEquals(c.count(), 0L);
+      b.increment();
+      Assertions.assertEquals(c.count(), 2L);
+      b.increment();
+      Assertions.assertEquals(c.count(), 2L);
+    }
+    Assertions.assertEquals(c.count(), 3L);
+  }
+
+  @Test
   public void testIncrementAmount() {
     Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
     c.increment(42);
+    Assertions.assertEquals(c.count(), 42L);
+  }
+
+  @Test
+  public void testIncrementAmountBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.increment(42);
+    }
     Assertions.assertEquals(c.count(), 42L);
   }
 
@@ -53,9 +76,27 @@ public class DefaultCounterTest {
   }
 
   @Test
+  public void testAddAmountBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.add(42.0);
+    }
+    Assertions.assertEquals(c.actualCount(), 42.0, 1e-12);
+  }
+
+  @Test
   public void testAddNegativeAmount() {
     Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
     c.add(-42.0);
+    Assertions.assertEquals(c.actualCount(), 0.0, 1e-12);
+  }
+
+  @Test
+  public void testAddNegativeAmountBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.add(-42.0);
+    }
     Assertions.assertEquals(c.actualCount(), 0.0, 1e-12);
   }
 
@@ -68,9 +109,28 @@ public class DefaultCounterTest {
   }
 
   @Test
+  public void testAddNaNBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.add(1.0);
+      b.add(Double.NaN);
+    }
+    Assertions.assertEquals(c.actualCount(), 1.0, 1e-12);
+  }
+
+  @Test
   public void testAddInfinity() {
     Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
     c.add(Double.POSITIVE_INFINITY);
+    Assertions.assertEquals(c.actualCount(), 0.0, 1e-12);
+  }
+
+  @Test
+  public void testAddInfinityBatch() throws Exception {
+    Counter c = new DefaultCounter(clock, NoopId.INSTANCE);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.add(Double.POSITIVE_INFINITY);
+    }
     Assertions.assertEquals(c.actualCount(), 0.0, 1e-12);
   }
 
