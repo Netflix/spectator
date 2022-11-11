@@ -458,7 +458,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   @Override protected Counter newCounter(Id id) {
-    return new AtlasCounter(this, id, clock(), meterTTL, lwcStepMillis);
+    return new AtlasCounter(id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {

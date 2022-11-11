@@ -17,11 +17,9 @@ package com.netflix.spectator.atlas;
 
 import java.util.Arrays;
 
-import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
