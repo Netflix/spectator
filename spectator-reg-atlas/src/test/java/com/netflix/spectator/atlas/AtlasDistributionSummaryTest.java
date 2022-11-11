@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas;
 import java.util.Arrays;
 
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
@@ -29,9 +30,8 @@ import org.junit.jupiter.api.Test;
 public class AtlasDistributionSummaryTest {
 
   private final CountingManualClock clock = new CountingManualClock();
-  private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);
+  private final AtlasDistributionSummary dist = new AtlasDistributionSummary(Id.create("test"), clock, step, step);
 
   private void checkValue(long count, long amount, long square, long max) {
     int num = 0;
@@ -108,6 +108,26 @@ public class AtlasDistributionSummaryTest {
     dist.record(1);
     clock.setWallTime(step + 1);
     checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  public void recordSeveralValuesBatch(int batchSize) throws Exception {
+    try (DistributionSummary.BatchUpdater b = dist.batchUpdater(batchSize)) {
+      b.record(1);
+      b.record(2);
+      b.record(3);
+      b.record(1);
+    }
+    clock.setWallTime(step + 1);
+    checkValue(4, 1 + 2 + 3 + 1, 1 + 4 + 9 + 1, 3);
+  }
+
+  @Test
+  public void recordSeveralValuesBatch() throws Exception {
+    recordSeveralValuesBatch(1);
+    recordSeveralValuesBatch(2);
+    recordSeveralValuesBatch(3);
+    recordSeveralValuesBatch(4);
+    recordSeveralValuesBatch(5);
   }
 
   @Test

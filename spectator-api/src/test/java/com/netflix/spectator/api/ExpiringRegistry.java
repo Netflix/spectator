@@ -17,6 +17,8 @@ package com.netflix.spectator.api;
 
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class ExpiringRegistry extends AbstractRegistry {
 
@@ -48,7 +50,34 @@ public class ExpiringRegistry extends AbstractRegistry {
       @Override public boolean hasExpired() {
         return clock().wallTime() > creationTime;
       }
+
+      @Override public BatchUpdater batchUpdater(int batchSize) {
+        return new CounterUpdater();
+      }
     };
+  }
+
+  private static class CounterUpdater implements Counter.BatchUpdater, Consumer<Supplier<Counter>> {
+
+    private Supplier<Counter> counterSupplier;
+    private double sum;
+
+    @Override public void add(double amount) {
+      sum += amount;
+    }
+
+    @Override public void flush() {
+      counterSupplier.get().add(sum);
+      sum = 0.0;
+    }
+
+    @Override public void close() throws Exception {
+      flush();
+    }
+
+    @Override public void accept(Supplier<Counter> counterSupplier) {
+      this.counterSupplier = counterSupplier;
+    }
   }
 
   @Override protected DistributionSummary newDistributionSummary(Id id) {
@@ -79,7 +108,31 @@ public class ExpiringRegistry extends AbstractRegistry {
       @Override public boolean hasExpired() {
         return clock().wallTime() > creationTime;
       }
+
+      @Override public BatchUpdater batchUpdater(int batchSize) {
+        return new DistributionSummaryUpdater();
+      }
     };
+  }
+
+  private static class DistributionSummaryUpdater
+      implements DistributionSummary.BatchUpdater, Consumer<Supplier<DistributionSummary>> {
+
+    private Supplier<DistributionSummary> distSummarySupplier;
+
+    @Override public void record(long amount) {
+      distSummarySupplier.get().record(amount);
+    }
+
+    @Override public void flush() {
+    }
+
+    @Override public void close() throws Exception {
+    }
+
+    @Override public void accept(Supplier<DistributionSummary> distSummarySupplier) {
+      this.distSummarySupplier = distSummarySupplier;
+    }
   }
 
   @Override protected Timer newTimer(Id id) {
@@ -110,7 +163,30 @@ public class ExpiringRegistry extends AbstractRegistry {
       @Override public boolean hasExpired() {
         return clock().wallTime() > creationTime;
       }
+
+      @Override public BatchUpdater batchUpdater(int batchSize) {
+        return new TimerUpdater();
+      }
     };
+  }
+
+  private static class TimerUpdater implements Timer.BatchUpdater, Consumer<Supplier<Timer>> {
+
+    private Supplier<Timer> timerSupplier;
+
+    @Override public void record(long amount, TimeUnit unit) {
+      timerSupplier.get().record(amount, unit);
+    }
+
+    @Override public void flush() {
+    }
+
+    @Override public void close() throws Exception {
+    }
+
+    @Override public void accept(Supplier<Timer> timerSupplier) {
+      this.timerSupplier = timerSupplier;
+    }
   }
 
   @Override protected Gauge newGauge(Id id) {

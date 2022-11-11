@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,5 +141,22 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
 
   @Override public long totalAmount() {
     return total.poll();
+  }
+
+  @Override public BatchUpdater batchUpdater(int batchSize) {
+    AtlasDistSummaryBatchUpdater updater = new AtlasDistSummaryBatchUpdater(batchSize);
+    updater.accept(() -> this);
+    return updater;
+  }
+
+  /**
+   * Helper to allow the batch updater to directly update the individual stats.
+   */
+  void update(long count, long total, double totalOfSquares, long max) {
+    long now = clock.wallTime();
+    this.count.getCurrent(now).addAndGet(count);
+    this.total.getCurrent(now).addAndGet(total);
+    this.totalOfSquares.getCurrent(now).addAndGet(totalOfSquares);
+    updateMax(this.max.getCurrent(now), max);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,20 @@ public class DefaultDistributionSummaryTest {
   }
 
   @Test
+  public void testRecordBatch() throws Exception {
+    DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
+    try (DistributionSummary.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(42);
+      b.record(42);
+      Assertions.assertEquals(t.count(), 2L);
+      Assertions.assertEquals(t.totalAmount(), 84L);
+      b.record(1);
+    }
+    Assertions.assertEquals(t.count(), 3L);
+    Assertions.assertEquals(t.totalAmount(), 85L);
+  }
+
+  @Test
   public void testRecordNegative() {
     DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
     t.record(-42);
@@ -47,9 +61,29 @@ public class DefaultDistributionSummaryTest {
   }
 
   @Test
+  public void testRecordNegativeBatch() throws Exception {
+    DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
+    try (DistributionSummary.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(-42);
+    }
+    Assertions.assertEquals(t.count(), 0L);
+    Assertions.assertEquals(t.totalAmount(), 0L);
+  }
+
+  @Test
   public void testRecordZero() {
     DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
     t.record(0);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalAmount(), 0L);
+  }
+
+  @Test
+  public void testRecordZeroBatch() throws Exception {
+    DistributionSummary t = new DefaultDistributionSummary(clock, NoopId.INSTANCE);
+    try (DistributionSummary.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(0);
+    }
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalAmount(), 0L);
   }

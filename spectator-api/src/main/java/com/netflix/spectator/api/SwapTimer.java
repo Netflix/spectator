@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2022 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ import com.netflix.spectator.impl.SwapMeter;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 /** Wraps another timer allowing the underlying type to be swapped. */
 final class SwapTimer extends SwapMeter<Timer> implements Timer {
@@ -63,5 +65,17 @@ final class SwapTimer extends SwapMeter<Timer> implements Timer {
 
   @Override public long totalTime() {
     return get().totalTime();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override public BatchUpdater batchUpdater(int batchSize) {
+    BatchUpdater updater = get().batchUpdater(batchSize);
+    // Registry implementations can implement `Consumer<Supplier<Timer>>` to allow the
+    // meter to be resolved when flushed and avoid needing to hold on to a particular
+    // instance of the meter that might have expired and been removed from the registry.
+    if (updater instanceof Consumer<?>) {
+      ((Consumer<Supplier<Timer>>) updater).accept(this::get);
+    }
+    return updater;
   }
 }
