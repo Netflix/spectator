@@ -17,7 +17,9 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 /** Wraps another counter allowing the underlying type to be swapped. */
 final class SwapCounter extends SwapMeter<Counter> implements Counter {
@@ -39,7 +41,15 @@ final class SwapCounter extends SwapMeter<Counter> implements Counter {
     return get().actualCount();
   }
 
+  @SuppressWarnings("unchecked")
   @Override public BatchUpdater batchUpdater(int batchSize) {
-    return get().batchUpdater(batchSize);
+    BatchUpdater updater = get().batchUpdater(batchSize);
+    // Registry implementations can implement `Consumer<Supplier<Counter>>` to allow the
+    // meter to be resolved when flushed and avoid needing to hold on to a particular
+    // instance of the meter that might have expired and been removed from the registry.
+    if (updater instanceof Consumer<?>) {
+      ((Consumer<Supplier<Counter>>) updater).accept(this::get);
+    }
+    return updater;
   }
 }

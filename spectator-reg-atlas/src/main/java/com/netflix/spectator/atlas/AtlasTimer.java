@@ -196,7 +196,9 @@ class AtlasTimer extends AtlasMeter implements Timer {
   }
 
   @Override public BatchUpdater batchUpdater(int batchSize) {
-    return new AtlasTimerBatchUpdater(this, batchSize);
+    AtlasTimerBatchUpdater updater = new AtlasTimerBatchUpdater(batchSize);
+    updater.accept(() -> this);
+    return updater;
   }
 
   /**

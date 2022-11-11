@@ -18,10 +18,12 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Timer;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-final class AtlasTimerBatchUpdater implements Timer.BatchUpdater {
+final class AtlasTimerBatchUpdater implements Timer.BatchUpdater, Consumer<Supplier<Timer>> {
 
-  private AtlasTimer timer;
+  private Supplier<Timer> timerSupplier;
   private final int batchSize;
 
   private int count;
@@ -29,10 +31,20 @@ final class AtlasTimerBatchUpdater implements Timer.BatchUpdater {
   private double totalOfSquares;
   private long max;
 
-  AtlasTimerBatchUpdater(AtlasTimer timer, int batchSize) {
-    this.timer = timer;
+  AtlasTimerBatchUpdater(int batchSize) {
     this.batchSize = batchSize;
-    timer.updateRefCount(1);
+  }
+
+  public void accept(Supplier<Timer> timerSupplier) {
+    this.timerSupplier = timerSupplier;
+  }
+
+  private AtlasTimer getTimer() {
+    if (timerSupplier != null) {
+      Timer t = timerSupplier.get();
+      return (t instanceof AtlasTimer) ? (AtlasTimer) t : null;
+    }
+    return null;
   }
 
   @Override
@@ -53,6 +65,7 @@ final class AtlasTimerBatchUpdater implements Timer.BatchUpdater {
 
   @Override
   public void flush() {
+    AtlasTimer timer = getTimer();
     if (timer != null) {
       timer.update(count, total, totalOfSquares, max);
       count = 0;
@@ -64,10 +77,6 @@ final class AtlasTimerBatchUpdater implements Timer.BatchUpdater {
 
   @Override
   public void close() throws Exception {
-    if (timer != null) {
-      flush();
-      timer.updateRefCount(-1);
-      timer = null;
-    }
+    flush();
   }
 }

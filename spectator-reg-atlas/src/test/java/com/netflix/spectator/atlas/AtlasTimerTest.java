@@ -15,10 +15,8 @@
  */
 package com.netflix.spectator.atlas;
 
-import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Utils;
 import org.junit.jupiter.api.Assertions;
@@ -31,9 +29,8 @@ import java.util.concurrent.TimeUnit;
 public class AtlasTimerTest {
 
   private final CountingManualClock clock = new CountingManualClock();
-  private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasTimer dist = new AtlasTimer(registry.createId("test"), clock, step, step);
+  private final AtlasTimer dist = new AtlasTimer(Id.create("test"), clock, step, step);
 
   private void checkValue(long count, double amount, double square, long max) {
     int num = 0;

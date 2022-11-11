@@ -17,9 +17,13 @@ package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.DistributionSummary;
 
-final class AtlasDistSummaryBatchUpdater implements DistributionSummary.BatchUpdater {
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
-  private AtlasDistributionSummary distSummary;
+final class AtlasDistSummaryBatchUpdater
+    implements DistributionSummary.BatchUpdater, Consumer<Supplier<DistributionSummary>> {
+
+  private Supplier<DistributionSummary> distSummarySupplier;
   private final int batchSize;
 
   private int count;
@@ -27,10 +31,20 @@ final class AtlasDistSummaryBatchUpdater implements DistributionSummary.BatchUpd
   private double totalOfSquares;
   private long max;
 
-  AtlasDistSummaryBatchUpdater(AtlasDistributionSummary distSummary, int batchSize) {
-    this.distSummary = distSummary;
+  AtlasDistSummaryBatchUpdater(int batchSize) {
     this.batchSize = batchSize;
-    distSummary.updateRefCount(1);
+  }
+
+  public void accept(Supplier<DistributionSummary> distSummarySupplier) {
+    this.distSummarySupplier = distSummarySupplier;
+  }
+
+  private AtlasDistributionSummary getDistributionSummary() {
+    if (distSummarySupplier != null) {
+      DistributionSummary d = distSummarySupplier.get();
+      return (d instanceof AtlasDistributionSummary) ? (AtlasDistributionSummary) d : null;
+    }
+    return null;
   }
 
   @Override
@@ -50,6 +64,7 @@ final class AtlasDistSummaryBatchUpdater implements DistributionSummary.BatchUpd
 
   @Override
   public void flush() {
+    AtlasDistributionSummary distSummary = getDistributionSummary();
     if (distSummary != null) {
       distSummary.update(count, total, totalOfSquares, max);
       count = 0;
@@ -61,10 +76,6 @@ final class AtlasDistSummaryBatchUpdater implements DistributionSummary.BatchUpd
 
   @Override
   public void close() throws Exception {
-    if (distSummary != null) {
-      flush();
-      distSummary.updateRefCount(-1);
-      distSummary = null;
-    }
+    flush();
   }
 }

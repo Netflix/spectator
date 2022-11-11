@@ -17,7 +17,9 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 /** Wraps another distribution summary allowing the underlying type to be swapped. */
 final class SwapDistributionSummary extends SwapMeter<DistributionSummary> implements DistributionSummary {
@@ -53,7 +55,15 @@ final class SwapDistributionSummary extends SwapMeter<DistributionSummary> imple
     return get().totalAmount();
   }
 
+  @SuppressWarnings("unchecked")
   @Override public BatchUpdater batchUpdater(int batchSize) {
-    return get().batchUpdater(batchSize);
+    BatchUpdater updater = get().batchUpdater(batchSize);
+    // Registry implementations can implement `Consumer<Supplier<DistributionSummary>>` to
+    // allow the meter to be resolved when flushed and avoid needing to hold on to a particular
+    // instance of the meter that might have expired and been removed from the registry.
+    if (updater instanceof Consumer<?>) {
+      ((Consumer<Supplier<DistributionSummary>>) updater).accept(this::get);
+    }
+    return updater;
   }
 }

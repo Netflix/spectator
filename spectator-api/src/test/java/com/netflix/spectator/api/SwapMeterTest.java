@@ -61,6 +61,69 @@ public class SwapMeterTest {
   }
 
   @Test
+  public void wrappedCounterBatchUpdater() throws Exception {
+    Counter c = new DefaultCounter(clock, counterId);
+    SwapCounter sc = new SwapCounter(registry, VERSION, counterId, c);
+    try (Counter.BatchUpdater b = sc.batchUpdater(2)) {
+      b.increment();
+    }
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals(1, sc.count());
+  }
+
+  @Test
+  public void wrappedCounterBatchUpdaterCustom() throws Exception {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Counter c = registry.counter(counterId);
+    try (Counter.BatchUpdater b = c.batchUpdater(2)) {
+      b.increment();
+    }
+    Assertions.assertEquals(1, c.count());
+  }
+
+  @Test
+  public void wrappedTimerBatchUpdater() throws Exception {
+    Timer t = new DefaultTimer(clock, timerId);
+    SwapTimer st = new SwapTimer(registry, VERSION, timerId, t);
+    try (Timer.BatchUpdater b = st.batchUpdater(2)) {
+      b.record(1, TimeUnit.NANOSECONDS);
+    }
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals(1, st.count());
+  }
+
+  @Test
+  public void wrappedTimerBatchUpdaterCustom() throws Exception {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    Timer t = registry.timer(timerId);
+    try (Timer.BatchUpdater b = t.batchUpdater(2)) {
+      b.record(1, TimeUnit.NANOSECONDS);
+    }
+    Assertions.assertEquals(1, t.count());
+  }
+
+  @Test
+  public void wrappedDistributionSummaryBatchUpdater() throws Exception {
+    DistributionSummary d = new DefaultDistributionSummary(clock, distSummaryId);
+    SwapDistributionSummary sd = new SwapDistributionSummary(registry, VERSION, distSummaryId, d);
+    try (DistributionSummary.BatchUpdater b = sd.batchUpdater(2)) {
+      b.record(1);
+    }
+    Assertions.assertEquals(1, d.count());
+    Assertions.assertEquals(1, sd.count());
+  }
+
+  @Test
+  public void wrappedDistributionSummaryBatchUpdaterCustom() throws Exception {
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+    DistributionSummary d = registry.distributionSummary(distSummaryId);
+    try (DistributionSummary.BatchUpdater b = d.batchUpdater(2)) {
+      b.record(1);
+    }
+    Assertions.assertEquals(1, d.count());
+  }
+
+  @Test
   public void wrapExpiredTimer() {
     ExpiringRegistry registry = new ExpiringRegistry(clock);
     Timer t = registry.timer(timerId);

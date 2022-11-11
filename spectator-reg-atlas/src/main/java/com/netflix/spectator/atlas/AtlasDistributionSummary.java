@@ -144,7 +144,9 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
   }
 
   @Override public BatchUpdater batchUpdater(int batchSize) {
-    return new AtlasDistSummaryBatchUpdater(this, batchSize);
+    AtlasDistSummaryBatchUpdater updater = new AtlasDistSummaryBatchUpdater(batchSize);
+    updater.accept(() -> this);
+    return updater;
   }
 
   /**

@@ -30,9 +30,8 @@ import org.junit.jupiter.api.Test;
 public class AtlasDistributionSummaryTest {
 
   private final CountingManualClock clock = new CountingManualClock();
-  private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasDistributionSummary dist = new AtlasDistributionSummary(registry.createId("test"), clock, step, step);
+  private final AtlasDistributionSummary dist = new AtlasDistributionSummary(Id.create("test"), clock, step, step);
 
   private void checkValue(long count, long amount, long square, long max) {
     int num = 0;
