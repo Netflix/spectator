@@ -15,10 +15,9 @@
  */
 package com.netflix.spectator.atlas;
 
-import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -27,10 +26,8 @@ import org.junit.jupiter.api.Test;
 public class AtlasCounterTest {
 
   private final ManualClock clock = new ManualClock();
-  private final Registry registry = new DefaultRegistry();
   private final long step = 10000L;
-  private final AtlasCounter counter = new AtlasCounter(registry,
-      registry.createId("test"), clock, step, step);
+  private final AtlasCounter counter = new AtlasCounter(Id.create("test"), clock, step, step);
 
   private void checkValue(double expected) {
     int count = 0;
@@ -118,5 +115,13 @@ public class AtlasCounterTest {
 
     counter.increment(42L);
     Assertions.assertFalse(counter.hasExpired());
+  }
+
+  @Test
+  public void preferStatisticFromTags() {
+    Id id = Id.create("test").withTag(Statistic.percentile);
+    AtlasCounter c = new AtlasCounter(id, clock, step, step);
+    Id actual = c.measure().iterator().next().id();
+    Assertions.assertEquals(id.withTag(DsType.rate), actual);
   }
 }
