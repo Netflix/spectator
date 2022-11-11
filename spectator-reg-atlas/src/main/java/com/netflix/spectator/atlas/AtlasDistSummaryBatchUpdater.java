@@ -35,6 +35,7 @@ final class AtlasDistSummaryBatchUpdater
     this.batchSize = batchSize;
   }
 
+  @Override
   public void accept(Supplier<DistributionSummary> distSummarySupplier) {
     this.distSummarySupplier = distSummarySupplier;
   }

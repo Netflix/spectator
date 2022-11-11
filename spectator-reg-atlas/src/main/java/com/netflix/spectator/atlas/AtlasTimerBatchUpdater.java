@@ -35,6 +35,7 @@ final class AtlasTimerBatchUpdater implements Timer.BatchUpdater, Consumer<Suppl
     this.batchSize = batchSize;
   }
 
+  @Override
   public void accept(Supplier<Timer> timerSupplier) {
     this.timerSupplier = timerSupplier;
   }
