@@ -65,7 +65,7 @@ final class HelperFunctions {
 
   /** Returns true if memory pool name matches an old generation pool. */
   static boolean isOldGenPool(String name) {
-    return name.endsWith("Old Gen")
+    return name.contains("Old Gen")
         || name.endsWith("Tenured Gen")
         || "Shenandoah".equals(name)
         || "ZHeap".equals(name);
@@ -73,7 +73,8 @@ final class HelperFunctions {
 
   /** Returns true if memory pool name matches an young generation pool. */
   static boolean isYoungGenPool(String name) {
-    return name.endsWith("Eden Space")
+    return name.contains("Young Gen")
+        || name.endsWith("Eden Space")
         || "Shenandoah".equals(name)
         || "ZHeap".equals(name);
   }
