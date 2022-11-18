@@ -43,6 +43,10 @@ final class HelperFunctions {
     m.put("ZGC",                  GcType.OLD);
     m.put("ZGC Cycles",           GcType.OLD);
     m.put("ZGC Pauses",           GcType.OLD);
+    m.put("ZGC Minor Cycles",     GcType.YOUNG);
+    m.put("ZGC Minor Pauses",     GcType.YOUNG);
+    m.put("ZGC Major Cycles",     GcType.OLD);
+    m.put("ZGC Major Pauses",     GcType.OLD);
     m.put("Shenandoah Cycles",    GcType.OLD);
     m.put("Shenandoah Pauses",    GcType.OLD);
     return Collections.unmodifiableMap(m);
@@ -61,7 +65,7 @@ final class HelperFunctions {
 
   /** Returns true if memory pool name matches an old generation pool. */
   static boolean isOldGenPool(String name) {
-    return name.endsWith("Old Gen")
+    return name.contains("Old Gen")
         || name.endsWith("Tenured Gen")
         || "Shenandoah".equals(name)
         || "ZHeap".equals(name);
@@ -69,7 +73,8 @@ final class HelperFunctions {
 
   /** Returns true if memory pool name matches an young generation pool. */
   static boolean isYoungGenPool(String name) {
-    return name.endsWith("Eden Space")
+    return name.contains("Young Gen")
+        || name.endsWith("Eden Space")
         || "Shenandoah".equals(name)
         || "ZHeap".equals(name);
   }
