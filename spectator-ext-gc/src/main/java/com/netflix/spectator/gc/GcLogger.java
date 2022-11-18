@@ -258,13 +258,9 @@ public final class GcLogger {
     // https://bugs.openjdk.java.net/browse/JDK-8265136
     //
     // For ZGC in older versions, there is no way to accurately get the amount of time
-    // in STW pauses. The allocation stall seems to indicate that some thread
-    // or threads are blocked trying to allocate. Even though it is not a true STW pause,
-    // counting it as such seems to be less confusing.
-    return "No GC".equals(info.getGcCause())            // CMS
-        || "Shenandoah Cycles".equals(info.getGcName()) // Shenandoah
-        || "ZGC Cycles".equals(info.getGcName())        // ZGC in jdk17+
-        || ("ZGC".equals(info.getGcName()) && !"Allocation Stall".equals(info.getGcCause()));
+    // in STW pauses.
+    return "No GC".equals(info.getGcCause())     // CMS
+        || info.getGcName().endsWith(" Cycles"); // Shenandoah, ZGC
   }
 
   private class GcNotificationListener implements NotificationListener {
