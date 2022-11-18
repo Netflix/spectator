@@ -43,6 +43,10 @@ final class HelperFunctions {
     m.put("ZGC",                  GcType.OLD);
     m.put("ZGC Cycles",           GcType.OLD);
     m.put("ZGC Pauses",           GcType.OLD);
+    m.put("ZGC Minor Cycles",     GcType.YOUNG);
+    m.put("ZGC Minor Pauses",     GcType.YOUNG);
+    m.put("ZGC Major Cycles",     GcType.OLD);
+    m.put("ZGC Major Pauses",     GcType.OLD);
     m.put("Shenandoah Cycles",    GcType.OLD);
     m.put("Shenandoah Pauses",    GcType.OLD);
     return Collections.unmodifiableMap(m);
