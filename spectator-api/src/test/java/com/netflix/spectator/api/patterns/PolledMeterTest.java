@@ -26,9 +26,15 @@ import com.netflix.spectator.impl.AtomicDouble;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 public class PolledMeterTest {
 
@@ -196,5 +202,72 @@ public class PolledMeterTest {
     future.cancel(true);
     Assertions.assertEquals(1.0, g.value(), 1e-12);
     Assertions.assertEquals(1, c.count());
+  }
+
+  @Test
+  public void monitorValueLongAdder() {
+    final Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    final Id id = r.createId("test");
+
+    final LongAdder v = PolledMeter.using(r)
+            .withName("test")
+            .monitorValue(new LongAdder());
+
+    v.increment();
+    PolledMeter.update(r);
+    Assertions.assertEquals(1.0, r.gauge(id).value());
+
+    v.decrement();
+    PolledMeter.update(r);
+    Assertions.assertEquals(0.0, r.gauge(id).value());
+
+    v.add(50);
+    PolledMeter.update(r);
+    Assertions.assertEquals(50.0, r.gauge(id).value());
+  }
+
+  @Test
+  public void monitorSizeOfList() {
+    final Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    final Id id = r.createId("test");
+
+    final List<String> list = PolledMeter.using(r)
+            .withName("test")
+            .monitorSize(Collections.synchronizedList(new ArrayList<String>()));
+
+    list.add("a");
+    PolledMeter.update(r);
+    Assertions.assertEquals(1.0, r.gauge(id).value());
+
+    list.add("b");
+    PolledMeter.update(r);
+    Assertions.assertEquals(2.0, r.gauge(id).value());
+
+    list.clear();
+    PolledMeter.update(r);
+    Assertions.assertEquals(0.0, r.gauge(id).value());
+  }
+
+  @Test
+  public void monitorSizeOfMap() {
+    final Registry r = new DefaultRegistry(Clock.SYSTEM, p -> null);
+    final Id id = r.createId("test");
+
+    final Map<String, String> map = PolledMeter.using(r)
+            .withName("test")
+            .monitorSize(new ConcurrentHashMap<String, String>());
+
+    map.put("a", "a-value");
+    PolledMeter.update(r);
+    Assertions.assertEquals(1.0, r.gauge(id).value());
+
+    map.put("b", "b-value");
+    PolledMeter.update(r);
+    Assertions.assertEquals(2.0, r.gauge(id).value());
+
+    map.remove("a");
+    map.remove("b");
+    PolledMeter.update(r);
+    Assertions.assertEquals(0.0, r.gauge(id).value());
   }
 }
