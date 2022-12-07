@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.impl.Cache;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -175,8 +176,9 @@ public final class QueryIndex<T> {
           otherChecksCache.clear();
 
           // Not queries should match if the key is missing from the id, so they need to
-          // be included in the other keys sub-tree as well
-          if (kq instanceof Query.InvertedKeyQuery) {
+          // be included in the other keys sub-tree as well. Check this by seeing if it will
+          // match an empty map as there could be a variety of inverted types.
+          if (kq.matches(Collections.emptyMap())) {
             if (missingKeysIdx == null) {
               missingKeysIdx = QueryIndex.empty(registry);
             }
@@ -267,8 +269,9 @@ public final class QueryIndex<T> {
           }
 
           // Not queries should match if the key is missing from the id, so they need to
-          // be included in the other keys sub-tree as well
-          if (kq instanceof Query.InvertedKeyQuery && missingKeysIdx != null) {
+          // be included in the other keys sub-tree as well. Check this by seeing if it will
+          // match an empty map as there could be a variety of inverted types.
+          if (kq.matches(Collections.emptyMap()) && missingKeysIdx != null) {
             result |= missingKeysIdx.remove(queries, j, value);
             if (missingKeysIdx.isEmpty())
               missingKeysIdx = null;
