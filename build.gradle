@@ -1,5 +1,5 @@
 plugins {
-  id 'com.github.ben-manes.versions' version '0.42.0'
+  id 'com.github.ben-manes.versions' version '0.44.0'
   id 'com.github.spotbugs' version '5.0.13' apply false
   id 'me.champeau.jmh' version '0.6.8'
   id 'com.netflix.nebula.dependency-recommender' version '12.0.0'
