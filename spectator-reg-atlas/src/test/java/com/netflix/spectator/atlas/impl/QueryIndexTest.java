@@ -373,6 +373,16 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void doubleNotsSameKey() {
+    Query q = Parser.parseQuery("a,1,:eq,b,2,:eq,:and,c,3,:eq,:not,:and,c,4,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
+    Assertions.assertFalse(idx.findMatches(id("cpu", "a", "1", "b", "2", "c", "5")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "a", "1", "b", "2", "c", "3")).isEmpty());
+    Assertions.assertTrue(idx.findMatches(id("cpu", "a", "1", "b", "2", "c", "4")).isEmpty());
+    Assertions.assertFalse(idx.findMatches(id("cpu", "a", "1", "b", "2")).isEmpty());
+  }
+
+  @Test
   public void removalOfNotQuery() {
     Query q = Parser.parseQuery("name,cpu,:eq,id,user,:eq,:not,:and");
     QueryIndex<Query> idx = QueryIndex.<Query>newInstance(registry).add(q, q);
