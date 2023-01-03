@@ -30,28 +30,6 @@ final class MappingExpr {
   }
 
   /**
-   * On Java 8, the {@code String.replace} call uses a regex internally which results
-   * in a considerable overhead. This does a simple replace without using regex.
-   */
-  static String replace(String str, String target, String replacement) {
-    int pos = str.indexOf(target);
-    if (pos == -1) {
-      return str;
-    }
-
-    StringBuilder builder = new StringBuilder();
-    String tmp = str;
-    while (pos >= 0) {
-      builder.append(tmp.substring(0, pos)).append(replacement);
-      tmp = tmp.substring(pos + target.length());
-      pos = tmp.indexOf(target);
-    }
-    builder.append(tmp);
-
-    return builder.toString();
-  }
-
-  /**
    * Substitute named variables in the pattern string with the corresponding
    * values in the variables map.
    *
@@ -65,14 +43,48 @@ final class MappingExpr {
    *     placeholder, then it will not be modified and left in place.
    */
   static String substitute(String pattern, Map<String, String> vars) {
-    String value = pattern;
-    for (Map.Entry<String, String> entry : vars.entrySet()) {
-      String raw = entry.getValue();
-      String v = Introspector.decapitalize(raw);
-      value = replace(value, "{raw:" + entry.getKey() + "}", raw);
-      value = replace(value, "{" + entry.getKey() + "}", v);
+    int openBracePos = pattern.indexOf('{');
+    if (openBracePos == -1) {
+      return pattern;
     }
-    return value;
+
+    int closeBracePos = pattern.indexOf('}', openBracePos);
+    if (closeBracePos == -1) {
+      return pattern;
+    }
+
+    StringBuilder builder = new StringBuilder(pattern.length());
+    int startPos = 0;
+    while (startPos < pattern.length()) {
+      builder.append(pattern, startPos, openBracePos);
+      String var = pattern.substring(openBracePos + 1, closeBracePos);
+      boolean useRawValue = var.startsWith("raw:");
+      String value = useRawValue
+        ? vars.get(var.substring("raw:".length()))
+        : vars.get(var);
+      if (value == null) {
+        builder.append('{').append(var).append('}');
+      } else {
+        builder.append(useRawValue ? value : Introspector.decapitalize(value));
+      }
+
+      startPos = closeBracePos + 1;
+      openBracePos = pattern.indexOf('{', startPos);
+      if (openBracePos == -1) {
+        break;
+      }
+
+      closeBracePos = pattern.indexOf('}', openBracePos);
+      if (closeBracePos == -1) {
+        break;
+      }
+    }
+
+    if (startPos < pattern.length()) {
+      builder.append(pattern, startPos, pattern.length());
+    }
+
+    return builder.toString();
   }
 
   /**

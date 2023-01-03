@@ -27,48 +27,47 @@ import java.util.*;
  * <pre>
  * ## Java 8
  *
- * Benchmark                                  Mode  Cnt         Score              Error   Units
- * customReplaceMatch                        thrpt    5  18983022.881 ±       212610.589   ops/s
- * customReplaceNoMatch                      thrpt    5  19068305.638 ±        54315.365   ops/s
- * stringReplaceMatch                        thrpt    5   4606323.928 ±        36878.183   ops/s
- * stringReplaceNoMatch                      thrpt    5   4636115.030 ±        22758.712   ops/s
+ * Benchmark                                  Mode  Cnt          Score         Error   Units
+ * customReplaceMatch                        thrpt    5   32004441.157 ± 1124280.222   ops/s
+ * customReplaceNoMatch                      thrpt    5  265951976.539 ± 3763154.472   ops/s
+ * stringReplaceMatch                        thrpt    5     793429.235 ±   11693.098   ops/s
+ * stringReplaceNoMatch                      thrpt    5     813017.866 ±   17047.396   ops/s
  *
- * Benchmark                                  Mode  Cnt         Score              Error   Units
- * customReplaceMatch           gc.alloc.rate.norm    5       141.733 ±           88.578    B/op
- * customReplaceNoMatch         gc.alloc.rate.norm    5       152.020 ±            0.002    B/op
- * stringReplaceMatch           gc.alloc.rate.norm    5      2584.079 ±            0.006    B/op
- * stringReplaceNoMatch         gc.alloc.rate.norm    5      2584.079 ±            0.006    B/op
+ *
+ * Benchmark                                  Mode  Cnt          Score         Error   Units
+ * customReplaceMatch           gc.alloc.rate.norm    5        160.012 ±       0.001    B/op
+ * customReplaceNoMatch         gc.alloc.rate.norm    5          0.001 ±       0.001    B/op
+ * stringReplaceMatch           gc.alloc.rate.norm    5      17616.448 ±       0.029    B/op
+ * stringReplaceNoMatch         gc.alloc.rate.norm    5      17616.442 ±       0.045    B/op
  *
  * ## Java 17
  *
- * Benchmark                                  Mode  Cnt         Score        Error   Units
- * customReplaceMatch                        thrpt    5  26738250.771 ± 203389.685   ops/s
- * customReplaceNoMatch                      thrpt    5  27456054.651 ± 171103.076   ops/s
- * stringReplaceMatch                        thrpt    5  18817330.662 ±  91736.795   ops/s
- * stringReplaceNoMatch                      thrpt    5  18810950.123 ±  64060.629   ops/s
+ * Benchmark                                  Mode  Cnt          Score         Error   Units
+ * customReplaceMatch                        thrpt    5   22809472.437 ± 1075058.765   ops/s
+ * customReplaceNoMatch                      thrpt    5  529952552.582 ± 7374375.509   ops/s
+ * stringReplaceMatch                        thrpt    5    2247841.555 ±   58645.893   ops/s
+ * stringReplaceNoMatch                      thrpt    5    2156524.729 ±  498269.673   ops/s
  *
- * Benchmark                                  Mode  Cnt         Score        Error   Units
- * customReplaceMatch           gc.alloc.rate.norm    5       120.017 ±      0.001    B/op
- * customReplaceNoMatch         gc.alloc.rate.norm    5       120.016 ±      0.001    B/op
- * stringReplaceMatch           gc.alloc.rate.norm    5       120.024 ±      0.001    B/op
- * stringReplaceNoMatch         gc.alloc.rate.norm    5       120.023 ±      0.001    B/op
- *
+ * Benchmark                                  Mode  Cnt          Score         Error   Units
+ * customReplaceMatch           gc.alloc.rate.norm    5        160.019 ±       0.001    B/op
+ * customReplaceNoMatch         gc.alloc.rate.norm    5          0.001 ±       0.001    B/op
+ * stringReplaceMatch           gc.alloc.rate.norm    5        888.197 ±       0.001    B/op
+ * stringReplaceNoMatch         gc.alloc.rate.norm    5        888.201 ±       0.036    B/op
  * </pre>
  */
 @State(Scope.Thread)
 public class MappingExprSubstitute {
 
-  private static final Map<String, String> VARS = Collections.singletonMap("{variable}", "value");
+  private static final Map<String, String> VARS = new HashMap<>();
 
-  static String substituteCustom(String pattern, Map<String, String> vars) {
-    String value = pattern;
-    for (Map.Entry<String, String> entry : vars.entrySet()) {
-      String raw = entry.getValue();
-      String v = Introspector.decapitalize(raw);
-      value = MappingExpr.replace(value, "{raw:" + entry.getKey() + "}", raw);
-      value = MappingExpr.replace(value, "{" + entry.getKey() + "}", v);
-    }
-    return value;
+  static {
+    VARS.put("keyspace", "test");
+    VARS.put("scope", "foo");
+    VARS.put("name", "ReadLatency");
+    VARS.put("type", "ColumnFamily");
+    VARS.put("LatencyUnit", "MICROSECONDS");
+    VARS.put("RateUnit", "SECONDS");
+    VARS.put("EventType", "calls");
   }
 
   static String substituteString(String pattern, Map<String, String> vars) {
@@ -84,12 +83,12 @@ public class MappingExprSubstitute {
 
   @Benchmark
   public void customReplaceMatch(Blackhole bh) {
-    bh.consume(substituteCustom("{variable}", VARS));
+    bh.consume(MappingExpr.substitute("{variable}", VARS));
   }
 
   @Benchmark
   public void customReplaceNoMatch(Blackhole bh) {
-    bh.consume(substituteCustom("abcdefghi", VARS));
+    bh.consume(MappingExpr.substitute("abcdefghi", VARS));
   }
 
   @Benchmark

@@ -25,34 +25,6 @@ import java.util.Map;
 public class MappingExprTest {
 
   @Test
-  public void replaceSingle() {
-    Assertions.assertEquals("123", MappingExpr.replace("{def}", "{def}", "123"));
-    Assertions.assertEquals("abc123", MappingExpr.replace("abc{def}", "{def}", "123"));
-    Assertions.assertEquals("123abc", MappingExpr.replace("{def}abc", "{def}", "123"));
-  }
-
-  @Test
-  public void replaceMulitple() {
-    String expected = "_a_bc_ghi{de}k_";
-    String actual = MappingExpr.replace("{def}a{def}bc{def}ghi{de}k{def}", "{def}", "_");
-    Assertions.assertEquals(expected, actual);
-  }
-
-  @Test
-  public void replaceNone() {
-    String expected = "abcdef";
-    String actual = MappingExpr.replace("abcdef", "{def}", "_");
-    Assertions.assertSame(expected, actual);
-  }
-
-  @Test
-  public void replaceRecursive() {
-    String expected = "abcdef{def}";
-    String actual = MappingExpr.replace("abc{def}", "{def}", "def{def}");
-    Assertions.assertEquals(expected, actual);
-  }
-
-  @Test
   public void substituteEmpty() {
     Map<String, String> vars = new HashMap<>();
     String actual = MappingExpr.substitute("", vars);
@@ -75,11 +47,43 @@ public class MappingExprTest {
   }
 
   @Test
+  public void substituteSingleEmptyVarName() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("", "123");
+    String actual = MappingExpr.substitute("abc{}", vars);
+    Assertions.assertEquals("abc123", actual);
+  }
+
+  @Test
+  public void substituteSingleMissingClose() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("def", "123");
+    String actual = MappingExpr.substitute("abc{def", vars);
+    Assertions.assertEquals("abc{def", actual);
+  }
+
+  @Test
   public void substituteMultiple() {
     Map<String, String> vars = new HashMap<>();
     vars.put("def", "123");
     String actual = MappingExpr.substitute("abc{def}, {def}", vars);
     Assertions.assertEquals("abc123, 123", actual);
+  }
+
+  @Test
+  public void substituteMultipleMissingClose() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("def", "123");
+    String actual = MappingExpr.substitute("abc{def}, {def", vars);
+    Assertions.assertEquals("abc123, {def", actual);
+  }
+
+  @Test
+  public void substituteMultipleContainsOpenBrace() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("def, {def", "123");
+    String actual = MappingExpr.substitute("abc{def, {def}", vars);
+    Assertions.assertEquals("abc123", actual);
   }
 
   @Test
@@ -104,6 +108,14 @@ public class MappingExprTest {
     Map<String, String> vars = new HashMap<>();
     vars.put("name", "FooBarBaz");
     String actual = MappingExpr.substitute("abc.def.{raw:name}", vars);
+    Assertions.assertEquals("abc.def.FooBarBaz", actual);
+  }
+
+  @Test
+  public void substituteRawEmtpyVarName() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("", "FooBarBaz");
+    String actual = MappingExpr.substitute("abc.def.{raw:}", vars);
     Assertions.assertEquals("abc.def.FooBarBaz", actual);
   }
 
