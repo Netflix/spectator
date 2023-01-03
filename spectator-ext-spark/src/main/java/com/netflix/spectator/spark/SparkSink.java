@@ -20,7 +20,7 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
-import com.netflix.spectator.stateless.StatelessRegistry;
+import com.netflix.spectator.sidecar.SidecarRegistry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.spark.metrics.sink.Sink;
@@ -41,7 +41,7 @@ public class SparkSink implements Sink {
   private static final Logger LOGGER = LoggerFactory.getLogger(SparkSink.class);
 
   private final SpectatorReporter reporter;
-  private final StatelessRegistry statelessRegistry;
+  private final SidecarRegistry sidecarRegistry;
 
   private final long pollPeriod;
   private final TimeUnit pollUnit;
@@ -58,11 +58,11 @@ public class SparkSink implements Sink {
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) throws MalformedURLException {
     final Config config = loadConfig();
-    statelessRegistry = new StatelessRegistry(
-        Clock.SYSTEM, new SpectatorConfig(config.getConfig("spectator.spark.stateless")));
+    sidecarRegistry = new SidecarRegistry(
+        Clock.SYSTEM, new SpectatorConfig(config.getConfig("spectator.spark.sidecar")));
     reporter = SpectatorReporter.forRegistry(registry)
-        .withSpectatorRegistry(statelessRegistry)
-        .withNameFunction(SparkNameFunction.fromConfig(config, statelessRegistry))
+        .withSpectatorRegistry(sidecarRegistry)
+        .withNameFunction(SparkNameFunction.fromConfig(config, sidecarRegistry))
         .withValueFunction(SparkValueFunction.fromConfig(config))
         .withGaugeCounters(Pattern.compile(config.getString("spectator.spark.gauge-counters")))
         .build();
@@ -73,7 +73,7 @@ public class SparkSink implements Sink {
     // this should be enabled. The apps can report to the global registry and it will get
     // picked up by the Spark integration.
     if (shouldAddToGlobal(properties)) {
-      Spectator.globalRegistry().add(statelessRegistry);
+      Spectator.globalRegistry().add(sidecarRegistry);
     }
   }
 
@@ -93,7 +93,7 @@ public class SparkSink implements Sink {
 
   private void startJvmCollection() {
     try {
-      Jmx.registerStandardMXBeans(statelessRegistry);
+      Jmx.registerStandardMXBeans(sidecarRegistry);
       gcLogger = new GcLogger();
       gcLogger.start(null);
     } catch (Exception e) {
@@ -121,18 +121,12 @@ public class SparkSink implements Sink {
     LOGGER.info("starting poller");
     reporter.start(pollPeriod, pollUnit);
     startJvmCollection();
-    if (statelessRegistry != null) {
-      statelessRegistry.start();
-    }
   }
 
   @Override public void stop() {
     LOGGER.info("stopping poller");
     reporter.stop();
     gcLogger.stop();
-    if (statelessRegistry != null) {
-      statelessRegistry.stop();
-    }
   }
 
   @Override public void report() {
