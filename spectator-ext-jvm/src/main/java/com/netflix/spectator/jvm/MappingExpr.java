@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,15 +42,50 @@ final class MappingExpr {
    *     String with values substituted in. If no matching key is found for a
    *     placeholder, then it will not be modified and left in place.
    */
+  @SuppressWarnings("PMD.NPathComplexity")
   static String substitute(String pattern, Map<String, String> vars) {
-    String value = pattern;
-    for (Map.Entry<String, String> entry : vars.entrySet()) {
-      String raw = entry.getValue();
-      String v = Introspector.decapitalize(raw);
-      value = value.replace("{raw:" + entry.getKey() + "}", raw);
-      value = value.replace("{" + entry.getKey() + "}", v);
+    int openBracePos = pattern.indexOf('{');
+    if (openBracePos == -1) {
+      return pattern;
     }
-    return value;
+
+    int closeBracePos = pattern.indexOf('}', openBracePos);
+    if (closeBracePos == -1) {
+      return pattern;
+    }
+
+    StringBuilder builder = new StringBuilder(pattern.length());
+    int startPos = 0;
+    while (startPos < pattern.length()) {
+      builder.append(pattern, startPos, openBracePos);
+      String var = pattern.substring(openBracePos + 1, closeBracePos);
+      boolean useRawValue = var.startsWith("raw:");
+      String value = useRawValue
+        ? vars.get(var.substring("raw:".length()))
+        : vars.get(var);
+      if (value == null) {
+        builder.append('{').append(var).append('}');
+      } else {
+        builder.append(useRawValue ? value : Introspector.decapitalize(value));
+      }
+
+      startPos = closeBracePos + 1;
+      openBracePos = pattern.indexOf('{', startPos);
+      if (openBracePos == -1) {
+        break;
+      }
+
+      closeBracePos = pattern.indexOf('}', openBracePos);
+      if (closeBracePos == -1) {
+        break;
+      }
+    }
+
+    if (startPos < pattern.length()) {
+      builder.append(pattern, startPos, pattern.length());
+    }
+
+    return builder.toString();
   }
 
   /**
