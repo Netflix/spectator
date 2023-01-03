@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,34 @@ import java.util.Map;
 
 
 public class MappingExprTest {
+
+  @Test
+  public void replaceSingle() {
+    Assertions.assertEquals("123", MappingExpr.replace("{def}", "{def}", "123"));
+    Assertions.assertEquals("abc123", MappingExpr.replace("abc{def}", "{def}", "123"));
+    Assertions.assertEquals("123abc", MappingExpr.replace("{def}abc", "{def}", "123"));
+  }
+
+  @Test
+  public void replaceMulitple() {
+    String expected = "_a_bc_ghi{de}k_";
+    String actual = MappingExpr.replace("{def}a{def}bc{def}ghi{de}k{def}", "{def}", "_");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void replaceNone() {
+    String expected = "abcdef";
+    String actual = MappingExpr.replace("abcdef", "{def}", "_");
+    Assertions.assertSame(expected, actual);
+  }
+
+  @Test
+  public void replaceRecursive() {
+    String expected = "abcdef{def}";
+    String actual = MappingExpr.replace("abc{def}", "{def}", "def{def}");
+    Assertions.assertEquals(expected, actual);
+  }
 
   @Test
   public void substituteEmpty() {

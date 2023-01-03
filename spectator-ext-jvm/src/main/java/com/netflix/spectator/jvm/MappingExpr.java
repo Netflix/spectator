@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,28 @@ final class MappingExpr {
   }
 
   /**
+   * On Java 8, the {@code String.replace} call uses a regex internally which results
+   * in a considerable overhead. This does a simple replace without using regex.
+   */
+  static String replace(String str, String target, String replacement) {
+    int pos = str.indexOf(target);
+    if (pos == -1) {
+      return str;
+    }
+
+    StringBuilder builder = new StringBuilder();
+    String tmp = str;
+    while (pos >= 0) {
+      builder.append(tmp.substring(0, pos)).append(replacement);
+      tmp = tmp.substring(pos + target.length());
+      pos = tmp.indexOf(target);
+    }
+    builder.append(tmp);
+
+    return builder.toString();
+  }
+
+  /**
    * Substitute named variables in the pattern string with the corresponding
    * values in the variables map.
    *
@@ -47,8 +69,8 @@ final class MappingExpr {
     for (Map.Entry<String, String> entry : vars.entrySet()) {
       String raw = entry.getValue();
       String v = Introspector.decapitalize(raw);
-      value = value.replace("{raw:" + entry.getKey() + "}", raw);
-      value = value.replace("{" + entry.getKey() + "}", v);
+      value = replace(value, "{raw:" + entry.getKey() + "}", raw);
+      value = replace(value, "{" + entry.getKey() + "}", v);
     }
     return value;
   }
