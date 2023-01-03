@@ -42,6 +42,7 @@ final class MappingExpr {
    *     String with values substituted in. If no matching key is found for a
    *     placeholder, then it will not be modified and left in place.
    */
+  @SuppressWarnings("PMD.NPathComplexity")
   static String substitute(String pattern, Map<String, String> vars) {
     int openBracePos = pattern.indexOf('{');
     if (openBracePos == -1) {
