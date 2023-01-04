@@ -83,7 +83,7 @@ public class MappingExprSubstitute {
 
   @Benchmark
   public void customReplaceMatch(Blackhole bh) {
-    bh.consume(MappingExpr.substitute("{variable}", VARS));
+    bh.consume(MappingExpr.substitute("{keyspace}", VARS));
   }
 
   @Benchmark
@@ -93,7 +93,7 @@ public class MappingExprSubstitute {
 
   @Benchmark
   public void stringReplaceMatch(Blackhole bh) {
-    bh.consume(substituteString("{variable}", VARS));
+    bh.consume(substituteString("{keyspace}", VARS));
   }
 
   @Benchmark
