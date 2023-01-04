@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.agent;
 
-import com.netflix.iep.NetflixEnvironment;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.atlas.AtlasConfig;
@@ -23,6 +22,7 @@ import com.netflix.spectator.atlas.AtlasRegistry;
 import com.netflix.spectator.gc.GcLogger;
 import com.netflix.spectator.jvm.Jmx;
 import com.netflix.spectator.jvm.JmxPoller;
+import com.netflix.spectator.nflx.tagging.NetflixTagging;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
@@ -188,7 +188,7 @@ public final class Agent {
     }
 
     @Override public Map<String, String> commonTags() {
-      Map<String, String> tags = NetflixEnvironment.commonTagsForAtlas();
+      Map<String, String> tags = NetflixTagging.commonTagsForAtlas();
       for (Config cfg : config.getConfigList("atlas.tags")) {
         // These are often populated by environment variables that can sometimes be empty
         // rather than not set when missing. Empty strings are not allowed by Atlas.

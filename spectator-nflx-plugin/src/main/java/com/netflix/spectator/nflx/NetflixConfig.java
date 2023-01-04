@@ -22,7 +22,7 @@ import com.netflix.archaius.config.DefaultCompositeConfig;
 import com.netflix.archaius.config.EnvironmentConfig;
 import com.netflix.archaius.config.MapConfig;
 import com.netflix.archaius.config.SystemConfig;
-import com.netflix.iep.NetflixEnvironment;
+import com.netflix.spectator.nflx.tagging.NetflixTagging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,7 +115,7 @@ public final class NetflixConfig {
    * and for providing a scope for the metrics produced.
    */
   public static Map<String, String> commonTags() {
-    return NetflixEnvironment.commonTagsForAtlas();
+    return NetflixTagging.commonTagsForAtlas();
   }
 
   private static class Env {
