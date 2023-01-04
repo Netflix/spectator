@@ -15,14 +15,13 @@
  */
 package com.netflix.spectator.spark;
 
-import com.netflix.spectator.stateless.StatelessConfig;
+import com.netflix.spectator.sidecar.SidecarConfig;
 import com.typesafe.config.Config;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-class SpectatorConfig implements StatelessConfig {
+class SpectatorConfig implements SidecarConfig {
 
   private final Config config;
 
@@ -36,43 +35,13 @@ class SpectatorConfig implements StatelessConfig {
   }
 
   @Override
-  public boolean enabled() {
-    return config.getBoolean("enabled");
-  }
-
-  @Override
-  public Duration meterTTL() {
-    return config.getDuration("meter-ttl");
-  }
-
-  @Override
-  public Duration frequency() {
-    return config.getDuration("frequency");
-  }
-
-  @Override
-  public Duration connectTimeout() {
-    return config.getDuration("connect-timeout");
-  }
-
-  @Override
-  public Duration readTimeout() {
-    return config.getDuration("read-timeout");
-  }
-
-  @Override
-  public String uri() {
-    return config.getString("uri");
-  }
-
-  @Override
-  public int batchSize() {
-    return config.getInt("batch-size");
+  public String outputLocation() {
+    return config.getString("output-location");
   }
 
   @Override
   public Map<String, String> commonTags() {
-    Map<String, String> tags = new HashMap<>();
+    Map<String, String> tags = new HashMap<>(SidecarConfig.super.commonTags());
     for (Config cfg : config.getConfigList("tags")) {
       // These are often populated by environment variables that can sometimes be empty
       // rather than not set when missing. Empty strings are not allowed by Atlas.
