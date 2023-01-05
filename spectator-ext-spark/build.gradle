@@ -8,8 +8,8 @@ dependencies {
   implementation project(':spectator-ext-jvm')
   implementation project(':spectator-reg-sidecar')
   implementation "com.typesafe:config"
-  implementation 'io.dropwizard.metrics:metrics-core:3.1.2'
-  implementation 'org.apache.spark:spark-core_2.10:1.6.1'
+  implementation 'io.dropwizard.metrics:metrics-core:3.1.5'
+  implementation 'org.apache.spark:spark-core_2.11:2.4.4'
 }
 
 jar {
@@ -23,6 +23,15 @@ jar {
 shadowJar {
   classifier = 'shadow'
 
+  // Combine all the reference.conf and application.conf so all default props will be
+  // available
+  append 'reference.conf'
+  append 'application.conf'
+
+  // Avoid:
+  // shadow.org.apache.tools.zip.Zip64RequiredException: archive contains more than 65535 entries.
+  zip64 = true
+
   // The dependencies not listed here should come from the spark distribution
   dependencies {
     include project(':spectator-api')
@@ -30,13 +39,18 @@ shadowJar {
     include project(':spectator-ext-ipc')
     include project(':spectator-ext-jvm')
     include project(':spectator-reg-sidecar')
-    include dependency("com.fasterxml.jackson.core:jackson-core")
     include dependency("com.typesafe:config")
   }
   minimize()
-  exclude('module-info.class')
-  exclude('META-INF/maven/com.fasterxml.jackson.*/**')
-  exclude('META-INF/services/com.fasterxml.*')
-  relocate('com.fasterxml.jackson', 'com.netflix.spectator.spark-shaded.json')
+
+  exclude 'module-info.class'
+  relocate 'com.netflix.spectator.api', 'spectator-ext-spark.api'
+  relocate 'com.netflix.spectator.gc', 'spectator-ext-spark.gc'
+  relocate 'com.netflix.spectator.impl', 'spectator-ext-spark.impl'
+  relocate 'com.netflix.spectator.ipc', 'spectator-ext-spark.ipc'
+  relocate 'com.netflix.spectator.jvm', 'spectator-ext-spark.jvm'
+  relocate 'com.netflix.spectator.sidecar', 'spectator-ext-spark.sidecar'
+  relocate 'org.slf4j', 'spectator-ext-spark.slf4j'
+  relocate 'com.typesafe', 'spectator-ext-spark.com.typesafe'
 }
 
