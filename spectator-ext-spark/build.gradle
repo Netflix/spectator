@@ -39,7 +39,8 @@ shadowJar {
     include project(':spectator-ext-ipc')
     include project(':spectator-ext-jvm')
     include project(':spectator-reg-sidecar')
-    include dependency("com.typesafe:config")
+    include dependency('com.typesafe:config')
+    include dependency('org.slf4j:slf4j-api')
   }
   minimize()
 
