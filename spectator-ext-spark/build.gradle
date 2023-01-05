@@ -45,7 +45,9 @@ shadowJar {
   minimize()
 
   exclude 'module-info.class'
-  relocate 'com.netflix.spectator.api', 'spectator-ext-spark.api'
+
+  // Relocate all deps other than spectator-api. The api jar is needed by other spark distribution jars
+  // so we cannot change the package here.
   relocate 'com.netflix.spectator.gc', 'spectator-ext-spark.gc'
   relocate 'com.netflix.spectator.impl', 'spectator-ext-spark.impl'
   relocate 'com.netflix.spectator.ipc', 'spectator-ext-spark.ipc'
