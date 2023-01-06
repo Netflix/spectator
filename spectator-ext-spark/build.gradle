@@ -40,7 +40,6 @@ shadowJar {
     include project(':spectator-ext-jvm')
     include project(':spectator-reg-sidecar')
     include dependency('com.typesafe:config')
-    include dependency('org.slf4j:slf4j-api')
   }
   minimize()
 
@@ -53,7 +52,6 @@ shadowJar {
   relocate 'com.netflix.spectator.ipc', 'spectator-ext-spark.ipc'
   relocate 'com.netflix.spectator.jvm', 'spectator-ext-spark.jvm'
   relocate 'com.netflix.spectator.sidecar', 'spectator-ext-spark.sidecar'
-  relocate 'org.slf4j', 'spectator-ext-spark.slf4j'
   relocate 'com.typesafe', 'spectator-ext-spark.com.typesafe'
 }
 
