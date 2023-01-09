@@ -8,8 +8,10 @@ dependencies {
   implementation project(':spectator-ext-jvm')
   implementation project(':spectator-reg-sidecar')
   implementation "com.typesafe:config"
-  implementation 'io.dropwizard.metrics:metrics-core:3.1.5'
-  implementation 'org.apache.spark:spark-core_2.11:2.4.4'
+  compileOnly 'io.dropwizard.metrics:metrics-core:3.1.5'
+  compileOnly 'org.apache.spark:spark-core_2.11:2.4.4'
+  testImplementation 'io.dropwizard.metrics:metrics-core:3.1.5'
+  testImplementation 'org.apache.spark:spark-core_2.11:2.4.4'
 }
 
 jar {
