@@ -78,12 +78,10 @@ abstract class SidecarWriter implements Closeable {
     try {
       LOGGER.trace("writing to {}: {}", location, line);
       writeImpl(line);
-      suppressWarnings = false;
     } catch (IOException e) {
       // Some writers such as the UDP writer can be quite noisy if the sidecar is not present.
       // To avoid spamming the user with warnings, they will be suppressed after a warning is
-      // logged. Warnings will be re-enabled if there is a successful write so that if there
-      // are problems with a sidecar being intermittently accessible it will still get detected.
+      // logged. Note, in some cases UDP writes will fail without throwing an exception.
       if (!suppressWarnings) {
         LOGGER.warn("write to {} failed: {}", location, line, e);
         suppressWarnings = true;
