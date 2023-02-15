@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -152,7 +153,7 @@ public class Evaluator {
       if (timestamp % step == 0) {
         LOGGER.debug("evaluating subscription: {}: {}", timestamp, subEntry.subscription);
         DataExpr expr = subEntry.subscription.dataExpr();
-        DataExpr.Aggregator aggregator = expr.aggregator(expr.query().exactTags(), false);
+        DataExpr.Aggregator aggregator = expr.aggregator(subEntry.tags, false);
         Iterator<Map.Entry<Id, Consolidator>> it = subEntry.measurements.entrySet().iterator();
         while (it.hasNext()) {
           Map.Entry<Id, Consolidator> entry = it.next();
@@ -206,11 +207,13 @@ public class Evaluator {
   private static class SubscriptionEntry {
     private final Subscription subscription;
     private final int multiple;
+    private final Map<String, String> tags;
     private final Map<Id, Consolidator> measurements;
 
     SubscriptionEntry(Subscription subscription, int multiple) {
       this.subscription = subscription;
       this.multiple = multiple;
+      this.tags = Collections.unmodifiableMap(subscription.dataExpr().query().exactTags());
       this.measurements = new HashMap<>();
     }
 
