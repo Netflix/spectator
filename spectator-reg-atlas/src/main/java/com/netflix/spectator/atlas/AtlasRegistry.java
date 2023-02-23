@@ -344,8 +344,20 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    */
   @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override public void removeExpiredMeters() {
-    // Overridden to increase visibility from protected in base class to public
-    super.removeExpiredMeters();
+    long now = clock().wallTime();
+    int total = 0;
+    int expired = 0;
+    Iterator<Meter> it = iterator();
+    while (it.hasNext()) {
+      ++total;
+      AtlasMeter m = (AtlasMeter) it.next();
+      if (m.hasExpired(now)) {
+        ++expired;
+        it.remove();
+      }
+    }
+    logger.debug("removed {} expired meters out of {} total", expired, total);
+    cleanupCachedState();
   }
 
   private void fetchSubscriptions() {

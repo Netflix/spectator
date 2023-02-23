@@ -59,7 +59,11 @@ abstract class AtlasMeter implements Meter {
   }
 
   @Override public boolean hasExpired() {
-    return clock.wallTime() - lastUpdated > ttl;
+    return hasExpired(clock.wallTime());
+  }
+
+  boolean hasExpired(long now) {
+    return now - lastUpdated > ttl;
   }
 
   @Override public Iterable<Measurement> measure() {
