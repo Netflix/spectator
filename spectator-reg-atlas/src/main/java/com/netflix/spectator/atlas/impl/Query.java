@@ -592,7 +592,10 @@ public interface Query {
       // to be indexed more efficiently. The size is limited because if there are
       // multiple large in clauses in an expression the cross product can become really
       // large.
-      if (vs.size() <= 5) {
+      //
+      // The name key is always expanded as it is used as the root of the QueryIndex. Early
+      // filtering at the root has a big impact on matching performance.
+      if ("name".equals(k) || vs.size() <= 5) {
         List<Query> queries = new ArrayList<>(vs.size());
         for (String v : vs) {
           queries.add(new Query.Equal(k, v));
