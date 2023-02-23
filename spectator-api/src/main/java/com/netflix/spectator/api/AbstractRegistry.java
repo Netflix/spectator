@@ -291,11 +291,10 @@ public abstract class AbstractRegistry implements Registry {
   protected void removeExpiredMeters() {
     int total = 0;
     int expired = 0;
-    Iterator<Map.Entry<Id, Meter>> it = meters.entrySet().iterator();
+    Iterator<Meter> it = meters.values().iterator();
     while (it.hasNext()) {
       ++total;
-      Map.Entry<Id, Meter> entry = it.next();
-      Meter m = entry.getValue();
+      Meter m = it.next();
       if (m.hasExpired()) {
         ++expired;
         it.remove();
@@ -309,7 +308,7 @@ public abstract class AbstractRegistry implements Registry {
    * Cleanup any expired meter patterns stored in the state. It should only be used as
    * a cache so the entry should get recreated if needed.
    */
-  private void cleanupCachedState() {
+  protected void cleanupCachedState() {
     int total = 0;
     int expired = 0;
     Iterator<Map.Entry<Id, Object>> it = state.entrySet().iterator();
