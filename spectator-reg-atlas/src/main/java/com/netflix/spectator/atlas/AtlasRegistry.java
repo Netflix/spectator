@@ -404,9 +404,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * into batches.
    */
   synchronized List<RollupPolicy.Result> getBatches(long t) {
-    List<RollupPolicy.Result> batches = new ArrayList<>();
+    final int n = atlasMeasurements.size();
+    final List<RollupPolicy.Result> batches = new ArrayList<>(n / batchSize + 1);
     publishTaskTimer("getBatches").record(() -> {
-      int n = atlasMeasurements.size();
       debugRegistry.distributionSummary("spectator.registrySize").record(n);
       List<Measurement> input = new ArrayList<>(n);
       Iterator<Map.Entry<Id, Consolidator>> it = atlasMeasurements.entrySet().iterator();
