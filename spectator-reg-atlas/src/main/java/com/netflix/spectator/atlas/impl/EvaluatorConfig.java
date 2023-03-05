@@ -67,4 +67,13 @@ public interface EvaluatorConfig {
   default <T> QueryIndex.CacheSupplier<T> indexCacheSupplier() {
     return new QueryIndex.DefaultCacheSupplier<>(new NoopRegistry());
   }
+
+  /**
+   * Returns true if the measurements should be polled in parallel using the default
+   * common fork join pool. For apps that are mostly just reporting metrics this can be
+   * useful to more quickly process them. Default is false.
+   */
+  default boolean parallelMeasurementPolling() {
+    return false;
+  }
 }
