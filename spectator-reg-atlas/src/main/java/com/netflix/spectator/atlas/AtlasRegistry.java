@@ -56,7 +56,6 @@ import java.util.stream.Stream;
 @Singleton
 public final class AtlasRegistry extends AbstractRegistry implements AutoCloseable {
 
-  private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
   private static final String PUBLISH_TASK_TIMER = "spectator.atlas.publishTaskTime";
 
   private final Clock stepClock;
