@@ -125,7 +125,7 @@ public interface Consolidator {
   }
 
   /**
-   * Placeholder implementation used when the the primary and consolidated step sizes are
+   * Placeholder implementation used when the primary and consolidated step sizes are
    * the same.
    */
   final class None implements Consolidator {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.atlas.impl.Consolidator;
 import com.netflix.spectator.atlas.impl.DefaultPublisher;
 import com.netflix.spectator.atlas.impl.EvalPayload;
 import com.netflix.spectator.atlas.impl.Evaluator;
-import com.netflix.spectator.atlas.impl.JsonUtils;
+import com.netflix.spectator.atlas.impl.EvaluatorConfig;
 import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
@@ -41,16 +41,14 @@ import javax.inject.Singleton;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 /**
@@ -80,8 +78,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final int numThreads;
   private final Map<String, String> commonTags;
 
-  private final Function<String, String> fixTagString;
-
   private final Registry debugRegistry;
 
   private final RollupPolicy rollupPolicy;
@@ -95,7 +91,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   private long lastPollTimestamp = -1L;
   private long lastFlushTimestamp = -1L;
-  private final Map<Id, Consolidator> atlasMeasurements = new LinkedHashMap<>();
+  private final ConcurrentHashMap<Id, Consolidator> atlasMeasurements = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
   @Inject
@@ -132,8 +128,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.numThreads = config.numThreads();
     this.commonTags = new TreeMap<>(config.commonTags());
 
-    this.fixTagString = JsonUtils.createReplacementFunction(config.validTagCharacters());
-
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
 
     this.rollupPolicy = config.rollupPolicy();
@@ -144,7 +138,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     this.publisher = pub == null ? new DefaultPublisher(config, httpClient, debugRegistry) : pub;
 
     this.subManager = new SubscriptionManager(new ObjectMapper(), httpClient, clock, config);
-    this.evaluator = new Evaluator(commonTags, this::toMap, lwcStepMillis);
+    this.evaluator = new Evaluator(EvaluatorConfig.fromAtlasConfig(config));
 
     if (config.autoStart()) {
       start();
@@ -309,18 +303,16 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     });
   }
 
-  /** Collect measurements from all of the meters in the registry. */
+  /** Collect measurements from all the meters in the registry. */
   synchronized void pollMeters(long t) {
     publishTaskTimer("pollMeters").record(() -> {
       if (t > lastPollTimestamp) {
         MeasurementConsumer consumer = (id, timestamp, value) -> {
           // Update the map for data to go to the Atlas storage layer
-          Consolidator consolidator = atlasMeasurements.get(id);
-          if (consolidator == null) {
+          Consolidator consolidator = Utils.computeIfAbsent(atlasMeasurements, id, k -> {
             int multiple = (int) (stepMillis / lwcStepMillis);
-            consolidator = Consolidator.create(id, stepMillis, multiple);
-            atlasMeasurements.put(id, consolidator);
-          }
+            return Consolidator.create(k, stepMillis, multiple);
+          });
           consolidator.update(timestamp, value);
 
           // Update aggregators for streaming
@@ -394,21 +386,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       }
       logger.debug("clock skew between client and server: {}ms", delta);
     }
-  }
-
-  private Map<String, String> toMap(Id id) {
-    Map<String, String> tags = new HashMap<>();
-
-    for (Tag t : id.tags()) {
-      String k = fixTagString.apply(t.key());
-      String v = fixTagString.apply(t.value());
-      tags.put(k, v);
-    }
-
-    String name = fixTagString.apply(id.name());
-    tags.put("name", name);
-
-    return tags;
   }
 
   /**

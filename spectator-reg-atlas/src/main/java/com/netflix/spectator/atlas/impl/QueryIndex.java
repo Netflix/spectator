@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Index that to efficiently match an {@link com.netflix.spectator.api.Id} against a set of
@@ -35,19 +36,52 @@ import java.util.function.Consumer;
 public final class QueryIndex<T> {
 
   /**
-   * Return a new instance of an index that is empty.
+   * Supplier to create a new instance of a cache used for other checks. The default should
+   * be fine for most uses, but heavy uses with many expressions and high throughput may
+   * benefit from an alternate implementation.
+   */
+  public interface CacheSupplier<V> extends Supplier<Cache<String, List<QueryIndex<V>>>> {
+  }
+
+  /** Default supplier based on a simple LFU cache. */
+  public static class DefaultCacheSupplier<V> implements CacheSupplier<V> {
+
+    private final Registry registry;
+
+    DefaultCacheSupplier(Registry registry) {
+      this.registry = registry;
+    }
+
+    @Override
+    public Cache<String, List<QueryIndex<V>>> get() {
+      return Cache.lfu(registry, "QueryIndex", 100, 1000);
+    }
+  }
+
+  /**
+   * Return a new instance of an index that is empty. The default caching behavior will be
+   * used.
    */
   public static <V> QueryIndex<V> newInstance(Registry registry) {
-    return new QueryIndex<>(registry, "name");
+    return newInstance(new DefaultCacheSupplier<>(registry));
+  }
+
+  /**
+   * Return a new instance of an index that is empty. The caches will be used to cache the
+   * results of regex or other checks to try and avoid scans with repeated string values
+   * across many ids.
+   */
+  public static <V> QueryIndex<V> newInstance(CacheSupplier<V> cacheSupplier) {
+    return new QueryIndex<>(cacheSupplier, "name");
   }
 
   /**
    * Return a new instance of an index that is empty and doesn't have an explicit key set.
-   * Used internally rather than {@link #newInstance(Registry)} which sets the key to {@code name}
+   * Used internally rather than {@link #newInstance(CacheSupplier)} which sets the key to {@code name}
    * so the root node will be correct for traversing the id.
    */
-  private static <V> QueryIndex<V> empty(Registry registry) {
-    return new QueryIndex<>(registry, null);
+  private static <V> QueryIndex<V> empty(CacheSupplier<V> cacheSupplier) {
+    return new QueryIndex<>(cacheSupplier, null);
   }
 
   /**
@@ -66,7 +100,7 @@ public final class QueryIndex<T> {
     }
   }
 
-  private final Registry registry;
+  private final CacheSupplier<T> cacheSupplier;
 
   private volatile String key;
 
@@ -83,13 +117,13 @@ public final class QueryIndex<T> {
   private final Set<T> matches;
 
   /** Create a new instance. */
-  private QueryIndex(Registry registry, String key) {
-    this.registry = registry;
+  private QueryIndex(CacheSupplier<T> cacheSupplier, String key) {
+    this.cacheSupplier = cacheSupplier;
     this.key = key;
     this.equalChecks = new ConcurrentHashMap<>();
     this.otherChecks = new ConcurrentHashMap<>();
     this.otherChecksTree = new PrefixTree<>();
-    this.otherChecksCache = Cache.lfu(registry, "QueryIndex", 100, 1000);
+    this.otherChecksCache = cacheSupplier.get();
     this.hasKeyIdx = null;
     this.otherKeysIdx = null;
     this.missingKeysIdx = null;
@@ -157,15 +191,15 @@ public final class QueryIndex<T> {
       if (key.equals(kq.key())) {
         if (kq instanceof Query.Equal) {
           String v = ((Query.Equal) kq).value();
-          QueryIndex<T> idx = equalChecks.computeIfAbsent(v, id -> QueryIndex.empty(registry));
+          QueryIndex<T> idx = equalChecks.computeIfAbsent(v, id -> QueryIndex.empty(cacheSupplier));
           idx.add(queries, j, value);
         } else if (kq instanceof Query.Has) {
           if (hasKeyIdx == null) {
-            hasKeyIdx = QueryIndex.empty(registry);
+            hasKeyIdx = QueryIndex.empty(cacheSupplier);
           }
           hasKeyIdx.add(queries, j, value);
         } else {
-          QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(registry));
+          QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(cacheSupplier));
           idx.add(queries, j, value);
           if (kq instanceof Query.Regex) {
             Query.Regex re = (Query.Regex) kq;
@@ -180,14 +214,14 @@ public final class QueryIndex<T> {
           // match an empty map as there could be a variety of inverted types.
           if (kq.matches(Collections.emptyMap())) {
             if (missingKeysIdx == null) {
-              missingKeysIdx = QueryIndex.empty(registry);
+              missingKeysIdx = QueryIndex.empty(cacheSupplier);
             }
             missingKeysIdx.add(queries, j, value);
           }
         }
       } else {
         if (otherKeysIdx == null) {
-          otherKeysIdx = QueryIndex.empty(registry);
+          otherKeysIdx = QueryIndex.empty(cacheSupplier);
         }
         otherKeysIdx.add(queries, i, value);
       }
