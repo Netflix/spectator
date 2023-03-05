@@ -19,8 +19,8 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Tag;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 
 public class EvaluatorTest {
@@ -47,26 +48,17 @@ public class EvaluatorTest {
     return ms;
   }
 
-  private TagsValuePair newTagsValuePair(Measurement m) {
-    Map<String, String> tags = new HashMap<>();
-    for (Tag t : m.id().tags()) {
-      tags.put(t.key(), t.value());
-    }
-    tags.put("name", m.id().name());
-    return new TagsValuePair(tags, m.value());
-  }
-
-  private Map<String, String> toMap(Id id) {
-    Map<String, String> tags = new HashMap<>();
-    for (Tag t : id.tags()) {
-      tags.put(t.key(), t.value());
-    }
-    tags.put("name", id.name());
-    return tags;
-  }
-
   private Evaluator newEvaluator(String... commonTags) {
-    return new Evaluator(tags(commonTags), this::toMap, 5000);
+    EvaluatorConfig config = new EvaluatorConfig() {
+      @Override public long evaluatorStepSize() {
+        return 5000L;
+      }
+
+      @Override public Map<String, String> commonTags() {
+        return tags(commonTags);
+      }
+    };
+    return new Evaluator(config);
   }
 
   private Map<String, String> tags(String... ts) {

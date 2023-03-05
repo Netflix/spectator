@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.NoopRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,14 +28,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Evaluates all of the expressions for a set of subscriptions.
+ * Evaluates all the expressions for a set of subscriptions.
  *
- * <b>Classes in this package are only intended for use internally within spectator. They may
+ * <p><b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
 public class Evaluator {
@@ -53,18 +53,14 @@ public class Evaluator {
   /**
    * Create a new instance.
    *
-   * @param commonTags
-   *     Common tags that should be applied to all datapoints.
-   * @param idMapper
-   *     Function to convert an id to a map of key/value pairs.
-   * @param step
-   *     Step size used for the raw measurements.
+   * @param config
+   *     Config settings to tune the evaluation behavior.
    */
-  public Evaluator(Map<String, String> commonTags, Function<Id, Map<String, String>> idMapper, long step) {
-    this.commonTags = commonTags;
-    this.idMapper = idMapper;
-    this.step = step;
-    this.index = QueryIndex.newInstance(new NoopRegistry());
+  public Evaluator(EvaluatorConfig config) {
+    this.commonTags = new TreeMap<>(config.commonTags());
+    this.idMapper = config.idMapper();
+    this.step = config.evaluatorStepSize();
+    this.index = QueryIndex.newInstance(config.indexCacheSupplier());
     this.subscriptions = new ConcurrentHashMap<>();
     this.consumers = new ThreadLocal<>();
   }
@@ -199,7 +195,7 @@ public class Evaluator {
     return eval(t);
   }
 
-  /** Used for tests to ensure expected number of subcriptions in the evaluator. */
+  /** Used for tests to ensure expected number of subscriptions in the evaluator. */
   int subscriptionCount() {
     return subscriptions.size();
   }
