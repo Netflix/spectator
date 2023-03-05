@@ -48,7 +48,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -58,7 +57,6 @@ import java.util.stream.StreamSupport;
 @Singleton
 public final class AtlasRegistry extends AbstractRegistry implements AutoCloseable {
 
-  private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
   private static final String PUBLISH_TASK_TIMER = "spectator.atlas.publishTaskTime";
 
   private final Clock stepClock;
@@ -360,33 +358,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       evaluator.sync(subManager.subscriptions());
     } else {
       logger.debug("lwc is disabled, skipping subscription config refresh");
-    }
-  }
-
-  /**
-   * Record the difference between the date response time and the local time on the server.
-   * This is used to get a rough idea of the amount of skew in the environment. Ideally it
-   * should be fairly small. The date header will only have seconds so we expect to regularly
-   * have differences of up to 1 second. Note, that it is a rough estimate and could be
-   * elevated because of unrelated problems like GC or network delays.
-   */
-  private void recordClockSkew(long responseTimestamp) {
-    if (responseTimestamp == 0L) {
-      logger.debug("no date timestamp on response, cannot record skew");
-    } else {
-      final long delta = clock().wallTime() - responseTimestamp;
-      if (delta >= 0L) {
-        // Local clock is running fast compared to the server. Note this should also be the
-        // common case for if the clocks are in sync as there will be some delay for the server
-        // response to reach this node.
-        debugRegistry.timer(CLOCK_SKEW_TIMER, "id", "fast").record(delta, TimeUnit.MILLISECONDS);
-      } else {
-        // Local clock is running slow compared to the server. This means the response timestamp
-        // appears to be after the current time on this node. The timer will ignore negative
-        // values so we negate and record it with a different id.
-        debugRegistry.timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
-      }
-      logger.debug("clock skew between client and server: {}ms", delta);
     }
   }
 
