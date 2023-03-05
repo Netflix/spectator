@@ -17,12 +17,12 @@ package com.netflix.spectator.atlas.impl;
 
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
+import com.netflix.spectator.api.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -204,13 +204,13 @@ public class Evaluator {
     private final Subscription subscription;
     private final int multiple;
     private final Map<String, String> tags;
-    private final Map<Id, Consolidator> measurements;
+    private final ConcurrentHashMap<Id, Consolidator> measurements;
 
     SubscriptionEntry(Subscription subscription, int multiple) {
       this.subscription = subscription;
       this.multiple = multiple;
       this.tags = Collections.unmodifiableMap(subscription.dataExpr().query().exactTags());
-      this.measurements = new HashMap<>();
+      this.measurements = new ConcurrentHashMap<>();
     }
 
     void update(Measurement m) {
@@ -218,11 +218,11 @@ public class Evaluator {
     }
 
     void update(Id id, long t, double v) {
-      Consolidator consolidator = measurements.get(id);
-      if (consolidator == null) {
-        consolidator = Consolidator.create(id, subscription.getFrequency(), multiple);
-        measurements.put(id, consolidator);
-      }
+      Consolidator consolidator = Utils.computeIfAbsent(
+          measurements,
+          id,
+          k -> Consolidator.create(k, subscription.getFrequency(), multiple)
+      );
       consolidator.update(t, v);
     }
   }

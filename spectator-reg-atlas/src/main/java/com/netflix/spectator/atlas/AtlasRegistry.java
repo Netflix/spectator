@@ -50,6 +50,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * Registry for reporting metrics to Atlas.
@@ -88,6 +89,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
 
   private final SubscriptionManager subManager;
   private final Evaluator evaluator;
+  private final boolean parallelPolling;
 
   private long lastPollTimestamp = -1L;
   private long lastFlushTimestamp = -1L;
@@ -137,8 +139,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     Publisher pub = config.publisher();
     this.publisher = pub == null ? new DefaultPublisher(config, httpClient, debugRegistry) : pub;
 
+    EvaluatorConfig evalConfig = EvaluatorConfig.fromAtlasConfig(config);
     this.subManager = new SubscriptionManager(new ObjectMapper(), httpClient, clock, config);
-    this.evaluator = new Evaluator(EvaluatorConfig.fromAtlasConfig(config));
+    this.evaluator = new Evaluator(evalConfig);
+    this.parallelPolling = evalConfig.parallelMeasurementPolling();
 
     if (config.autoStart()) {
       start();
@@ -319,11 +323,9 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           evaluator.update(id, timestamp, value);
         };
         logger.debug("collecting measurements for time: {}", t);
-        publishTaskTimer("pollMeasurements").record(() -> {
-          for (Meter meter : this) {
-            ((AtlasMeter) meter).measure(t, consumer);
-          }
-        });
+        publishTaskTimer("pollMeasurements").record(() -> StreamSupport
+            .stream(spliterator(), parallelPolling)
+            .forEach(meter -> ((AtlasMeter) meter).measure(t, consumer)));
         lastPollTimestamp = t;
       }
     });
