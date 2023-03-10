@@ -26,9 +26,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
-import java.util.stream.Collectors;
 
 /**
  * Maps calls to zero or more sub-registries. If zero then it will act similar to the noop
@@ -36,13 +36,9 @@ import java.util.stream.Collectors;
  */
 public final class CompositeRegistry implements Registry {
 
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private final ReentrantReadWriteLock.ReadLock rlock = lock.readLock();
-  private final ReentrantReadWriteLock.WriteLock wlock = lock.writeLock();
-
   private final Clock clock;
 
-  private final List<Registry> registries;
+  private final AtomicReference<Registry[]> registries;
   private final AtomicLong version;
   private final LongSupplier versionSupplier;
 
@@ -52,7 +48,7 @@ public final class CompositeRegistry implements Registry {
   /** Creates a new instance. */
   CompositeRegistry(Clock clock) {
     this.clock = clock;
-    this.registries = new ArrayList<>();
+    this.registries = new AtomicReference<>(new Registry[0]);
     this.version = new AtomicLong();
     this.versionSupplier = version::get;
     this.state = new ConcurrentHashMap<>();
@@ -64,7 +60,7 @@ public final class CompositeRegistry implements Registry {
    */
   @SuppressWarnings("unchecked")
   <T extends Registry> T find(Class<T> c) {
-    for (Registry r : registries) {
+    for (Registry r : registries.get()) {
       if (c.isAssignableFrom(r.getClass())) {
         return (T) r;
       }
@@ -72,40 +68,46 @@ public final class CompositeRegistry implements Registry {
     return null;
   }
 
+  private int indexOf(Registry[] rs, Registry registry) {
+    for (int i = 0; i < rs.length; ++i) {
+      if (rs[i].equals(registry))
+        return i;
+    }
+    return -1;
+  }
+
   /** Add a registry to the composite. */
-  public void add(Registry registry) {
-    wlock.lock();
-    try {
-      if (!registries.contains(registry)) {
-        registries.add(registry);
-        version.incrementAndGet();
-      }
-    } finally {
-      wlock.unlock();
+  public synchronized void add(Registry registry) {
+    Registry[] rs = registries.get();
+    int pos = indexOf(rs, registry);
+    if (pos == -1) {
+      Registry[] tmp = new Registry[rs.length + 1];
+      System.arraycopy(rs, 0, tmp, 0, rs.length);
+      tmp[rs.length] = registry;
+      registries.set(tmp);
+      version.incrementAndGet();
     }
   }
 
   /** Remove a registry from the composite. */
-  public void remove(Registry registry) {
-    wlock.lock();
-    try {
-      if (registries.remove(registry)) {
-        version.incrementAndGet();
-      }
-    } finally {
-      wlock.unlock();
+  public synchronized void remove(Registry registry) {
+    Registry[] rs = registries.get();
+    int pos = indexOf(rs, registry);
+    if (pos >= 0) {
+      Registry[] tmp = new Registry[rs.length - 1];
+      if (pos > 0)
+        System.arraycopy(rs, 0, tmp, 0, pos);
+      if (pos < tmp.length)
+        System.arraycopy(rs, pos + 1, tmp, pos, rs.length - pos - 1);
+      registries.set(tmp);
+      version.incrementAndGet();
     }
   }
 
   /** Remove all registries from the composite. */
-  public void removeAll() {
-    wlock.lock();
-    try {
-      registries.clear();
-      state.clear();
-    } finally {
-      wlock.unlock();
-    }
+  public synchronized void removeAll() {
+    registries.set(new Registry[0]);
+    state.clear();
   }
 
   @Override public Clock clock() {
@@ -129,28 +131,30 @@ public final class CompositeRegistry implements Registry {
     return state;
   }
 
-  private Counter newCounter(Id id) {
-    rlock.lock();
-    try {
-      Counter c;
-      switch (registries.size()) {
-        case 0:
-          c = NoopCounter.INSTANCE;
-          break;
-        case 1:
-          c = registries.get(0).counter(id);
-          break;
-        default:
-          List<Counter> cs = registries.stream()
-              .map(r -> r.counter(id))
-              .collect(Collectors.toList());
-          c = new CompositeCounter(id, cs);
-          break;
-      }
-      return c;
-    } finally {
-      rlock.unlock();
+  private <T> List<T> meters(Registry[] rs, Id id, BiFunction<Registry, Id, T> f) {
+    List<T> ms = new ArrayList<>(rs.length);
+    for (Registry r : rs) {
+      ms.add(f.apply(r, id));
     }
+    return ms;
+  }
+
+  private Counter newCounter(Id id) {
+    Registry[] rs = registries.get();
+    Counter c;
+    switch (rs.length) {
+      case 0:
+        c = NoopCounter.INSTANCE;
+        break;
+      case 1:
+        c = rs[0].counter(id);
+        break;
+      default:
+        List<Counter> cs = meters(rs, id, Registry::counter);
+        c = new CompositeCounter(id, cs);
+        break;
+    }
+    return c;
   }
 
   @Override public Counter counter(Id id) {
@@ -158,27 +162,21 @@ public final class CompositeRegistry implements Registry {
   }
 
   private DistributionSummary newDistributionSummary(Id id) {
-    rlock.lock();
-    try {
-      DistributionSummary t;
-      switch (registries.size()) {
-        case 0:
-          t = NoopDistributionSummary.INSTANCE;
-          break;
-        case 1:
-          t = registries.get(0).distributionSummary(id);
-          break;
-        default:
-          List<DistributionSummary> ds = registries.stream()
-              .map(r -> r.distributionSummary(id))
-              .collect(Collectors.toList());
-          t = new CompositeDistributionSummary(id, ds);
-          break;
-      }
-      return t;
-    } finally {
-      rlock.unlock();
+    Registry[] rs = registries.get();
+    DistributionSummary t;
+    switch (rs.length) {
+      case 0:
+        t = NoopDistributionSummary.INSTANCE;
+        break;
+      case 1:
+        t = rs[0].distributionSummary(id);
+        break;
+      default:
+        List<DistributionSummary> ds = meters(rs, id, Registry::distributionSummary);
+        t = new CompositeDistributionSummary(id, ds);
+        break;
     }
+    return t;
   }
 
   @Override public DistributionSummary distributionSummary(Id id) {
@@ -186,27 +184,21 @@ public final class CompositeRegistry implements Registry {
   }
 
   private Timer newTimer(Id id) {
-    rlock.lock();
-    try {
-      Timer t;
-      switch (registries.size()) {
-        case 0:
-          t = NoopTimer.INSTANCE;
-          break;
-        case 1:
-          t = registries.get(0).timer(id);
-          break;
-        default:
-          List<Timer> ts = registries.stream()
-              .map(r -> r.timer(id))
-              .collect(Collectors.toList());
-          t = new CompositeTimer(id, clock, ts);
-          break;
-      }
-      return t;
-    } finally {
-      rlock.unlock();
+    Registry[] rs = registries.get();
+    Timer t;
+    switch (rs.length) {
+      case 0:
+        t = NoopTimer.INSTANCE;
+        break;
+      case 1:
+        t = rs[0].timer(id);
+        break;
+      default:
+        List<Timer> ts = meters(rs, id, Registry::timer);
+        t = new CompositeTimer(id, clock, ts);
+        break;
     }
+    return t;
   }
 
   @Override public Timer timer(Id id) {
@@ -214,27 +206,21 @@ public final class CompositeRegistry implements Registry {
   }
 
   private Gauge newGauge(Id id) {
-    rlock.lock();
-    try {
-      Gauge t;
-      switch (registries.size()) {
-        case 0:
-          t = NoopGauge.INSTANCE;
-          break;
-        case 1:
-          t = registries.get(0).gauge(id);
-          break;
-        default:
-          List<Gauge> gs = registries.stream()
-              .map(r -> r.gauge(id))
-              .collect(Collectors.toList());
-          t = new CompositeGauge(id, gs);
-          break;
-      }
-      return t;
-    } finally {
-      rlock.unlock();
+    Registry[] rs = registries.get();
+    Gauge t;
+    switch (rs.length) {
+      case 0:
+        t = NoopGauge.INSTANCE;
+        break;
+      case 1:
+        t = rs[0].gauge(id);
+        break;
+      default:
+        List<Gauge> gs = meters(rs, id, Registry::gauge);
+        t = new CompositeGauge(id, gs);
+        break;
     }
+    return t;
   }
 
   @Override public Gauge gauge(Id id) {
@@ -242,27 +228,21 @@ public final class CompositeRegistry implements Registry {
   }
 
   private Gauge newMaxGauge(Id id) {
-    rlock.lock();
-    try {
-      Gauge t;
-      switch (registries.size()) {
-        case 0:
-          t = NoopGauge.INSTANCE;
-          break;
-        case 1:
-          t = registries.get(0).maxGauge(id);
-          break;
-        default:
-          List<Gauge> gs = registries.stream()
-              .map(r -> r.maxGauge(id))
-              .collect(Collectors.toList());
-          t = new CompositeGauge(id, gs);
-          break;
-      }
-      return t;
-    } finally {
-      rlock.unlock();
+    Registry[] rs = registries.get();
+    Gauge t;
+    switch (rs.length) {
+      case 0:
+        t = NoopGauge.INSTANCE;
+        break;
+      case 1:
+        t = rs[0].maxGauge(id);
+        break;
+      default:
+        List<Gauge> gs = meters(rs, id, Registry::maxGauge);
+        t = new CompositeGauge(id, gs);
+        break;
     }
+    return t;
   }
 
   @Override public Gauge maxGauge(Id id) {
@@ -270,62 +250,53 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Meter get(Id id) {
-    rlock.lock();
-    try {
-      for (Registry r : registries) {
-        Meter m = r.get(id);
-        if (m != null) {
-          if (m instanceof Counter) {
-            return counter(id);
-          } else if (m instanceof Timer) {
-            return timer(id);
-          } else if (m instanceof DistributionSummary) {
-            return distributionSummary(id);
-          } else if (m instanceof Gauge) {
-            return gauge(id);
-          } else {
-            return null;
-          }
+    for (Registry r : registries.get()) {
+      Meter m = r.get(id);
+      if (m != null) {
+        if (m instanceof Counter) {
+          return counter(id);
+        } else if (m instanceof Timer) {
+          return timer(id);
+        } else if (m instanceof DistributionSummary) {
+          return distributionSummary(id);
+        } else if (m instanceof Gauge) {
+          return gauge(id);
+        } else {
+          return null;
         }
       }
-      return null;
-    } finally {
-      rlock.unlock();
     }
+    return null;
   }
 
   @Override public Iterator<Meter> iterator() {
-    rlock.lock();
-    try {
-      if (registries.isEmpty()) {
-        return Collections.emptyIterator();
-      } else {
-        final Set<Id> ids = new HashSet<>();
-        for (Registry r : registries) {
-          for (Meter m : r) ids.add(m.id());
+    Registry[] rs = registries.get();
+    if (rs.length == 0) {
+      return Collections.emptyIterator();
+    } else {
+      final Set<Id> ids = new HashSet<>();
+      for (Registry r : rs) {
+        for (Meter m : r) ids.add(m.id());
+      }
+
+      return new Iterator<Meter>() {
+        private final Iterator<Id> idIter = ids.iterator();
+
+        @Override
+        public boolean hasNext() {
+          return idIter.hasNext();
         }
 
-        return new Iterator<Meter>() {
-          private final Iterator<Id> idIter = ids.iterator();
+        @Override
+        public Meter next() {
+          return get(idIter.next());
+        }
 
-          @Override
-          public boolean hasNext() {
-            return idIter.hasNext();
-          }
-
-          @Override
-          public Meter next() {
-            return get(idIter.next());
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-          }
-        };
-      }
-    } finally {
-      rlock.unlock();
+        @Override
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
     }
   }
 }
