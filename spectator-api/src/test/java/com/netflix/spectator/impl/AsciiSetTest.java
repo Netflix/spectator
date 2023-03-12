@@ -152,6 +152,104 @@ public class AsciiSetTest {
   }
 
   @Test
+  public void none() {
+    AsciiSet none = AsciiSet.none();
+    Assertions.assertTrue(none.isEmpty());
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertFalse(none.contains(c));
+    }
+  }
+
+  @Test
+  public void all() {
+    AsciiSet all = AsciiSet.all();
+    Assertions.assertFalse(all.isEmpty());
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertTrue(all.contains(c));
+    }
+    Assertions.assertFalse(all.contains((char) (AsciiSet.ASCII_MAX + 1)));
+  }
+
+  @Test
+  public void control() {
+    AsciiSet control = AsciiSet.control();
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      boolean expected = Character.isISOControl(c);
+      Assertions.assertEquals(expected, control.contains(c));
+    }
+  }
+
+  @Test
+  public void invert() {
+    AsciiSet set = AsciiSet.fromPattern("A-Z");
+    AsciiSet inverted = set.invert();
+
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertNotEquals(set.contains(c), inverted.contains(c));
+    }
+    Assertions.assertFalse(inverted.contains((char) (AsciiSet.ASCII_MAX + 1)));
+  }
+
+  @Test
+  public void invertNone() {
+    AsciiSet all = AsciiSet.none().invert();
+    Assertions.assertEquals(AsciiSet.all(), all);
+  }
+
+  @Test
+  public void invertAll() {
+    AsciiSet none = AsciiSet.all().invert();
+    Assertions.assertEquals(AsciiSet.none(), none);
+  }
+
+  @Test
+  public void union() {
+    AsciiSet letters = AsciiSet.fromPattern("a-zA-Z");
+    AsciiSet digits = AsciiSet.fromPattern("0-9");
+    AsciiSet union = digits.union(letters);
+
+    Assertions.assertEquals("0-9A-Za-z", union.toString());
+
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertEquals(union.contains(c), letters.contains(c) || digits.contains(c));
+    }
+  }
+
+  @Test
+  public void intersection() {
+    AsciiSet letters = AsciiSet.fromPattern("a-zA-Z");
+    AsciiSet uppercase = AsciiSet.fromPattern("A-Z");
+    AsciiSet intersection = letters.intersection(uppercase);
+
+    Assertions.assertEquals("A-Z", intersection.toString());
+
+    for (char c = 0; c <= AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertEquals(intersection.contains(c), letters.contains(c) && uppercase.contains(c));
+    }
+  }
+
+  @Test
+  public void diff() {
+    AsciiSet letters = AsciiSet.fromPattern("a-z");
+    AsciiSet vowels = AsciiSet.fromPattern("aeiou");
+    AsciiSet diff = letters.diff(vowels);
+
+    Assertions.assertEquals("b-df-hj-np-tv-z", diff.toString());
+
+    for (char c = 0; c < AsciiSet.ASCII_MAX; c++) {
+      Assertions.assertEquals(diff.contains(c), letters.contains(c) && !vowels.contains(c));
+    }
+  }
+
+  @Test
+  public void character() {
+    Assertions.assertFalse(AsciiSet.none().character().isPresent());
+    Assertions.assertFalse(AsciiSet.all().character().isPresent());
+    Assertions.assertFalse(AsciiSet.fromPattern("ab").character().isPresent());
+    Assertions.assertEquals('z', AsciiSet.fromPattern("z").character().get());
+  }
+
+  @Test
   public void equalsContractTest() {
     EqualsVerifier
         .forClass(AsciiSet.class)

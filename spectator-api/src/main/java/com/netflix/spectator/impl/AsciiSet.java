@@ -19,7 +19,7 @@ import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
-import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Optional;
 
 /**
@@ -34,6 +34,11 @@ import java.util.Optional;
 public final class AsciiSet implements Serializable {
 
   private static final long serialVersionUID = 1L;
+
+  // The maximum value of an ASCII character.
+  static final char ASCII_MAX = 127;
+
+  static final int MAX_BITS = ASCII_MAX + 1;
 
   private static boolean isJava8() {
     String version = System.getProperty("java.version", "1.8");
@@ -89,22 +94,22 @@ public final class AsciiSet implements Serializable {
    *     Set containing the characters specified in {@code pattern}.
    */
   public static AsciiSet fromPattern(String pattern) {
-    final boolean[] members = new boolean[128];
+    final BitSet members = new BitSet();
     final int n = pattern.length();
     for (int i = 0; i < n; ++i) {
       final char c = pattern.charAt(i);
-      if (c >= members.length) {
+      if (c > ASCII_MAX) {
         throw new IllegalArgumentException("invalid pattern, '" + c + "' is not ascii");
       }
 
       final boolean isStartOrEnd = i == 0 || i == n - 1;
       if (isStartOrEnd || c != '-') {
-        members[c] = true;
+        members.set(c);
       } else {
         final char s = pattern.charAt(i - 1);
         final char e = pattern.charAt(i + 1);
         for (char v = s; v <= e; ++v) {
-          members[v] = true;
+          members.set(v);
         }
       }
     }
@@ -113,22 +118,23 @@ public final class AsciiSet implements Serializable {
 
   /** Returns a set that matches no characters. */
   public static AsciiSet none() {
-    final boolean[] members = new boolean[128];
-    return new AsciiSet(members);
+    return new AsciiSet(new BitSet(0));
   }
 
   /** Returns a set that matches all ascii characters. */
   public static AsciiSet all() {
-    final boolean[] members = new boolean[128];
-    Arrays.fill(members, true);
+    final BitSet members = new BitSet(MAX_BITS);
+    members.set(0, MAX_BITS, true);
     return new AsciiSet(members);
   }
 
   /** Returns a set that matches ascii control characters. */
   public static AsciiSet control() {
-    final boolean[] members = new boolean[128];
-    for (char c = 0; c < members.length; ++c) {
-      members[c] = Character.isISOControl(c);
+    final BitSet members = new BitSet();
+    for (char c = 0; c <= ASCII_MAX; c++) {
+      if (Character.isISOControl(c)) {
+        members.set(c);
+      }
     }
     return new AsciiSet(members);
   }
@@ -137,25 +143,26 @@ public final class AsciiSet implements Serializable {
    * Converts the members array to a pattern string. Used to provide a user friendly toString
    * implementation for the set.
    */
-  private static String toPattern(boolean[] members) {
+  private static String toPattern(BitSet members) {
     StringBuilder buf = new StringBuilder();
-    if (members['-']) {
+    if (members.get('-')) {
       buf.append('-');
     }
     boolean previous = false;
     char s = 0;
-    for (int i = 0; i < members.length; ++i) {
-      if (members[i] && !previous) {
-        s = (char) i;
-      } else if (!members[i] && previous) {
+
+    for (char i = 0; i <= ASCII_MAX; ++i) {
+      boolean isSet = members.get(i);
+      if (isSet && !previous) {
+        s = i;
+      } else if (!isSet && previous) {
         final char e = (char) (i - 1);
         append(buf, s, e);
       }
-      previous = members[i];
+      previous = isSet;
     }
     if (previous) {
-      final char e = (char) (members.length - 1);
-      append(buf, s, e);
+      append(buf, s, ASCII_MAX);
     }
     return buf.toString();
   }
@@ -169,9 +176,9 @@ public final class AsciiSet implements Serializable {
   }
 
   private final String pattern;
-  private final boolean[] members;
+  private final BitSet members;
 
-  private AsciiSet(boolean[] members) {
+  private AsciiSet(BitSet members) {
     this.members = Preconditions.checkNotNull(members, "members array cannot be null");
     this.pattern = toPattern(members);
   }
@@ -181,7 +188,7 @@ public final class AsciiSet implements Serializable {
    * operation.
    */
   public boolean contains(char c) {
-    return c < 128 && members[c];
+    return members.get(c);
   }
 
   /**
@@ -212,10 +219,8 @@ public final class AsciiSet implements Serializable {
    * set that is provided.
    */
   public AsciiSet union(AsciiSet set) {
-    final boolean[] unionMembers = new boolean[128];
-    for (int i = 0; i < unionMembers.length; ++i) {
-      unionMembers[i] = members[i] || set.members[i];
-    }
+    final BitSet unionMembers = (BitSet) this.members.clone();
+    unionMembers.or(set.members);
     return new AsciiSet(unionMembers);
   }
 
@@ -224,10 +229,8 @@ public final class AsciiSet implements Serializable {
    * set that is provided.
    */
   public AsciiSet intersection(AsciiSet set) {
-    final boolean[] intersectionMembers = new boolean[128];
-    for (int i = 0; i < intersectionMembers.length; ++i) {
-      intersectionMembers[i] = members[i] && set.members[i];
-    }
+    final BitSet intersectionMembers = (BitSet) this.members.clone();
+    intersectionMembers.and(set.members);
     return new AsciiSet(intersectionMembers);
   }
 
@@ -236,10 +239,8 @@ public final class AsciiSet implements Serializable {
    * set that is provided.
    */
   public AsciiSet diff(AsciiSet set) {
-    final boolean[] diffMembers = new boolean[128];
-    for (int i = 0; i < diffMembers.length; ++i) {
-      diffMembers[i] = members[i] && !set.members[i];
-    }
+    final BitSet diffMembers = (BitSet) members.clone();
+    diffMembers.andNot(set.members);
     return new AsciiSet(diffMembers);
   }
 
@@ -247,10 +248,8 @@ public final class AsciiSet implements Serializable {
    * Returns a new set that will match characters that are not included this set.
    */
   public AsciiSet invert() {
-    final boolean[] invertMembers = new boolean[128];
-    for (int i = 0; i < invertMembers.length; ++i) {
-      invertMembers[i] = !members[i];
-    }
+    final BitSet invertMembers = (BitSet) members.clone();
+    invertMembers.flip(0, MAX_BITS);
     return new AsciiSet(invertMembers);
   }
 
@@ -271,25 +270,19 @@ public final class AsciiSet implements Serializable {
    * Otherwise return an empty optional.
    */
   public Optional<Character> character() {
-    char c = 0;
-    int count = 0;
-    for (int i = 0; i < members.length; ++i) {
-      if (members[i]) {
-        c = (char) i;
-        ++count;
-      }
+    if (isEmpty()) {
+      return Optional.empty();
     }
-    return (count == 1) ? Optional.of(c) : Optional.empty();
+    int idx = members.nextSetBit(0);
+    if (members.nextSetBit(idx + 1) != -1) {
+      return Optional.empty();
+    }
+    return Optional.of((char) idx);
   }
 
   /** Returns true if this set is isEmpty. */
   public boolean isEmpty() {
-    for (boolean b : members) {
-      if (b) {
-        return false;
-      }
-    }
-    return true;
+    return members.isEmpty();
   }
 
   @Override public String toString() {
@@ -297,13 +290,13 @@ public final class AsciiSet implements Serializable {
   }
 
   @Override public int hashCode() {
-    return pattern.hashCode() + 31 * Arrays.hashCode(members);
+    return pattern.hashCode() + 31 * members.hashCode();
   }
 
   @Override public boolean equals(Object obj) {
     if (this == obj) return true;
-    if (obj == null || !(obj instanceof AsciiSet)) return false;
+    if (!(obj instanceof AsciiSet)) return false;
     AsciiSet other = (AsciiSet) obj;
-    return pattern.equals(other.pattern) && Arrays.equals(members, other.members);
+    return pattern.equals(other.pattern) && members.equals(other.members);
   }
 }
