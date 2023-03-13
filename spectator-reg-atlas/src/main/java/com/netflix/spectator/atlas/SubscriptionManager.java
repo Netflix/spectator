@@ -83,6 +83,7 @@ class SubscriptionManager {
           .withReadTimeout(readTimeout)
           .acceptGzip()
           .addHeader("If-None-Match", etag)
+          .reuseResponseBuffers(true)
           .send();
       if (res.status() == 304) {
         LOGGER.debug("no modification to subscriptions");
