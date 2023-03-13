@@ -23,6 +23,7 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.atlas.AtlasConfig;
 import com.netflix.spectator.atlas.AtlasRegistry;
 import com.netflix.spectator.atlas.Publisher;
+import com.netflix.spectator.impl.StreamHelper;
 import com.netflix.spectator.ipc.http.HttpClient;
 import com.netflix.spectator.ipc.http.HttpResponse;
 import org.slf4j.Logger;

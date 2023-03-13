@@ -16,6 +16,7 @@
 package com.netflix.spectator.ipc.http;
 
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.impl.StreamHelper;
 import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.NetflixHeaders;
@@ -57,6 +58,8 @@ public class HttpRequestBuilder {
   private static final Map<String, String> NETFLIX_HEADERS =
       NetflixHeaders.extractFromEnvironment();
 
+  private static final StreamHelper STREAM_HELPER = new StreamHelper();
+
   // Should not be used directly, use the method of the same name that will create the
   // executor if needed on the first access.
   private static volatile ExecutorService defaultExecutor;
@@ -91,6 +94,7 @@ public class HttpRequestBuilder {
   private String method = "GET";
   private Map<String, String> reqHeaders = new LinkedHashMap<>();
   private byte[] entity = HttpUtils.EMPTY;
+  private boolean reuseResponseStreams = false;
 
   private int connectTimeout = 1000;
   private int readTimeout = 30000;
@@ -200,6 +204,16 @@ public class HttpRequestBuilder {
   public HttpRequestBuilder compress(int level) throws IOException {
     addHeader("Content-Encoding", "gzip");
     entity = HttpUtils.gzip(entity, level);
+    return this;
+  }
+
+  /**
+   * Set to true to re-use the byte arrays when consuming the response. This will result
+   * in buffers being maintained that can be reused across requests resulting in fewer
+   * allocations. However, it will increase the steady state memory usage.
+   */
+  public HttpRequestBuilder reuseResponseBuffers(boolean b) {
+    this.reuseResponseStreams = b;
     return this;
   }
 
@@ -391,7 +405,9 @@ public class HttpRequestBuilder {
       // For error status codes with a content-length of 0 we see this case
       return new byte[0];
     } else {
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      ByteArrayOutputStream baos = reuseResponseStreams
+          ? STREAM_HELPER.getOrCreateStream()
+          : new ByteArrayOutputStream();
       byte[] buffer = new byte[4096];
       int length;
       while ((length = in.read(buffer)) > 0) {
