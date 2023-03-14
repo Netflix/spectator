@@ -173,24 +173,24 @@ public class QueryIndexTest {
     idx.add(IN_QUERY, IN_QUERY);
 
     Id id1 = id("a", "key", "b", "c", "12345");
-    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Query q = Parser.parseQuery("name,a,:eq");
     Assertions.assertFalse(idx.remove(q, q));
-    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, IN_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(idx.remove(IN_QUERY, IN_QUERY));
-    Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY, HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(idx.remove(SIMPLE_QUERY, SIMPLE_QUERY));
-    Assertions.assertEquals(list(HASKEY_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(HASKEY_QUERY), findMatches(idx, id1));
 
     Assertions.assertTrue(idx.remove(HASKEY_QUERY, HASKEY_QUERY));
     Assertions.assertTrue(idx.isEmpty());
     Assertions.assertTrue(idx.findMatches(id1).isEmpty());
 
     idx.add(SIMPLE_QUERY, SIMPLE_QUERY);
-    Assertions.assertEquals(list(SIMPLE_QUERY), idx.findMatches(id1));
+    Assertions.assertEquals(list(SIMPLE_QUERY), findMatches(idx, id1));
   }
 
   private boolean remove(QueryIndex<Query> idx, Query value) {
@@ -432,8 +432,8 @@ public class QueryIndexTest {
         "    equal checks:\n" +
         "    - [b]\n" +
         "        matches:\n" +
-        "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "        - [name,a,:eq,key,b,:eq,:and]\n" +
+        "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "    - [c]\n" +
         "        matches:\n" +
         "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +

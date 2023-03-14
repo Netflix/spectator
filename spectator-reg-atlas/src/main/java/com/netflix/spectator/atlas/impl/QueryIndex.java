@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -127,7 +128,7 @@ public final class QueryIndex<T> {
     this.hasKeyIdx = null;
     this.otherKeysIdx = null;
     this.missingKeysIdx = null;
-    this.matches = ConcurrentHashMap.newKeySet();
+    this.matches = new CopyOnWriteArraySet<>();
   }
 
   private List<Query.KeyQuery> sort(Query query) {
