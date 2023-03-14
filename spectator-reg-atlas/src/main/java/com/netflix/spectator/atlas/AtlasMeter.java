@@ -20,7 +20,6 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
-import com.netflix.spectator.api.TagList;
 
 import java.util.ArrayList;
 import java.util.List;
