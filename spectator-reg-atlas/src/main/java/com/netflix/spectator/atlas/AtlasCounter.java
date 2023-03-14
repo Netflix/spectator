@@ -37,10 +37,7 @@ class AtlasCounter extends AtlasMeter implements Counter {
     this.value = new StepDouble(0.0, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = Id.create(id.name())
-        .withTag(Statistic.count)
-        .withTag(DsType.rate)
-        .withTags(id.tags());
+    this.stat = AtlasMeter.addIfMissing(id, Statistic.count, DsType.rate);
   }
 
   @Override void measure(long now, MeasurementConsumer consumer) {

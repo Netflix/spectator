@@ -18,7 +18,6 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.impl.AtomicDouble;
 
@@ -31,15 +30,12 @@ class AtlasGauge extends AtlasMeter implements Gauge {
   private final Id stat;
 
   /** Create a new instance. */
-  AtlasGauge(Registry registry, Id id, Clock clock, long ttl) {
+  AtlasGauge(Id id, Clock clock, long ttl) {
     super(id, clock, ttl);
     this.value = new AtomicDouble(0.0);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = registry.createId(id.name())
-        .withTag(Statistic.gauge)
-        .withTag(DsType.gauge)
-        .withTags(id.tags());
+    this.stat = AtlasMeter.addIfMissing(id, Statistic.gauge, DsType.gauge);
   }
 
   @Override void measure(long now, MeasurementConsumer consumer) {
