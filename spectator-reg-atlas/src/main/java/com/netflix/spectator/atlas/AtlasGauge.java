@@ -36,10 +36,7 @@ class AtlasGauge extends AtlasMeter implements Gauge {
     this.value = new AtomicDouble(0.0);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = registry.createId(id.name())
-        .withTag(Statistic.gauge)
-        .withTag(DsType.gauge)
-        .withTags(id.tags());
+    this.stat = AtlasMeter.addIfMissing(id, Statistic.gauge, DsType.gauge);
   }
 
   @Override void measure(long now, MeasurementConsumer consumer) {

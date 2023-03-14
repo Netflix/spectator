@@ -39,10 +39,7 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
     this.value = new StepDouble(Double.NaN, clock, step);
     // Add the statistic for typing. Re-adding the tags from the id is to retain
     // the statistic from the id if it was already set
-    this.stat = registry.createId(id.name())
-        .withTag(Statistic.max)
-        .withTag(DsType.gauge)
-        .withTags(id.tags());
+    this.stat = AtlasMeter.addIfMissing(id, Statistic.max, DsType.gauge);
   }
 
   @Override void measure(long now, MeasurementConsumer consumer) {

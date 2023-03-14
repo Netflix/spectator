@@ -19,12 +19,42 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.api.TagList;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Base class for core meter types used by AtlasRegistry. */
 abstract class AtlasMeter implements Meter {
+
+  /**
+   * Add the new tags to the id if they are not already present. Tries to minimize the number
+   * of allocations by checking if they are present first.
+   */
+  static Id addIfMissing(Id id, Tag t1, Tag t2) {
+    String k1 = t1.key();
+    String k2 = t2.key();
+    boolean hasT1 = false;
+    boolean hasT2 = false;
+    for (int i = 1; i < id.size(); ++i) {
+      hasT1 = hasT1 || k1.equals(id.getKey(i));
+      hasT2 = hasT2 || k2.equals(id.getKey(i));
+      if (hasT1 && hasT2) {
+        break;
+      }
+    }
+
+    if (hasT1 && hasT2) {
+      return id;
+    } else if (!hasT1 && !hasT2) {
+      return id.withTags(t1.key(), t1.value(), t2.key(), t2.value());
+    } else if (!hasT1) {
+      return id.withTag(t1);
+    } else {
+      return id.withTag(t2);
+    }
+  }
 
   /** Base identifier for all measurements supplied by this meter. */
   protected final Id id;
