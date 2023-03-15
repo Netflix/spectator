@@ -17,10 +17,12 @@ package com.netflix.spectator.api;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 
 /**
  * Registry implementation that does nothing. This is typically used to allow for performance tests
@@ -45,6 +47,15 @@ public final class NoopRegistry implements Registry {
     return NoopId.INSTANCE;
   }
 
+  @Override public Id createId(String name, String... tags) {
+    return NoopId.INSTANCE;
+  }
+
+  @Override public Id createId(String name, Map<String, String> tags) {
+    return NoopId.INSTANCE;
+  }
+
+  @Deprecated
   @Override public void register(Meter meter) {
   }
 
@@ -80,9 +91,32 @@ public final class NoopRegistry implements Registry {
     return Collections.emptyIterator();
   }
 
-  @Override
-  public Spliterator<Meter> spliterator() {
+  @Override public Spliterator<Meter> spliterator() {
     return Spliterators.emptySpliterator();
+  }
+
+  @Override public Stream<Measurement> measurements() {
+    return Stream.empty();
+  }
+
+  @Override public Stream<Meter> stream() {
+    return Stream.empty();
+  }
+
+  @Override public Stream<Counter> counters() {
+    return Stream.empty();
+  }
+
+  @Override public Stream<DistributionSummary> distributionSummaries() {
+    return Stream.empty();
+  }
+
+  @Override public Stream<Timer> timers() {
+    return Stream.empty();
+  }
+
+  @Override public Stream<Gauge> gauges() {
+    return Stream.empty();
   }
 
   @Override public void propagate(String msg, Throwable t) {
