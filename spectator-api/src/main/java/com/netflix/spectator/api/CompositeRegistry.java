@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -119,6 +120,14 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Id createId(String name, Iterable<Tag> tags) {
+    return new DefaultId(name, ArrayTagSet.create(tags));
+  }
+
+  @Override public Id createId(String name, String... tags) {
+    return new DefaultId(name, ArrayTagSet.create(tags));
+  }
+
+  @Override public Id createId(String name, Map<String, String> tags) {
     return new DefaultId(name, ArrayTagSet.create(tags));
   }
 

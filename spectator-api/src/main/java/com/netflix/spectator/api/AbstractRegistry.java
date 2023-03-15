@@ -161,6 +161,24 @@ public abstract class AbstractRegistry implements Registry {
     }
   }
 
+  @Override public Id createId(String name, String... tags) {
+    try {
+      return new DefaultId(name, ArrayTagSet.create(tags));
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
+  }
+
+  @Override public Id createId(String name, Map<String, String> tags) {
+    try {
+      return new DefaultId(name, ArrayTagSet.create(tags));
+    } catch (Exception e) {
+      propagate(e);
+      return NoopId.INSTANCE;
+    }
+  }
+
   /**
    * Ensure a the id type is correct. While not recommended, nothing stops users from using a
    * custom implementation of the {@link Id} interface. This can create unexpected and strange
