@@ -316,6 +316,50 @@ public class CardinalityLimitersTest {
     Assertions.assertEquals(CardinalityLimiters.AUTO_ROLLUP, f.apply("a"));
   }
 
+  @Test
+  public void registeredNameOrIp() {
+    Function<String, String> registeredNamelimiter = CardinalityLimiters.first(2);
+    Function<String, String> ipNamelimiter = CardinalityLimiters.first(2);
+    Function<String, String> limiter = CardinalityLimiters.registeredNameOrIp(registeredNamelimiter, ipNamelimiter);
+
+    //Allow two IPs
+    Assertions.assertEquals("127.0.0.1", limiter.apply("127.0.0.1"));
+    Assertions.assertEquals("[::1]", limiter.apply("[::1]"));
+
+    //Further IPs are limited
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("127.0.0.2"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[::2]"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[v1.::1]"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[::1%0]"));
+
+    //Allow two registry names
+    Assertions.assertEquals("example.com", limiter.apply("example.com"));
+    Assertions.assertEquals("spectator", limiter.apply("spectator"));
+
+    //Further registry names are rolled up
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("subdomain.example.com"));
+
+    //Original IP are still allowed
+    Assertions.assertEquals("127.0.0.1", limiter.apply("127.0.0.1"));
+    Assertions.assertEquals("[::1]", limiter.apply("[::1]"));
+  }
+
+  @Test
+  public void registeredNameOrIpAnchorsIps() {
+    Function<String, String> registeredNamelimiter = CardinalityLimiters.first(4);
+    Function<String, String> ipNamelimiter = CardinalityLimiters.first(0);
+    Function<String, String> limiter = CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //Confirm test setup that IPs limited
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("127.0.0.1"));
+
+    //IP-like registered names are allowed
+    Assertions.assertEquals("127.0.0.1.example.com", limiter.apply("127.0.0.1.example.com"));
+    Assertions.assertEquals("vip-127.0.0.1", limiter.apply("vip-127.0.0.1"));
+    Assertions.assertEquals("[::1]-vip", limiter.apply("[::1]-vip"));
+    Assertions.assertEquals("vip-[::1]", limiter.apply("vip-[::1]"));
+  }
+
   @SuppressWarnings("unchecked")
   static void checkSerde(Function<String, String> limiter) {
     try {
@@ -358,6 +402,19 @@ public class CardinalityLimitersTest {
     limiter.apply("a");
     limiter.apply("b");
     limiter.apply("c");
+    checkSerde(limiter);
+  }
+
+  @Test
+  public void registeredNameOrIpSerializability() {
+    Function<String, String> registeredNamelimiter = CardinalityLimiters.first(5);
+    Function<String, String> ipNamelimiter = CardinalityLimiters.first(2);
+    Function<String, String> limiter = CardinalityLimiters.registeredNameOrIp(registeredNamelimiter, ipNamelimiter);
+
+    limiter.apply("127.0.0.1");
+    limiter.apply("[::1]");
+    limiter.apply("example.com");
+
     checkSerde(limiter);
   }
 }
