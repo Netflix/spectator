@@ -17,6 +17,7 @@ package com.netflix.spectator.api.patterns;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.impl.PatternMatcher;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -153,6 +155,25 @@ public final class CardinalityLimiters {
    */
   public static Function<String, String> rollup(int n) {
     return new RollupLimiter(n);
+  }
+
+  /**
+   * Restrict the cardinality independently for values which appear to be IP literals,
+   * which are likely high-cardinality and low value, and Registered names (eg: Eureka
+   * VIPs or DNS names), which are low-to-mid cardinality and high value. Values should
+   * be RFC3986 3.2.2 hosts, behavior with non-host strings is not guaranteed.
+   *
+   * @param registeredNameLimiter
+   *     The limiter applied to values which appear to be registered names.
+   * @param ipLimiter
+   *     The limiter applied to values which appear to be IP literals.
+   *
+   * @return
+   *     The result according to the the matched limiter.
+   */
+  public static Function<String, String> registeredNameOrIp(Function<String, String> registeredNameLimiter,
+                                                            Function<String, String> ipLimiter) {
+    return new RegisteredNameOrIpLimiter(registeredNameLimiter, ipLimiter);
   }
 
   private static class FirstLimiter implements Function<String, String>, Serializable {
@@ -355,6 +376,38 @@ public final class CardinalityLimiters {
     @Override public String toString() {
       final String state = rollup ? "true" : values.size()  + " of " + n;
       return "RollupLimiter(" + state + ")";
+    }
+  }
+
+  private static class RegisteredNameOrIpLimiter implements Function<String, String>, Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    //From RFC 3986 3.2.2, we can quickly identify IP literals (other than IPv4) from the first and last characters.
+    private static final Predicate<String> IS_IP_LITERAL = s -> s.startsWith("[") && s.endsWith("]");
+
+    //Approximating the logic from RFC 3986 3.2.2 without strictly enforcing the octect range
+    private static final Predicate<String> IS_IPV4_ADDRESS = PatternMatcher.compile(
+            "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")::matches;
+    private final Function<String, String> registeredNameLimiter;
+
+    private final Function<String, String> ipLimiter;
+
+    RegisteredNameOrIpLimiter(Function<String, String> registeredNameLimiter, Function<String, String> ipLimiter) {
+      this.registeredNameLimiter = registeredNameLimiter;
+      this.ipLimiter = ipLimiter;
+    }
+    @Override public String apply(String input) {
+      if (IS_IP_LITERAL.test(input) || IS_IPV4_ADDRESS.test(input)) {
+        return ipLimiter.apply(input);
+      } else {
+        return registeredNameLimiter.apply(input);
+      }
+    }
+
+    @Override public String toString() {
+      return "RegisteredNameOrIpLimiter(registeredNameLimiter=" + registeredNameLimiter.toString()
+              + ", ipLimiter=" + ipLimiter.toString() + ")";
     }
   }
 }
