@@ -22,6 +22,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.BitSet;
 import java.util.UUID;
 
 /**
@@ -33,25 +34,38 @@ import java.util.UUID;
  * {@link StringCreate} benchmark for more details).
  *
  * <pre>
- * Benchmark                                Mode  Cnt         Score         Error  Units
+ * Benchmark                               Mode  Cnt         Score         Error   Units
  *
- * StringReplace.bad_array                 thrpt   10  16714173.859 ±  234209.339  ops/s
- * StringReplace.bad_asciiSet              thrpt   10  18107063.738 ±  360271.524  ops/s
- * StringReplace.bad_checkFirst            thrpt   10  14165041.869 ±  208433.352  ops/s
- * StringReplace.bad_naive                 thrpt   10    530188.254 ±    8342.491  ops/s
- * StringReplace.bad_stringBuilder         thrpt   10   5754313.189 ±  138045.465  ops/s
+ * bad_array                              thrpt    5  20960080.404 ± 2528326.088   ops/s
+ * bad_asciiSet                           thrpt    5  28525355.999 ± 1110328.417   ops/s
+ * bad_bitSet                             thrpt    5  25384526.493 ±  399471.760   ops/s
+ * bad_checkFirst                         thrpt    5  28570631.420 ±  413296.441   ops/s
+ * bad_naive                              thrpt    5    798526.522 ±   24004.695   ops/s
+ * bad_stringBuilder                      thrpt    5  10592798.051 ±  500514.554   ops/s
  *
- * StringReplace.ok_array                  thrpt   10  18899940.964 ±  293219.495  ops/s
- * StringReplace.ok_asciiSet               thrpt   10  30230490.618 ± 1096911.677  ops/s
- * StringReplace.ok_checkFirst             thrpt   10  30601837.288 ±  453161.602  ops/s
- * StringReplace.ok_naive                  thrpt   10    491380.343 ±    9738.662  ops/s
- * StringReplace.ok_stringBuilder          thrpt   10   6673496.163 ±  115877.036  ops/s
+ * ok_array                               thrpt    5  19738313.781 ± 2000737.155   ops/s
+ * ok_asciiSet                            thrpt    5  47503468.615 ± 2395740.563   ops/s
+ * ok_bitSet                              thrpt    5  37388017.571 ± 2415574.832   ops/s
+ * ok_checkFirst                          thrpt    5  47555675.336 ± 1323382.528   ops/s
+ * ok_naive                               thrpt    5    641579.313 ±   10920.803   ops/s
+ * ok_stringBuilder                       thrpt    5  13520065.966 ±  925254.484   ops/s
  * </pre>
  */
 @State(Scope.Thread)
 public class StringReplace {
 
+  private static BitSet toBitSet(AsciiSet set) {
+    BitSet bits = new BitSet();
+    for (int i = 0; i < 128; ++i) {
+      char c = (char) i;
+      if (set.contains(c))
+        bits.set(i);
+    }
+    return bits;
+  }
+
   private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
+  private final BitSet members = toBitSet(set);
   private final String ok = UUID.randomUUID().toString();
   private final String bad = ok.replace('-', ' ');
 
@@ -101,6 +115,36 @@ public class StringReplace {
     return set.replaceNonMembers(input, replacement);
   }
 
+  boolean contains(char c) {
+    return members.get(c);
+  }
+
+  private boolean containsAll(CharSequence str) {
+    final int n = str.length();
+    for (int i = 0; i < n; ++i) {
+      if (!contains(str.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private String bitSet(String input, char replacement) {
+    if (containsAll(input)) {
+      return input;
+    } else {
+      final int n = input.length();
+      final char[] buf = input.toCharArray();
+      for (int i = 0; i < n; ++i) {
+        final char c = buf[i];
+        if (!contains(c)) {
+          buf[i] = replacement;
+        }
+      }
+      return new String(buf);
+    }
+  }
+
   @Threads(1)
   @Benchmark
   public void ok_naive(Blackhole bh) {
@@ -133,6 +177,12 @@ public class StringReplace {
 
   @Threads(1)
   @Benchmark
+  public void ok_bitSet(Blackhole bh) {
+    bh.consume(bitSet(ok, '_'));
+  }
+
+  @Threads(1)
+  @Benchmark
   public void bad_naive(Blackhole bh) {
     bh.consume(naive(bad, '_'));
   }
@@ -159,6 +209,12 @@ public class StringReplace {
   @Benchmark
   public void bad_asciiSet(Blackhole bh) {
     bh.consume(asciiSet(bad, '_'));
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void bad_bitSet(Blackhole bh) {
+    bh.consume(bitSet(bad, '_'));
   }
 
 }
