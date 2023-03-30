@@ -1,5 +1,5 @@
 plugins {
-  id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 dependencies {
@@ -23,7 +23,7 @@ jar {
 }
 
 shadowJar {
-  classifier = 'shadow'
+  archiveClassifier = 'shadow'
 
   // Combine all the reference.conf and application.conf so all default props will be
   // available
