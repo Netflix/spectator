@@ -259,8 +259,13 @@ public final class GcLogger {
     //
     // For ZGC in older versions, there is no way to accurately get the amount of time
     // in STW pauses.
-    return "No GC".equals(info.getGcCause())     // CMS
-        || info.getGcName().endsWith(" Cycles"); // Shenandoah, ZGC
+    //
+    // For G1, a new bean was added in JDK20 to indicate time spent in concurrent
+    // phases:
+    // https://bugs.openjdk.org/browse/JDK-8297247
+    return "No GC".equals(info.getGcCause())           // CMS
+        || "G1 Concurrent GC".equals(info.getGcName()) // G1 in JDK20+
+        || info.getGcName().endsWith(" Cycles");       // Shenandoah, ZGC
   }
 
   private class GcNotificationListener implements NotificationListener {
