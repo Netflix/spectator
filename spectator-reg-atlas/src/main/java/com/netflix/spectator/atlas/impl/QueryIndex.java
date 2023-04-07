@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -362,6 +363,7 @@ public final class QueryIndex<T> {
     forEachMatch(id, 0, consumer);
   }
 
+  @SuppressWarnings("PMD.NPathComplexity")
   private void forEachMatch(Id tags, int i, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
@@ -414,7 +416,10 @@ public final class QueryIndex<T> {
           if (hasKeyIdx != null) {
             hasKeyIdx.forEachMatch(tags, i, consumer);
           }
-        } else if (cmp > 0) {
+        }
+
+        // Quit loop if the key was found or not present
+        if (cmp >= 0) {
           break;
         }
       }
@@ -428,6 +433,93 @@ public final class QueryIndex<T> {
       if (missingKeysIdx != null && !keyPresent) {
         missingKeysIdx.forEachMatch(tags, i, consumer);
       }
+    }
+  }
+
+  /**
+   * Find all values where the corresponding queries match the specified tags. This can be
+   * used if the tags are not already structured as a spectator Id.
+   *
+   * @param tags
+   *     Function to look up the value for a given tag key. The function should return
+   *     {@code null} if there is no value for the key.
+   * @return
+   *     List of all matching values for the id.
+   */
+  public List<T> findMatches(Function<String, String> tags) {
+    List<T> result = new ArrayList<>();
+    forEachMatch(tags, result::add);
+    return result;
+  }
+
+  /**
+   * Invoke the consumer for all values where the corresponding queries match the specified tags.
+   * This can be used if the tags are not already structured as a spectator Id.
+   *
+   * @param tags
+   *     Function to look up the value for a given tag key. The function should return
+   *     {@code null} if there is no value for the key.
+   * @param consumer
+   *     Function to invoke for values associated with a query that matches the id.
+   */
+  public void forEachMatch(Function<String, String> tags, Consumer<T> consumer) {
+    // Matches for this level
+    matches.forEach(consumer);
+
+    boolean keyPresent = false;
+    if (key != null) {
+      String v = tags.apply(key);
+      if (v != null) {
+        keyPresent = true;
+
+        // Find exact matches
+        QueryIndex<T> eqIdx = equalChecks.get(v);
+        if (eqIdx != null) {
+          eqIdx.forEachMatch(tags, consumer);
+        }
+
+        // Scan for matches with other conditions
+        List<QueryIndex<T>> otherMatches = otherChecksCache.get(v);
+        if (otherMatches == null) {
+          // Avoid the list and cache allocations if there are no other checks at
+          // this level
+          if (!otherChecks.isEmpty()) {
+            List<QueryIndex<T>> tmp = new ArrayList<>();
+            otherChecksTree.forEach(v, kq -> {
+              if (kq.matches(v)) {
+                QueryIndex<T> idx = otherChecks.get(kq);
+                if (idx != null) {
+                  tmp.add(idx);
+                  idx.forEachMatch(tags, consumer);
+                }
+              }
+            });
+            otherChecksCache.put(v, tmp);
+          }
+        } else {
+          // Enhanced for loop typically results in iterator being allocated. Using
+          // size/get avoids the allocation and has better throughput.
+          int n = otherMatches.size();
+          for (int p = 0; p < n; ++p) {
+            otherMatches.get(p).forEachMatch(tags, consumer);
+          }
+        }
+
+        // Check matches for has key
+        if (hasKeyIdx != null) {
+          hasKeyIdx.forEachMatch(tags, consumer);
+        }
+      }
+    }
+
+    // Check matches with other keys
+    if (otherKeysIdx != null) {
+      otherKeysIdx.forEachMatch(tags, consumer);
+    }
+
+    // Check matches with missing keys
+    if (missingKeysIdx != null && !keyPresent) {
+      missingKeysIdx.forEachMatch(tags, consumer);
     }
   }
 
