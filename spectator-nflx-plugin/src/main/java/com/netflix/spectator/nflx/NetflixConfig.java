@@ -101,15 +101,6 @@ public final class NetflixConfig {
     }
   }
 
-  private static void put(Map<String, String> map, String key, String maybeNullValue) {
-    if (maybeNullValue != null) {
-      String value = maybeNullValue.trim();
-      if (!value.isEmpty()) {
-        map.put(key, maybeNullValue);
-      }
-    }
-  }
-
   /**
    * Infrastructure tags that are common across all metrics. Used for deduplication
    * and for providing a scope for the metrics produced.
