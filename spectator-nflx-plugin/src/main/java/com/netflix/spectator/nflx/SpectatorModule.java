@@ -59,7 +59,7 @@ import java.util.Map;
  * </pre>
  *
  * <p><b>Governator</b></p>
- * <p>One of the classes requires an {@link javax.annotation.PostConstruct} block to initialize
+ * <p>One of the classes requires an {@code javax.annotation.PostConstruct} block to initialize
  * so governator should be used to manage the lifecycle as guice doesn't support it directly.</p>
  * <pre>
  * Injector injector = LifecycleInjector.builder()

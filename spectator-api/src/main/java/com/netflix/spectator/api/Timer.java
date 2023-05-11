@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * an http request. Though "short running" is a bit subjective the assumption is that it should be
  * under a minute.
  *
- * The precise set of information maintained by the timer depends on the implementation. Most
+ * <p>The precise set of information maintained by the timer depends on the implementation. Most
  * should try to provide a consistent implementation of {@link #count()} and {@link #totalTime()},
  * but some implementations may not. In particular, the implementation from {@link NoopRegistry}
  * will always return 0.
@@ -60,7 +60,7 @@ public interface Timer extends Meter {
    *     for a value, the value will be dropped.
    * @param n
    *     The number of elements to write from the amounts array (starting from 0). If n is
-   *     <= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
+   *     &lt;= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
    *     will be recorded.
    * @param unit
    *     Time unit for the amounts being recorded.

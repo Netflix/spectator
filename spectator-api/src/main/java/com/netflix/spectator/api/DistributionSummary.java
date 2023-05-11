@@ -19,7 +19,7 @@ package com.netflix.spectator.api;
  * Track the sample distribution of events. An example would be the response sizes for requests
  * hitting and http server.
  *
- * The precise set of information maintained depends on the implementation. Most should try to
+ * <p>The precise set of information maintained depends on the implementation. Most should try to
  * provide a consistent implementation of {@link #count()} and {@link #totalAmount()},
  * but some implementations may not. In particular, the implementation from {@link NoopRegistry}
  * will always return 0.
@@ -44,7 +44,7 @@ public interface DistributionSummary extends Meter {
    *     from a server. If the amount is less than 0 the value will be dropped.
    * @param n
    *     The number of elements to write from the amounts array (starting from 0). If n is
-   *     <= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
+   *     &lt;= 0 no entries will be recorded. If n is greater than amounts.length, all amounts
    *     will be recorded.
    *
    * @see #record(long)
