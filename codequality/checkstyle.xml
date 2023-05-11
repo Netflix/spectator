@@ -170,4 +170,7 @@
         <module name="SuppressWarningsHolder"/>
     </module>
     <module name="SuppressWarningsFilter"/>
+    <module name="SuppressionFilter">
+      <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
+    </module>
 </module>
