@@ -7,6 +7,12 @@
     </And>
   </Match>
   <Match>
+    <And>
+      <Class name="com.netflix.spectator.impl.UnsafeUtils"/>
+      <Bug pattern="REC_CATCH_EXCEPTION"/>
+    </And>
+  </Match>
+  <Match>
     <Bug pattern="EI_EXPOSE_REP"/>
   </Match>
   <Match>

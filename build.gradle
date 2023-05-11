@@ -102,6 +102,7 @@ subprojects {
     toolVersion = '9.3'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
+    configDirectory = rootProject.file("codequality")
     sourceSets = [sourceSets.main]
   }
   

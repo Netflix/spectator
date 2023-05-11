@@ -2,9 +2,11 @@
 dependencies {
   testImplementation files("$projectDir/src/test/lib/compatibility-0.68.0.jar")
   testImplementation "com.google.re2j:re2j"
+  testImplementation "net.openhft:zero-allocation-hashing"
   testImplementation "org.hsqldb:hsqldb"
   jmh "com.google.re2j:re2j"
   jmh "com.github.ben-manes.caffeine:caffeine"
+  jmh "net.openhft:zero-allocation-hashing"
 }
 
 javadoc {
