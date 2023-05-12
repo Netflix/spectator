@@ -188,13 +188,17 @@ public final class AsciiSet implements Serializable {
    * Returns true if all characters in the string are contained within the set.
    */
   public boolean containsAll(CharSequence str) {
+    return indexOfNonMember(str) == str.length();
+  }
+
+  private int indexOfNonMember(CharSequence str) {
     final int n = str.length();
     for (int i = 0; i < n; ++i) {
       if (!contains(str.charAt(i))) {
-        return false;
+        return i;
       }
     }
-    return true;
+    return n;
   }
 
   /**
@@ -204,7 +208,8 @@ public final class AsciiSet implements Serializable {
     if (!contains(replacement)) {
       throw new IllegalArgumentException(replacement + " is not a member of " + pattern);
     }
-    return containsAll(input) ? input : replaceNonMembersImpl(input, replacement);
+    int i = indexOfNonMember(input);
+    return i < input.length() ? replaceNonMembersImpl(input, i, replacement) : input;
   }
 
   /**
@@ -254,14 +259,14 @@ public final class AsciiSet implements Serializable {
     return new AsciiSet(invertMembers);
   }
 
-  private String replaceNonMembersImpl(String input, char replacement) {
+  private String replaceNonMembersImpl(String input, int start, char replacement) {
     final int n = input.length();
     final char[] buf = input.toCharArray();
-    for (int i = 0; i < n; ++i) {
-      final char c = buf[i];
-      if (!contains(c)) {
+    buf[start] = replacement;
+    for (int i = start + 1; i < n; ++i) {
+      final char c = input.charAt(i);
+      if (!contains(c))
         buf[i] = replacement;
-      }
     }
     return newString(buf);
   }
