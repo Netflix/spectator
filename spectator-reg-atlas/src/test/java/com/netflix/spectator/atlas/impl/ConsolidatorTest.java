@@ -108,7 +108,7 @@ public class ConsolidatorTest {
 
   @Test
   public void noneEmpty() {
-    Consolidator consolidator = new Consolidator.None();
+    Consolidator consolidator = new Consolidator.None(false);
     Assertions.assertTrue(consolidator.isEmpty());
     consolidator.update(30000, 12.0);
     Assertions.assertFalse(consolidator.isEmpty());
@@ -205,7 +205,7 @@ public class ConsolidatorTest {
     Counter primary = registry(clock, CONSOLIDATED_STEP).counter(id);
     Counter consolidated = registry(clock, CONSOLIDATED_STEP).counter(id);
 
-    Consolidator consolidator = new Consolidator.None();
+    Consolidator consolidator = new Consolidator.None(false);
 
     consolidateRandomData(
         measurementId,
