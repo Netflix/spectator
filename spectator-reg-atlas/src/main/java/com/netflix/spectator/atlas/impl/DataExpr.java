@@ -40,6 +40,27 @@ public interface DataExpr {
   /** Query for selecting the input measurements that should be aggregated. */
   Query query();
 
+  /** Returns true if the aggregation type is accumulating (sum or count). */
+  boolean isAccumulating();
+
+
+  /** Returns true if the aggregation type is count. */
+  default boolean isCount() {
+    return false;
+  }
+
+  /**
+   * Get the set of result tags for a particular datapoint. The result tags will include
+   * everything with an exact match in the query clause and keys used in a group by
+   * clause.
+   *
+   * @param tags
+   *     Full set of tags for a datapoint.
+   * @return
+   *     Result tags for a datapoint.
+   */
+  Map<String, String> resultTags(Map<String, String> tags);
+
   /**
    * Get an aggregator that can be incrementally fed values. See {@link #eval(Iterable)} if
    * you already have the completed list of values.
@@ -56,11 +77,18 @@ public interface DataExpr {
   Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery);
 
   /**
-   * Get an aggregator using the default set of tags for the final result. The tags will
-   * be extracted based on the exact matches for the underlying query.
+   * Get an aggregator that can be incrementally fed values. See {@link #eval(Iterable)} if
+   * you already have the completed list of values.
+   *
+   * @param shouldCheckQuery
+   *     If true, then values will be checked against the query before applying to the
+   *     aggregate. Otherwise, it is assumed that the user has already verified that the
+   *     datapoint matches before passing it in.
+   * @return
+   *     Aggregator for this data expression.
    */
-  default Aggregator aggregator() {
-    return aggregator(query().exactTags(), true);
+  default Aggregator aggregator(boolean shouldCheckQuery) {
+    return aggregator(resultTags(Collections.emptyMap()), shouldCheckQuery);
   }
 
   /**
@@ -73,7 +101,7 @@ public interface DataExpr {
    *     Aggregated data values.
    */
   default Iterable<TagsValuePair> eval(Iterable<TagsValuePair> input) {
-    Aggregator aggr = aggregator();
+    Aggregator aggr = aggregator(true);
     for (TagsValuePair p : input) {
       aggr.update(p);
     }
@@ -106,13 +134,20 @@ public interface DataExpr {
       return query;
     }
 
-    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
+    @Override public boolean isAccumulating() {
+      return false;
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return tags;
+    }
+
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private final List<TagsValuePair> pairs = new ArrayList<>();
 
         @Override public void update(TagsValuePair p) {
-          Map<String, String> tags = p.tags();
-          if (!shouldCheckQuery || query.matches(tags)) {
+          if (!shouldCheckQuery || query.matches(p.tags())) {
             pairs.add(new TagsValuePair(tags, p.value()));
           }
         }
@@ -121,10 +156,6 @@ public interface DataExpr {
           return pairs;
         }
       };
-    }
-
-    @Override public Aggregator aggregator() {
-      return aggregator(null, true);
     }
 
     @Override public String toString() {
@@ -156,14 +187,24 @@ public interface DataExpr {
   final class Sum implements AggregateFunction {
 
     private final Query query;
+    private final Map<String, String> queryTags;
 
     /** Create a new instance. */
     Sum(Query query) {
       this.query = query;
+      this.queryTags = Collections.unmodifiableMap(query.exactTags());
     }
 
     @Override public Query query() {
       return query;
+    }
+
+    @Override public boolean isAccumulating() {
+      return true;
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return queryTags;
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
@@ -194,11 +235,12 @@ public interface DataExpr {
       if (this == obj) return true;
       if (!(obj instanceof Sum)) return false;
       Sum other = (Sum) obj;
-      return query.equals(other.query);
+      return query.equals(other.query) && queryTags.equals(other.queryTags);
     }
 
     @Override public int hashCode() {
       int result = query.hashCode();
+      result = 31 * result + queryTags.hashCode();
       result = 31 * result + ":sum".hashCode();
       return result;
     }
@@ -211,14 +253,24 @@ public interface DataExpr {
   final class Min implements AggregateFunction {
 
     private final Query query;
+    private final Map<String, String> queryTags;
 
     /** Create a new instance. */
     Min(Query query) {
       this.query = query;
+      this.queryTags = Collections.unmodifiableMap(query.exactTags());
     }
 
     @Override public Query query() {
       return query;
+    }
+
+    @Override public boolean isAccumulating() {
+      return false;
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return queryTags;
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
@@ -249,11 +301,12 @@ public interface DataExpr {
       if (this == obj) return true;
       if (!(obj instanceof Min)) return false;
       Min other = (Min) obj;
-      return query.equals(other.query);
+      return query.equals(other.query) && queryTags.equals(other.queryTags);
     }
 
     @Override public int hashCode() {
       int result = query.hashCode();
+      result = 31 * result + queryTags.hashCode();
       result = 31 * result + ":min".hashCode();
       return result;
     }
@@ -266,14 +319,24 @@ public interface DataExpr {
   final class Max implements AggregateFunction {
 
     private final Query query;
+    private final Map<String, String> queryTags;
 
     /** Create a new instance. */
     Max(Query query) {
       this.query = query;
+      this.queryTags = Collections.unmodifiableMap(query.exactTags());
     }
 
     @Override public Query query() {
       return query;
+    }
+
+    @Override public boolean isAccumulating() {
+      return false;
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return queryTags;
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
@@ -304,11 +367,12 @@ public interface DataExpr {
       if (this == obj) return true;
       if (!(obj instanceof Max)) return false;
       Max other = (Max) obj;
-      return query.equals(other.query);
+      return query.equals(other.query) && queryTags.equals(other.queryTags);
     }
 
     @Override public int hashCode() {
       int result = query.hashCode();
+      result = 31 * result + queryTags.hashCode();
       result = 31 * result + ":max".hashCode();
       return result;
     }
@@ -321,14 +385,28 @@ public interface DataExpr {
   final class Count implements AggregateFunction {
 
     private final Query query;
+    private final Map<String, String> queryTags;
 
     /** Create a new instance. */
     Count(Query query) {
       this.query = query;
+      this.queryTags = Collections.unmodifiableMap(query.exactTags());
     }
 
     @Override public Query query() {
       return query;
+    }
+
+    @Override public boolean isAccumulating() {
+      return true;
+    }
+
+    @Override public boolean isCount() {
+      return true;
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return queryTags;
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
@@ -357,11 +435,12 @@ public interface DataExpr {
       if (this == obj) return true;
       if (!(obj instanceof Count)) return false;
       Count other = (Count) obj;
-      return query.equals(other.query);
+      return query.equals(other.query) && queryTags.equals(other.queryTags);
     }
 
     @Override public int hashCode() {
       int result = query.hashCode();
+      result = 31 * result + queryTags.hashCode();
       result = 31 * result + ":count".hashCode();
       return result;
     }
@@ -399,16 +478,33 @@ public interface DataExpr {
       return af.query();
     }
 
-    @Override public Aggregator aggregator(Map<String, String> queryTags, boolean shouldCheckQuery) {
+    @Override public boolean isAccumulating() {
+      return af.isAccumulating();
+    }
+
+    @Override public boolean isCount() {
+      return af.isCount();
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      Map<String, String> resultTags = keyTags(tags);
+      if (resultTags == null) {
+        return null;
+      } else {
+        resultTags.putAll(af.resultTags(tags));
+        return resultTags;
+      }
+    }
+
+    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
         private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
           if (!shouldCheckQuery || af.query().matches(tags)) {
-            Map<String, String> k = keyTags(tags);
+            Map<String, String> k = resultTags(tags);
             if (k != null) {
-              k.putAll(queryTags);
               aggrs.computeIfAbsent(k, ks -> af.aggregator(ks, false)).update(p);
             }
           }
@@ -463,17 +559,30 @@ public interface DataExpr {
       return af.query();
     }
 
-    @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
+    @Override public boolean isAccumulating() {
+      return af.isAccumulating();
+    }
+
+    @Override public boolean isCount() {
+      return af.isCount();
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      Map<String, String> resultTags = new HashMap<>(tags);
+      for (String k : keys) {
+        resultTags.remove(k);
+      }
+      return resultTags;
+    }
+
+    @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
       return new Aggregator() {
         private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
-          Map<String, String> tags = new HashMap<>(p.tags());
-          if (!shouldCheckQuery || af.query().matches(tags)) {
-            for (String k : keys) {
-              tags.remove(k);
-            }
-            aggrs.computeIfAbsent(tags, ks -> af.aggregator(ks, false)).update(p);
+          if (!shouldCheckQuery || af.query().matches(p.tags())) {
+            Map<String, String> k = resultTags(p.tags());
+            aggrs.computeIfAbsent(k, ks -> af.aggregator(ks, false)).update(p);
           }
         }
 
@@ -483,10 +592,6 @@ public interface DataExpr {
               .collect(Collectors.toList());
         }
       };
-    }
-
-    @Override public Aggregator aggregator() {
-      return aggregator(null, true);
     }
 
     @Override public String toString() {
@@ -530,17 +635,28 @@ public interface DataExpr {
       return af.query();
     }
 
+    @Override public boolean isAccumulating() {
+      return af.isAccumulating();
+    }
+
+    @Override public boolean isCount() {
+      return af.isCount();
+    }
+
+    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+      return tags.entrySet().stream()
+          .filter(e -> keys.contains(e.getKey()))
+          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
     @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
         private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
-          Map<String, String> tags = p.tags();
-          if (!shouldCheckQuery || af.query().matches(tags)) {
-            Map<String, String> newTags = tags.entrySet().stream()
-                .filter(e -> keys.contains(e.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            aggrs.computeIfAbsent(newTags, ks -> af.aggregator(ks, false)).update(p);
+          if (!shouldCheckQuery || af.query().matches(p.tags())) {
+            Map<String, String> k = resultTags(p.tags());
+            aggrs.computeIfAbsent(k, ks -> af.aggregator(ks, false)).update(p);
           }
         }
 
@@ -550,10 +666,6 @@ public interface DataExpr {
               .collect(Collectors.toList());
         }
       };
-    }
-
-    @Override public Aggregator aggregator() {
-      return aggregator(null, true);
     }
 
     @Override public String toString() {

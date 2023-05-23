@@ -76,4 +76,15 @@ public interface EvaluatorConfig {
   default boolean parallelMeasurementPolling() {
     return false;
   }
+
+  /**
+   * Returns true if gauge aggregation should be delayed until downstream in the final eval
+   * step. In some cases such as running with an inline aggregator, the same gauge value may
+   * be reported to multiple instances resulting in it contributing to the aggregate multiple
+   * times. When delayed, the downstream eval step will receive all datapoints and dedup based
+   * on a hash to mimic all datapoints being at a single aggregator.
+   */
+  default boolean delayGaugeAggregation() {
+    return false;
+  }
 }

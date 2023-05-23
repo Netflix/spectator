@@ -66,7 +66,7 @@ public class DataExprTest {
   }
 
   private Iterable<TagsValuePair> evalNoCheck(DataExpr expr, Iterable<TagsValuePair> input) {
-    DataExpr.Aggregator aggr = expr.aggregator(expr.query().exactTags(), false);
+    DataExpr.Aggregator aggr = expr.aggregator(false);
     for (TagsValuePair p : input) {
       aggr.update(p);
     }
@@ -192,7 +192,7 @@ public class DataExprTest {
         Assertions.assertEquals("foo", v.tags().get("name"));
       }
       double tv = Double.parseDouble(v.tags().get("v"));
-      Assertions.assertEquals((tv < 2.0) ? 2.0 : tv, v.value(), 1e-12);
+      Assertions.assertEquals(Math.max(tv, 2.0), v.value(), 1e-12);
     }
     Assertions.assertEquals(shouldCheckQuery ? 3 : 4, count);
   }

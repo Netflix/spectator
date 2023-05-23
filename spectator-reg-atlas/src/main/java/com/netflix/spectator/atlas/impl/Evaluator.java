@@ -18,11 +18,12 @@ package com.netflix.spectator.atlas.impl;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.impl.Hash64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -46,6 +47,7 @@ public class Evaluator {
   private final Map<String, String> commonTags;
   private final Function<Id, Map<String, String>> idMapper;
   private final long step;
+  private final boolean delayGaugeAggregation;
   private final QueryIndex<SubscriptionEntry> index;
   private final Map<Subscription, SubscriptionEntry> subscriptions;
   private final ThreadLocal<SubscriptionEntryConsumer> consumers;
@@ -60,6 +62,7 @@ public class Evaluator {
     this.commonTags = new TreeMap<>(config.commonTags());
     this.idMapper = config.idMapper();
     this.step = config.evaluatorStepSize();
+    this.delayGaugeAggregation = config.delayGaugeAggregation();
     this.index = QueryIndex.newInstance(config.indexCacheSupplier());
     this.subscriptions = new ConcurrentHashMap<>();
     this.consumers = new ThreadLocal<>();
@@ -145,30 +148,40 @@ public class Evaluator {
   public EvalPayload eval(long timestamp) {
     List<EvalPayload.Metric> metrics = new ArrayList<>();
     subscriptions.values().forEach(subEntry -> {
-      long step = subEntry.subscription.getFrequency();
+      final String subId = subEntry.subscription.getId();
+      final long step = subEntry.subscription.getFrequency();
+
       if (timestamp % step == 0) {
         LOGGER.debug("evaluating subscription: {}: {}", timestamp, subEntry.subscription);
         DataExpr expr = subEntry.subscription.dataExpr();
-        DataExpr.Aggregator aggregator = expr.aggregator(subEntry.tags, false);
+        final boolean delayGaugeAggr = delayGaugeAggregation && expr.isAccumulating();
+
+        DataExpr.Aggregator aggregator = expr.aggregator(false);
         Iterator<Map.Entry<Id, Consolidator>> it = subEntry.measurements.entrySet().iterator();
         while (it.hasNext()) {
           Map.Entry<Id, Consolidator> entry = it.next();
-          Consolidator consolidator = entry.getValue();
+          final Consolidator consolidator = entry.getValue();
           consolidator.update(timestamp, Double.NaN);
-          double v = consolidator.value(timestamp);
+          final double v = consolidator.value(timestamp);
           if (!Double.isNaN(v)) {
             Map<String, String> tags = idMapper.apply(entry.getKey());
             tags.putAll(commonTags);
-            TagsValuePair p = new TagsValuePair(tags, v);
-            aggregator.update(p);
-            LOGGER.trace("aggregating: {}: {}", timestamp, p);
+            if (delayGaugeAggr && consolidator.isGauge()) {
+              Map<String, String> resultTags = new HashMap<>(expr.resultTags(tags));
+              resultTags.put("atlas.aggr", idHash(entry.getKey()));
+              double acc = expr.isCount() ? 1.0 : v;
+              metrics.add(new EvalPayload.Metric(subId, resultTags, acc));
+            } else {
+              TagsValuePair p = new TagsValuePair(tags, v);
+              aggregator.update(p);
+              LOGGER.trace("aggregating: {}: {}", timestamp, p);
+            }
           }
           if (consolidator.isEmpty()) {
             it.remove();
           }
         }
 
-        String subId = subEntry.subscription.getId();
         for (TagsValuePair pair : aggregator.result()) {
           LOGGER.trace("result: {}: {}", timestamp, pair);
           metrics.add(new EvalPayload.Metric(subId, pair.tags(), pair.value()));
@@ -177,6 +190,19 @@ public class Evaluator {
     });
 
     return new EvalPayload(timestamp, metrics);
+  }
+
+  private String idHash(Id id) {
+    Hash64 hasher = new Hash64();
+    hasher.updateString(id.name());
+    final int size = id.size();
+    for (int i = 1; i < size; ++i) {
+      hasher.updateByte((byte) ',');
+      hasher.updateString(id.getKey(i));
+      hasher.updateByte((byte) '=');
+      hasher.updateString(id.getValue(i));
+    }
+    return Long.toHexString(hasher.compute());
   }
 
   /**
@@ -203,13 +229,11 @@ public class Evaluator {
   private static class SubscriptionEntry {
     private final Subscription subscription;
     private final int multiple;
-    private final Map<String, String> tags;
     private final ConcurrentHashMap<Id, Consolidator> measurements;
 
     SubscriptionEntry(Subscription subscription, int multiple) {
       this.subscription = subscription;
       this.multiple = multiple;
-      this.tags = Collections.unmodifiableMap(subscription.dataExpr().query().exactTags());
       this.measurements = new ConcurrentHashMap<>();
     }
 

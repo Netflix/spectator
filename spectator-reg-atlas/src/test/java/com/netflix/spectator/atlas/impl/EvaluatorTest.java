@@ -48,7 +48,22 @@ public class EvaluatorTest {
     return ms;
   }
 
+  private List<Measurement> counterData(String name, double... vs) {
+    List<Measurement> ms = new ArrayList<>();
+    for (int i = 0; i < vs.length; ++i) {
+      String pos = String.format("%03d", i);
+      String value = String.format("%f", vs[i]);
+      Id id = registry.createId(name, "i", pos, "v", value, "statistic", "count");
+      ms.add(new Measurement(id, 0L, vs[i]));
+    }
+    return ms;
+  }
+
   private Evaluator newEvaluator(String... commonTags) {
+    return newEvaluator(false, commonTags);
+  }
+
+  private Evaluator newEvaluator(boolean delayGauge, String... commonTags) {
     EvaluatorConfig config = new EvaluatorConfig() {
       @Override public long evaluatorStepSize() {
         return 5000L;
@@ -56,6 +71,10 @@ public class EvaluatorTest {
 
       @Override public Map<String, String> commonTags() {
         return tags(commonTags);
+      }
+
+      @Override public boolean delayGaugeAggregation() {
+        return delayGauge;
       }
     };
     return new Evaluator(config);
@@ -180,5 +199,125 @@ public class EvaluatorTest {
     Evaluator evaluator = newEvaluator("app", "www");
     evaluator.sync(subs);
     Assertions.assertEquals(0, evaluator.subscriptionCount());
+  }
+
+  @Test
+  public void delayAggrCounterSum() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:sum"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, counterData("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(1, payload.getMetrics().size());
+    Assertions.assertEquals(
+        new EvalPayload.Metric("sum", tags(), 6.0),
+        payload.getMetrics().get(0)
+    );
+  }
+
+  @Test
+  public void delayAggrGaugeSum() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:sum"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(3, payload.getMetrics().size());
+    for (EvalPayload.Metric m : payload.getMetrics()) {
+      Map<String, String> tags = m.getTags();
+      Assertions.assertEquals(1, tags.size());
+      Assertions.assertTrue(tags.containsKey("atlas.aggr"));
+    }
+  }
+
+
+  @Test
+  public void delayAggrGaugeCount() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:count"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(3, payload.getMetrics().size());
+    for (EvalPayload.Metric m : payload.getMetrics()) {
+      Map<String, String> tags = m.getTags();
+      Assertions.assertEquals(1, tags.size());
+      Assertions.assertTrue(tags.containsKey("atlas.aggr"));
+      Assertions.assertEquals(1.0, m.getValue());
+    }
+  }
+
+  @Test
+  public void delayAggrGaugeGroupByCount() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:count,(,name,),:by"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(3, payload.getMetrics().size());
+    for (EvalPayload.Metric m : payload.getMetrics()) {
+      Map<String, String> tags = m.getTags();
+      Assertions.assertEquals(2, tags.size());
+      Assertions.assertTrue(tags.containsKey("atlas.aggr"));
+      Assertions.assertEquals(1.0, m.getValue());
+    }
+  }
+
+  @Test
+  public void delayAggrGaugeMax() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("max", ":true,:max"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(1, payload.getMetrics().size());
+    Assertions.assertEquals(
+        new EvalPayload.Metric("max", tags(), 3.0),
+        payload.getMetrics().get(0)
+    );
+  }
+
+  @Test
+  public void delayAggrCombinationSum() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:sum,(,name,),:by"));
+
+    List<Measurement> ms = data("gauge", 1.0, 2.0, 3.0);
+    ms.addAll(counterData("counter", 1.0, 2.0, 3.0));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, ms);
+
+    Assertions.assertEquals(4, payload.getMetrics().size());
+    int counterValues = 0;
+    int gaugeValues = 0;
+    for (EvalPayload.Metric m : payload.getMetrics()) {
+      Map<String, String> tags = m.getTags();
+      switch (tags.get("name")) {
+        case "gauge":
+          Assertions.assertTrue(tags.containsKey("atlas.aggr"));
+          ++gaugeValues;
+          break;
+        case "counter":
+          Assertions.assertFalse(tags.containsKey("atlas.aggr"));
+          ++counterValues;
+          break;
+        default:
+          Assertions.fail();
+      }
+    }
+    Assertions.assertEquals(1, counterValues);
+    Assertions.assertEquals(3, gaugeValues);
   }
 }

@@ -58,6 +58,9 @@ public interface Consolidator {
    */
   boolean isEmpty();
 
+  /** Returns true if this consolidator is intended for gauge values. */
+  boolean isGauge();
+
   /**
    * Create a new consolidator instance based on the statistic in the id. If not statistic tag
    * is present, then it will be treated as a gauge.
@@ -105,23 +108,24 @@ public interface Consolidator {
    *     A new consolidator instance.
    */
   static Consolidator create(String statistic, long step, int multiple) {
+    boolean gauge = isGauge(statistic);
     if (multiple == 1) {
-      return new None();
+      return new None(gauge);
     }
-    Consolidator consolidator;
+    return gauge ? new Max(step, multiple) : new Avg(step, multiple);
+  }
+
+  static boolean isGauge(String statistic) {
     switch (statistic == null ? "gauge" : statistic) {
       case "count":
       case "totalAmount":
       case "totalTime":
       case "totalOfSquares":
       case "percentile":
-        consolidator = new Avg(step, multiple);
-        break;
+        return false;
       default:
-        consolidator = new Max(step, multiple);
-        break;
+        return true;
     }
-    return consolidator;
   }
 
   /**
@@ -132,10 +136,12 @@ public interface Consolidator {
 
     private long timestamp;
     private double value;
+    private boolean gauge;
 
-    None() {
+    None(boolean gauge) {
       this.timestamp = -1L;
       this.value = Double.NaN;
+      this.gauge = gauge;
     }
 
     @Override public void update(long t, double v) {
@@ -151,6 +157,10 @@ public interface Consolidator {
 
     @Override public boolean isEmpty() {
       return Double.isNaN(value);
+    }
+
+    @Override public boolean isGauge() {
+      return gauge;
     }
   }
 
@@ -241,6 +251,10 @@ public interface Consolidator {
     @Override protected double complete(double v) {
       return v / multiple;
     }
+
+    @Override public boolean isGauge() {
+      return false;
+    }
   }
 
   /**
@@ -259,6 +273,10 @@ public interface Consolidator {
 
     @Override protected double complete(double v) {
       return v;
+    }
+
+    @Override public boolean isGauge() {
+      return true;
     }
   }
 }
