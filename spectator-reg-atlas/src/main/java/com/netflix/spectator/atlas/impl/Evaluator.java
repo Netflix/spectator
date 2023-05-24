@@ -167,10 +167,15 @@ public class Evaluator {
             Map<String, String> tags = idMapper.apply(entry.getKey());
             tags.putAll(commonTags);
             if (delayGaugeAggr && consolidator.isGauge()) {
-              Map<String, String> resultTags = new HashMap<>(expr.resultTags(tags));
-              resultTags.put("atlas.aggr", idHash(entry.getKey()));
-              double acc = expr.isCount() ? 1.0 : v;
-              metrics.add(new EvalPayload.Metric(subId, resultTags, acc));
+              // When performing a group by, datapoints missing tag used for the grouping
+              // should be ignored
+              Map<String, String> rs = expr.resultTags(tags);
+              if (rs != null) {
+                Map<String, String> resultTags = new HashMap<>(rs);
+                resultTags.put("atlas.aggr", idHash(entry.getKey()));
+                double acc = expr.isCount() ? 1.0 : v;
+                metrics.add(new EvalPayload.Metric(subId, resultTags, acc));
+              }
             } else {
               TagsValuePair p = new TagsValuePair(tags, v);
               aggregator.update(p);

@@ -272,6 +272,18 @@ public class EvaluatorTest {
   }
 
   @Test
+  public void delayAggrGaugeGroupByMissingKey() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:sum,(,foo,),:by"));
+
+    Evaluator evaluator = newEvaluator(true);
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    Assertions.assertEquals(0, payload.getMetrics().size());
+  }
+
+  @Test
   public void delayAggrGaugeMax() {
     List<Subscription> subs = new ArrayList<>();
     subs.add(newSubscription("max", ":true,:max"));
