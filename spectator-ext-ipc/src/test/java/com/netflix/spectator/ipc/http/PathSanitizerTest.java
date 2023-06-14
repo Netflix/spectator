@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 public class PathSanitizerTest {
@@ -105,6 +107,16 @@ public class PathSanitizerTest {
   public void graphql() {
     String path = "/graphql";
     Assertions.assertEquals("_graphql", sanitize(path));
+  }
+
+  @Test
+  public void allowSet() {
+    String path = "/foo-bar";
+    Assertions.assertEquals("_-", PathSanitizer.sanitize(path));
+
+    Set<String> allowed = Collections.singleton("foo-bar");
+    Assertions.assertEquals("_foo-bar", PathSanitizer.sanitize(path, allowed));
+    Assertions.assertEquals("_api_v1_foo-bar", PathSanitizer.sanitize("/api/v1" + path, allowed));
   }
 
   @Test
