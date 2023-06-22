@@ -74,7 +74,6 @@ task checkShadowJar {
       if (it.name == "spectator-reg-atlas" && it.extension == "jar") {
         Set<String> metadataFiles = [
             "META-INF/MANIFEST.MF",
-            "META-INF/NOTICE",
             "META-INF/services/com.netflix.spectator.api.Registry",
             "META-INF/spectator-reg-atlas.properties"
         ]
@@ -84,6 +83,7 @@ task checkShadowJar {
             .filter { !it.directory }
             .filter { !it.name.startsWith("com/netflix/spectator/atlas/") }
             .filter { !it.name.matches("^META-INF/[^/]*LICENSE\$") }
+            .filter { !it.name.matches("^META-INF/[^/]*NOTICE\$") }
             .filter { !metadataFiles.contains(it.name) }
             .forEach {
               throw new IllegalStateException(
