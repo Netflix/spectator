@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@
 package com.netflix.spectator.ipc.http;
 
 import com.netflix.spectator.impl.AsciiSet;
+
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * Helper for sanitizing a URL path for including as the {@code ipc.endpoint} value. Makes
@@ -37,7 +40,22 @@ public final class PathSanitizer {
 
   /** Returns a sanitized path string for use as an endpoint tag value. */
   public static String sanitize(String path) {
-    return sanitizeSegments(removeParameters(path));
+    return sanitizeSegments(removeParameters(path), Collections.emptySet());
+  }
+
+  /**
+   * Returns a sanitized path string for use as an endpoint tag value.
+   *
+   * @param path
+   *     Path from a URI that should be sanitized.
+   * @param allowed
+   *     Set of allowed segment strings. This can be used to override the default rules for
+   *     a set of known good values.
+   * @return
+   *     Sanitized path that can be used as an endpoint tag value.
+   */
+  public static String sanitize(String path, Set<String> allowed) {
+    return sanitizeSegments(removeParameters(path), allowed);
   }
 
   private static String removeParameters(String path) {
@@ -49,7 +67,7 @@ public final class PathSanitizer {
     return i > 0 ? path.substring(0, i) : path;
   }
 
-  private static String sanitizeSegments(String path) {
+  private static String sanitizeSegments(String path, Set<String> allowed) {
     StringBuilder builder = new StringBuilder();
     int length = path.length();
     int pos = path.charAt(0) == '/' ? 1 : 0;
@@ -67,7 +85,7 @@ public final class PathSanitizer {
       }
 
       if (!segment.isEmpty()) {
-        if (shouldSuppressSegment(segment))
+        if (shouldSuppressSegment(segment, allowed))
           appendIfSpaceAvailable(builder, "-");
         else
           appendIfSpaceAvailable(builder, segment);
@@ -78,10 +96,10 @@ public final class PathSanitizer {
     return builder.toString();
   }
 
-  private static boolean shouldSuppressSegment(String segment) {
+  private static boolean shouldSuppressSegment(String segment, Set<String> allowed) {
     // GraphQL is a common endpoint, but hits the consonants check to detect strings
     // that are likely to be random. Special case it for now.
-    if ("graphql".equals(segment)) {
+    if ("graphql".equals(segment) || allowed.contains(segment)) {
       return false;
     }
 
