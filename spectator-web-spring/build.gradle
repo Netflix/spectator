@@ -21,9 +21,9 @@ plugins {
 
 dependencies {
   api project(':spectator-api')
-  implementation 'org.springframework.boot:spring-boot-autoconfigure:2.7.11'
-  implementation 'org.springframework:spring-beans:5.3.27'
-  implementation 'org.springframework:spring-web:5.3.27'
+  implementation 'org.springframework.boot:spring-boot-autoconfigure:2.7.12'
+  implementation 'org.springframework:spring-beans:5.3.28'
+  implementation 'org.springframework:spring-web:5.3.28'
   implementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 
@@ -88,7 +88,6 @@ task checkShadowJar {
       if (it.name == "spectator-web-spring" && it.extension == "jar") {
         Set<String> metadataFiles = [
             "META-INF/MANIFEST.MF",
-            "META-INF/NOTICE",
             "META-INF/spectator-web-spring.properties"
         ]
         ZipFile zf = new ZipFile(it.file)
@@ -97,6 +96,7 @@ task checkShadowJar {
               .filter { !it.directory }
               .filter { !it.name.startsWith("com/netflix/spectator/controllers/") }
               .filter { !it.name.matches("^META-INF/[^/]*LICENSE\$") }
+              .filter { !it.name.matches("^META-INF/[^/]*NOTICE\$") }
               .filter { !metadataFiles.contains(it.name) }
               .forEach {
                 throw new IllegalStateException(
