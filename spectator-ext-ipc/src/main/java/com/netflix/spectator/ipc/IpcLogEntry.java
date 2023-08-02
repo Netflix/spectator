@@ -639,7 +639,7 @@ public final class IpcLogEntry {
 
   private String getEndpoint() {
     return (endpoint == null)
-        ? (path == null) ? "unknown" : PathSanitizer.sanitize(path)
+        ? (path == null || httpStatus == 404) ? "unknown" : PathSanitizer.sanitize(path)
         : endpoint;
   }
 
