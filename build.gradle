@@ -3,7 +3,7 @@ plugins {
   id 'com.github.spotbugs' version '5.0.14' apply false
   id 'me.champeau.jmh' version '0.7.1'
   id 'com.netflix.nebula.dependency-recommender' version '12.2.0'
-  id 'com.netflix.nebula.netflixoss' version '11.3.1'
+  id 'com.netflix.nebula.netflixoss' version '11.3.2'
 }
 
 // Establish version and status
