@@ -226,6 +226,17 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void endpointViaUri404() {
+    String path = "/api/v1/1234567890";
+    String actual = (String) entry
+        .withUri(URI.create(path))
+        .withHttpStatus(404)
+        .convert(this::toMap)
+        .get("endpoint");
+    Assertions.assertEquals("unknown", actual);
+  }
+
+  @Test
   public void clientNode() {
     String expected = "i-12345";
     String actual = (String) entry
