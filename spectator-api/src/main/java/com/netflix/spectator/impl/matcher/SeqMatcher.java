@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,11 @@ final class SeqMatcher implements Matcher, Serializable {
   @Override
   public String prefix() {
     return matchers[0].prefix();
+  }
+
+  @Override
+  public String containedString() {
+    return matchers[0].containedString();
   }
 
   @Override
