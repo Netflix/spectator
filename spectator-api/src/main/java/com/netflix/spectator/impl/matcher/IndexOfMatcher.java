@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,16 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   /** Return the matcher for the portion that follows the sub-string. */
   Matcher next() {
     return next;
+  }
+
+  @Override
+  public String containedString() {
+    return pattern;
+  }
+
+  @Override
+  public boolean isContainsMatcher() {
+    return next == TrueMatcher.INSTANCE;
   }
 
   private int indexOfIgnoreCase(String str, int offset) {

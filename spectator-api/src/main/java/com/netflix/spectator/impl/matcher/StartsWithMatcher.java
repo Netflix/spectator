@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,21 @@ final class StartsWithMatcher implements Matcher, Serializable {
   @Override
   public String prefix() {
     return pattern;
+  }
+
+  @Override
+  public String containedString() {
+    return pattern;
+  }
+
+  @Override
+  public boolean isPrefixMatcher() {
+    return true;
+  }
+
+  @Override
+  public boolean isContainsMatcher() {
+    return true;
   }
 
   @Override

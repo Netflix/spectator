@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,16 @@ public interface PatternMatcher {
   }
 
   /**
+   * Returns a fixed string that is contained within matching results for the pattern if one
+   * is available. This can be used with indexed data to help select a subset of values that
+   * are possible matches. If the pattern does not have a fixed sub-string, then null will be
+   * returned.
+   */
+  default String containedString() {
+    return null;
+  }
+
+  /**
    * The minimum possible length of a matching string. This can be used as a quick check
    * to see if there is any way a given string could match.
    */
@@ -89,6 +99,24 @@ public interface PatternMatcher {
    * to avoid checking for matches.
    */
   default boolean neverMatches() {
+    return false;
+  }
+
+  /**
+   * Returns true if this matcher is equivalent to performing a starts with check on the
+   * prefix. This can be useful when mapping to storage that may have optimized prefix
+   * matching operators.
+   */
+  default boolean isPrefixMatcher() {
+    return false;
+  }
+
+  /**
+   * Returns true if this matcher is equivalent to checking if a string contains a string.
+   * This can be useful when mapping to storage that may have optimized contains matching
+   * operators.
+   */
+  default boolean isContainsMatcher() {
     return false;
   }
 
