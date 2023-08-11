@@ -244,7 +244,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return debugRegistry.timer(PUBLISH_TASK_TIMER, "id", id);
   }
 
-  void sendToAtlas() {
+  synchronized void sendToAtlas() {
     publishTaskTimer("sendToAtlas").record(() -> {
       if (config.enabled()) {
         long t = lastCompletedTimestamp(stepMillis);
@@ -272,7 +272,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     });
   }
 
-  void sendToLWC() {
+  synchronized void sendToLWC() {
     publishTaskTimer("sendToLWC").record(() -> {
       long t = lastCompletedTimestamp(lwcStepMillis);
       //if (config.enabled() || config.lwcEnabled()) {
