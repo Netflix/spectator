@@ -48,6 +48,8 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -92,6 +94,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private long lastPollTimestamp = -1L;
   private long lastFlushTimestamp = -1L;
   private final ConcurrentHashMap<Id, Consolidator> atlasMeasurements = new ConcurrentHashMap<>();
+
+  private final ConcurrentHashMap<String, Lock> publishTaskLocks = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
   @Inject
@@ -244,8 +248,24 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     return debugRegistry.timer(PUBLISH_TASK_TIMER, "id", id);
   }
 
-  synchronized void sendToAtlas() {
-    publishTaskTimer("sendToAtlas").record(() -> {
+  private void timePublishTask(String id, Runnable task) {
+    timePublishTask(id, id, task);
+  }
+
+  private void timePublishTask(String id, String lockName, Runnable task) {
+    publishTaskTimer(id).record(() -> {
+      Lock lock = publishTaskLocks.computeIfAbsent(lockName, n -> new ReentrantLock());
+      lock.lock();
+      try {
+        task.run();
+      } finally {
+        lock.unlock();
+      }
+    });
+  }
+
+  void sendToAtlas() {
+    timePublishTask("sendToAtlas", () -> {
       if (config.enabled()) {
         long t = lastCompletedTimestamp(stepMillis);
         if (t > lastFlushTimestamp) {
@@ -272,8 +292,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
     });
   }
 
-  synchronized void sendToLWC() {
-    publishTaskTimer("sendToLWC").record(() -> {
+  void sendToLWC() {
+    timePublishTask("sendToLWC", () -> {
       long t = lastCompletedTimestamp(lwcStepMillis);
       //if (config.enabled() || config.lwcEnabled()) {
       // If either are enabled we poll the meters for each step interval to flush the
@@ -306,8 +326,8 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   /** Collect measurements from all the meters in the registry. */
-  synchronized void pollMeters(long t) {
-    publishTaskTimer("pollMeters").record(() -> {
+  void pollMeters(long t) {
+    timePublishTask("pollMeters", "atlasMeasurements", () -> {
       if (t > lastPollTimestamp) {
         MeasurementConsumer consumer = (id, timestamp, value) -> {
           // Update the map for data to go to the Atlas storage layer
@@ -365,10 +385,10 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * Get a list of all consolidated measurements intended to be sent to Atlas and break them
    * into batches.
    */
-  synchronized List<RollupPolicy.Result> getBatches(long t) {
+  List<RollupPolicy.Result> getBatches(long t) {
     final int n = atlasMeasurements.size();
     final List<RollupPolicy.Result> batches = new ArrayList<>(n / batchSize + 1);
-    publishTaskTimer("getBatches").record(() -> {
+    timePublishTask("getBatches", "atlasMeasurements", () -> {
       debugRegistry.distributionSummary("spectator.registrySize").record(n);
       List<Measurement> input = new ArrayList<>(n);
       Iterator<Map.Entry<Id, Consolidator>> it = atlasMeasurements.entrySet().iterator();
