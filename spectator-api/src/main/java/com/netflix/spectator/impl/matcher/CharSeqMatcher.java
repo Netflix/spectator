@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.SortedSet;
 
 /** Matcher that checks for a sequence of characters. */
 final class CharSeqMatcher implements Matcher, Serializable {
@@ -45,6 +46,11 @@ final class CharSeqMatcher implements Matcher, Serializable {
   /** Sub-string to look for within the string being checked. */
   String pattern() {
     return pattern;
+  }
+
+  @Override
+  public SortedSet<String> trigrams() {
+    return PatternUtils.computeTrigrams(pattern);
   }
 
   @Override

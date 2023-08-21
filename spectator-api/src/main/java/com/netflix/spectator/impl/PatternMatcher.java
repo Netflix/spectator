@@ -19,6 +19,7 @@ import com.netflix.spectator.impl.matcher.PatternUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
 
 /**
  * Efficient alternative to using {@link java.util.regex.Pattern} for use cases that just
@@ -118,6 +119,16 @@ public interface PatternMatcher {
    */
   default boolean isContainsMatcher() {
     return false;
+  }
+
+  /**
+   * Returns a set of trigrams for this pattern. A string will only match if it contains
+   * all trigrams in the set. This can be useful for performing an initial filter based on
+   * a trigram index. For complex expressions, expand OR clauses first (see
+   * {@link #expandOrClauses(int)}) and then extract the trigrams for the individual patterns.
+   */
+  default SortedSet<String> trigrams() {
+    return Collections.emptySortedSet();
   }
 
   /**

@@ -17,6 +17,8 @@ package com.netflix.spectator.impl.matcher;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -60,6 +62,14 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   @Override
   public boolean isContainsMatcher() {
     return next == TrueMatcher.INSTANCE;
+  }
+
+  @Override
+  public SortedSet<String> trigrams() {
+    SortedSet<String> ts = new TreeSet<>();
+    ts.addAll(PatternUtils.computeTrigrams(pattern));
+    ts.addAll(next.trigrams());
+    return ts;
   }
 
   private int indexOfIgnoreCase(String str, int offset) {

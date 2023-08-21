@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.SortedSet;
 
 /**
  * Matcher that checks if the string starts with a given character sequence.
@@ -70,6 +71,11 @@ final class StartsWithMatcher implements Matcher, Serializable {
   @Override
   public boolean isContainsMatcher() {
     return true;
+  }
+
+  @Override
+  public SortedSet<String> trigrams() {
+    return PatternUtils.computeTrigrams(pattern);
   }
 
   @Override
