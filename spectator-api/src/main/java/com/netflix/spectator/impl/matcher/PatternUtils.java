@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -625,6 +627,20 @@ public final class PatternUtils {
       return pattern.length() <= 1 ? TrueMatcher.INSTANCE : new CharSeqMatcher(pattern.substring(1));
     } else {
       return TrueMatcher.INSTANCE;
+    }
+  }
+
+  /** Compute the set of trigrams for an input string. */
+  public static SortedSet<String> computeTrigrams(String input) {
+    if (input.length() < 3) {
+      return Collections.emptySortedSet();
+    } else {
+      SortedSet<String> trigrams = new TreeSet<>();
+      int n = input.length() - 3;
+      for (int i = 0; i <= n; ++i) {
+        trigrams.add(input.substring(i, i + 3));
+      }
+      return trigrams;
     }
   }
 }

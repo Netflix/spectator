@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@ package com.netflix.spectator.impl.matcher;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class PatternUtilsTest {
 
@@ -178,5 +183,25 @@ public class PatternUtilsTest {
   @Test
   public void escapeDelete() {
     Assertions.assertEquals("\\u007f", PatternUtils.escape("\u007f"));
+  }
+
+  @Test
+  public void computeTrigramsTooShort() {
+    Assertions.assertEquals(Collections.emptySortedSet(), PatternUtils.computeTrigrams(""));
+    Assertions.assertEquals(Collections.emptySortedSet(), PatternUtils.computeTrigrams("a"));
+    Assertions.assertEquals(Collections.emptySortedSet(), PatternUtils.computeTrigrams("ab"));
+  }
+
+  private SortedSet<String> sortedSet(String... items) {
+    return new TreeSet<>(Arrays.asList(items));
+  }
+
+  @Test
+  public void computeTrigrams() {
+    Assertions.assertEquals(sortedSet("abc"), PatternUtils.computeTrigrams("abc"));
+    Assertions.assertEquals(
+        sortedSet("abc", "bcd", "cde", "def", "efg"),
+        PatternUtils.computeTrigrams("abcdefg")
+    );
   }
 }

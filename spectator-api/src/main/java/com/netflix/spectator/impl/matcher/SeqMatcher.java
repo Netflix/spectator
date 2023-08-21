@@ -20,6 +20,8 @@ import com.netflix.spectator.impl.PatternMatcher;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -79,6 +81,15 @@ final class SeqMatcher implements Matcher, Serializable {
   @Override
   public String containedString() {
     return matchers[0].containedString();
+  }
+
+  @Override
+  public SortedSet<String> trigrams() {
+    SortedSet<String> ts = new TreeSet<>();
+    for (Matcher m : matchers) {
+      ts.addAll(m.trigrams());
+    }
+    return ts;
   }
 
   @Override

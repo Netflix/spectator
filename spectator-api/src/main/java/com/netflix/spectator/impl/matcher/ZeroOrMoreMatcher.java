@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import com.netflix.spectator.impl.Preconditions;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -45,6 +47,14 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
   /** Return the matcher for the portion that follows the sub-string. */
   Matcher next() {
     return next;
+  }
+
+  @Override
+  public SortedSet<String> trigrams() {
+    SortedSet<String> ts = new TreeSet<>();
+    ts.addAll(repeated.trigrams());
+    ts.addAll(next.trigrams());
+    return ts;
   }
 
   @Override
