@@ -642,6 +642,48 @@ public class ArrayTagSetTest {
   }
 
   @Test
+  public void addReplace() {
+    ArrayTagSet ts1 = ArrayTagSet.create("k1", "v1");
+    ArrayTagSet ts2 = ArrayTagSet.create("k1", "v2");
+    ArrayTagSet expected = ArrayTagSet.create("k1", "v2");
+    Assertions.assertEquals(expected, ts1.addAll(ts2));
+
+    List<Tag> list = new ArrayList<>();
+    list.add(new BasicTag("k1", "v3"));
+    list.add(new BasicTag("k1", "v2"));
+    Assertions.assertEquals(expected, ts1.addAll(list));
+
+    list.clear();
+    list.add(new BasicTag("k1", "v3"));
+    list.add(new BasicTag("k1", "v2"));
+    Assertions.assertEquals(expected, ArrayTagSet.create(new HashMap<>()).addAll(list));
+
+    Assertions.assertEquals(expected, expected.addAll(new ArrayList<>()));
+
+    Assertions.assertEquals(expected, expected.addAll(new HashMap<>()));
+
+    Assertions.assertEquals(expected, ts1.addAll(new BadTagList("k1", "v2")));
+
+    Assertions.assertEquals(expected, ts1.addAll(new TagIterator("k1", "v2")));
+
+    Assertions.assertEquals(expected, ts1.addAll(new Tag[] { new BasicTag("k1", "v2")}));
+
+    ConcurrentHashMap<String, String> cMap = new ConcurrentHashMap<>();
+    cMap.put("k1", "v2");
+    Assertions.assertEquals(expected, ts1.addAll(cMap));
+
+    HashMap<String, String> hMap = new HashMap<>();
+    hMap.put("k1", "v2");
+    Assertions.assertEquals(expected, ts1.addAll(hMap));
+
+    Assertions.assertEquals(expected, ts1.add("k1", "v2"));
+
+    Assertions.assertEquals(expected, ts1.add(new BasicTag("k1", "v2")));
+
+    Assertions.assertEquals(expected, ArrayTagSet.create("k1", "v1", "k1", "v2"));
+  }
+
+  @Test
   public void testAddBeginning() {
     ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
     ArrayTagSet updated = tags.add("0", "v0");
@@ -674,5 +716,91 @@ public class ArrayTagSetTest {
     ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
     ArrayTagSet updated = tags.add("c", "v3");
     Assertions.assertSame(tags, updated);
+  }
+
+  @Test
+  public void addAllDuplicates() {
+    ArrayTagSet existing = ArrayTagSet.create("a", "foo");
+    List<Tag> tags = Arrays.asList(
+        Tag.of("b", "bar"),
+        Tag.of("b", "ERROR")
+    );
+    ArrayTagSet updated = existing.addAll(tags);
+    assertDistinct(updated);
+
+    // <= 1.6.9 would throw here as the two values in the array list would be merged
+    // into the result without checking for duplicates.
+    existing = ArrayTagSet.create("b", "foo");
+    tags = Arrays.asList(
+        Tag.of("a", "bar"),
+        Tag.of("a", "ERROR")
+    );
+    updated = existing.addAll(tags);
+    assertDistinct(updated);
+
+    existing = ArrayTagSet.create("b", "foo");
+    tags = Arrays.asList(
+        Tag.of("a", "bar"),
+        Tag.of("b", "boo"),
+        Tag.of("a", "ERROR")
+    );
+    updated = existing.addAll(tags);
+    assertDistinct(updated);
+  }
+
+  class TagIterator implements Iterable<Tag> {
+    String[] tags;
+    TagIterator(String... tags) {
+      this.tags = tags;
+    }
+
+    @Override
+    public Iterator<Tag> iterator() {
+      return new Iterator<Tag>() {
+        int i = 0;
+
+        @Override
+        public boolean hasNext() {
+          return i < tags.length;
+        }
+
+        @Override
+        public Tag next() {
+          return new BasicTag(tags[i++], tags[i++]);
+        }
+      };
+    }
+  }
+
+  class BadTagList implements TagList {
+
+    String[] tags;
+    BadTagList(String... tags) {
+      this.tags = tags;
+    }
+
+    @Override
+    public String getKey(int i) {
+      return tags[i * 2];
+    }
+
+    @Override
+    public String getValue(int i) {
+      return tags[(i * 2) + 1];
+    }
+
+    @Override
+    public int size() {
+      return tags.length / 2;
+    }
+  }
+
+  private void assertDistinct(TagList tags) {
+    try {
+      StreamSupport.stream(tags.spliterator(), false)
+          .collect(Collectors.toMap(Tag::key, Tag::value));
+    } catch (Exception e) {
+      throw new AssertionError("failed to convert tags to map", e);
+    }
   }
 }

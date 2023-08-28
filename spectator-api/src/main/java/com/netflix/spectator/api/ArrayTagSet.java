@@ -337,6 +337,7 @@ final class ArrayTagSet implements TagList {
   /**
    * Merge and dedup any entries in {@code ts} that have the same key. The last entry
    * with a given key will get selected.
+   * Note: Each list must be sorted by key before processing.
    */
   private static int merge(String[] dst, String[] srcA, int lengthA, String[] srcB, int lengthB) {
     int i = 0;
@@ -348,6 +349,11 @@ final class ArrayTagSet implements TagList {
       final String av = srcA[ai + 1];
       String bk = srcB[bi];
       String bv = srcB[bi + 1];
+      if (i > 1 && bk.compareTo(dst[i - 2]) == 0) {
+        // skip duplicates in the second array.
+        bi += 2;
+        continue;
+      }
       int cmp = ak.compareTo(bk);
       if (cmp < 0) {
         dst[i++] = ak;
