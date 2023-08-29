@@ -462,6 +462,7 @@ public interface DataExpr {
       this.keys = keys;
     }
 
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     private Map<String, String> keyTags(Map<String, String> tags) {
       Map<String, String> result = new HashMap<>();
       for (String k : keys) {
@@ -486,6 +487,7 @@ public interface DataExpr {
       return af.isCount();
     }
 
+    @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
     @Override public Map<String, String> resultTags(Map<String, String> tags) {
       Map<String, String> resultTags = keyTags(tags);
       if (resultTags == null) {

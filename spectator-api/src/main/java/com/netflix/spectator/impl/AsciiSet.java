@@ -31,6 +31,7 @@ import java.util.Optional;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
+@SuppressWarnings("PMD.AvoidAccessibilityAlteration")
 public final class AsciiSet implements Serializable {
 
   private static final long serialVersionUID = 1L;

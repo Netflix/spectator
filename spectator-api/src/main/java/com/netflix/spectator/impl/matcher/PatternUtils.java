@@ -219,6 +219,7 @@ public final class PatternUtils {
    * Expand OR clauses in the provided matcher up to the max limit. If expanding would exceed
    * the max, then null will be returned.
    */
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   static List<Matcher> expandOrClauses(Matcher matcher, int max) {
     if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
@@ -255,6 +256,7 @@ public final class PatternUtils {
     }
   }
 
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private static List<Matcher> map(List<Matcher> ms, Function<Matcher, Matcher> f, int max) {
     if (ms == null || ms.size() > max) {
       return null;
@@ -266,6 +268,7 @@ public final class PatternUtils {
     return results;
   }
 
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private static List<Matcher> expandSeq(SeqMatcher seqMatcher, int max) {
     List<List<Matcher>> results = new ArrayList<>();
     for (Matcher matcher : seqMatcher.matchers()) {
@@ -301,6 +304,7 @@ public final class PatternUtils {
     return tmp;
   }
 
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   private static List<Matcher> expandOr(OrMatcher matcher, int max) {
     List<Matcher> ms = matcher.matchers();
     if (ms.size() > max) {

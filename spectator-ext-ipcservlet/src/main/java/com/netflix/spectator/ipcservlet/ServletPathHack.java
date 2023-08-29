@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
  * It uses reflection to extract the servlet path based on the pattern that was used for the
  * guice bindings.
  */
+@SuppressWarnings("PMD.AvoidAccessibilityAlteration")
 final class ServletPathHack {
 
   private ServletPathHack() {
