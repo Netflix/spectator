@@ -99,6 +99,15 @@ public class SubscriptionManagerTest {
   }
 
   @Test
+  public void unknownField() {
+    ManualClock clock = new ManualClock();
+    byte[] data = "{\"expressions\":[{\"expression\":\"name,1,:eq,:sum\",\"id\":\"1\",\"frequency\":60000,\"foo\":\"bar\"}]}".getBytes(StandardCharsets.UTF_8);
+    SubscriptionManager mgr = newInstance(clock, ok(data));
+    mgr.refresh();
+    Assertions.assertEquals(set(sub(1)), new HashSet<>(mgr.subscriptions()));
+  }
+
+  @Test
   public void singleExpression() throws Exception {
     ManualClock clock = new ManualClock();
     byte[] data = json(sub(1));

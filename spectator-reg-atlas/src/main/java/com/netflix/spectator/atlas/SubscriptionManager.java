@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.atlas.impl.Subscription;
@@ -58,6 +59,7 @@ class SubscriptionManager {
   /** Create a new instance. */
   SubscriptionManager(ObjectMapper mapper, HttpClient client, Clock clock, AtlasConfig config) {
     this.mapper = mapper;
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     this.client = client;
     this.clock = clock;
     this.uri = URI.create(config.configUri());
