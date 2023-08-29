@@ -68,10 +68,46 @@ public class ContainsTest {
   public void containedString() {
     Assertions.assertEquals("abc", re("abc").containedString());
     Assertions.assertEquals("abc", re(".*abc").containedString());
+    Assertions.assertEquals("abc", re(".*abc$").containedString());
     Assertions.assertEquals("ab", re(".*ab[cd]").containedString());
     Assertions.assertEquals("abc", re("abc.def").containedString());
     Assertions.assertEquals("abc.def", re("abc\\.def").containedString());
     Assertions.assertEquals("abc", re("^abc.def").containedString());
     Assertions.assertEquals("abc.def", re("^abc\\.def").containedString());
+  }
+
+  @Test
+  public void containsZeroOrMore() {
+    Assertions.assertEquals("def", re("(abc)*def").containedString());
+  }
+
+  @Test
+  public void containsZeroOrOne() {
+    Assertions.assertEquals("def", re("(abc)?def").containedString());
+  }
+
+  @Test
+  public void containsOneOrMore() {
+    Assertions.assertEquals("abc", re("(abc)+def").containedString());
+  }
+
+  @Test
+  public void containsRepeat() {
+    Assertions.assertEquals("def", re("(abc){0,5}def").containedString());
+  }
+
+  @Test
+  public void containsRepeatAtLeastOne() {
+    Assertions.assertEquals("abc", re("(abc){1,5}def").containedString());
+  }
+
+  @Test
+  public void containsPartOfSequence() {
+    Assertions.assertEquals("abcd", re(".*[0-9]abcd[efg]hij").containedString());
+  }
+
+  @Test
+  public void containsMultiple() {
+    Assertions.assertEquals("abc", re("^abc.*def.*ghi").containedString());
   }
 }

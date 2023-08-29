@@ -50,11 +50,13 @@ final class ZeroOrOneMatcher implements GreedyMatcher, Serializable {
   }
 
   @Override
+  public String containedString() {
+    return next.containedString();
+  }
+
+  @Override
   public SortedSet<String> trigrams() {
-    SortedSet<String> ts = new TreeSet<>();
-    ts.addAll(repeated.trigrams());
-    ts.addAll(next.trigrams());
-    return ts;
+    return next.trigrams();
   }
 
   @Override

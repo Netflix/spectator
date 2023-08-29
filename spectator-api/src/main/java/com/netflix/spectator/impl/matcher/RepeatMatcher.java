@@ -16,6 +16,7 @@
 package com.netflix.spectator.impl.matcher;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.SortedSet;
 import java.util.function.Function;
@@ -49,8 +50,13 @@ final class RepeatMatcher implements Matcher, Serializable {
   }
 
   @Override
+  public String containedString() {
+    return min == 0 ? null : repeated.containedString();
+  }
+
+  @Override
   public SortedSet<String> trigrams() {
-    return repeated.trigrams();
+    return min == 0 ? Collections.emptySortedSet() : repeated.trigrams();
   }
 
   @Override
