@@ -56,6 +56,7 @@ interface Matcher extends PatternMatcher {
     return new IgnoreCaseMatcher(m);
   }
 
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   @Override
   default List<PatternMatcher> expandOrClauses(int max) {
     List<Matcher> ms = PatternUtils.expandOrClauses(this, max);

@@ -80,6 +80,7 @@ public final class Functions {
    * @return
    *     Value returned by the method or NaN if an exception is thrown.
    */
+  @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
   public static <T> ToDoubleFunction<T> invokeMethod(final Method method) {
     method.setAccessible(true);
     return (obj) -> {

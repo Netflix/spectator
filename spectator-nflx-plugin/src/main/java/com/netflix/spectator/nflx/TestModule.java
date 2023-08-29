@@ -29,6 +29,7 @@ import com.netflix.spectator.api.Registry;
  * calling {@link com.netflix.spectator.api.Spectator#globalRegistry()}. Use the
  * {@link com.netflix.spectator.nflx.SpectatorModule} when running code outside of unit tests.
  */
+@SuppressWarnings("PMD.TestClassWithoutTestCases")
 public final class TestModule extends AbstractModule {
   @Override protected void configure() {
     final Registry registry = new DefaultRegistry();
