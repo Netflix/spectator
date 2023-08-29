@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,11 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
- * Data expressions for defining how to aggregate values. For more information see:
+ * Data expressions for defining how to aggregate values. For more information see
+ * <a href="https://netflix.github.io/atlas-docs/asl/tutorial/">Atlas docs</a>.
  *
- * https://github.com/Netflix/atlas/wiki/Reference-data
- *
- * <b>Classes in this package are only intended for use internally within spectator. They may
- * change at any time and without notice.</b>
+ * <p><b>Classes in this package are only intended for use internally within spectator.
+ * They may change at any time and without notice.</b>
  */
 public interface DataExpr {
 
@@ -118,8 +117,7 @@ public interface DataExpr {
   }
 
   /**
-   * Includes all datapoints that match the query expression. See also:
-   * https://github.com/Netflix/atlas/wiki/data-all
+   * Includes all datapoints that match the query expression.
    */
   final class All implements DataExpr {
 
@@ -182,7 +180,8 @@ public interface DataExpr {
 
   /**
    * Aggregates all datapoints that match the query to a single datapoint that is the
-   * sum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-sum
+   * sum of the input values. See <a href="https://netflix.github.io/atlas-docs/asl/ref/sum/">docs</a>
+   * for more information.
    */
   final class Sum implements AggregateFunction {
 
@@ -248,7 +247,8 @@ public interface DataExpr {
 
   /**
    * Aggregates all datapoints that match the query to a single datapoint that is the
-   * minimum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-min
+   * minimum of the input values. See <a href="https://netflix.github.io/atlas-docs/asl/ref/min/">docs</a>
+   * for more information.
    */
   final class Min implements AggregateFunction {
 
@@ -314,7 +314,8 @@ public interface DataExpr {
 
   /**
    * Aggregates all datapoints that match the query to a single datapoint that is the
-   * maximum of the input values. See also: https://github.com/Netflix/atlas/wiki/data-max
+   * maximum of the input values. See <a href="https://netflix.github.io/atlas-docs/asl/ref/max/">docs</a>
+   * for more information.
    */
   final class Max implements AggregateFunction {
 
@@ -380,7 +381,8 @@ public interface DataExpr {
 
   /**
    * Aggregates all datapoints that match the query to a single datapoint that is the
-   * number of input values. See also: https://github.com/Netflix/atlas/wiki/data-count
+   * number of input values. See <a href="https://netflix.github.io/atlas-docs/asl/ref/count/">docs</a>
+   * for more information.
    */
   final class Count implements AggregateFunction {
 
@@ -448,7 +450,8 @@ public interface DataExpr {
 
   /**
    * Compute a set of time series matching the query and grouped by the specified keys.
-   * See also: https://github.com/Netflix/atlas/wiki/data-by
+   * See <a href="https://netflix.github.io/atlas-docs/asl/ref/by/">docs</a> for more
+   * information.
    */
   final class GroupBy implements DataExpr {
 
