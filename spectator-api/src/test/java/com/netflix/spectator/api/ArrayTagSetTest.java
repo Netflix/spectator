@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -716,6 +716,37 @@ public class ArrayTagSetTest {
     ArrayTagSet tags = ArrayTagSet.create("a", "v1", "b", "v2", "c", "v3");
     ArrayTagSet updated = tags.add("c", "v3");
     Assertions.assertSame(tags, updated);
+  }
+
+  @Test
+  public void mergeDuplicatesTwoKeys() {
+    String[] dst = new String[8];
+    String[] srcA = {"a", "2"};
+    String[] srcB = {"a", "1", "b", "1", "b", "2"};
+
+    int n = ArrayTagSet.merge(dst, srcA, srcA.length, srcB, srcB.length);
+    Assertions.assertArrayEquals(new String[] {"a", "1", "b", "2", null, null, null, null}, dst);
+    Assertions.assertEquals(4, n);
+  }
+
+  @Test
+  public void mergeDuplicatesSrcB() {
+    String[] dst = new String[8];
+    String[] srcA = {"b", "1"};
+    String[] srcB = {"a", "1", "a", "2"};
+    int n = ArrayTagSet.merge(dst, srcA, srcA.length, srcB, srcB.length);
+    Assertions.assertArrayEquals(new String[] {"a", "2", "b", "1", null, null, null, null}, dst);
+    Assertions.assertEquals(4, n);
+  }
+
+  @Test
+  public void mergeDuplicatesBoth() {
+    String[] dst = new String[8];
+    String[] srcA = {"a", "1"};
+    String[] srcB = {"a", "2", "a", "3"};
+    int n = ArrayTagSet.merge(dst, srcA, srcA.length, srcB, srcB.length);
+    Assertions.assertArrayEquals(new String[] {"a", "3", null, null, null, null, null, null}, dst);
+    Assertions.assertEquals(2, n);
   }
 
   @Test
