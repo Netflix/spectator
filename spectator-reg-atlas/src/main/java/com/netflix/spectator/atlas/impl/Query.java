@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Query for matching based on tags. For more information see:
+ * Query for matching based on tags. For more information see
+ * <a href="https://netflix.github.io/atlas-docs/asl/tutorial/">Atlas docs</a>.
  *
- * https://github.com/Netflix/atlas/wiki/Stack-Language#query
- *
- * <b>Classes in this package are only intended for use internally within spectator. They may
- * change at any time and without notice.</b>
+ * <p><b>Classes in this package are only intended for use internally within spectator.
+ * They may change at any time and without notice.</b>
  */
 public interface Query {
 
