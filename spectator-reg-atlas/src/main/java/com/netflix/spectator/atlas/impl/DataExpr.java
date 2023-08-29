@@ -450,7 +450,7 @@ public interface DataExpr {
 
   /**
    * Compute a set of time series matching the query and grouped by the specified keys.
-   * See <a href="https://netflix.github.io/atlas-docs/asl/ref/by/">docs</a></a> for more
+   * See <a href="https://netflix.github.io/atlas-docs/asl/ref/by/">docs</a> for more
    * information.
    */
   final class GroupBy implements DataExpr {
