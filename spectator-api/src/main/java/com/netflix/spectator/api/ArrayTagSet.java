@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -336,9 +336,9 @@ final class ArrayTagSet implements TagList {
 
   /**
    * Merge and dedup any entries in {@code ts} that have the same key. The last entry
-   * with a given key will get selected.
+   * with a given key will get selected. Each list must be sorted by key before processing.
    */
-  private static int merge(String[] dst, String[] srcA, int lengthA, String[] srcB, int lengthB) {
+  static int merge(String[] dst, String[] srcA, int lengthA, String[] srcB, int lengthB) {
     int i = 0;
     int ai = 0;
     int bi = 0;
@@ -350,13 +350,20 @@ final class ArrayTagSet implements TagList {
       String bv = srcB[bi + 1];
       int cmp = ak.compareTo(bk);
       if (cmp < 0) {
+        // srcA should already have been deduped as it comes from the tag list
         dst[i++] = ak;
         dst[i++] = av;
         ai += 2;
       } else if (cmp > 0) {
+        // Choose last value for a given key if there are duplicates. It is possible srcB
+        // will contain duplicates if the user supplied a type like a list.
+        int j = bi + 2;
+        for (; j < lengthB && bk.equals(srcB[j]); j += 2) {
+          bv = srcB[j + 1];
+        }
         dst[i++] = bk;
         dst[i++] = bv;
-        bi += 2;
+        bi = j;
       } else {
         // Newer tags should override, use source B if there are duplicate keys.
         // If source B has duplicates, then use the last value for the given key.
