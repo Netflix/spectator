@@ -80,7 +80,12 @@ final class SeqMatcher implements Matcher, Serializable {
 
   @Override
   public String containedString() {
-    return matchers[0].containedString();
+    String str = null;
+    for (Matcher m : matchers) {
+      str = m.containedString();
+      if (str != null) break;
+    }
+    return str;
   }
 
   @Override

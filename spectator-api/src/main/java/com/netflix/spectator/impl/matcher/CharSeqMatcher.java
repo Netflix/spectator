@@ -49,6 +49,11 @@ final class CharSeqMatcher implements Matcher, Serializable {
   }
 
   @Override
+  public String containedString() {
+    return pattern;
+  }
+
+  @Override
   public SortedSet<String> trigrams() {
     return PatternUtils.computeTrigrams(pattern);
   }

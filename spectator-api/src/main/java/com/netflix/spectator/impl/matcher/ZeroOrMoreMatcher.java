@@ -20,7 +20,6 @@ import com.netflix.spectator.impl.Preconditions;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.function.Function;
 
 /**
@@ -50,11 +49,13 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
   }
 
   @Override
+  public String containedString() {
+    return next.containedString();
+  }
+
+  @Override
   public SortedSet<String> trigrams() {
-    SortedSet<String> ts = new TreeSet<>();
-    ts.addAll(repeated.trigrams());
-    ts.addAll(next.trigrams());
-    return ts;
+    return next.trigrams();
   }
 
   @Override

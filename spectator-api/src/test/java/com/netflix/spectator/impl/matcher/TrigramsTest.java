@@ -48,13 +48,13 @@ public class TrigramsTest {
   @Test
   public void zeroOrMore() {
     PatternMatcher m = PatternMatcher.compile("(abc)*def");
-    Assertions.assertEquals(sortedSet("abc", "def"), m.trigrams());
+    Assertions.assertEquals(sortedSet("def"), m.trigrams());
   }
 
   @Test
   public void zeroOrOne() {
     PatternMatcher m = PatternMatcher.compile("(abc)?def");
-    Assertions.assertEquals(sortedSet("abc", "def"), m.trigrams());
+    Assertions.assertEquals(sortedSet("def"), m.trigrams());
   }
 
   @Test
@@ -66,6 +66,12 @@ public class TrigramsTest {
   @Test
   public void repeat() {
     PatternMatcher m = PatternMatcher.compile("(abc){0,5}def");
+    Assertions.assertEquals(sortedSet("def"), m.trigrams());
+  }
+
+  @Test
+  public void repeatAtLeastOne() {
+    PatternMatcher m = PatternMatcher.compile("(abc){1,5}def");
     Assertions.assertEquals(sortedSet("abc", "def"), m.trigrams());
   }
 

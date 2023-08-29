@@ -422,6 +422,14 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatZero() {
+    testRE("(abc){0,3}def", "def");
+    testRE("(abc){0,3}def", "abcdef");
+    testRE("(abc){1,3}def", "def");
+    testRE("(abc){1,3}def", "abcdef");
+  }
+
+  @Test
   public void repeatWithOr() {
     testRE("(a|b|c){1,3}d", "aaad");
     testRE("(a|b|c){1,3}d", "aaa");
