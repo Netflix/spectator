@@ -304,33 +304,16 @@ final class ArrayTagSet implements TagList {
    * tags. With the small size a simple insertion sort works well.
    */
   private static void insertionSort(String[] ts, int length) {
-    if (length == 4) {
-      // Two key/value pairs, swap if needed
-      if (ts[0].compareTo(ts[2]) > 0) {
-        // Swap key
-        String tmp = ts[0];
-        ts[0] = ts[2];
-        ts[2] = tmp;
-
-        // Swap value
-        tmp = ts[1];
-        ts[1] = ts[3];
-        ts[3] = tmp;
+    for (int i = 2; i < length; i += 2) {
+      String k = ts[i];
+      String v = ts[i + 1];
+      int j = i - 2;
+      for (; j >= 0 && ts[j].compareTo(k) > 0; j -= 2) {
+        ts[j + 2] = ts[j];
+        ts[j + 3] = ts[j + 1];
       }
-    } else if (length > 4) {
-      // One entry is already sorted. Two entries handled above, for larger arrays
-      // use insertion sort.
-      for (int i = 2; i < length; i += 2) {
-        String k = ts[i];
-        String v = ts[i + 1];
-        int j = i - 2;
-        for (; j >= 0 && ts[j].compareTo(k) > 0; j -= 2) {
-          ts[j + 2] = ts[j];
-          ts[j + 3] = ts[j + 1];
-        }
-        ts[j + 2] = k;
-        ts[j + 3] = v;
-      }
+      ts[j + 2] = k;
+      ts[j + 3] = v;
     }
   }
 

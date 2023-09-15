@@ -779,7 +779,25 @@ public class ArrayTagSetTest {
     assertDistinct(updated);
   }
 
-  class TagIterator implements Iterable<Tag> {
+  @Test
+  public void testSort() {
+    Assertions.assertEquals(Arrays.asList("a", "v1"), toList(ArrayTagSet.create("a", "v1")));
+    Assertions.assertEquals(Arrays.asList("a", "v1", "b", "v2"), toList(ArrayTagSet.create("a", "v1", "b", "v2")));
+    Assertions.assertEquals(Arrays.asList("a", "v1", "b", "v2"), toList(ArrayTagSet.create("b", "v2", "a", "v1")));
+    Assertions.assertEquals(Arrays.asList("a", "v1", "b", "v3"), toList(ArrayTagSet.create("b", "v2", "a", "v1", "b", "v3")));
+    Assertions.assertEquals(Arrays.asList("a", "v1", "b", "v2", "c", "v3"), toList(ArrayTagSet.create("c", "v3", "b", "v2", "a", "v1")));
+  }
+
+  private static List<String> toList(TagList tagList) {
+    List<String> list = new ArrayList<>(tagList.size() * 2);
+    tagList.forEach(tag -> {
+      list.add(tag.key());
+      list.add(tag.value());
+    });
+    return list;
+  }
+
+  static final class TagIterator implements Iterable<Tag> {
     String[] tags;
     TagIterator(String... tags) {
       this.tags = tags;
@@ -803,7 +821,7 @@ public class ArrayTagSetTest {
     }
   }
 
-  class BadTagList implements TagList {
+  static final class BadTagList implements TagList {
 
     String[] tags;
     BadTagList(String... tags) {
