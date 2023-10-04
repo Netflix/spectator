@@ -117,7 +117,7 @@ public class MetricsRegistryTest {
     MetricsRegistry r = new MetricsRegistry(clock, dwRegistry);
 
     // Directly register a gauge with metrics register
-    dwRegistry.register("foo", (Gauge<Double>) () -> 42.0D);
+    dwRegistry.registerGauge("foo", () -> 42.0D);
 
     // Try to register the same gauge via spectator
     AtomicInteger num = r.gauge("foo", new AtomicInteger(42));
