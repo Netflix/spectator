@@ -50,6 +50,12 @@
   </Match>
   <Match>
     <And>
+      <Class name="com.netflix.spectator.atlas.impl.PrefixTree"/>
+      <Bug pattern="UL_UNRELEASED_LOCK"/>
+    </And>
+  </Match>
+  <Match>
+    <And>
       <Class name="com.netflix.spectator.perf.ManyTags"/>
       <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
     </And>
