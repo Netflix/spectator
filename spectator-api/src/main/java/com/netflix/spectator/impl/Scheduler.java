@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
@@ -113,6 +115,8 @@ public class Scheduler {
   private final ThreadFactory factory;
   private final Thread[] threads;
 
+  private final Lock lock = new ReentrantLock();
+
   private volatile boolean started = false;
   private volatile boolean shutdown = false;
 
@@ -168,26 +172,36 @@ public class Scheduler {
    * Shutdown and cleanup resources associated with the scheduler. All threads will be
    * interrupted, but this method does not block for them to all finish execution.
    */
-  public synchronized void shutdown() {
-    shutdown = true;
-    for (int i = 0; i < threads.length; ++i) {
-      if (threads[i] != null && threads[i].isAlive()) {
-        threads[i].interrupt();
-        threads[i] = null;
+  public void shutdown() {
+    lock.lock();
+    try {
+      shutdown = true;
+      for (int i = 0; i < threads.length; ++i) {
+        if (threads[i] != null && threads[i].isAlive()) {
+          threads[i].interrupt();
+          threads[i] = null;
+        }
       }
+    } finally {
+      lock.unlock();
     }
   }
 
-  private synchronized void startThreads() {
-    if (!shutdown) {
-      started = true;
-      for (int i = 0; i < threads.length; ++i) {
-        if (threads[i] == null || !threads[i].isAlive() || threads[i].isInterrupted()) {
-          threads[i] = factory.newThread(new Worker());
-          threads[i].start();
-          LOGGER.debug("started thread {}", threads[i].getName());
+  private void startThreads() {
+    lock.lock();
+    try {
+      if (!shutdown) {
+        started = true;
+        for (int i = 0; i < threads.length; ++i) {
+          if (threads[i] == null || !threads[i].isAlive() || threads[i].isInterrupted()) {
+            threads[i] = factory.newThread(new Worker());
+            threads[i].start();
+            LOGGER.debug("started thread {}", threads[i].getName());
+          }
         }
       }
+    } finally {
+      lock.unlock();
     }
   }
 

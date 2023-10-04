@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.LongSupplier;
 
@@ -36,6 +38,8 @@ import java.util.function.LongSupplier;
  * registry. Otherwise activity will be sent to all registries that are part of the composite.
  */
 public final class CompositeRegistry implements Registry {
+
+  private final Lock lock = new ReentrantLock();
 
   private final Clock clock;
 
@@ -78,37 +82,52 @@ public final class CompositeRegistry implements Registry {
   }
 
   /** Add a registry to the composite. */
-  public synchronized void add(Registry registry) {
-    Registry[] rs = registries.get();
-    int pos = indexOf(rs, registry);
-    if (pos == -1) {
-      Registry[] tmp = new Registry[rs.length + 1];
-      System.arraycopy(rs, 0, tmp, 0, rs.length);
-      tmp[rs.length] = registry;
-      registries.set(tmp);
-      version.incrementAndGet();
+  public void add(Registry registry) {
+    lock.lock();
+    try {
+      Registry[] rs = registries.get();
+      int pos = indexOf(rs, registry);
+      if (pos == -1) {
+        Registry[] tmp = new Registry[rs.length + 1];
+        System.arraycopy(rs, 0, tmp, 0, rs.length);
+        tmp[rs.length] = registry;
+        registries.set(tmp);
+        version.incrementAndGet();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   /** Remove a registry from the composite. */
-  public synchronized void remove(Registry registry) {
-    Registry[] rs = registries.get();
-    int pos = indexOf(rs, registry);
-    if (pos >= 0) {
-      Registry[] tmp = new Registry[rs.length - 1];
-      if (pos > 0)
-        System.arraycopy(rs, 0, tmp, 0, pos);
-      if (pos < tmp.length)
-        System.arraycopy(rs, pos + 1, tmp, pos, rs.length - pos - 1);
-      registries.set(tmp);
-      version.incrementAndGet();
+  public void remove(Registry registry) {
+    lock.lock();
+    try {
+      Registry[] rs = registries.get();
+      int pos = indexOf(rs, registry);
+      if (pos >= 0) {
+        Registry[] tmp = new Registry[rs.length - 1];
+        if (pos > 0)
+          System.arraycopy(rs, 0, tmp, 0, pos);
+        if (pos < tmp.length)
+          System.arraycopy(rs, pos + 1, tmp, pos, rs.length - pos - 1);
+        registries.set(tmp);
+        version.incrementAndGet();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   /** Remove all registries from the composite. */
-  public synchronized void removeAll() {
-    registries.set(new Registry[0]);
-    state.clear();
+  public void removeAll() {
+    lock.lock();
+    try {
+      registries.set(new Registry[0]);
+      state.clear();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override public Clock clock() {
