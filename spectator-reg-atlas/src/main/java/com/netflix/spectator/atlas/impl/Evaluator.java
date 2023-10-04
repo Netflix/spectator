@@ -31,6 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -44,6 +46,7 @@ public class Evaluator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(Evaluator.class);
 
+  private final Lock lock = new ReentrantLock();
   private final Map<String, String> commonTags;
   private final Function<Id, Map<String, String>> idMapper;
   private final long step;
@@ -71,36 +74,41 @@ public class Evaluator {
   /**
    * Synchronize the set of subscriptions for this evaluator with the provided set.
    */
-  public synchronized void sync(List<Subscription> subs) {
-    Set<Subscription> removed = new HashSet<>(subscriptions.keySet());
-    for (Subscription sub : subs) {
-      boolean alreadyPresent = removed.remove(sub);
-      if (!alreadyPresent) {
-        try {
-          // Parse and simplify query
-          Query q = sub.dataExpr().query().simplify(commonTags);
-          LOGGER.trace("query pre-eval: original [{}], simplified [{}], common tags {}",
-              sub.dataExpr().query(), q, commonTags);
+  public void sync(List<Subscription> subs) {
+    lock.lock();
+    try {
+      Set<Subscription> removed = new HashSet<>(subscriptions.keySet());
+      for (Subscription sub : subs) {
+        boolean alreadyPresent = removed.remove(sub);
+        if (!alreadyPresent) {
+          try {
+            // Parse and simplify query
+            Query q = sub.dataExpr().query().simplify(commonTags);
+            LOGGER.trace("query pre-eval: original [{}], simplified [{}], common tags {}",
+                sub.dataExpr().query(), q, commonTags);
 
-          // Update index
-          int multiple = (int) (sub.getFrequency() / step);
-          SubscriptionEntry entry = new SubscriptionEntry(sub, multiple);
-          subscriptions.put(sub, entry);
-          index.add(q, entry);
-          LOGGER.debug("subscription added: {}", sub);
-        } catch (Exception e) {
-          LOGGER.warn("failed to add subscription: {}", sub, e);
+            // Update index
+            int multiple = (int) (sub.getFrequency() / step);
+            SubscriptionEntry entry = new SubscriptionEntry(sub, multiple);
+            subscriptions.put(sub, entry);
+            index.add(q, entry);
+            LOGGER.debug("subscription added: {}", sub);
+          } catch (Exception e) {
+            LOGGER.warn("failed to add subscription: {}", sub, e);
+          }
+        } else {
+          LOGGER.trace("subscription already present: {}", sub);
         }
-      } else {
-        LOGGER.trace("subscription already present: {}", sub);
       }
-    }
 
-    for (Subscription sub : removed) {
-      SubscriptionEntry entry = subscriptions.remove(sub);
-      Query q = sub.dataExpr().query().simplify(commonTags);
-      index.remove(q, entry);
-      LOGGER.debug("subscription removed: {}", sub);
+      for (Subscription sub : removed) {
+        SubscriptionEntry entry = subscriptions.remove(sub);
+        Query q = sub.dataExpr().query().simplify(commonTags);
+        index.remove(q, entry);
+        LOGGER.debug("subscription removed: {}", sub);
+      }
+    } finally {
+      lock.unlock();
     }
   }
 

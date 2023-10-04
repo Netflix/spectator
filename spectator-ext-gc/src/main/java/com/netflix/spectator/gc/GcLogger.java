@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Logger to collect GC notifcation events.
@@ -81,6 +83,8 @@ public final class GcLogger {
   // Time spent in concurrent phases of GC
   private static final Id CONCURRENT_PHASE_TIME =
       Spectator.globalRegistry().createId("jvm.gc.concurrentPhaseTime");
+
+  private final Lock lock = new ReentrantLock();
 
   private final long jvmStartTime;
 
@@ -129,38 +133,48 @@ public final class GcLogger {
    *     If not null, the listener will be called with the event objects after metrics and the
    *     log buffer is updated.
    */
-  public synchronized void start(GcEventListener listener) {
-    // TODO: this class has a bad mix of static fields used from an instance of the class. For now
-    // this has been changed not to throw to make the dependency injection use-cases work. A
-    // more general refactor of the GcLogger class is needed.
-    if (notifListener != null) {
-      LOGGER.warn("logger already started");
-      return;
-    }
-    eventListener = listener;
-    notifListener = new GcNotificationListener();
-    for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
-      if (mbean instanceof NotificationEmitter) {
-        final NotificationEmitter emitter = (NotificationEmitter) mbean;
-        emitter.addNotificationListener(notifListener, null, null);
+  public void start(GcEventListener listener) {
+    lock.lock();
+    try {
+      // TODO: this class has a bad mix of static fields used from an instance of the class. For now
+      // this has been changed not to throw to make the dependency injection use-cases work. A
+      // more general refactor of the GcLogger class is needed.
+      if (notifListener != null) {
+        LOGGER.warn("logger already started");
+        return;
       }
+      eventListener = listener;
+      notifListener = new GcNotificationListener();
+      for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        if (mbean instanceof NotificationEmitter) {
+          final NotificationEmitter emitter = (NotificationEmitter) mbean;
+          emitter.addNotificationListener(notifListener, null, null);
+        }
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   /** Stop collecting GC events. */
-  public synchronized void stop() {
-    Preconditions.checkState(notifListener != null, "logger has not been started");
-    for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
-      if (mbean instanceof NotificationEmitter) {
-        final NotificationEmitter emitter = (NotificationEmitter) mbean;
-        try {
-          emitter.removeNotificationListener(notifListener);
-        } catch (ListenerNotFoundException e) {
-          LOGGER.warn("could not remove gc listener", e);
+  public void stop() {
+    lock.lock();
+    try {
+      Preconditions.checkState(notifListener != null, "logger has not been started");
+      for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        if (mbean instanceof NotificationEmitter) {
+          final NotificationEmitter emitter = (NotificationEmitter) mbean;
+          try {
+            emitter.removeNotificationListener(notifListener);
+          } catch (ListenerNotFoundException e) {
+            LOGGER.warn("could not remove gc listener", e);
+          }
         }
       }
+      notifListener = null;
+    } finally {
+      lock.unlock();
     }
-    notifListener = null;
   }
 
   /** Return the current set of GC events in the in-memory log. */

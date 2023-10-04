@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 /**
@@ -39,6 +41,7 @@ final class PrefixTree<T> {
     return (i >= TABLE_SIZE) ? -1 : i;
   }
 
+  private final Lock lock = new ReentrantLock();
   private final AtomicReferenceArray<PrefixTree<T>> children;
   private final Set<T> values;
 
@@ -51,12 +54,15 @@ final class PrefixTree<T> {
   private PrefixTree<T> computeIfAbsent(int i) {
     PrefixTree<T> child = children.get(i);
     if (child == null) {
-      synchronized (this) {
+      lock.lock();
+      try {
         child = children.get(i);
         if (child == null) {
           child = new PrefixTree<>();
           children.set(i, child);
         }
+      } finally {
+        lock.unlock();
       }
     }
     return child;
@@ -122,13 +128,16 @@ final class PrefixTree<T> {
         } else {
           boolean result = child.remove(prefix, pos + 1, value);
           if (result && child.isEmpty()) {
-            synchronized (this) {
+            lock.lock();
+            try {
               // Check that the children array still has the reference to the
               // same child object. The entry may have been replaced by another
               // thread.
               if (child == children.get(i) && child.isEmpty()) {
                 children.set(i, null);
               }
+            } finally {
+              lock.unlock();
             }
           }
           return result;

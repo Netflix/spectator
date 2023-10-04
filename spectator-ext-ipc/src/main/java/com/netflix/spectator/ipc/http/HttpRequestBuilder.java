@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -59,6 +61,8 @@ public class HttpRequestBuilder {
       NetflixHeaders.extractFromEnvironment();
 
   private static final StreamHelper STREAM_HELPER = new StreamHelper();
+
+  private static final Lock LOCK = new ReentrantLock();
 
   // Should not be used directly, use the method of the same name that will create the
   // executor if needed on the first access.
@@ -82,10 +86,13 @@ public class HttpRequestBuilder {
     if (executor != null) {
       return executor;
     }
-    synchronized (LOGGER) {
+    LOCK.lock();
+    try {
       defaultExecutor = Executors.newFixedThreadPool(
           Runtime.getRuntime().availableProcessors(), newThreadFactory());
       return defaultExecutor;
+    } finally {
+      LOCK.unlock();
     }
   }
 
