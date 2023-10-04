@@ -14,25 +14,25 @@ jobs:
       - uses: actions/checkout@v3
       - name: Gradle wrapper validation
         uses: gradle/wrapper-validation-action@v1
-      - name: Set up JDK 20
+      - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
-          java-version: 20
-          distribution: 'temurin'
+          java-version: 21
+          distribution: 'zulu'
           cache: 'gradle'
-      - run: echo "JDK20=$JAVA_HOME" >> $GITHUB_ENV
+      - run: echo "JDK21=$JAVA_HOME" >> $GITHUB_ENV
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: 17
-          distribution: 'temurin'
+          distribution: 'zulu'
           cache: 'gradle'
       - run: echo "JDK17=$JAVA_HOME" >> $GITHUB_ENV
       - name: Set up JDK 8
         uses: actions/setup-java@v3
         with:
           java-version: 8
-          distribution: 'temurin'
+          distribution: 'zulu'
           cache: 'gradle'
       - run: echo "JDK8=$JAVA_HOME" >> $GITHUB_ENV
       - name: Build candidate
