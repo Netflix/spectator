@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -719,6 +719,21 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void clientMetricsDisbled() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createClientEntry()
+        .withOwner("test")
+        .disableMetrics() // must be before markStart for inflight
+        .markStart()
+        .markEnd()
+        .log();
+
+    Assertions.assertEquals(0, registry.stream().count());
+  }
+
+  @Test
   public void serverMetricsValidate() {
     Registry registry = new DefaultRegistry();
     IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
@@ -730,6 +745,36 @@ public class IpcLogEntryTest {
         .log();
 
     IpcMetric.validate(registry);
+  }
+
+  @Test
+  public void serverMetricsDisabled() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .disableMetrics()
+        .markStart()
+        .markEnd()
+        .log();
+
+    Assertions.assertEquals(0, registry.stream().count());
+  }
+
+  @Test
+  public void serverMetricsDisabledViaHeader() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .addRequestHeader("netflix-ingress-common-ipc-metrics", "true")
+        .markStart()
+        .markEnd()
+        .log();
+
+    Assertions.assertEquals(0, registry.stream().count());
   }
 
   @Test

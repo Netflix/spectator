@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,6 +93,8 @@ public final class IpcLogEntry {
   private String remoteAddress;
   private int remotePort;
 
+  private boolean disableMetrics;
+
   private final Map<String, String> additionalTags = new HashMap<>();
 
   private final StringBuilder builder = new StringBuilder();
@@ -154,7 +156,7 @@ public final class IpcLogEntry {
    * the request completes it is recommended to call {@link #markEnd()}.
    */
   public IpcLogEntry markStart() {
-    if (registry != null) {
+    if (registry != null && !disableMetrics) {
       inflightId = getInflightId();
       int n = logger.inflightRequests(inflightId).incrementAndGet();
       registry.distributionSummary(inflightId).record(n);
@@ -526,16 +528,17 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry addRequestHeader(String name, String value) {
     if (clientAsg == null && name.equalsIgnoreCase(NetflixHeader.ASG.headerName())) {
-        withClientAsg(value);
+      withClientAsg(value);
     } else if (clientZone == null && name.equalsIgnoreCase(NetflixHeader.Zone.headerName())) {
       withClientZone(value);
     } else if (clientNode == null && name.equalsIgnoreCase(NetflixHeader.Node.headerName())) {
       withClientNode(value);
     } else if (vip == null && name.equalsIgnoreCase(NetflixHeader.Vip.headerName())) {
       withVip(value);
-    } else {
-      this.requestHeaders.add(new Header(name, value));
+    } else if (name.equalsIgnoreCase(NetflixHeader.IngressCommonIpcMetrics.headerName())) {
+      disableMetrics();
     }
+    this.requestHeaders.add(new Header(name, value));
     return this;
   }
 
@@ -552,9 +555,8 @@ public final class IpcLogEntry {
       withServerNode(value);
     } else if (endpoint == null && name.equalsIgnoreCase(NetflixHeader.Endpoint.headerName())) {
       withEndpoint(value);
-    } else {
-      this.responseHeaders.add(new Header(name, value));
     }
+    this.responseHeaders.add(new Header(name, value));
     return this;
   }
 
@@ -593,6 +595,15 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry addTag(String k, String v) {
     this.additionalTags.put(k, v);
+    return this;
+  }
+
+  /**
+   * Disable the metrics. The log will still get written, but none of the metrics will get
+   * updated.
+   */
+  public IpcLogEntry disableMetrics() {
+    this.disableMetrics = true;
     return this;
   }
 
@@ -707,6 +718,10 @@ public final class IpcLogEntry {
   }
 
   private void recordClientMetrics() {
+    if (disableMetrics) {
+      return;
+    }
+
     Id clientCall = createCallId(IpcMetric.clientCall.metricName());
     PercentileTimer.builder(registry)
         .withId(clientCall)
@@ -727,6 +742,10 @@ public final class IpcLogEntry {
   }
 
   private void recordServerMetrics() {
+    if (disableMetrics) {
+      return;
+    }
+
     Id serverCall = createCallId(IpcMetric.serverCall.metricName());
     PercentileTimer.builder(registry)
         .withId(serverCall)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,24 +26,24 @@ public enum NetflixHeader {
    * Server group name for the client or the server. It should follow the naming conventions
    * expected by Frigga. See {@link ServerGroup} for more information.
    */
-  ASG,
+  ASG("Netflix-ASG"),
 
   /**
    * Availability zone of the client or server instance.
    */
-  Zone,
+  Zone("Netflix-Zone"),
 
   /**
    * Instance id of the client or server.
    */
-  Node,
+  Node("Netflix-Node"),
 
   /**
    * Route or route handler for a given path. It should have a fixed cardinality. For HTTP
    * this would need to come from the server so there is agreement and the client will report
    * the same value.
    */
-  Endpoint,
+  Endpoint("Netflix-Endpoint"),
 
   /**
    * VIP that was used to lookup instances for a service when using a client side load balancer.
@@ -51,11 +51,21 @@ public enum NetflixHeader {
    * that would be the VIP used for the DeploymentContextBasedVipAddresses. If multiple VIPs are
    * used, then the first VIP that caused a given server instance to be selected should be used.
    *
-   * For server side load balancers the VIP header should be omitted.
+   * <p>For server side load balancers the VIP header should be omitted.
    */
-  Vip;
+  Vip("Netflix-Vip"),
 
-  private final String headerName = "Netflix-" + name();
+  /**
+   * Used to indicate that common IPC metrics are provided by a proxy and do not need to be
+   * reported locally. Reporting in multiple places can lead to confusing duplication.
+   */
+  IngressCommonIpcMetrics("Netflix-Ingress-Common-IPC-Metrics");
+
+  private final String headerName;
+
+  private NetflixHeader(String headerName) {
+    this.headerName = headerName;
+  }
 
   /** Return the fully qualified header name. */
   public String headerName() {
