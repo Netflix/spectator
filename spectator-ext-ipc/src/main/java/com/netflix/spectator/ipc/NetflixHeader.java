@@ -63,7 +63,7 @@ public enum NetflixHeader {
 
   private final String headerName;
 
-  private NetflixHeader(String headerName) {
+  NetflixHeader(String headerName) {
     this.headerName = headerName;
   }
 
