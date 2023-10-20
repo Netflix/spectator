@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  */
 package com.netflix.spectator.sandbox;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.api.Timer;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -85,16 +85,12 @@ public final class BucketTimer implements Timer {
     return t.hasExpired();
   }
 
+  @Override public Clock clock() {
+    return t.clock();
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     t.record(amount, unit);
-  }
-
-  @Override public <T> T record(Callable<T> rf) throws Exception {
-    return t.record(rf);
-  }
-
-  @Override public void record(Runnable rf) {
-    t.record(rf);
   }
 
   @Override public long count() {

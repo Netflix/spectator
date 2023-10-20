@@ -486,7 +486,7 @@ public class Scheduler {
             final long delay = clock.wallTime() - task.getNextExecutionTime();
             stats.taskExecutionDelay().record(delay, TimeUnit.MILLISECONDS);
 
-            stats.taskExecutionTime().record(() -> task.runAndReschedule(queue, stats));
+            stats.taskExecutionTime().recordRunnable(() -> task.runAndReschedule(queue, stats));
           } catch (InterruptedException e) {
             LOGGER.debug("task interrupted", e);
             break;

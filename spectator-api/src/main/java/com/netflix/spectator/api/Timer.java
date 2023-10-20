@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,11 @@ package com.netflix.spectator.api;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
+import java.util.function.IntSupplier;
+import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 /**
  * Timer intended to track a large number of short running events. Example would be something like
@@ -30,6 +35,14 @@ import java.util.concurrent.TimeUnit;
  * will always return 0.
  */
 public interface Timer extends Meter {
+
+  /**
+   * The clock used for timing events.
+   */
+  default Clock clock() {
+    return Clock.SYSTEM;
+  }
+
   /**
    * Updates the statistics kept by the timer with the specified amount.
    *
@@ -102,8 +115,45 @@ public interface Timer extends Meter {
    *     Function to execute and measure the execution time.
    * @return
    *     The return value of `f`.
+   *
+   * @deprecated Use {@link #recordCallable(Callable)} instead.
    */
-  <T> T record(Callable<T> f) throws Exception;
+  @Deprecated
+  default <T> T record(Callable<T> f) throws Exception {
+    return recordCallable(f);
+  }
+
+  /**
+   * Executes the runnable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   *
+   * @deprecated Use {@link #recordRunnable(Runnable)} instead.
+   */
+  @Deprecated
+  default void record(Runnable f) {
+    recordRunnable(f);
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default <T> T recordCallable(Callable<T> f) throws Exception {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.call();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
 
   /**
    * Executes the runnable `f` and records the time taken.
@@ -111,7 +161,111 @@ public interface Timer extends Meter {
    * @param f
    *     Function to execute and measure the execution time.
    */
-  void record(Runnable f);
+  default void recordRunnable(Runnable f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      f.run();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default <T> T recordSupplier(Supplier<T> f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.get();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default boolean recordBooleanSupplier(BooleanSupplier f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.getAsBoolean();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default double recordDoubleSupplier(DoubleSupplier f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.getAsDouble();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default int recordIntSupplier(IntSupplier f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.getAsInt();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  /**
+   * Executes the callable `f` and records the time taken.
+   *
+   * @param f
+   *     Function to execute and measure the execution time.
+   * @return
+   *     The return value of `f`.
+   */
+  default long recordLongSupplier(LongSupplier f) {
+    final Clock clock = clock();
+    long s = clock.monotonicTime();
+    try {
+      return f.getAsLong();
+    } finally {
+      long e = clock.monotonicTime();
+      record(e - s, TimeUnit.NANOSECONDS);
+    }
+  }
 
   /**
    * The number of times that record has been called since this timer was last reset.
@@ -133,7 +287,7 @@ public interface Timer extends Meter {
    * cost, but the updates may be delayed a bit in reaching the meter. The updates will only
    * be seen after the updater is explicitly flushed.
    *
-   * The caller should ensure that the updater is closed after using to guarantee any resources
+   * <p>The caller should ensure that the updater is closed after using to guarantee any resources
    * associated with it are cleaned up. In some cases failure to close the updater could result
    * in a memory leak.
    *

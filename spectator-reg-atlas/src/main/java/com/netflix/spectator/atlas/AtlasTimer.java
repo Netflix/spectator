@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import com.netflix.spectator.impl.StepLong;
 import com.netflix.spectator.impl.StepValue;
 
 import java.time.Duration;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -95,6 +94,10 @@ class AtlasTimer extends AtlasMeter implements Timer {
     consumer.accept(mid, timestamp, maxValue);
   }
 
+  @Override public Clock clock() {
+    return clock;
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     long now = clock.wallTime();
     count.getCurrent(now).incrementAndGet();
@@ -163,24 +166,6 @@ class AtlasTimer extends AtlasMeter implements Timer {
     long p = maxValue.get();
     while (v > p && !maxValue.compareAndSet(p, v)) {
       p = maxValue.get();
-    }
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long start = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long start = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
     }
   }
 

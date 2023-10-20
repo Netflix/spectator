@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.netflix.spectator.api;
 
 import com.netflix.spectator.impl.SwapMeter;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -35,28 +34,12 @@ final class SwapTimer extends SwapMeter<Timer> implements Timer {
     return registry.timer(id);
   }
 
+  @Override public Clock clock() {
+    return registry.clock();
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     get().record(amount, unit);
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = registry.clock().monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = registry.clock().monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = registry.clock().monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = registry.clock().monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   @Override public long count() {
