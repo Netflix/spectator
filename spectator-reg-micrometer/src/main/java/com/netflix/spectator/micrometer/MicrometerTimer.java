@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.micrometer;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Timer;
@@ -27,11 +28,17 @@ import java.util.concurrent.TimeUnit;
 class MicrometerTimer extends MicrometerMeter implements Timer {
 
   private final io.micrometer.core.instrument.Timer impl;
+  private final Clock clock;
 
   /** Create a new instance. */
-  MicrometerTimer(Id id, io.micrometer.core.instrument.Timer impl) {
+  MicrometerTimer(Id id, io.micrometer.core.instrument.Timer impl, Clock clock) {
     super(id);
     this.impl = impl;
+    this.clock = clock;
+  }
+
+  @Override public Clock clock() {
+    return clock;
   }
 
   @Override public void record(long amount, TimeUnit unit) {

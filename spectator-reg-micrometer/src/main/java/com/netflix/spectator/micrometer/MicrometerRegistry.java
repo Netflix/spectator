@@ -44,12 +44,14 @@ import java.util.stream.Collectors;
 public final class MicrometerRegistry implements Registry {
 
   private final MeterRegistry impl;
+  private final Clock clock;
 
   private final ConcurrentHashMap<Id, Object> state = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
   public MicrometerRegistry(MeterRegistry impl) {
     this.impl = impl;
+    this.clock = new MicrometerClock(impl.config().clock());
   }
 
   private io.micrometer.core.instrument.Tag convert(Tag t) {
@@ -88,7 +90,7 @@ public final class MicrometerRegistry implements Registry {
   }
 
   @Override public Clock clock() {
-    return new MicrometerClock(impl.config().clock());
+    return clock;
   }
 
   @Override public Id createId(String name) {
@@ -116,7 +118,7 @@ public final class MicrometerRegistry implements Registry {
   }
 
   @Override public Timer timer(Id id) {
-    return new MicrometerTimer(id, impl.timer(id.name(), convert(id.tags())));
+    return new MicrometerTimer(id, impl.timer(id.name(), convert(id.tags())), clock);
   }
 
   @Override public Gauge gauge(Id id) {
