@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package com.netflix.spectator.api;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /** Counter implementation for the no-op registry. */
@@ -37,14 +36,6 @@ enum NoopTimer implements Timer {
 
   @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    return f.call();
-  }
-
-  @Override public void record(Runnable f) {
-    f.run();
   }
 
   @Override public long count() {

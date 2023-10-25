@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import com.netflix.spectator.api.patterns.TagsBuilder;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
@@ -153,7 +152,7 @@ public final class PercentileTimer implements Timer {
      * for the important range of values and reduce the overhead associated with tracking the
      * data distribution.
      *
-     * For example, suppose you are making a client call and timeout after 10 seconds. Setting
+     * <p>For example, suppose you are making a client call and timeout after 10 seconds. Setting
      * the range to 10 seconds will restrict the possible set of buckets used to those
      * approaching the boundary. So we can still detect if it is nearing failure, but percentiles
      * that are further away from the range may be inflated compared to the actual value.
@@ -246,32 +245,14 @@ public final class PercentileTimer implements Timer {
     return Math.max(v, min);
   }
 
+  @Override public Clock clock() {
+    return registry.clock();
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     final long nanos = restrict(unit.toNanos(amount));
     timer.record(amount, unit);
     counterFor(PercentileBuckets.indexOf(nanos)).increment();
-  }
-
-  @Override public <T> T record(Callable<T> rf) throws Exception {
-    final Clock clock = registry.clock();
-    final long s = clock.monotonicTime();
-    try {
-      return rf.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable rf) {
-    final Clock clock = registry.clock();
-    final long s = clock.monotonicTime();
-    try {
-      rf.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
   }
 
   /**

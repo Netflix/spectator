@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
  */
 package com.netflix.spectator.micrometer;
 
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Timer;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,23 +28,21 @@ import java.util.concurrent.TimeUnit;
 class MicrometerTimer extends MicrometerMeter implements Timer {
 
   private final io.micrometer.core.instrument.Timer impl;
+  private final Clock clock;
 
   /** Create a new instance. */
-  MicrometerTimer(Id id, io.micrometer.core.instrument.Timer impl) {
+  MicrometerTimer(Id id, io.micrometer.core.instrument.Timer impl, Clock clock) {
     super(id);
     this.impl = impl;
+    this.clock = clock;
+  }
+
+  @Override public Clock clock() {
+    return clock;
   }
 
   @Override public void record(long amount, TimeUnit unit) {
     impl.record(amount, unit);
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    return impl.recordCallable(f);
-  }
-
-  @Override public void record(Runnable f) {
-    impl.record(f);
   }
 
   @Override public long count() {

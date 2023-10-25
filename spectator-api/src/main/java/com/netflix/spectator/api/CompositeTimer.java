@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2023 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package com.netflix.spectator.api;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /** Timer implementation for the composite registry. */
@@ -31,29 +30,13 @@ final class CompositeTimer extends CompositeMeter<Timer> implements Timer {
     this.clock = clock;
   }
 
+  @Override public Clock clock() {
+    return clock;
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
     for (Timer t : meters) {
       t.record(amount, unit);
-    }
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long s = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long s = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      final long e = clock.monotonicTime();
-      record(e - s, TimeUnit.NANOSECONDS);
     }
   }
 
