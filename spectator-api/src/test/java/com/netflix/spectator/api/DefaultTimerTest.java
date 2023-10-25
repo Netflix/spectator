@@ -113,7 +113,7 @@ public class DefaultTimerTest {
   public void testRecordCallable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
-    int v = t.record(() -> {
+    int v = t.recordCallable(() -> {
       clock.setMonotonicTime(500L);
       return 42;
     });
@@ -128,7 +128,7 @@ public class DefaultTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.recordCallable(() -> {
         clock.setMonotonicTime(500L);
         throw new Exception("foo");
       });
@@ -144,18 +144,173 @@ public class DefaultTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
-    t.record(() -> clock.setMonotonicTime(500L));
+    t.recordRunnable(() -> clock.setMonotonicTime(500L));
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalTime(), 400L);
   }
 
   @Test
-  public void testRecordRunnableException() throws Exception {
+  public void testRecordRunnableException() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.recordRunnable(() -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordSupplier() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    String value = t.recordSupplier(() -> {
+      clock.setMonotonicTime(500L);
+      return "foo";
+    });
+    Assertions.assertEquals(value, "foo");
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordSupplierException() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean seen = false;
+    try {
+      t.recordSupplier(() -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordBooleanSupplier() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean value = t.recordBooleanSupplier(() -> {
+      clock.setMonotonicTime(500L);
+      return true;
+    });
+    Assertions.assertTrue(value);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordBooleanSupplierException() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean seen = false;
+    try {
+      t.recordBooleanSupplier(() -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordIntSupplier() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    int value = t.recordIntSupplier(() -> {
+      clock.setMonotonicTime(500L);
+      return 42;
+    });
+    Assertions.assertEquals(value, 42);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordIntSupplierException() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean seen = false;
+    try {
+      t.recordIntSupplier(() -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordLongSupplier() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    long value = t.recordLongSupplier(() -> {
+      clock.setMonotonicTime(500L);
+      return 42L;
+    });
+    Assertions.assertEquals(value, 42L);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordLongSupplierException() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean seen = false;
+    try {
+      t.recordLongSupplier(() -> {
+        clock.setMonotonicTime(500L);
+        throw new RuntimeException("foo");
+      });
+    } catch (Exception e) {
+      seen = true;
+    }
+    Assertions.assertTrue(seen);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordDoubleSupplier() throws Exception {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    double value = t.recordDoubleSupplier(() -> {
+      clock.setMonotonicTime(500L);
+      return 42.5;
+    });
+    Assertions.assertEquals(value, 42.5);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @Test
+  public void testRecordDoubleSupplierException() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+    boolean seen = false;
+    try {
+      t.recordDoubleSupplier(() -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });
@@ -174,7 +329,7 @@ public class DefaultTimerTest {
   @Test
   public void testCallable() throws Exception {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
-    int v2 = t.record(() -> square(42));
+    int v2 = t.recordCallable(() -> square(42));
   }
 
   @Test

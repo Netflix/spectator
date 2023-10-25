@@ -173,7 +173,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Executes the callable `f` and records the time taken.
+   * Executes the supplier `f` and records the time taken.
    *
    * @param f
    *     Function to execute and measure the execution time.
@@ -192,7 +192,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Executes the callable `f` and records the time taken.
+   * Executes the supplier `f` and records the time taken.
    *
    * @param f
    *     Function to execute and measure the execution time.
@@ -211,7 +211,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Executes the callable `f` and records the time taken.
+   * Executes the supplier `f` and records the time taken.
    *
    * @param f
    *     Function to execute and measure the execution time.
@@ -230,7 +230,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Executes the callable `f` and records the time taken.
+   * Executes the supplier `f` and records the time taken.
    *
    * @param f
    *     Function to execute and measure the execution time.
@@ -249,7 +249,7 @@ public interface Timer extends Meter {
   }
 
   /**
-   * Executes the callable `f` and records the time taken.
+   * Executes the supplier `f` and records the time taken.
    *
    * @param f
    *     Function to execute and measure the execution time.
