@@ -18,8 +18,54 @@ package com.netflix.spectator.api;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.BinaryOperator;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.DoubleBinaryOperator;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoublePredicate;
+import java.util.function.DoubleSupplier;
+import java.util.function.DoubleToIntFunction;
+import java.util.function.DoubleToLongFunction;
+import java.util.function.DoubleUnaryOperator;
+import java.util.function.Function;
+import java.util.function.IntBinaryOperator;
+import java.util.function.IntConsumer;
+import java.util.function.IntFunction;
+import java.util.function.IntPredicate;
+import java.util.function.IntSupplier;
+import java.util.function.IntToDoubleFunction;
+import java.util.function.IntToLongFunction;
+import java.util.function.IntUnaryOperator;
+import java.util.function.LongBinaryOperator;
+import java.util.function.LongConsumer;
+import java.util.function.LongFunction;
+import java.util.function.LongPredicate;
+import java.util.function.LongSupplier;
+import java.util.function.LongToDoubleFunction;
+import java.util.function.LongToIntFunction;
+import java.util.function.LongUnaryOperator;
+import java.util.function.ObjDoubleConsumer;
+import java.util.function.ObjIntConsumer;
+import java.util.function.ObjLongConsumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.function.ToDoubleBiFunction;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntBiFunction;
+import java.util.function.ToIntFunction;
+import java.util.function.ToLongBiFunction;
+import java.util.function.ToLongFunction;
+import java.util.function.UnaryOperator;
 
 public class DefaultTimerTest {
 
@@ -199,7 +245,7 @@ public class DefaultTimerTest {
   }
 
   @Test
-  public void testRecordBooleanSupplier() throws Exception {
+  public void testRecordBooleanSupplier() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
     boolean value = t.recordBooleanSupplier(() -> {
@@ -230,7 +276,7 @@ public class DefaultTimerTest {
   }
 
   @Test
-  public void testRecordIntSupplier() throws Exception {
+  public void testRecordIntSupplier() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
     int value = t.recordIntSupplier(() -> {
@@ -261,7 +307,7 @@ public class DefaultTimerTest {
   }
 
   @Test
-  public void testRecordLongSupplier() throws Exception {
+  public void testRecordLongSupplier() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
     long value = t.recordLongSupplier(() -> {
@@ -292,7 +338,7 @@ public class DefaultTimerTest {
   }
 
   @Test
-  public void testRecordDoubleSupplier() throws Exception {
+  public void testRecordDoubleSupplier() {
     Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
     clock.setMonotonicTime(100L);
     double value = t.recordDoubleSupplier(() -> {
@@ -320,6 +366,117 @@ public class DefaultTimerTest {
     Assertions.assertTrue(seen);
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalTime(), 400L);
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> void testWrapper(Class<T> cls, BiFunction<Timer, T, T> wrap, Consumer<T> run, Object retValue) {
+    clock.setMonotonicTime(0L);
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+
+    // Success
+    T f = (T) Proxy.newProxyInstance(
+        cls.getClassLoader(),
+        new Class<?>[]{cls},
+        (obj, m, args) -> {
+          clock.setMonotonicTime(500L);
+          return retValue;
+        }
+    );
+    T wrapped = wrap.apply(t, f);
+    Assertions.assertEquals(t.count(), 0L);
+    run.accept(wrapped);
+    Assertions.assertEquals(t.count(), 1L);
+    Assertions.assertEquals(t.totalTime(), 400L);
+
+    // Exception
+    T f2 = (T) Proxy.newProxyInstance(
+        cls.getClassLoader(),
+        new Class<?>[]{cls},
+        (obj, m, args) -> {
+          clock.setMonotonicTime(1000L);
+          throw new RuntimeException("foo");
+        }
+    );
+    final T wrapped2 = wrap.apply(t, f2);
+    Assertions.assertThrows(RuntimeException.class, () -> run.accept(wrapped2));
+    Assertions.assertEquals(t.count(), 2L);
+    Assertions.assertEquals(t.totalTime(), 900L);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testWrappingLambdas() {
+    Consumer<Callable> cc = c -> {
+      try {
+        c.call();
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    };
+    testWrapper(Callable.class, Timer::wrapCallable, cc, "");
+    testWrapper(Runnable.class, Timer::wrapRunnable, Runnable::run, "");
+    testWrapper(BiConsumer.class, Timer::wrapBiConsumer, c -> c.accept("", ""), "");
+    testWrapper(BiFunction.class, Timer::wrapBiFunction, c -> c.apply("", ""), "");
+    testWrapper(BinaryOperator.class, Timer::wrapBinaryOperator, c -> c.apply("", ""), "");
+    testWrapper(BiPredicate.class, Timer::wrapBiPredicate, c -> c.test("", ""), false);
+    testWrapper(BooleanSupplier.class, Timer::wrapBooleanSupplier, BooleanSupplier::getAsBoolean, false);
+    testWrapper(Consumer.class, Timer::wrapConsumer, c -> c.accept(""), "");
+    testWrapper(DoubleBinaryOperator.class, Timer::wrapDoubleBinaryOperator, c -> c.applyAsDouble(1.0, 2.0), 3.0);
+    testWrapper(DoubleConsumer.class, Timer::wrapDoubleConsumer, c -> c.accept(1.0), "");
+    testWrapper(java.util.function.DoubleFunction.class, Timer::wrapDoubleFunction, c -> c.apply(1.0), 1.0);
+    testWrapper(DoublePredicate.class, Timer::wrapDoublePredicate, c -> c.test(1.0), false);
+    testWrapper(DoubleSupplier.class, Timer::wrapDoubleSupplier, DoubleSupplier::getAsDouble, 1.0);
+    testWrapper(DoubleToIntFunction.class, Timer::wrapDoubleToIntFunction, c -> c.applyAsInt(1.0), 1);
+    testWrapper(DoubleToLongFunction.class, Timer::wrapDoubleToLongFunction, c -> c.applyAsLong(1.0), 1L);
+    testWrapper(DoubleUnaryOperator.class, Timer::wrapDoubleUnaryOperator, c -> c.applyAsDouble(1.0), 1.0);
+    testWrapper(Function.class, Timer::wrapFunction, c -> c.apply(""), "");
+    testWrapper(IntBinaryOperator.class, Timer::wrapIntBinaryOperator, c -> c.applyAsInt(1, 2), 3);
+    testWrapper(IntConsumer.class, Timer::wrapIntConsumer, c -> c.accept(1), "");
+    testWrapper(IntFunction.class, Timer::wrapIntFunction, c -> c.apply(1), 1);
+    testWrapper(IntPredicate.class, Timer::wrapIntPredicate, c -> c.test(1), false);
+    testWrapper(IntSupplier.class, Timer::wrapIntSupplier, IntSupplier::getAsInt, 1);
+    testWrapper(IntToDoubleFunction.class, Timer::wrapIntToDoubleFunction, c -> c.applyAsDouble(1), 1.0);
+    testWrapper(IntToLongFunction.class, Timer::wrapIntToLongFunction, c -> c.applyAsLong(1), 1L);
+    testWrapper(IntUnaryOperator.class, Timer::wrapIntUnaryOperator, c -> c.applyAsInt(1), 1);
+    testWrapper(LongBinaryOperator.class, Timer::wrapLongBinaryOperator, c -> c.applyAsLong(1, 2), 3L);
+    testWrapper(LongConsumer.class, Timer::wrapLongConsumer, c -> c.accept(1), "");
+    testWrapper(LongFunction.class, Timer::wrapLongFunction, c -> c.apply(1), 1L);
+    testWrapper(LongPredicate.class, Timer::wrapLongPredicate, c -> c.test(1), false);
+    testWrapper(LongSupplier.class, Timer::wrapLongSupplier, LongSupplier::getAsLong, 1L);
+    testWrapper(LongToDoubleFunction.class, Timer::wrapLongToDoubleFunction, c -> c.applyAsDouble(1), 1.0);
+    testWrapper(LongToIntFunction.class, Timer::wrapLongToIntFunction, c -> c.applyAsInt(1), 1);
+    testWrapper(LongUnaryOperator.class, Timer::wrapLongUnaryOperator, c -> c.applyAsLong(1), 1L);
+    testWrapper(ObjDoubleConsumer.class, Timer::wrapObjDoubleConsumer, c -> c.accept("", 1.0), "");
+    testWrapper(ObjIntConsumer.class, Timer::wrapObjIntConsumer, c -> c.accept("", 1), "");
+    testWrapper(ObjLongConsumer.class, Timer::wrapObjLongConsumer, c -> c.accept("", 1L), "");
+    testWrapper(Predicate.class, Timer::wrapPredicate, c -> c.test(""), false);
+    testWrapper(Supplier.class, Timer::wrapSupplier, Supplier::get, "");
+    testWrapper(ToDoubleBiFunction.class, Timer::wrapToDoubleBiFunction, c -> c.applyAsDouble("", ""), 1.0);
+    testWrapper(ToDoubleFunction.class, Timer::wrapToDoubleFunction, c -> c.applyAsDouble(""), 1.0);
+    testWrapper(ToIntBiFunction.class, Timer::wrapToIntBiFunction, c -> c.applyAsInt("", ""), 1);
+    testWrapper(ToIntFunction.class, Timer::wrapToIntFunction, c -> c.applyAsInt(""), 1);
+    testWrapper(ToLongBiFunction.class, Timer::wrapToLongBiFunction, c -> c.applyAsLong("", ""), 1L);
+    testWrapper(ToLongFunction.class, Timer::wrapToLongFunction, c -> c.applyAsLong(""), 1L);
+    testWrapper(UnaryOperator.class, Timer::wrapUnaryOperator, c -> c.apply(""), "");
+  }
+
+  @Test
+  public void wrapWithStreamApi() {
+    Timer t = new DefaultTimer(clock, NoopId.INSTANCE);
+    clock.setMonotonicTime(100L);
+
+    int sum = Arrays
+        .stream(new int[] {1, 2, 3, 4, 5, 6})
+        .map(t.wrapIntUnaryOperator(i -> i + 1))
+        .sum();
+    Assertions.assertEquals(27, sum);
+
+    sum = Arrays
+        .stream(new String[] {"foo", "bar", "baz"})
+        .mapToInt(t.wrapToIntFunction(String::length))
+        .sum();
+    Assertions.assertEquals(9, sum);
   }
 
   private int square(int v) {
