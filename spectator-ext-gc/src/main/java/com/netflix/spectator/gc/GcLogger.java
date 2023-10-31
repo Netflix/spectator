@@ -35,9 +35,10 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -88,7 +89,7 @@ public final class GcLogger {
 
   private final long jvmStartTime;
 
-  private final ConcurrentHashMap<String, CircularBuffer<GcEvent>> gcLogs = new ConcurrentHashMap<>();
+  private final Map<String, CircularBuffer<GcEvent>> gcLogs;
 
   private long youngGenSizeAfter = 0L;
 
@@ -105,10 +106,12 @@ public final class GcLogger {
   /** Create a new instance. */
   public GcLogger() {
     jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
+    Map<String, CircularBuffer<GcEvent>> gcLogs = new HashMap<>();
     for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
       CircularBuffer<GcEvent> buffer = new CircularBuffer<>(BUFFER_SIZE);
       gcLogs.put(mbean.getName(), buffer);
     }
+    this.gcLogs = Collections.unmodifiableMap(gcLogs);
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       String poolName = mbean.getName();
