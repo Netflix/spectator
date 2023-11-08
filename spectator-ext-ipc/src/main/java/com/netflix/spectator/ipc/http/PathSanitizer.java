@@ -40,7 +40,7 @@ public final class PathSanitizer {
 
   /** Returns a sanitized path string for use as an endpoint tag value. */
   public static String sanitize(String path) {
-    return sanitizeSegments(removeParameters(path), Collections.emptySet());
+    return sanitize(path, Collections.emptySet());
   }
 
   /**
@@ -55,7 +55,8 @@ public final class PathSanitizer {
    *     Sanitized path that can be used as an endpoint tag value.
    */
   public static String sanitize(String path, Set<String> allowed) {
-    return sanitizeSegments(removeParameters(path), allowed);
+    String tmp = sanitizeSegments(removeParameters(path), allowed);
+    return tmp.isEmpty() ? "none" : tmp;
   }
 
   private static String removeParameters(String path) {
@@ -64,13 +65,13 @@ public final class PathSanitizer {
 
   private static String removeParameters(String path, char c) {
     int i = path.indexOf(c);
-    return i > 0 ? path.substring(0, i) : path;
+    return i >= 0 ? path.substring(0, i) : path;
   }
 
   private static String sanitizeSegments(String path, Set<String> allowed) {
     StringBuilder builder = new StringBuilder();
     int length = path.length();
-    int pos = path.charAt(0) == '/' ? 1 : 0;
+    int pos = path.isEmpty() || path.charAt(0) != '/' ? 0 : 1;
     int segmentsAdded = 0;
 
     while (pos < length && segmentsAdded < 5) {

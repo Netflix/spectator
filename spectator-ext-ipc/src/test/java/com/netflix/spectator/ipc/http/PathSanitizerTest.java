@@ -38,6 +38,14 @@ public class PathSanitizerTest {
   }
 
   @Test
+  public void emptyPath() {
+    Assertions.assertEquals("none", sanitize("/"));
+    Assertions.assertEquals("none", sanitize(""));
+    Assertions.assertEquals("none", sanitize("/?a=1"));
+    Assertions.assertEquals("none", sanitize("?a=1"));
+  }
+
+  @Test
   public void uuids() {
     String path = "/api/v1/foo/" + UUID.randomUUID();
     Assertions.assertEquals("_api_v1_foo_-", sanitize(path));
