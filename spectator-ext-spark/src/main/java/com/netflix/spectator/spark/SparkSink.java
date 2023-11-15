@@ -27,7 +27,6 @@ import org.apache.spark.metrics.sink.Sink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.MalformedURLException;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -56,7 +55,7 @@ public class SparkSink implements Sink {
   public SparkSink(
       Properties properties,
       MetricRegistry registry,
-      org.apache.spark.SecurityManager manager) throws MalformedURLException {
+      org.apache.spark.SecurityManager manager) {
     final Config config = loadConfig();
     sidecarRegistry = new SidecarRegistry(
         Clock.SYSTEM, new SpectatorConfig(config.getConfig("spectator.spark.sidecar")));

@@ -56,6 +56,18 @@
   </Match>
   <Match>
     <And>
+      <Class name="com.netflix.spectator.ipc.http.HttpUtils$GzipLevelOutputStream"/>
+      <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </And>
+  </Match>
+  <Match>
+    <And>
+      <Class name="com.netflix.spectator.sandbox.HttpUtils$GzipLevelOutputStream"/>
+      <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </And>
+  </Match>
+  <Match>
+    <And>
       <Class name="com.netflix.spectator.perf.ManyTags"/>
       <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
     </And>
