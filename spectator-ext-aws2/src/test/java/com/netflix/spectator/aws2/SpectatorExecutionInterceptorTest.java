@@ -220,7 +220,7 @@ public class SpectatorExecutionInterceptorTest {
     SdkHttpRequest request = SdkHttpRequest.builder()
         .method(SdkHttpMethod.POST)
         .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
-        .appendHeader("amz-sdk-retry", header)
+        .appendHeader("amz-sdk-request", header)
         .build();
     SdkHttpResponse response = SdkHttpResponse.builder()
         .statusCode(200)
@@ -238,27 +238,27 @@ public class SpectatorExecutionInterceptorTest {
 
   @Test
   public void parseRetryHeaderInitial() {
-    parseRetryHeaderTest("initial", "0/NotUsed");
+    parseRetryHeaderTest("initial", "attempt=1; max=4");
   }
 
   @Test
   public void parseRetryHeaderSecond() {
-    parseRetryHeaderTest("second", "1/NotUsed");
+    parseRetryHeaderTest("second", "attempt=2; max=4");
   }
 
   @Test
   public void parseRetryHeaderThird() {
-    parseRetryHeaderTest("third_up", "2/NotUsed");
+    parseRetryHeaderTest("third_up", "attempt=3; max=4");
   }
 
   @Test
   public void parseRetryHeader50() {
-    parseRetryHeaderTest("third_up", "50/NotUsed");
+    parseRetryHeaderTest("third_up", "attempt=50; max=50");
   }
 
   @Test
   public void parseRetryHeaderInvalidNumber() {
-    parseRetryHeaderTest("unknown", "foo/bar");
+    parseRetryHeaderTest("unknown", "attempt=foo; max=bar");
   }
 
   @Test
