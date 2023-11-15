@@ -95,25 +95,34 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
   /**
    * Extract the attempt number from the {@code amz-sdk-retry} header.
    */
-  private IpcAttempt extractAttempt(SdkHttpRequest request) {
+  private void updateAttempts(IpcLogEntry logEntry, SdkHttpRequest request) {
     int attempt = 0;
-    List<String> vs = request.headers().get("amz-sdk-retry");
+    int max = 0;
+    List<String> vs = request.headers().get("amz-sdk-request");
     if (vs != null) {
       for (String v : vs) {
-        // Format is: {requestCount - 1}/{lastBackoffDelay}/{availableRetryCapacity}
-        // See internal RetryHandler for more details.
-        int pos = v.indexOf('/');
+        // Format is: attempt={}; max={}
+        // https://github.com/aws/aws-sdk-java-v2/pull/2179/files
+        int pos = v.indexOf(';');
         if (pos > 0) {
-          try {
-            attempt = Integer.parseInt(v.substring(0, pos)) + 1;
-          } catch (NumberFormatException e) {
-            // If we cannot parse it, then attempt is unknown
-            attempt = 0;
-          }
+          attempt = parseFieldValue(v.substring(0, pos));
+          max = parseFieldValue(v.substring(pos + 1));
         }
       }
     }
-    return IpcAttempt.forAttemptNumber(attempt);
+    logEntry
+        .withAttempt(IpcAttempt.forAttemptNumber(attempt))
+        .withAttemptFinal(attempt == max);
+  }
+
+  private int parseFieldValue(String field) {
+    int pos = field.indexOf("=");
+    try {
+      return pos > 0 ? Integer.parseInt(field.substring(pos + 1)) : 0;
+    } catch (NumberFormatException e) {
+      // If we cannot parse it, then attempt is unknown
+      return 0;
+    }
   }
 
   @Override
@@ -131,9 +140,8 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
         .withProtocol(IpcProtocol.http_1)
         .withHttpMethod(request.method().name())
         .withUri(request.getUri())
-        .withEndpoint(endpoint)
-        .withAttempt(extractAttempt(request))
-        .withAttemptFinal(false); // Don't know if it is the final attempt
+        .withEndpoint(endpoint);
+    updateAttempts(logEntry, request);
 
     request.headers().forEach((k, vs) -> vs.forEach(v -> logEntry.addRequestHeader(k, v)));
 
