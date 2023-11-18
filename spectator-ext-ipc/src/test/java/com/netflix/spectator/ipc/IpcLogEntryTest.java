@@ -778,6 +778,28 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void serverMetricsDisabledReuseEntry() {
+    Registry registry = new DefaultRegistry();
+    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .addRequestHeader("netflix-ingress-common-ipc-metrics", "true")
+        .markStart()
+        .markEnd()
+        .log();
+    Assertions.assertEquals(0, registry.stream().count());
+
+    logger.createServerEntry()
+        .withOwner("test")
+        .addRequestHeader("netflix-ingress-common-ipc-metrics", "false")
+        .markStart()
+        .markEnd()
+        .log();
+    Assertions.assertEquals(3, registry.stream().count());
+  }
+
+  @Test
   public void endpointUnknownIfNotSet() {
     Registry registry = new DefaultRegistry();
     IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
