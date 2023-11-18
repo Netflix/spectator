@@ -535,11 +535,16 @@ public final class IpcLogEntry {
       withClientNode(value);
     } else if (vip == null && name.equalsIgnoreCase(NetflixHeader.Vip.headerName())) {
       withVip(value);
-    } else if (name.equalsIgnoreCase(NetflixHeader.IngressCommonIpcMetrics.headerName())) {
+    } else if (isMeshRequest(name, value)) {
       disableMetrics();
     }
     this.requestHeaders.add(new Header(name, value));
     return this;
+  }
+
+  private boolean isMeshRequest(String name, String value) {
+    return name.equalsIgnoreCase(NetflixHeader.IngressCommonIpcMetrics.headerName())
+        && "true".equalsIgnoreCase(value);
   }
 
   /**
@@ -620,38 +625,24 @@ public final class IpcLogEntry {
     }
   }
 
-  private IpcResult getResult() {
+  private void finalizeFields() {
+    // Do final checks and update fields that haven't been explicitly set if needed
+    // before logging.
     if (result == null) {
       result = status == null ? IpcResult.success : status.result();
     }
-    return result;
-  }
-
-  private IpcStatus getStatus() {
     if (status == null) {
       status = (result == IpcResult.success) ? IpcStatus.success : IpcStatus.unexpected_error;
     }
-    return status;
-  }
-
-  private IpcAttempt getAttempt() {
     if (attempt == null) {
       attempt = IpcAttempt.forAttemptNumber(1);
     }
-    return attempt;
-  }
-
-  private IpcAttemptFinal getAttemptFinal() {
     if (attemptFinal == null) {
       attemptFinal = IpcAttemptFinal.is_true;
     }
-    return attemptFinal;
-  }
-
-  private String getEndpoint() {
-    return (endpoint == null)
-        ? (path == null || httpStatus == 404) ? "unknown" : PathSanitizer.sanitize(path)
-        : endpoint;
+    if (endpoint == null) {
+      endpoint = (path == null || httpStatus == 404) ? "unknown" : PathSanitizer.sanitize(path);
+    }
   }
 
   private boolean isClient() {
@@ -669,13 +660,13 @@ public final class IpcLogEntry {
 
     // Required for both client and server
     putTag(tags, IpcTagKey.owner.key(), owner);
-    putTag(tags, getResult());
-    putTag(tags, getStatus());
+    putTag(tags, result);
+    putTag(tags, status);
 
     if (isClient()) {
       // Required for client, should be null on server
-      putTag(tags, getAttempt());
-      putTag(tags, getAttemptFinal());
+      putTag(tags, attempt);
+      putTag(tags, attemptFinal);
 
       // Optional for client
       putTag(tags, IpcTagKey.serverApp.key(), serverApp);
@@ -689,7 +680,7 @@ public final class IpcLogEntry {
     }
 
     // Optional for both client and server
-    putTag(tags, IpcTagKey.endpoint.key(), getEndpoint());
+    putTag(tags, IpcTagKey.endpoint.key(), endpoint);
     putTag(tags, IpcTagKey.vip.key(), vip);
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);
@@ -771,6 +762,7 @@ public final class IpcLogEntry {
    */
   public void log() {
     if (logger != null) {
+      finalizeFields();
       if (registry != null) {
         if (isClient()) {
           recordClientMetrics();
@@ -898,6 +890,7 @@ public final class IpcLogEntry {
 
   @Override
   public String toString() {
+    finalizeFields();
     return new JsonStringBuilder(builder)
         .startObject()
         .addField("owner", owner)
@@ -906,7 +899,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
-        .addField("endpoint", getEndpoint())
+        .addField("endpoint", endpoint)
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
         .addField("clientZone", clientZone)
@@ -982,6 +975,7 @@ public final class IpcLogEntry {
     responseHeaders.clear();
     remoteAddress = null;
     remotePort = -1;
+    disableMetrics = false;
     additionalTags.clear();
     builder.delete(0, builder.length());
     inflightId = null;
