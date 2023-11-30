@@ -106,16 +106,26 @@ public final class QueryIndex<T> {
 
   private volatile String key;
 
+  // Checks for :eq clauses
   private final ConcurrentHashMap<String, QueryIndex<T>> equalChecks;
 
+  // Checks for other key queries, e.g. :re, :in, :gt, :lt, etc. Prefix tree is used to
+  // filter regex and in clauses. The matching is cached to avoid expensive regex checks
+  // as much as possible.
   private final ConcurrentHashMap<Query.KeyQuery, QueryIndex<T>> otherChecks;
   private final PrefixTree<Query.KeyQuery> otherChecksTree;
   private final Cache<String, List<QueryIndex<T>>> otherChecksCache;
 
+  // Index for :has queries
   private volatile QueryIndex<T> hasKeyIdx;
+
+  // Index for queries that do not have a clause for a given key
   private volatile QueryIndex<T> otherKeysIdx;
+
+  // Index for :not queries to capture entries where a key is missing
   private volatile QueryIndex<T> missingKeysIdx;
 
+  // Matches for this level of the tree
   private final Set<T> matches;
 
   /** Create a new instance. */
