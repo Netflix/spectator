@@ -54,6 +54,11 @@ final class StartsWithMatcher implements Matcher, Serializable {
   }
 
   @Override
+  public boolean matchesAfterPrefix(String str) {
+    return true;
+  }
+
+  @Override
   public String prefix() {
     return pattern;
   }

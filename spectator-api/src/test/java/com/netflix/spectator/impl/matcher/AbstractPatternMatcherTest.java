@@ -66,6 +66,18 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void matchesAfterPrefix() {
+    // StartsWithMatcher, bar case should match because it will not get checked and we trust
+    // that the caller has already verified the prefix.
+    Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("abcdef"));
+    Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("bardef"));
+
+    // SeqMatcher
+    Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("abc[d-f]"));
+    Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("bar[d-f]"));
+  }
+
+  @Test
   public void startAnchor() {
     testRE("^abc", "abcdef");
     testRE("^abc", "123456");
