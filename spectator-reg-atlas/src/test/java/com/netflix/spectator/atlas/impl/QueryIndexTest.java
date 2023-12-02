@@ -533,4 +533,22 @@ public class QueryIndexTest {
       Assertions.assertTrue(idx.isEmpty());
     }
   }
+
+  @Test
+  public void findHotSpots() {
+    Registry registry = new NoopRegistry();
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+    for (int i = 0; i < 5; ++i) {
+      Query q = Parser.parseQuery("name,foo,:re,i," + i + ",:re,:and");
+      idx.add(q, i);
+    }
+
+    idx.findHotSpots(4, (path, queries) -> {
+      Assertions.assertEquals(
+          "K=name > other-checks > name,foo,:re > K=i > other-checks",
+          String.join(" > ", path)
+      );
+      Assertions.assertEquals(5, queries.size());
+    });
+  }
 }

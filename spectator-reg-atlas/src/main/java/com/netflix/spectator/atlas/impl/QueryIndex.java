@@ -19,12 +19,15 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.impl.Cache;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -530,6 +533,69 @@ public final class QueryIndex<T> {
     // Check matches with missing keys
     if (missingKeysIdx != null && !keyPresent) {
       missingKeysIdx.forEachMatch(tags, consumer);
+    }
+  }
+
+  /**
+   * Find hot spots in the index where there is a large set of linear matches, e.g. a bunch
+   * of regex queries for a given key.
+   *
+   * @param threshold
+   *     Threshold for the number of entries in the other checks sub-tree to be considered
+   *     a hot spot.
+   * @param consumer
+   *     Function that will be invoked with a path and set of queries for the hot spot.
+   */
+  public void findHotSpots(int threshold, BiConsumer<List<String>, List<Query.KeyQuery>> consumer) {
+    Deque<String> path = new ArrayDeque<>();
+    findHotSpots(threshold, path, consumer);
+  }
+
+  private void findHotSpots(
+      int threshold,
+      Deque<String> path,
+      BiConsumer<List<String>, List<Query.KeyQuery>> consumer
+  ) {
+    if (key != null) {
+      path.addLast("K=" + key);
+
+      equalChecks.forEach((v, idx) -> {
+        path.addLast(key + "," + v + ",:eq");
+        idx.findHotSpots(threshold, path, consumer);
+        path.removeLast();
+      });
+
+      path.addLast("other-checks");
+      if (otherChecks.size() > threshold) {
+        List<Query.KeyQuery> queries = new ArrayList<>(otherChecks.keySet());
+        consumer.accept(new ArrayList<>(path), queries);
+      }
+      otherChecks.forEach((q, idx) -> {
+        path.addLast(q.toString());
+        idx.findHotSpots(threshold, path, consumer);
+        path.removeLast();
+      });
+      path.removeLast();
+
+      if (hasKeyIdx != null) {
+        path.addLast("has");
+        hasKeyIdx.findHotSpots(threshold, path, consumer);
+        path.removeLast();
+      }
+
+      path.removeLast();
+    }
+
+    if (otherKeysIdx != null) {
+      path.addLast("other-keys");
+      otherKeysIdx.findHotSpots(threshold, path, consumer);
+      path.removeLast();
+    }
+
+    if (missingKeysIdx != null) {
+      path.addLast("missing-keys");
+      missingKeysIdx.findHotSpots(threshold, path, consumer);
+      path.removeLast();
     }
   }
 
