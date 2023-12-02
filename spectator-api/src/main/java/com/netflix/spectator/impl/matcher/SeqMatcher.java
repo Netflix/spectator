@@ -74,6 +74,20 @@ final class SeqMatcher implements Matcher, Serializable {
   }
 
   @Override
+  public boolean matchesAfterPrefix(String str) {
+    if (matchers[0] instanceof StartsWithMatcher) {
+      final int end = str.length();
+      int pos = matchers[0].prefix().length();
+      for (int i = 1; i < matchers.length && pos >= 0; ++i) {
+        pos = matchers[i].matches(str, pos, end - pos);
+      }
+      return pos >= 0;
+    } else {
+      return matches(str);
+    }
+  }
+
+  @Override
   public String prefix() {
     return matchers[0].prefix();
   }

@@ -499,7 +499,7 @@ public final class QueryIndex<T> {
           if (!otherChecks.isEmpty()) {
             List<QueryIndex<T>> tmp = new ArrayList<>();
             otherChecksTree.forEach(v, kq -> {
-              if (kq.matches(v)) {
+              if (matches(kq, v)) {
                 QueryIndex<T> idx = otherChecks.get(kq);
                 if (idx != null) {
                   tmp.add(idx);
@@ -533,6 +533,15 @@ public final class QueryIndex<T> {
     // Check matches with missing keys
     if (missingKeysIdx != null && !keyPresent) {
       missingKeysIdx.forEachMatch(tags, consumer);
+    }
+  }
+
+  private boolean matches(Query.KeyQuery kq, String value) {
+    if (kq instanceof Query.Regex) {
+      Query.Regex re = (Query.Regex) kq;
+      return re.pattern().matchesAfterPrefix(value);
+    } else {
+      return kq.matches(value);
     }
   }
 

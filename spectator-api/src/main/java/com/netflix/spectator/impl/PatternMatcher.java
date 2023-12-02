@@ -47,6 +47,15 @@ public interface PatternMatcher {
   boolean matches(String str);
 
   /**
+   * Returns true if the passed in string matches the pattern after the prefix. This method
+   * can be used to more efficiently check the value if the {@link #prefix()} was already
+   * verified.
+   */
+  default boolean matchesAfterPrefix(String str) {
+    return matches(str);
+  }
+
+  /**
    * Returns a fixed string prefix for the pattern if one is available. This can be used
    * with indexed data to help select a subset of values that are possible matches. If the
    * pattern does not have a fixed string prefix, then null will be returned.
