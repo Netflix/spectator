@@ -176,6 +176,16 @@ public interface DataExpr {
 
   /** Base type for simple aggregate functions. */
   interface AggregateFunction extends DataExpr {
+
+    /** Return the exact matches from the query clause. */
+    Map<String, String> queryTags();
+
+    @Override default Map<String, String> resultTags(Map<String, String> tags) {
+      Map<String, String> ts = queryTags();
+      return ts.isEmpty()
+          ? Collections.singletonMap("name", "unknown")
+          : ts;
+    }
   }
 
   /**
@@ -202,7 +212,7 @@ public interface DataExpr {
       return true;
     }
 
-    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+    @Override public Map<String, String> queryTags() {
       return queryTags;
     }
 
@@ -269,7 +279,7 @@ public interface DataExpr {
       return false;
     }
 
-    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+    @Override public Map<String, String> queryTags() {
       return queryTags;
     }
 
@@ -336,7 +346,7 @@ public interface DataExpr {
       return false;
     }
 
-    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+    @Override public Map<String, String> queryTags() {
       return queryTags;
     }
 
@@ -407,7 +417,7 @@ public interface DataExpr {
       return true;
     }
 
-    @Override public Map<String, String> resultTags(Map<String, String> tags) {
+    @Override public Map<String, String> queryTags() {
       return queryTags;
     }
 
@@ -496,7 +506,7 @@ public interface DataExpr {
       if (resultTags == null) {
         return null;
       } else {
-        resultTags.putAll(af.resultTags(tags));
+        resultTags.putAll(af.queryTags());
         return resultTags;
       }
     }
