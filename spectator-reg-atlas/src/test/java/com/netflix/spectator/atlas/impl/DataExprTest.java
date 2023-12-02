@@ -314,6 +314,20 @@ public class DataExprTest {
   }
 
   @Test
+  public void orClauseTags() {
+    DataExpr expr = parse("name,foo,:eq,name,bar,:eq,:or,:sum");
+    Map<String, String> tags = expr.resultTags(Collections.singletonMap("name", "foo"));
+    Assertions.assertEquals(Collections.singletonMap("name", "unknown"), tags);
+  }
+
+  @Test
+  public void orClauseTagsGroupBy() {
+    DataExpr expr = parse("name,foo,:eq,name,bar,:eq,:or,:sum,(,name,),:by");
+    Map<String, String> tags = expr.resultTags(Collections.singletonMap("name", "foo"));
+    Assertions.assertEquals(Collections.singletonMap("name", "foo"), tags);
+  }
+
+  @Test
   public void allEqualsContract() {
     EqualsVerifier
         .forClass(DataExpr.All.class)
