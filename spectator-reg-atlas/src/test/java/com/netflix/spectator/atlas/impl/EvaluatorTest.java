@@ -117,8 +117,8 @@ public class EvaluatorTest {
     EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
 
     List<EvalPayload.Metric> metrics = new ArrayList<>();
-    metrics.add(new EvalPayload.Metric("max", Collections.emptyMap(), 3.0));
-    metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 6.0));
+    metrics.add(new EvalPayload.Metric("max", tags("name", "unknown"), 3.0));
+    metrics.add(new EvalPayload.Metric("sum", tags("name", "unknown"), 6.0));
     EvalPayload expected = new EvalPayload(0L, metrics);
     Assertions.assertEquals(expected, sort(payload));
   }
@@ -133,7 +133,7 @@ public class EvaluatorTest {
     evaluator.sync(sumSub);
     EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
     List<EvalPayload.Metric> metrics = new ArrayList<>();
-    metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 6.0));
+    metrics.add(new EvalPayload.Metric("sum", tags("name", "unknown"), 6.0));
     EvalPayload expected = new EvalPayload(0L, metrics);
     Assertions.assertEquals(expected, payload);
 
@@ -143,7 +143,7 @@ public class EvaluatorTest {
     evaluator.sync(maxSub);
     payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
     metrics = new ArrayList<>();
-    metrics.add(new EvalPayload.Metric("sum", Collections.emptyMap(), 3.0));
+    metrics.add(new EvalPayload.Metric("sum", tags("name", "unknown"), 3.0));
     expected = new EvalPayload(0L, metrics);
     Assertions.assertEquals(expected, payload);
   }
@@ -212,7 +212,7 @@ public class EvaluatorTest {
 
     Assertions.assertEquals(1, payload.getMetrics().size());
     Assertions.assertEquals(
-        new EvalPayload.Metric("sum", tags(), 6.0),
+        new EvalPayload.Metric("sum", tags("name", "unknown"), 6.0),
         payload.getMetrics().get(0)
     );
   }
@@ -229,7 +229,7 @@ public class EvaluatorTest {
     Assertions.assertEquals(3, payload.getMetrics().size());
     for (EvalPayload.Metric m : payload.getMetrics()) {
       Map<String, String> tags = m.getTags();
-      Assertions.assertEquals(1, tags.size());
+      Assertions.assertEquals(2, tags.size());
       Assertions.assertTrue(tags.containsKey("atlas.aggr"));
     }
   }
@@ -247,7 +247,7 @@ public class EvaluatorTest {
     Assertions.assertEquals(3, payload.getMetrics().size());
     for (EvalPayload.Metric m : payload.getMetrics()) {
       Map<String, String> tags = m.getTags();
-      Assertions.assertEquals(1, tags.size());
+      Assertions.assertEquals(2, tags.size());
       Assertions.assertTrue(tags.containsKey("atlas.aggr"));
       Assertions.assertEquals(1.0, m.getValue());
     }
@@ -294,7 +294,7 @@ public class EvaluatorTest {
 
     Assertions.assertEquals(1, payload.getMetrics().size());
     Assertions.assertEquals(
-        new EvalPayload.Metric("max", tags(), 3.0),
+        new EvalPayload.Metric("max", tags("name", "unknown"), 3.0),
         payload.getMetrics().get(0)
     );
   }
