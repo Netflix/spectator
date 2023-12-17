@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,15 @@
  */
 package com.netflix.spectator.atlas.impl;
 
+import com.netflix.spectator.impl.Preconditions;
+
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -32,40 +36,14 @@ import java.util.function.Consumer;
  */
 final class PrefixTree<T> {
 
-  private static final int FIRST_CHAR = ' ';
-  private static final int LAST_CHAR = '~';
-  private static final int TABLE_SIZE = LAST_CHAR - FIRST_CHAR + 1;
-
-  private static int indexOf(char c) {
-    int i = c - FIRST_CHAR;
-    return (i >= TABLE_SIZE) ? -1 : i;
-  }
-
   private final Lock lock = new ReentrantLock();
-  private final AtomicReferenceArray<PrefixTree<T>> children;
+
+  private volatile Node root;
   private final Set<T> values;
 
   /** Create a new instance. */
   PrefixTree() {
-    children = new AtomicReferenceArray<>(TABLE_SIZE);
-    values = ConcurrentHashMap.newKeySet();
-  }
-
-  private PrefixTree<T> computeIfAbsent(int i) {
-    PrefixTree<T> child = children.get(i);
-    if (child == null) {
-      lock.lock();
-      try {
-        child = children.get(i);
-        if (child == null) {
-          child = new PrefixTree<>();
-          children.set(i, child);
-        }
-      } finally {
-        lock.unlock();
-      }
-    }
-    return child;
+    values = newSet();
   }
 
   /**
@@ -77,23 +55,59 @@ final class PrefixTree<T> {
    *     Value to associate with the prefix.
    */
   void put(String prefix, T value) {
-    if (prefix == null)
-      values.add(value);
-    else
-      put(prefix, 0, value);
-  }
-
-  private void put(String prefix, int pos, T value) {
-    if (pos == prefix.length()) {
+    if (prefix == null) {
       values.add(value);
     } else {
-      int i = indexOf(prefix.charAt(pos));
-      if (i < 0) {
-        values.add(value);
-      } else {
-        PrefixTree<T> child = computeIfAbsent(i);
-        child.put(prefix, pos + 1, value);
+      lock.lock();
+      try {
+        Node node = root;
+        if (node == null) {
+          root = new Node(prefix, EMPTY, setOf(value));
+        } else {
+          root = putImpl(node, prefix, 0, value);
+        }
+      } finally {
+        lock.unlock();
       }
+    }
+  }
+
+  private Node putImpl(Node node, String key, int offset, T value) {
+    final int prefixLength = node.prefix.length();
+    final int keyLength = key.length() - offset;
+    final int commonLength = commonPrefixLength(node.prefix, key, offset);
+    if (commonLength == 0 && prefixLength > 0) {
+      // No common prefix
+      Node n = new Node(key.substring(offset), EMPTY, setOf(value));
+      return new Node("", new Node[] {n, node});
+    } else if (keyLength == prefixLength && commonLength == prefixLength) {
+      // Fully matches, add the value to this node
+      node.values.add(value);
+      return node;
+    } else if (keyLength > prefixLength && commonLength == prefixLength) {
+      // key.startsWith(prefix), put the value into a child
+      int childOffset = offset + commonLength;
+      int pos = find(node.children, key, childOffset);
+      if (pos >= 0) {
+        Node n = putImpl(node.children[pos], key, childOffset, value);
+        return node.replaceChild(n, pos);
+      } else {
+        Node n = new Node(key.substring(childOffset), EMPTY, setOf(value));
+        return node.addChild(n);
+      }
+    } else if (prefixLength > keyLength && commonLength == keyLength) {
+      // prefix.startsWith(key), make new parent node and add this node as a child
+      int childOffset = offset + commonLength;
+      Node n = new Node(node.prefix.substring(commonLength), node.children, node.values);
+      return new Node(key.substring(offset, childOffset), new Node[] {n}, setOf(value));
+    } else {
+      // Common prefix is a subset of both
+      int childOffset = offset + commonLength;
+      Node[] children = new Node[] {
+          new Node(node.prefix.substring(commonLength), node.children, node.values),
+          new Node(key.substring(childOffset), EMPTY, setOf(value))
+      };
+      return new Node(node.prefix.substring(0, commonLength), children);
     }
   }
 
@@ -108,41 +122,41 @@ final class PrefixTree<T> {
    *     Returns true if a value was removed from the tree.
    */
   boolean remove(String prefix, T value) {
-    if (prefix == null)
-      return values.remove(value);
-    else
-      return remove(prefix, 0, value);
-  }
-
-  private boolean remove(String prefix, int pos, T value) {
-    if (pos == prefix.length()) {
+    if (prefix == null) {
       return values.remove(value);
     } else {
-      int i = indexOf(prefix.charAt(pos));
-      if (i < 0) {
-        return values.remove(value);
-      } else {
-        PrefixTree<T> child = children.get(i);
-        if (child == null) {
-          return false;
-        } else {
-          boolean result = child.remove(prefix, pos + 1, value);
-          if (result && child.isEmpty()) {
-            lock.lock();
-            try {
-              // Check that the children array still has the reference to the
-              // same child object. The entry may have been replaced by another
-              // thread.
-              if (child == children.get(i) && child.isEmpty()) {
-                children.set(i, null);
-              }
-            } finally {
-              lock.unlock();
-            }
+      lock.lock();
+      try {
+        boolean removed = false;
+        Node node = root;
+        if (node != null) {
+          removed = removeImpl(node, prefix, 0, value);
+          if (removed) {
+            node = node.compress();
+            root = node.isEmpty() ? null : node;
           }
-          return result;
         }
+        return removed;
+      } finally {
+        lock.unlock();
       }
+    }
+  }
+
+  private boolean removeImpl(Node node, String key, int offset, T value) {
+    final int prefixLength = node.prefix.length();
+    final int keyLength = key.length() - offset;
+    final int commonLength = commonPrefixLength(node.prefix, key, offset);
+    if (keyLength == prefixLength && commonLength == prefixLength) {
+      // Fully matches, remove the value from this node
+      return node.values.remove(value);
+    } else if (keyLength > prefixLength && commonLength == prefixLength) {
+      // Try to remove from children
+      int childOffset = offset + commonLength;
+      int pos = find(node.children, key, childOffset);
+      return pos >= 0 && removeImpl(node.children[pos], key, childOffset, value);
+    } else {
+      return false;
     }
   }
 
@@ -155,9 +169,9 @@ final class PrefixTree<T> {
    *     Values associated with a matching prefix.
    */
   List<T> get(String key) {
-    List<T> results = new ArrayList<>();
-    forEach(key, results::add);
-    return results;
+    List<T> result = new ArrayList<>();
+    forEach(key, result::add);
+    return result;
   }
 
   /**
@@ -169,17 +183,31 @@ final class PrefixTree<T> {
    *     Function to call for matching values.
    */
   void forEach(String key, Consumer<T> consumer) {
-    forEach(key, 0, consumer);
+    values.forEach(consumer);
+    Node node = root;
+    if (node != null) {
+      forEachImpl(node, key, 0, consumer);
+    }
   }
 
-  private void forEach(String key, int pos, Consumer<T> consumer) {
-    values.forEach(consumer);
-    if (pos < key.length()) {
-      int i = indexOf(key.charAt(pos));
-      if (i >= 0) {
-        PrefixTree<T> child = children.get(i);
-        if (child != null) {
-          child.forEach(key, pos + 1, consumer);
+  @SuppressWarnings("unchecked")
+  private void forEachImpl(Node node, String key, int offset, Consumer<T> consumer) {
+    final int prefixLength = node.prefix.length();
+    final int keyLength = key.length() - offset;
+    final int commonLength = commonPrefixLength(node.prefix, key, offset);
+
+    if (commonLength == prefixLength) {
+      // Prefix matches, consume values for this node
+      for (Object value : node.values) {
+        consumer.accept((T) value);
+      }
+
+      if (commonLength < keyLength) {
+        // There is more to the key, check if there are also matches for child nodes
+        int childOffset = offset + commonLength;
+        int pos = find(node.children, key, childOffset);
+        if (pos >= 0) {
+          forEachImpl(node.children[pos], key, childOffset, consumer);
         }
       }
     }
@@ -189,16 +217,7 @@ final class PrefixTree<T> {
    * Returns true if the tree is empty.
    */
   boolean isEmpty() {
-    if (values.isEmpty()) {
-      for (int i = 0; i < TABLE_SIZE; ++i) {
-        if (children.get(i) != null) {
-          return false;
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
+    return values.isEmpty() && (root == null || root.isEmpty());
   }
 
   /**
@@ -206,13 +225,176 @@ final class PrefixTree<T> {
    * by traversing the tree, so this call may be expensive.
    */
   int size() {
-    int sz = values.size();
-    for (int i = 0; i < TABLE_SIZE; ++i) {
-      PrefixTree<T> child = children.get(i);
-      if (child != null) {
-        sz += child.size();
+    Node r = root;
+    return (r == null ? 0 : r.size()) + values.size();
+  }
+
+  /**
+   * Determine the length of the common prefix for two strings.
+   *
+   * @param str1
+   *     First string to compare.
+   * @param str2
+   *     Second string to compare.
+   * @param offset
+   *     Offset in the second string for where to start.
+   * @return
+   *     Length of the common prefix for the two strings.
+   */
+  static int commonPrefixLength(String str1, String str2, int offset) {
+    int length = Math.min(str1.length(), str2.length() - offset);
+    for (int i = 0; i < length; ++i) {
+      if (str1.charAt(i) != str2.charAt(offset + i)) {
+        return i;
       }
     }
-    return sz;
+    return length;
+  }
+
+  private static int find(Node[] nodes, String key, int offset) {
+    int s = 0;
+    int e = nodes.length - 1;
+    while (s <= e) {
+      int mid = (s + e) / 2;
+      int cmp = Character.compare(nodes[mid].prefix.charAt(0), key.charAt(offset));
+      if (cmp == 0)
+        return mid;
+      else if (cmp < 0)
+        s = mid + 1;
+      else
+        e = mid - 1;
+    }
+    return -1;
+  }
+
+  private static <T> Set<T> newSet() {
+    return new CopyOnWriteArraySet<>();//ConcurrentHashMap.newKeySet();
+  }
+
+  private static Set<Object> setOf(Object value) {
+    Set<Object> set = newSet();
+    set.add(value);
+    return set;
+  }
+
+  private static final Node[] EMPTY = new Node[0];
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    PrefixTree<?> that = (PrefixTree<?>) o;
+    return Objects.equals(root, that.root)
+        && values.equals(that.values);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(root, values);
+  }
+
+  private static class Node {
+
+    final String prefix;
+    final Node[] children;
+    final Set<Object> values;
+
+    Node(String prefix, Node[] children, Set<Object> values) {
+      this.prefix = Preconditions.checkNotNull(prefix, "prefix");
+      this.children = Preconditions.checkNotNull(children, "children");
+      this.values = Preconditions.checkNotNull(values, "values");
+      Arrays.sort(children, Comparator.comparing(n -> n.prefix));
+    }
+
+    Node(String prefix, Node[] children) {
+      this(prefix, children, newSet());
+    }
+
+    Node replaceChild(Node n, int i) {
+      Node[] cs = new Node[children.length];
+      System.arraycopy(children, 0, cs, 0, i);
+      cs[i] = n;
+      System.arraycopy(children, i + 1, cs, i + 1, children.length - i - 1);
+      return new Node(prefix, cs, values);
+    }
+
+    Node addChild(Node n) {
+      Node[] cs = new Node[children.length + 1];
+      System.arraycopy(children, 0, cs, 0, children.length);
+      cs[children.length] = n;
+      return new Node(prefix, cs, values);
+    }
+
+    Node compress() {
+      // Create list of compressed children, avoid allocating the list unless
+      // there is a change.
+      List<Node> cs = null;
+      for (int i = 0; i < children.length; ++i) {
+        Node child = children[i];
+        Node c = child.compress();
+        if (c != child || c.isEmpty()) {
+          if (cs == null) {
+            cs = new ArrayList<>(children.length);
+            for (int j = 0; j < i; ++j) {
+              cs.add(children[j]);
+            }
+          }
+          if (!c.isEmpty()) {
+            cs.add(c);
+          }
+        } else if (cs != null) {
+          cs.add(child);
+        }
+      }
+
+      // Return compressed node. Merge nodes if intermediates have no values.
+      if (cs == null) {
+        return this;
+      } else if (values.isEmpty() && cs.size() == 1) {
+        Node c = cs.get(0);
+        String p = prefix + c.prefix;
+        return new Node(p, EMPTY, c.values);
+      } else {
+        return new Node(prefix, cs.toArray(EMPTY), values);
+      }
+    }
+
+    boolean isEmpty() {
+      return values.isEmpty() && areAllChildrenEmpty();
+    }
+
+    private boolean areAllChildrenEmpty() {
+      for (Node child : children) {
+        if (!child.isEmpty()) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    int size() {
+      int sz = values.size();
+      for (Node child : children) {
+        sz += child.size();
+      }
+      return sz;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      Node node = (Node) o;
+      return prefix.equals(node.prefix)
+          && Arrays.equals(children, node.children)
+          && values.equals(node.values);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = Objects.hash(prefix, values);
+      result = 31 * result + Arrays.hashCode(children);
+      return result;
+    }
   }
 }
