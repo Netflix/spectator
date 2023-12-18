@@ -193,8 +193,7 @@ public final class CardinalityLimiters {
         // Lock to keep hashmap consistent with counter for remaining
         lock.lock();
         try {
-          if (remaining.get() > 0) {
-            values.put(s, s);
+          if (remaining.get() > 0 && values.put(s, s) == null) {
             remaining.decrementAndGet();
           }
         } finally {
