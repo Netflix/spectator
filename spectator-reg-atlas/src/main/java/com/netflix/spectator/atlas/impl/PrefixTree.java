@@ -62,7 +62,7 @@ final class PrefixTree<T> {
       try {
         Node node = root;
         if (node == null) {
-          root = new Node(prefix, EMPTY, setOf(value));
+          root = new Node(prefix, EMPTY, asSet(value));
         } else {
           root = putImpl(node, prefix, 0, value);
         }
@@ -78,7 +78,7 @@ final class PrefixTree<T> {
     final int commonLength = commonPrefixLength(node.prefix, key, offset);
     if (commonLength == 0 && prefixLength > 0) {
       // No common prefix
-      Node n = new Node(key.substring(offset), EMPTY, setOf(value));
+      Node n = new Node(key.substring(offset), EMPTY, asSet(value));
       return new Node("", new Node[] {n, node});
     } else if (keyLength == prefixLength && commonLength == prefixLength) {
       // Fully matches, add the value to this node
@@ -92,20 +92,20 @@ final class PrefixTree<T> {
         Node n = putImpl(node.children[pos], key, childOffset, value);
         return node.replaceChild(n, pos);
       } else {
-        Node n = new Node(key.substring(childOffset), EMPTY, setOf(value));
+        Node n = new Node(key.substring(childOffset), EMPTY, asSet(value));
         return node.addChild(n);
       }
     } else if (prefixLength > keyLength && commonLength == keyLength) {
       // prefix.startsWith(key), make new parent node and add this node as a child
       int childOffset = offset + commonLength;
       Node n = new Node(node.prefix.substring(commonLength), node.children, node.values);
-      return new Node(key.substring(offset, childOffset), new Node[] {n}, setOf(value));
+      return new Node(key.substring(offset, childOffset), new Node[] {n}, asSet(value));
     } else {
       // Common prefix is a subset of both
       int childOffset = offset + commonLength;
-      Node[] children = new Node[] {
+      Node[] children = {
           new Node(node.prefix.substring(commonLength), node.children, node.values),
-          new Node(key.substring(childOffset), EMPTY, setOf(value))
+          new Node(key.substring(childOffset), EMPTY, asSet(value))
       };
       return new Node(node.prefix.substring(0, commonLength), children);
     }
@@ -255,7 +255,7 @@ final class PrefixTree<T> {
     int s = 0;
     int e = nodes.length - 1;
     while (s <= e) {
-      int mid = (s + e) / 2;
+      int mid = (s + e) >>> 1;
       int cmp = Character.compare(nodes[mid].prefix.charAt(0), key.charAt(offset));
       if (cmp == 0)
         return mid;
@@ -268,10 +268,12 @@ final class PrefixTree<T> {
   }
 
   private static <T> Set<T> newSet() {
-    return new CopyOnWriteArraySet<>();//ConcurrentHashMap.newKeySet();
+    // The copy on write implementation is used because in the hot path traversing the set of values
+    // is the most important aspect.
+    return new CopyOnWriteArraySet<>();
   }
 
-  private static Set<Object> setOf(Object value) {
+  private static Set<Object> asSet(Object value) {
     Set<Object> set = newSet();
     set.add(value);
     return set;
