@@ -116,6 +116,10 @@ public class QueryTest {
     EqualsVerifier
         .forClass(Query.In.class)
         .suppress(Warning.NULL_FIELDS)
+        .withCachedHashCode(
+            "cachedHashCode",
+            "calculateHashCode",
+            new Query.In("k", Collections.singleton("v")))
         .verify();
   }
 

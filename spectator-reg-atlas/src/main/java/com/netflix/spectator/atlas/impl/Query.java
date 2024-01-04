@@ -567,11 +567,14 @@ public interface Query {
     private final String k;
     private final Set<String> vs;
 
+    private final int cachedHashCode;
+
     /** Create a new instance. */
     In(String k, Set<String> vs) {
       Preconditions.checkArg(!vs.isEmpty(), "list of values for :in cannot be empty");
       this.k = Preconditions.checkNotNull(k, "k");
       this.vs = Preconditions.checkNotNull(vs, "vs");
+      this.cachedHashCode = calculateHashCode();
     }
 
     @Override public String key() {
@@ -618,6 +621,10 @@ public interface Query {
     }
 
     @Override public int hashCode() {
+      return cachedHashCode;
+    }
+
+    private int calculateHashCode() {
       int result = k.hashCode();
       result = 31 * result + vs.hashCode();
       return result;
