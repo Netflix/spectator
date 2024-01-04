@@ -116,7 +116,7 @@ public final class QueryIndex<T> {
   // filter regex and in clauses. The matching is cached to avoid expensive regex checks
   // as much as possible.
   private final ConcurrentHashMap<Query.KeyQuery, QueryIndex<T>> otherChecks;
-  private final PrefixTree<Query.KeyQuery> otherChecksTree;
+  private final PrefixTree otherChecksTree;
   private final Cache<String, List<QueryIndex<T>>> otherChecksCache;
 
   // Index for :has queries
@@ -137,7 +137,7 @@ public final class QueryIndex<T> {
     this.key = key;
     this.equalChecks = new ConcurrentHashMap<>();
     this.otherChecks = new ConcurrentHashMap<>();
-    this.otherChecksTree = new PrefixTree<>();
+    this.otherChecksTree = new PrefixTree();
     this.otherChecksCache = cacheSupplier.get();
     this.hasKeyIdx = null;
     this.otherKeysIdx = null;
@@ -216,12 +216,7 @@ public final class QueryIndex<T> {
         } else {
           QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(cacheSupplier));
           idx.add(queries, j, value);
-          if (kq instanceof Query.Regex) {
-            Query.Regex re = (Query.Regex) kq;
-            otherChecksTree.put(re.pattern().prefix(), kq);
-          } else {
-            otherChecksTree.put(null, kq);
-          }
+          otherChecksTree.put(kq);
           otherChecksCache.clear();
 
           // Not queries should match if the key is missing from the id, so they need to
@@ -308,12 +303,7 @@ public final class QueryIndex<T> {
             otherChecksCache.clear();
             if (idx.isEmpty()) {
               otherChecks.remove(kq);
-              if (kq instanceof Query.Regex) {
-                Query.Regex re = (Query.Regex) kq;
-                otherChecksTree.remove(re.pattern().prefix(), kq);
-              } else {
-                otherChecksTree.remove(null, kq);
-              }
+              otherChecksTree.remove(kq);
             }
           }
 
@@ -406,7 +396,7 @@ public final class QueryIndex<T> {
             if (!otherChecks.isEmpty()) {
               List<QueryIndex<T>> tmp = new ArrayList<>();
               otherChecksTree.forEach(v, kq -> {
-                if (kq.matches(v)) {
+                if (kq instanceof Query.In || kq.matches(v)) {
                   QueryIndex<T> idx = otherChecks.get(kq);
                   if (idx != null) {
                     tmp.add(idx);
@@ -499,7 +489,7 @@ public final class QueryIndex<T> {
           if (!otherChecks.isEmpty()) {
             List<QueryIndex<T>> tmp = new ArrayList<>();
             otherChecksTree.forEach(v, kq -> {
-              if (matches(kq, v)) {
+              if (kq instanceof Query.In || matches(kq, v)) {
                 QueryIndex<T> idx = otherChecks.get(kq);
                 if (idx != null) {
                   tmp.add(idx);

@@ -20,57 +20,63 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class PrefixTreeTest {
 
-  private List<String> list(String... values) {
-    return Arrays.asList(values);
+  private List<Query.KeyQuery> list(String... values) {
+    return Arrays.stream(values).map(PrefixTreeTest::re).collect(Collectors.toList());
   }
 
-  private List<String> sort(List<String> values) {
-    values.sort(String::compareTo);
+  private List<Query.KeyQuery> sort(List<Query.KeyQuery> values) {
+    values.sort(Comparator.comparing(Object::toString));
     return values;
   }
 
-  private void assertSize(PrefixTree<?> tree, int expected) {
+  private static Query.KeyQuery re(String s) {
+    return new Query.Regex("name", "^" + s);
+  }
+
+  private void assertSize(PrefixTree tree, int expected) {
     Assertions.assertEquals(expected, tree.size());
     Assertions.assertEquals(expected == 0, tree.isEmpty());
   }
 
   @Test
   public void nullPrefix() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put(null, "1");
+    PrefixTree tree = new PrefixTree();
+    tree.put(null, re("1"));
     assertSize(tree, 1);
 
     Assertions.assertEquals(list("1"), tree.get("foo"));
     Assertions.assertEquals(list("1"), tree.get("bar"));
     Assertions.assertEquals(list("1"), tree.get(""));
 
-    Assertions.assertFalse(tree.remove(null, "2"));
-    Assertions.assertTrue(tree.remove(null, "1"));
+    Assertions.assertFalse(tree.remove(null, re("2")));
+    Assertions.assertTrue(tree.remove(null, re("1")));
     assertSize(tree, 0);
     Assertions.assertEquals(Collections.emptyList(), tree.get("foo"));
   }
 
   @Test
   public void emptyPrefix() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("", "1");
+    PrefixTree tree = new PrefixTree();
+    tree.put("", re("1"));
     Assertions.assertEquals(list("1"), tree.get("foo"));
     Assertions.assertEquals(list("1"), tree.get("bar"));
     Assertions.assertEquals(list("1"), tree.get(""));
 
-    Assertions.assertFalse(tree.remove("", "2"));
-    Assertions.assertTrue(tree.remove("", "1"));
+    Assertions.assertFalse(tree.remove("", re("2")));
+    Assertions.assertTrue(tree.remove("", re("1")));
     Assertions.assertEquals(Collections.emptyList(), tree.get("foo"));
   }
 
   @Test
   public void simplePrefix() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abc", "1");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abc", re("1"));
     assertSize(tree, 1);
 
     Assertions.assertEquals(list("1"), tree.get("abcdef"));
@@ -79,19 +85,19 @@ public class PrefixTreeTest {
     Assertions.assertEquals(Collections.emptyList(), tree.get("abd"));
     Assertions.assertEquals(Collections.emptyList(), tree.get("ab"));
 
-    Assertions.assertTrue(tree.remove("abc", "1"));
-    Assertions.assertFalse(tree.remove("abc", "1"));
+    Assertions.assertTrue(tree.remove("abc", re("1")));
+    Assertions.assertFalse(tree.remove("abc", re("1")));
     assertSize(tree, 0);
     Assertions.assertEquals(Collections.emptyList(), tree.get("abcdef"));
   }
 
   @Test
   public void multipleMatches() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abc", "1");
-    tree.put("ab", "2");
-    tree.put("a", "3");
-    tree.put("abc", "4");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abc", re("1"));
+    tree.put("ab", re("2"));
+    tree.put("a", re("3"));
+    tree.put("abc", re("4"));
     assertSize(tree, 4);
 
     Assertions.assertEquals(list("1", "2", "3", "4"), sort(tree.get("abcdef")));
@@ -99,16 +105,16 @@ public class PrefixTreeTest {
     Assertions.assertEquals(list("3"), tree.get("adef"));
     Assertions.assertEquals(Collections.emptyList(), tree.get("bcdef"));
 
-    Assertions.assertFalse(tree.remove("ab", "1"));
-    Assertions.assertTrue(tree.remove("abc", "1"));
+    Assertions.assertFalse(tree.remove("ab", re("1")));
+    Assertions.assertTrue(tree.remove("abc", re("1")));
     assertSize(tree, 3);
     Assertions.assertEquals(list("2", "3", "4"), sort(tree.get("abcdef")));
   }
 
   @Test
   public void unicodeCharInPrefix() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("aβc", "1");
+    PrefixTree tree = new PrefixTree();
+    tree.put("aβc", re("1"));
     assertSize(tree, 1);
 
     Assertions.assertEquals(list("1"), tree.get("aβcdef"));
@@ -122,24 +128,24 @@ public class PrefixTreeTest {
     Assertions.assertEquals(Collections.emptyList(), tree.get("aβ"));
     Assertions.assertEquals(Collections.emptyList(), tree.get("b"));
 
-    Assertions.assertTrue(tree.remove("aβc", "1"));
+    Assertions.assertTrue(tree.remove("aβc", re("1")));
     assertSize(tree, 0);
     Assertions.assertEquals(Collections.emptyList(), tree.get("abcdef"));
   }
 
   @Test
   public void emptyRootPrefix() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("ab", "ab");
-    tree.put("cd", "cd");
+    PrefixTree tree = new PrefixTree();
+    tree.put("ab", re("ab"));
+    tree.put("cd", re("cd"));
 
     Assertions.assertEquals(list("ab"), tree.get("ab"));
     Assertions.assertEquals(list("cd"), tree.get("cd"));
     Assertions.assertEquals(Collections.emptyList(), tree.get("ef"));
 
-    Assertions.assertTrue(tree.remove("ab", "ab"));
-    PrefixTree<String> tree2 = new PrefixTree<>();
-    tree2.put("cd", "cd");
+    Assertions.assertTrue(tree.remove("ab", re("ab")));
+    PrefixTree tree2 = new PrefixTree();
+    tree2.put("cd", re("cd"));
     Assertions.assertEquals(tree2, tree);
 
     Assertions.assertEquals(Collections.emptyList(), tree.get("ab"));
@@ -149,19 +155,19 @@ public class PrefixTreeTest {
 
   @Test
   public void updateExistingNode() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abcdef", "1");
-    tree.put("abcdef", "2");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abcdef", re("1"));
+    tree.put("abcdef", re("2"));
 
     Assertions.assertEquals(list("1", "2"), tree.get("abcdef"));
   }
 
   @Test
   public void addChildNode() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abc", "1");
-    tree.put("abcdefghi", "2");
-    tree.put("abcdef", "3");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abc", re("1"));
+    tree.put("abcdefghi", re("2"));
+    tree.put("abcdef", re("3"));
 
     Assertions.assertEquals(list("1", "3"), tree.get("abcdef"));
     Assertions.assertEquals(list("1", "3", "2"), tree.get("abcdefghi"));
@@ -169,9 +175,9 @@ public class PrefixTreeTest {
 
   @Test
   public void splitInteriorNode() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abcdef", "abcdef");
-    tree.put("abcghi", "abcghi");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abcdef", re("abcdef"));
+    tree.put("abcghi", re("abcghi"));
 
     Assertions.assertEquals(list("abcdef"), tree.get("abcdef"));
     Assertions.assertEquals(list("abcghi"), tree.get("abcghi"));
@@ -179,10 +185,10 @@ public class PrefixTreeTest {
 
   @Test
   public void manyDifferentRootPrefixes() {
-    PrefixTree<String> tree = new PrefixTree<>();
-    tree.put("abc", "abc");
-    tree.put("def", "def");
-    tree.put("ghi", "ghi");
+    PrefixTree tree = new PrefixTree();
+    tree.put("abc", re("abc"));
+    tree.put("def", re("def"));
+    tree.put("ghi", re("ghi"));
     Assertions.assertEquals(list("abc"), tree.get("abcdef"));
   }
 
