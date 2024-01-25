@@ -170,7 +170,7 @@ public final class DefaultPublisher implements Publisher {
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
         validationHelper.recordResults(payload.getMetrics().size(), res);
       } catch (Exception e) {
-        logger.warn("failed to send metrics (uri={})", uri, e);
+        logger.error("failed to send metrics (uri={})", uri, e);
         validationHelper.incrementDroppedHttp(payload.getMetrics().size());
       }
     };
@@ -191,7 +191,7 @@ public final class DefaultPublisher implements Publisher {
             .withJsonContent(json)
             .send();
       } catch (Exception e) {
-        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
+        logger.error("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
     };
     return CompletableFuture.runAsync(task, senderPool);

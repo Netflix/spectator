@@ -217,7 +217,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
         overridableClock.setWallTime(now / stepMillis * stepMillis + stepMillis);
         sendToAtlas();
       } catch (Exception e) {
-        logger.warn("failed to flush data to Atlas", e);
+        logger.error("failed to flush data to Atlas", e);
       }
 
       // Shutdown publisher used for sending metrics
@@ -317,7 +317,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
           }
         } catch (Exception e) {
-          logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
+          logger.error("failed to send metrics for subscriptions (uri={})", evalUri, e);
         }
       } else {
         logger.debug("lwc is disabled, skipping subscriptions");

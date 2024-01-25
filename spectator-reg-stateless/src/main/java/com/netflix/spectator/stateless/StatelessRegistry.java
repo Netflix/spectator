@@ -123,12 +123,12 @@ public final class StatelessRegistry extends AbstractRegistry {
             .compress(Deflater.BEST_SPEED)
             .send();
         if (res.status() != 200) {
-          logger.warn("failed to send metrics, status {}: {}", res.status(), res.entityAsString());
+          logger.error("failed to send metrics, status {}: {}", res.status(), res.entityAsString());
         }
       }
       removeExpiredMeters();
     } catch (Exception e) {
-      logger.warn("failed to send metrics", e);
+      logger.error("failed to send metrics", e);
     }
   }
 
