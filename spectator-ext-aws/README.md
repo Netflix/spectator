@@ -5,7 +5,7 @@ Use Spectator as the Metrics backend for AWS SDK Request Metrics.
 The spectator-ext-aws module can be plugged into the SDK globally using:
 
 `````java
-SpectatorMetricsCollector collector = new SpectatorMetricsCollector(Spectator.globalRegistry());
+SpectatorMetricCollector collector = new SpectatorMetricCollector(Spectator.globalRegistry());
 AwsSdkMetrics.setMetricCollector(collector);
 `````
 
