@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
  */
 class DefaultPlaceholderTimer extends AbstractDefaultPlaceholderMeter<Timer> implements Timer {
 
-  private final Clock clock;
-
   /**
    * Constructs a new timer with the specified dynamic id.
    *
@@ -38,12 +36,11 @@ class DefaultPlaceholderTimer extends AbstractDefaultPlaceholderMeter<Timer> imp
    */
   DefaultPlaceholderTimer(PlaceholderId id, Registry registry) {
     super(id, registry::timer);
-    this.clock = registry.clock();
   }
 
   @Override
   public Clock clock() {
-    return clock;
+    return resolveToCurrentMeter().clock();
   }
 
   @Override
