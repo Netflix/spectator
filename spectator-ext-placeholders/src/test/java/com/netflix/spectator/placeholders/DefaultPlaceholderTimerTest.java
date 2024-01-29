@@ -81,7 +81,7 @@ public class DefaultPlaceholderTimerTest {
     int expected = 42;
     Timer timer = factory.timer(factory.createId("testRecordCallable"));
     clock.setMonotonicTime(100L);
-    int actual = timer.record(() -> {
+    int actual = timer.recordCallable(() -> {
       clock.setMonotonicTime(500L);
       return expected;
     });
@@ -96,7 +96,7 @@ public class DefaultPlaceholderTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      timer.record(() -> {
+      timer.recordCallable(() -> {
         clock.setMonotonicTime(500L);
         throw new Exception("foo");
       });
@@ -112,7 +112,7 @@ public class DefaultPlaceholderTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer timer = factory.timer(factory.createId("testRecordRunnable"));
     clock.setMonotonicTime(100L);
-    timer.record(() -> clock.setMonotonicTime(500L));
+    timer.recordRunnable(() -> clock.setMonotonicTime(500L));
     Assertions.assertEquals(1L, timer.count());
     Assertions.assertEquals(timer.totalTime(), 400L);
   }
@@ -121,10 +121,10 @@ public class DefaultPlaceholderTimerTest {
   public void testRecordRunnableException() throws Exception {
     Timer timer = factory.timer(factory.createId("testRecordRunnableException"));
     clock.setMonotonicTime(100L);
-    Exception expectedExc = new RuntimeException("foo");
+    RuntimeException expectedExc = new RuntimeException("foo");
     Exception actualExc = null;
     try {
-      timer.record(() -> {
+      timer.recordRunnable(() -> {
         clock.setMonotonicTime(500L);
         throw expectedExc;
       });

@@ -25,7 +25,6 @@ import com.netflix.spectator.impl.AtomicDouble;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongToDoubleFunction;
@@ -65,24 +64,6 @@ class StatelessTimer extends StatelessMeter implements Timer {
       totalOfSquares.addAndGet(seconds * seconds);
       max.max(seconds);
       updateLastModTime();
-    }
-  }
-
-  @Override public <T> T record(Callable<T> f) throws Exception {
-    final long start = clock.monotonicTime();
-    try {
-      return f.call();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
-    }
-  }
-
-  @Override public void record(Runnable f) {
-    final long start = clock.monotonicTime();
-    try {
-      f.run();
-    } finally {
-      record(clock.monotonicTime() - start, TimeUnit.NANOSECONDS);
     }
   }
 

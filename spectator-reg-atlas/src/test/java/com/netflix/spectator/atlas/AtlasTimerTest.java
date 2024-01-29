@@ -272,14 +272,14 @@ public class AtlasTimerTest {
 
   @Test
   public void recordRunnable() {
-    dist.record(() -> clock.setMonotonicTime(clock.monotonicTime() + 2));
+    dist.recordRunnable(() -> clock.setMonotonicTime(clock.monotonicTime() + 2));
     clock.setWallTime(step + 1);
     checkValue(1, 2, 4, 2);
   }
 
   @Test
   public void recordCallable() throws Exception {
-    String s = dist.record(() -> {
+    String s = dist.recordCallable(() -> {
       clock.setMonotonicTime(clock.monotonicTime() + 2);
       return "foo";
     });
