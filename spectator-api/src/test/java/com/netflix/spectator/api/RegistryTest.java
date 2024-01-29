@@ -519,7 +519,7 @@ public class RegistryTest {
     ExpiringRegistry registry = new ExpiringRegistry(clock);
     Timer t = registry.timer("test");
 
-    t.record(() -> {
+    t.recordRunnable(() -> {
       // Force expiration in the body of the lambda
       clock.setWallTime(60000 * 30);
       registry.removeExpiredMeters();

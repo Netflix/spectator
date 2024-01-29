@@ -142,7 +142,7 @@ public class MicrometerRegistryTest {
   @Test
   public void timerRecordRunnable() {
     Timer t = registry.timer("foo");
-    t.record((Runnable) () -> clock.add(42, TimeUnit.SECONDS));
+    t.recordRunnable(() -> clock.add(42, TimeUnit.SECONDS));
     Assertions.assertEquals(1, t.count());
     Assertions.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
   }
@@ -150,7 +150,7 @@ public class MicrometerRegistryTest {
   @Test
   public void timerRecordCallable() throws Exception {
     Timer t = registry.timer("foo");
-    t.record(() -> clock.add(42, TimeUnit.SECONDS));
+    t.recordCallable(() -> clock.add(42, TimeUnit.SECONDS));
     Assertions.assertEquals(1, t.count());
     Assertions.assertEquals(TimeUnit.SECONDS.toNanos(42), t.totalTime());
   }

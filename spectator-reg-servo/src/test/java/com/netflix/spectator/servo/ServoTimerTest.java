@@ -79,7 +79,7 @@ public class ServoTimerTest {
   public void testRecordCallable() throws Exception {
     Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
-    int v = t.record(() -> {
+    int v = t.recordCallable(() -> {
       clock.setMonotonicTime(500L);
       return 42;
     });
@@ -94,7 +94,7 @@ public class ServoTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record((Callable<Integer>) () -> {
+      t.recordCallable(() -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });
@@ -110,7 +110,7 @@ public class ServoTimerTest {
   public void testRecordRunnable() throws Exception {
     Timer t = newTimer("foo");
     clock.setMonotonicTime(100L);
-    t.record(() -> clock.setMonotonicTime(500L));
+    t.recordRunnable(() -> clock.setMonotonicTime(500L));
     Assertions.assertEquals(t.count(), 1L);
     Assertions.assertEquals(t.totalTime(), 400L);
   }
@@ -121,7 +121,7 @@ public class ServoTimerTest {
     clock.setMonotonicTime(100L);
     boolean seen = false;
     try {
-      t.record((Runnable) () -> {
+      t.recordRunnable(() -> {
         clock.setMonotonicTime(500L);
         throw new RuntimeException("foo");
       });

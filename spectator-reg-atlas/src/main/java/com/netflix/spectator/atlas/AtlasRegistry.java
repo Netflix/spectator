@@ -253,7 +253,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   private void timePublishTask(String id, String lockName, Runnable task) {
-    publishTaskTimer(id).record(() -> {
+    publishTaskTimer(id).recordRunnable(() -> {
       Lock lock = publishTaskLocks.computeIfAbsent(lockName, n -> new ReentrantLock());
       lock.lock();
       try {
@@ -341,7 +341,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           evaluator.update(id, timestamp, value);
         };
         logger.debug("collecting measurements for time: {}", t);
-        publishTaskTimer("pollMeasurements").record(() -> StreamSupport
+        publishTaskTimer("pollMeasurements").recordRunnable(() -> StreamSupport
             .stream(spliterator(), parallelPolling)
             .forEach(meter -> ((AtlasMeter) meter).measure(t, consumer)));
         lastPollTimestamp = t;

@@ -180,7 +180,7 @@ public class SidecarRegistryTest {
   @Test
   public void timerRecordCallable() throws Exception {
     Timer t = registry.timer("test");
-    long v = t.record(() -> {
+    long v = t.recordCallable(() -> {
       clock.setMonotonicTime(100_000_000);
       return registry.clock().monotonicTime();
     });
@@ -191,7 +191,7 @@ public class SidecarRegistryTest {
   @Test
   public void timerRecordRunnable() {
     Timer t = registry.timer("test");
-    t.record(() -> {
+    t.recordRunnable(() -> {
       clock.setMonotonicTime(100_000_000);
     });
     assertSingleMessage("t:test:0.1");

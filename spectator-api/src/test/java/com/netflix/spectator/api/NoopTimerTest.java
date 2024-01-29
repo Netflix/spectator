@@ -41,7 +41,7 @@ public class NoopTimerTest {
     NoopTimer t = NoopTimer.INSTANCE;
     boolean seen = false;
     try {
-      t.record(() -> {
+      t.recordCallable(() -> {
         throw new Exception("foo");
       });
     } catch (Exception e) {
@@ -55,7 +55,7 @@ public class NoopTimerTest {
     NoopTimer t = NoopTimer.INSTANCE;
     AtomicBoolean run = new AtomicBoolean();
 
-    t.record(() -> run.set(true));
+    t.recordRunnable(() -> run.set(true));
     Assertions.assertTrue(run.get());
   }
 
