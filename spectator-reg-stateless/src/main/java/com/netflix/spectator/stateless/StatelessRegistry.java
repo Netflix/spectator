@@ -26,6 +26,8 @@ import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
 import com.netflix.spectator.ipc.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Duration;
@@ -48,6 +50,8 @@ import java.util.zip.Deflater;
  */
 public final class StatelessRegistry extends AbstractRegistry {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(StatelessRegistry.class);
+
   private final boolean enabled;
   private final Duration frequency;
   private final long meterTTL;
@@ -58,6 +62,7 @@ public final class StatelessRegistry extends AbstractRegistry {
   private final Map<String, String> commonTags;
 
   private final HttpClient client;
+  private final ValidationHelper validationHelper;
 
   private Scheduler scheduler;
 
@@ -73,6 +78,7 @@ public final class StatelessRegistry extends AbstractRegistry {
     this.batchSize = config.batchSize();
     this.commonTags = config.commonTags();
     this.client = HttpClient.create(this);
+    this.validationHelper = new ValidationHelper(LOGGER, this);
   }
 
   /**
@@ -121,10 +127,12 @@ public final class StatelessRegistry extends AbstractRegistry {
             .withReadTimeout(readTimeout)
             .withContent("application/json", payload)
             .compress(Deflater.BEST_SPEED)
-            .send();
+            .send()
+            .decompress();
         if (res.status() != 200) {
           logger.warn("failed to send metrics, status {}: {}", res.status(), res.entityAsString());
         }
+        validationHelper.recordResults(batch.size(), res);
       }
       removeExpiredMeters();
     } catch (Exception e) {

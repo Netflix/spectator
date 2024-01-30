@@ -2,6 +2,7 @@ dependencies {
   api project(':spectator-api')
   api project(':spectator-ext-ipc')
   implementation 'com.fasterxml.jackson.core:jackson-core'
+  testImplementation 'com.fasterxml.jackson.core:jackson-databind'
 }
 
 jar {

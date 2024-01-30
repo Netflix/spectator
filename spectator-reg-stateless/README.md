@@ -1,8 +1,6 @@
 ## Description
 
-**DEPRECATED:** should not be used for any new development as Prana is deprecated.
-
-Registry implementation for reporting data to a [Prana] sidecar.
+Registry implementation for reporting data to an aggregator cluster.
 
 [Prana]: https://github.com/Netflix/Prana
 
