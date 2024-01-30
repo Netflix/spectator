@@ -15,7 +15,6 @@
  */
 package com.netflix.spectator.stateless;
 
-import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
 import org.junit.jupiter.api.Assertions;
