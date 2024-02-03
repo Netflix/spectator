@@ -1,7 +1,7 @@
 import java.util.zip.ZipFile
 
 plugins {
-  id 'io.github.goooler.shadow' version '8.1.3'
+    id "com.github.johnrengelman.shadow"
 }
 
 dependencies {
@@ -51,7 +51,6 @@ afterEvaluate {
   publishing {
     publications {
       withType(MavenPublication) {
-        artifact(shadowJar)
         pom.withXml {
           asNode()
             .dependencies
