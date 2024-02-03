@@ -1,14 +1,16 @@
+// Needed until shadow plugin is updated for JDK21. For more details see
+// https://github.com/Netflix/spectator/issues/1113
 buildscript {
-    configurations.configureEach { configuration ->
-        configuration.resolutionStrategy {
-            eachDependency { DependencyResolveDetails details ->
-                if (details.requested.group == 'org.ow2.asm') {
-                    details.useVersion '9.6'
-                    details.because "Asm 9.6 is required for JDK 21+ support"
-                }
-            }
+  configurations.configureEach { configuration ->
+    configuration.resolutionStrategy {
+      eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'org.ow2.asm') {
+          details.useVersion '9.6'
+          details.because "Asm 9.6 is required for JDK 21+ support"
         }
+      }
     }
+  }
 }
 
 plugins {
