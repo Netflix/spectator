@@ -18,7 +18,7 @@ plugins {
   id 'com.github.spotbugs' version '5.2.5' apply false
   id "com.github.johnrengelman.shadow" version "8.1.1" apply false
   id 'me.champeau.jmh' version '0.7.2'
-  id 'com.netflix.nebula.dependency-recommender' version '12.2.0'
+  id 'com.netflix.nebula.dependency-recommender' version '12.4.0'
   id 'com.netflix.nebula.netflixoss' version '11.5.0'
   // Need to override as transitive from netflixoss has git.user error
   id 'com.netflix.nebula.release' version '19.0.6'
