@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -172,8 +173,13 @@ public class Evaluator {
           consolidator.update(timestamp, Double.NaN);
           final double v = consolidator.value(timestamp);
           if (!Double.isNaN(v)) {
-            Map<String, String> tags = idMapper.apply(entry.getKey());
-            tags.putAll(commonTags);
+            Map<String, String> tags = Collections.emptyMap();
+            if (!(expr instanceof DataExpr.AggregateFunction)) {
+              // Aggregation functions only use tags based on the expression. Avoid overhead of
+              // considering the tags for the data.
+              tags = idMapper.apply(entry.getKey());
+              tags.putAll(commonTags);
+            }
             if (delayGaugeAggr && consolidator.isGauge()) {
               // When performing a group by, datapoints missing tag used for the grouping
               // should be ignored
