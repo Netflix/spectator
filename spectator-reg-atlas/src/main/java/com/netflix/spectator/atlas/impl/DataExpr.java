@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,6 +116,19 @@ public interface DataExpr {
     Iterable<TagsValuePair> result();
   }
 
+  /** Base type for simple aggregators that have a single result value. */
+  interface SimpleAggregator extends Aggregator {
+    /** Compute the result for the aggregation. Can be used to avoid the list allocation with result. */
+    TagsValuePair resultPair();
+
+    @Override default Iterable<TagsValuePair> result() {
+      TagsValuePair pair = resultPair();
+      return pair == null
+          ? Collections.emptyList()
+          : Collections.singletonList(pair);
+    }
+  }
+
   /**
    * Includes all datapoints that match the query expression.
    */
@@ -217,7 +230,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
-      return new Aggregator() {
+      return new SimpleAggregator() {
         private double aggr = 0.0;
         private int count = 0;
 
@@ -228,10 +241,8 @@ public interface DataExpr {
           }
         }
 
-        @Override public Iterable<TagsValuePair> result() {
-          return (count > 0)
-              ? Collections.singletonList(new TagsValuePair(tags, aggr))
-              : Collections.emptyList();
+        @Override public TagsValuePair resultPair() {
+          return (count > 0) ? new TagsValuePair(tags, aggr) : null;
         }
       };
     }
@@ -284,7 +295,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
-      return new Aggregator() {
+      return new SimpleAggregator() {
         private double aggr = Double.MAX_VALUE;
         private int count = 0;
 
@@ -295,10 +306,8 @@ public interface DataExpr {
           }
         }
 
-        @Override public Iterable<TagsValuePair> result() {
-          return (count > 0)
-              ? Collections.singletonList(new TagsValuePair(tags, aggr))
-              : Collections.emptyList();
+        @Override public TagsValuePair resultPair() {
+          return (count > 0) ? new TagsValuePair(tags, aggr) : null;
         }
       };
     }
@@ -351,7 +360,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
-      return new Aggregator() {
+      return new SimpleAggregator() {
         private double aggr = -Double.MAX_VALUE;
         private int count = 0;
 
@@ -362,10 +371,8 @@ public interface DataExpr {
           }
         }
 
-        @Override public Iterable<TagsValuePair> result() {
-          return (count > 0)
-              ? Collections.singletonList(new TagsValuePair(tags, aggr))
-              : Collections.emptyList();
+        @Override public TagsValuePair resultPair() {
+          return (count > 0) ? new TagsValuePair(tags, aggr) : null;
         }
       };
     }
@@ -422,7 +429,7 @@ public interface DataExpr {
     }
 
     @Override public Aggregator aggregator(Map<String, String> tags, boolean shouldCheckQuery) {
-      return new Aggregator() {
+      return new SimpleAggregator() {
         private int aggr = 0;
 
         @Override public void update(TagsValuePair p) {
@@ -431,10 +438,8 @@ public interface DataExpr {
           }
         }
 
-        @Override public Iterable<TagsValuePair> result() {
-          return (aggr > 0)
-              ? Collections.singletonList(new TagsValuePair(tags, aggr))
-              : Collections.emptyList();
+        @Override public TagsValuePair resultPair() {
+          return (aggr > 0) ? new TagsValuePair(tags, aggr) : null;
         }
       };
     }
@@ -513,22 +518,27 @@ public interface DataExpr {
 
     @Override public Aggregator aggregator(Map<String, String> ignored, boolean shouldCheckQuery) {
       return new Aggregator() {
-        private final Map<Map<String, String>, Aggregator> aggrs = new HashMap<>();
+        private final Map<Map<String, String>, SimpleAggregator> aggrs = new HashMap<>();
 
         @Override public void update(TagsValuePair p) {
           Map<String, String> tags = p.tags();
           if (!shouldCheckQuery || af.query().matches(tags)) {
             Map<String, String> k = resultTags(tags);
             if (k != null) {
-              aggrs.computeIfAbsent(k, ks -> af.aggregator(ks, false)).update(p);
+              aggrs.computeIfAbsent(k, ks -> (SimpleAggregator) af.aggregator(ks, false)).update(p);
             }
           }
         }
 
         @Override public Iterable<TagsValuePair> result() {
-          return aggrs.values().stream()
-              .flatMap(a -> StreamSupport.stream(a.result().spliterator(), false))
-              .collect(Collectors.toList());
+          List<TagsValuePair> pairs = new ArrayList<>(aggrs.size());
+          for (SimpleAggregator aggr : aggrs.values()) {
+            TagsValuePair pair = aggr.resultPair();
+            if (pair != null) {
+              pairs.add(pair);
+            }
+          }
+          return pairs;
         }
       };
     }
