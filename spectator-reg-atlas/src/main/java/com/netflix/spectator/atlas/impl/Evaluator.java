@@ -34,8 +34,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Evaluates all the expressions for a set of subscriptions.
@@ -49,7 +49,7 @@ public class Evaluator {
 
   private final Lock lock = new ReentrantLock();
   private final Map<String, String> commonTags;
-  private final Function<Id, Map<String, String>> idMapper;
+  private final BiFunction<Id, Set<String>, Map<String, String>> idMapper;
   private final long step;
   private final boolean delayGaugeAggregation;
   private final QueryIndex<SubscriptionEntry> index;
@@ -174,11 +174,12 @@ public class Evaluator {
           final double v = consolidator.value(timestamp);
           if (!Double.isNaN(v)) {
             Map<String, String> tags = Collections.emptyMap();
-            if (!(expr instanceof DataExpr.AggregateFunction)) {
+            if (expr instanceof DataExpr.GroupBy) {
               // Aggregation functions only use tags based on the expression. Avoid overhead of
               // considering the tags for the data.
-              tags = idMapper.apply(entry.getKey());
-              tags.putAll(commonTags);
+              Set<String> keys = ((DataExpr.GroupBy) expr).keys();
+              tags = idMapper.apply(entry.getKey(), keys);
+              putCommonTags(tags, keys);
             }
             if (delayGaugeAggr && consolidator.isGauge()) {
               // When performing a group by, datapoints missing tag used for the grouping
@@ -209,6 +210,18 @@ public class Evaluator {
     });
 
     return new EvalPayload(timestamp, metrics);
+  }
+
+  private void putCommonTags(Map<String, String> dst, Set<String> keys) {
+    if (dst.size() < keys.size()) {
+      // Skip this step unless there is something pending
+      for (String key : keys) {
+        String value = commonTags.get(key);
+        if (value != null) {
+          dst.put(key, value);
+        }
+      }
+    }
   }
 
   private String idHash(Id id) {

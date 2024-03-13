@@ -471,13 +471,17 @@ public interface DataExpr {
   final class GroupBy implements DataExpr {
 
     private final AggregateFunction af;
-    private final List<String> keys;
+    private final Set<String> keys;
 
     /** Create a new instance. */
-    GroupBy(AggregateFunction af, List<String> keys) {
+    GroupBy(AggregateFunction af, Set<String> keys) {
       Preconditions.checkArg(!keys.isEmpty(), "key list for group by cannot be empty");
       this.af = af;
       this.keys = keys;
+    }
+
+    Set<String> keys() {
+      return keys;
     }
 
     @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")

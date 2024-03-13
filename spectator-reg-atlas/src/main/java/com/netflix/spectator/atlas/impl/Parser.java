@@ -21,6 +21,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -196,7 +197,7 @@ public final class Parser {
         case ":by":
           tmp = (List<String>) stack.pop();
           af = (DataExpr.AggregateFunction) stack.pop();
-          stack.push(new DataExpr.GroupBy(af, tmp));
+          stack.push(new DataExpr.GroupBy(af, new LinkedHashSet<>(tmp)));
           break;
         case ":rollup-drop":
           tmp = (List<String>) stack.pop();
