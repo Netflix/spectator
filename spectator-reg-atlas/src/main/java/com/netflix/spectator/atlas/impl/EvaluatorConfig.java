@@ -20,6 +20,8 @@ import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.atlas.AtlasConfig;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -45,7 +47,7 @@ public interface EvaluatorConfig {
           return config.commonTags();
         }
 
-        @Override public Function<Id, Map<String, String>> idMapper() {
+        @Override public BiFunction<Id, Set<String>, Map<String, String>> idMapper() {
           return new IdMapper(JsonUtils.createReplacementFunction(config.validTagCharacters()));
         }
       };
@@ -59,7 +61,7 @@ public interface EvaluatorConfig {
   Map<String, String> commonTags();
 
   /** Function to convert an id to a map of key/value pairs. */
-  default Function<Id, Map<String, String>> idMapper() {
+  default BiFunction<Id, Set<String>, Map<String, String>> idMapper() {
     return new IdMapper(Function.identity());
   }
 

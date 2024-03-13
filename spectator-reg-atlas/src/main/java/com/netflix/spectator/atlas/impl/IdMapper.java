@@ -19,6 +19,8 @@ import com.netflix.spectator.api.Id;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -27,7 +29,7 @@ import java.util.function.Function;
  * <p><b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
-public final class IdMapper implements Function<Id, Map<String, String>> {
+public final class IdMapper implements BiFunction<Id, Set<String>, Map<String, String>> {
 
   private final Function<String, String> fixTagString;
 
@@ -37,21 +39,25 @@ public final class IdMapper implements Function<Id, Map<String, String>> {
   }
 
   @Override
-  public Map<String, String> apply(Id id) {
+  public Map<String, String> apply(Id id, Set<String> keys) {
     int size = id.size();
-    Map<String, String> tags = new HashMap<>(size);
+    Map<String, String> tags = new HashMap<>(keys.size());
 
     // Start at 1 as name will be added last
     for (int i = 1; i < size; ++i) {
       String k = fixTagString.apply(id.getKey(i));
-      String v = fixTagString.apply(id.getValue(i));
-      tags.put(k, v);
+      if (keys.contains(k)) {
+        String v = fixTagString.apply(id.getValue(i));
+        tags.put(k, v);
+      }
     }
 
     // Add the name, it is added last so it will have precedence if the user tried to
     // use a tag key of "name".
-    String name = fixTagString.apply(id.name());
-    tags.put("name", name);
+    if (keys.contains("name")) {
+      String name = fixTagString.apply(id.name());
+      tags.put("name", name);
+    }
 
     return tags;
   }
