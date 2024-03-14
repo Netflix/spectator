@@ -480,6 +480,10 @@ public interface DataExpr {
       this.keys = keys;
     }
 
+    AggregateFunction aggregateFunction() {
+      return af;
+    }
+
     Set<String> keys() {
       return keys;
     }
