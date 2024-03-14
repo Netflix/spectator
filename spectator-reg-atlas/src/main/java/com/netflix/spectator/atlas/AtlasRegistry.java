@@ -308,10 +308,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
           EvalPayload payload = evaluator.eval(t);
           if (!payload.getMetrics().isEmpty()) {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (EvalPayload batch : payload.toBatches(batchSize)) {
-              CompletableFuture<Void> future = publisher.publish(batch);
-              futures.add(future);
-            }
+            payload.consumeBatches(batchSize, p -> futures.add(publisher.publish(p)));
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
           }
         } catch (Exception e) {

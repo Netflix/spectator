@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Wraps a list of measurements with a set of common tags. The common tags are
@@ -70,18 +71,31 @@ public final class EvalPayload {
    *     List of payloads that have at most {@code batchSize} metrics per payload.
    */
   public List<EvalPayload> toBatches(int batchSize) {
+    List<EvalPayload> payloads = new ArrayList<>(metrics.size() / batchSize + 1);
+    consumeBatches(batchSize, payloads::add);
+    return payloads;
+  }
+
+  /**
+   * Break the payload down to a set of batches to limit the size of requests going to the
+   * service.
+   *
+   * @param batchSize
+   *     Size of the metric batches to create.
+   * @param consumer
+   *     Consumer to receive an eval payload batch.
+   */
+  public void consumeBatches(int batchSize, Consumer<EvalPayload> consumer) {
     int size = metrics.size();
     if (size <= batchSize) {
-      return Collections.singletonList(this);
+      consumer.accept(this);
     } else {
-      List<EvalPayload> payloads = new ArrayList<>(size / batchSize + 1);
       for (int i = 0; i < size; i += batchSize) {
         List<Metric> batch = metrics.subList(i, Math.min(size, i + batchSize));
         // There shouldn't be many messages, stick in the first batch
         List<Message> msgs = (i == 0) ? messages : Collections.emptyList();
-        payloads.add(new EvalPayload(timestamp, batch, msgs));
+        consumer.accept(new EvalPayload(timestamp, batch, msgs));
       }
-      return payloads;
     }
   }
 
