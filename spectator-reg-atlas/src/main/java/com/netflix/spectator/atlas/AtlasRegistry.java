@@ -253,15 +253,13 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   private void timePublishTask(String id, String lockName, Runnable task) {
-    publishTaskTimer(id).recordRunnable(() -> {
-      Lock lock = publishTaskLocks.computeIfAbsent(lockName, n -> new ReentrantLock());
-      lock.lock();
-      try {
-        task.run();
-      } finally {
-        lock.unlock();
-      }
-    });
+    Lock lock = publishTaskLocks.computeIfAbsent(lockName, n -> new ReentrantLock());
+    lock.lock();
+    try {
+      publishTaskTimer(id).recordRunnable(task);
+    } finally {
+      lock.unlock();
+    }
   }
 
   void sendToAtlas() {
