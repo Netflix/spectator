@@ -141,10 +141,14 @@ public final class Hash64 {
   /** Update the hash with the specified byte value. */
   public Hash64 updateByte(byte value) {
     checkSpace(Byte.SIZE);
+    updateByteImpl(value);
+    return this;
+  }
+
+  private void updateByteImpl(byte value) {
     final long v = ((long) value & 0xFFL) << bitPos;
     stripe[stripePos] |= v;
     bitPos += Byte.SIZE;
-    return this;
   }
 
   /** Update the hash with the specified byte values. */
@@ -156,17 +160,25 @@ public final class Hash64 {
 
       // Complete current stripe
       for (int i = offset; i < s; ++i) {
-        updateByte(values[i]);
+        updateByteImpl(values[i]);
       }
+      if (++stripePos == stripe.length) {
+        processStripe();
+      }
+      bitPos = 0;
 
       // Write long values
       for (int i = s; i < e; i += Long.BYTES) {
-        updateLong(UnsafeUtils.getLong(values, i));
+        stripe[stripePos] = UnsafeUtils.getLong(values, i);
+        if (++stripePos == stripe.length) {
+          processStripe();
+        }
       }
 
       // Write remaining bytes
+      stripe[stripePos] = 0L;
       for (int i = e; i < offset + length; ++i) {
-        updateByte(values[i]);
+        updateByteImpl(values[i]);
       }
     } else {
       for (int i = offset; i < offset + length; ++i) {
