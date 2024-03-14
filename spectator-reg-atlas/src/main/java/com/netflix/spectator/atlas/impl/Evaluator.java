@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -173,23 +172,30 @@ public class Evaluator {
           consolidator.update(timestamp, Double.NaN);
           final double v = consolidator.value(timestamp);
           if (!Double.isNaN(v)) {
-            Map<String, String> tags = Collections.emptyMap();
+            Map<String, String> tags =  null;
             if (expr instanceof DataExpr.GroupBy) {
               // Aggregation functions only use tags based on the expression. Avoid overhead of
               // considering the tags for the data.
-              Set<String> keys = ((DataExpr.GroupBy) expr).keys();
+              DataExpr.GroupBy by = (DataExpr.GroupBy) expr;
+              Set<String> keys = by.keys();
               tags = idMapper.apply(entry.getKey(), keys);
               putCommonTags(tags, keys);
+              if (tags.size() < keys.size()) {
+                // When performing a group by, datapoints missing tag used for the grouping
+                // should be ignored
+                tags = null;
+              } else {
+                tags.putAll(by.aggregateFunction().queryTags());
+              }
+            } else if (expr instanceof DataExpr.AggregateFunction) {
+              DataExpr.AggregateFunction af = (DataExpr.AggregateFunction) expr;
+              tags = new HashMap<>(af.resultTags(af.queryTags()));
             }
             if (delayGaugeAggr && consolidator.isGauge()) {
-              // When performing a group by, datapoints missing tag used for the grouping
-              // should be ignored
-              Map<String, String> rs = expr.resultTags(tags);
-              if (rs != null) {
-                Map<String, String> resultTags = new HashMap<>(rs);
-                resultTags.put("atlas.aggr", idHash(entry.getKey()));
+              if (tags != null) {
+                tags.put("atlas.aggr", idHash(entry.getKey()));
                 double acc = expr.isCount() ? 1.0 : v;
-                metrics.add(new EvalPayload.Metric(subId, resultTags, acc));
+                metrics.add(new EvalPayload.Metric(subId, tags, acc));
               }
             } else {
               TagsValuePair p = new TagsValuePair(tags, v);
