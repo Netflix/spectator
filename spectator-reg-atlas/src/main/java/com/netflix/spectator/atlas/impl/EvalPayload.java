@@ -70,9 +70,9 @@ public final class EvalPayload {
    * @return
    *     List of payloads that have at most {@code batchSize} metrics per payload.
    */
-  public List<EvalPayload> toBatches(int batchSize) {
+  public List<EvalPayload> consumeBatches(int batchSize) {
     List<EvalPayload> payloads = new ArrayList<>(metrics.size() / batchSize + 1);
-    toBatches(batchSize, payloads::add);
+    consumeBatches(batchSize, payloads::add);
     return payloads;
   }
 
@@ -85,7 +85,7 @@ public final class EvalPayload {
    * @param consumer
    *     Consumer to receive an eval payload batch.
    */
-  public void toBatches(int batchSize, Consumer<EvalPayload> consumer) {
+  public void consumeBatches(int batchSize, Consumer<EvalPayload> consumer) {
     int size = metrics.size();
     if (size <= batchSize) {
       consumer.accept(this);

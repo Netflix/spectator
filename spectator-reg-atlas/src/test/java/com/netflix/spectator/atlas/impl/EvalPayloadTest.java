@@ -77,7 +77,7 @@ public class EvalPayloadTest {
   @Test
   public void toBatchesBelowThreshold() {
     EvalPayload payload = new EvalPayload(0L, metrics(4));
-    List<EvalPayload> batches = payload.toBatches(4);
+    List<EvalPayload> batches = payload.consumeBatches(4);
     Assertions.assertEquals(1, batches.size());
     Assertions.assertSame(payload, batches.get(0));
   }
@@ -85,7 +85,7 @@ public class EvalPayloadTest {
   @Test
   public void toBatchesAboveThreshold() {
     EvalPayload payload = new EvalPayload(0L, metrics(21));
-    List<EvalPayload> batches = payload.toBatches(4);
+    List<EvalPayload> batches = payload.consumeBatches(4);
     Assertions.assertEquals(6, batches.size());
     int i = 0;
     for (EvalPayload batch : batches) {
@@ -100,7 +100,7 @@ public class EvalPayloadTest {
   @Test
   public void toBatchesWithMessages() {
     EvalPayload payload = new EvalPayload(0L, metrics(21), messages(2));
-    List<EvalPayload> batches = payload.toBatches(4);
+    List<EvalPayload> batches = payload.consumeBatches(4);
     Assertions.assertEquals(6, batches.size());
     int i = 0;
     for (EvalPayload batch : batches) {
