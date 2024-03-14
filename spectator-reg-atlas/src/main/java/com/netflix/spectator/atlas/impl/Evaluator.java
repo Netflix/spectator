@@ -197,7 +197,7 @@ public class Evaluator {
                 double acc = expr.isCount() ? 1.0 : v;
                 metrics.add(new EvalPayload.Metric(subId, tags, acc));
               }
-            } else {
+            } else if (tags != null) {
               TagsValuePair p = new TagsValuePair(tags, v);
               aggregator.update(p);
               LOGGER.trace("aggregating: {}: {}", timestamp, p);

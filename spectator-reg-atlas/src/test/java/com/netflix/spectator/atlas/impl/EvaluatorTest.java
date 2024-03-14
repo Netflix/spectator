@@ -124,6 +124,19 @@ public class EvaluatorTest {
   }
 
   @Test
+  public void missingTagGroupBy() {
+    List<Subscription> subs = new ArrayList<>();
+    subs.add(newSubscription("sum", ":true,:sum,(,app,),:by"));
+
+    Evaluator evaluator = newEvaluator();
+    evaluator.sync(subs);
+    EvalPayload payload = evaluator.eval(0L, data("foo", 1.0, 2.0, 3.0));
+
+    EvalPayload expected = new EvalPayload(0L, Collections.emptyList());
+    Assertions.assertEquals(expected, sort(payload));
+  }
+
+  @Test
   public void updateSub() {
 
     // Eval with sum
