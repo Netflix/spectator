@@ -70,7 +70,7 @@ public final class EvalPayload {
    * @return
    *     List of payloads that have at most {@code batchSize} metrics per payload.
    */
-  public List<EvalPayload> consumeBatches(int batchSize) {
+  public List<EvalPayload> toBatches(int batchSize) {
     List<EvalPayload> payloads = new ArrayList<>(metrics.size() / batchSize + 1);
     consumeBatches(batchSize, payloads::add);
     return payloads;
