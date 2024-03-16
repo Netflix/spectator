@@ -305,7 +305,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       if (config.lwcEnabled()) {
         logger.debug("sending to LWC for time: {}", t);
         try {
-          EvalPayload payload = evaluator.eval(t);
+          EvalPayload payload = evaluator.eval(t, parallelPolling);
           if (!payload.getMetrics().isEmpty()) {
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             payload.consumeBatches(batchSize, p -> futures.add(publisher.publish(p)));
