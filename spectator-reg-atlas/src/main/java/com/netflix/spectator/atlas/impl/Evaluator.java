@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -31,10 +32,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.stream.StreamSupport;
 
 /**
  * Evaluates all the expressions for a set of subscriptions.
@@ -154,8 +157,24 @@ public class Evaluator {
    *     Payload representing the results of the evaluation.
    */
   public EvalPayload eval(long timestamp) {
-    List<EvalPayload.Metric> metrics = new ArrayList<>();
-    subscriptions.values().forEach(subEntry -> {
+    return eval(timestamp, false);
+  }
+
+  /**
+   * Evaluate the expressions for all subscriptions against the data available for the provided
+   * timestamp. The data must be populated by calling {@link #update(Id, long, double)} prior to
+   * performing the evaluation.
+   *
+   * @param timestamp
+   *     Timestamp for the interval to evaluate.
+   * @param parallel
+   *     Should the subscriptions be evaluated in parallel?
+   * @return
+   *     Payload representing the results of the evaluation.
+   */
+  public EvalPayload eval(long timestamp, boolean parallel) {
+    Collection<EvalPayload.Metric> metrics = new ConcurrentLinkedQueue<>();
+    StreamSupport.stream(subscriptions.values().spliterator(), parallel).forEach(subEntry -> {
       final String subId = subEntry.subscription.getId();
       final long step = subEntry.subscription.getFrequency();
 
@@ -215,7 +234,7 @@ public class Evaluator {
       }
     });
 
-    return new EvalPayload(timestamp, metrics);
+    return new EvalPayload(timestamp, new ArrayList<>(metrics));
   }
 
   private void putCommonTags(Map<String, String> dst, Set<String> keys) {
