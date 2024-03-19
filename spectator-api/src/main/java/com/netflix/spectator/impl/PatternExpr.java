@@ -18,6 +18,7 @@ package com.netflix.spectator.impl;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 /**
  * Represents an expression of simpler patterns combined with AND, OR, and NOT clauses.
@@ -32,6 +33,11 @@ public interface PatternExpr {
    * to ensure the matching logic is consistent with the original regular expression.
    */
   boolean matches(String value);
+
+  /**
+   * Returns a copy of the expression that will ignore the case when matching.
+   */
+  PatternExpr ignoreCase();
 
   /**
    * Convert this expression into a query string. A common example would be to implement
@@ -163,6 +169,10 @@ public interface PatternExpr {
       return matcher.matches(str);
     }
 
+    @Override public PatternExpr ignoreCase() {
+      return new Regex(matcher.ignoreCase());
+    }
+
     @Override public String toString() {
       return "'" + matcher + "'";
     }
@@ -198,6 +208,10 @@ public interface PatternExpr {
         }
       }
       return true;
+    }
+
+    @Override public PatternExpr ignoreCase() {
+      return new And(exprs.stream().map(PatternExpr::ignoreCase).collect(Collectors.toList()));
     }
 
     @Override public String toString() {
@@ -239,6 +253,10 @@ public interface PatternExpr {
       return false;
     }
 
+    @Override public PatternExpr ignoreCase() {
+      return new Or(exprs.stream().map(PatternExpr::ignoreCase).collect(Collectors.toList()));
+    }
+
     @Override public String toString() {
       StringJoiner joiner = new StringJoiner(" OR ", "(", ")");
       exprs.forEach(expr -> joiner.add(expr.toString()));
@@ -271,6 +289,10 @@ public interface PatternExpr {
 
     @Override public boolean matches(String str) {
       return !expr.matches(str);
+    }
+
+    @Override public PatternExpr ignoreCase() {
+      return new Not(expr.ignoreCase());
     }
 
     @Override public String toString() {
