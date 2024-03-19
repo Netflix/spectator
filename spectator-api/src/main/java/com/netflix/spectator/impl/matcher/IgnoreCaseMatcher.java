@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.io.Serializable;
@@ -25,19 +26,25 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  private final PatternMatcher matcher;
+  private final Matcher matcher;
 
   /**
    * Underlying matcher to use for checking the string. It should have already been converted
    * to match on the lower case version of the string.
    */
-  IgnoreCaseMatcher(PatternMatcher matcher) {
+  IgnoreCaseMatcher(Matcher matcher) {
     this.matcher = matcher;
   }
 
   @Override
   public boolean matches(String str) {
     return matcher.matches(str);
+  }
+
+  @Override
+  public PatternExpr toPatternExpr(int max) {
+    PatternExpr expr = PatternUtils.toPatternExpr(matcher, max);
+    return expr == null ? null : expr.ignoreCase();
   }
 
   @Override
