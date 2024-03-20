@@ -72,8 +72,14 @@ public final class PercentileTimer implements Timer {
    * site.
    */
   private static PercentileTimer computeIfAbsent(Registry registry, Id id, long min, long max) {
-    Object timer = Utils.computeIfAbsent(
-        registry.state(), id, i -> new PercentileTimer(registry, id, min, max));
+    Object timer = registry.state().get(id);
+    if (timer == null) {
+      PercentileTimer newTimer = new PercentileTimer(registry, id, min, max);
+      timer = registry.state().putIfAbsent(id, newTimer);
+      if (timer == null) {
+        return newTimer;
+      }
+    }
     return (timer instanceof PercentileTimer)
         ? ((PercentileTimer) timer).withRange(min, max)
         : new PercentileTimer(registry, id, min, max);
