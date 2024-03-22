@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.Timer;
-import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.IdBuilder;
 import com.netflix.spectator.api.patterns.TagsBuilder;
 
@@ -72,6 +71,12 @@ public final class PercentileTimer implements Timer {
    * site.
    */
   private static PercentileTimer computeIfAbsent(Registry registry, Id id, long min, long max) {
+    // Inlined:
+    // Object timer = Utils.computeIfAbsent(
+    //        registry.state(), id, i -> new PercentileTimer(registry, id, min, max));
+    //
+    // The lambda needs to capture the parameters for registry, min, and max which can lead to
+    // a high allocation rate for the lambda instance.
     Object timer = registry.state().get(id);
     if (timer == null) {
       PercentileTimer newTimer = new PercentileTimer(registry, id, min, max);

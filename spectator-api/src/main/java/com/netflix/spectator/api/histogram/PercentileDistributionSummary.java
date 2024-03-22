@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Statistic;
-import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.IdBuilder;
 import com.netflix.spectator.api.patterns.TagsBuilder;
 
@@ -66,8 +65,20 @@ public final class PercentileDistributionSummary implements DistributionSummary 
    */
   private static PercentileDistributionSummary computeIfAbsent(
       Registry registry, Id id, long min, long max) {
-    Object summary = Utils.computeIfAbsent(
-        registry.state(), id, i -> new PercentileDistributionSummary(registry, id, min, max));
+    // Inlined:
+    // Object summary = Utils.computeIfAbsent(
+    //        registry.state(), id, i -> new PercentileDistributionSummary(registry, id, min, max));
+    //
+    // The lambda needs to capture the parameters for registry, min, and max which can lead to
+    // a high allocation rate for the lambda instance.
+    Object summary = registry.state().get(id);
+    if (summary == null) {
+      PercentileDistributionSummary newSummary = new PercentileDistributionSummary(registry, id, min, max);
+      summary = registry.state().putIfAbsent(id, newSummary);
+      if (summary == null) {
+        return newSummary;
+      }
+    }
     return (summary instanceof PercentileDistributionSummary)
         ? ((PercentileDistributionSummary) summary).withRange(min, max)
         : new PercentileDistributionSummary(registry, id, min, max);
