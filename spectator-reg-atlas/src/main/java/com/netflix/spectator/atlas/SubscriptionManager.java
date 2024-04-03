@@ -112,10 +112,10 @@ class SubscriptionManager {
   private Subscriptions filterByStep(Subscriptions subs) {
     List<Subscription> filtered = new ArrayList<>(subs.getExpressions().size());
     for (Subscription sub : subs.getExpressions()) {
-      if (isSupportedFrequency(sub.getFrequency())) {
+      if (sub.isTimeSeries() && isSupportedFrequency(sub.getFrequency())) {
         filtered.add(sub);
       } else {
-        LOGGER.trace("ignored subscription with invalid frequency: {}", sub);
+        LOGGER.trace("ignored subscription with unsupported type or invalid step: {}", sub);
       }
     }
     return new Subscriptions().withExpressions(filtered);

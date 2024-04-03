@@ -42,4 +42,19 @@ public class SubscriptionTest {
     Assertions.assertThrows(IllegalArgumentException.class,
         () -> new Subscription().withExpression(":true").dataExpr());
   }
+
+  @Test
+  public void timeSeries() {
+    Subscription sub = new Subscription().withExpression(":true,:sum");
+    Assertions.assertTrue(sub.isTimeSeries());
+
+    sub.setExprType("TIME_SERIES");
+    Assertions.assertTrue(sub.isTimeSeries());
+
+    sub.setExprType("EVENTS");
+    Assertions.assertFalse(sub.isTimeSeries());
+
+    sub.setExprType("TRACE_TIME_SERIES");
+    Assertions.assertFalse(sub.isTimeSeries());
+  }
 }

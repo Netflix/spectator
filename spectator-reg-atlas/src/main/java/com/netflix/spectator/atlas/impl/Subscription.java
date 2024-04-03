@@ -24,6 +24,7 @@ package com.netflix.spectator.atlas.impl;
 public final class Subscription {
 
   private String id;
+  private String exprType;
   private String expression;
   private long frequency;
 
@@ -42,6 +43,12 @@ public final class Subscription {
     return expr;
   }
 
+  /** Return true if it is a time series expression. */
+  public boolean isTimeSeries() {
+    // Null is for legacy endpoints that do not indicate the type.
+    return exprType == null || "TIME_SERIES".equals(exprType);
+  }
+
   /** Id for a subscription.  */
   public String getId() {
     return id;
@@ -55,6 +62,22 @@ public final class Subscription {
   /** Set the subscription id. */
   public Subscription withId(String id) {
     this.id = id;
+    return this;
+  }
+
+  /** Expression type for the subscription. */
+  public String getExprType() {
+    return exprType;
+  }
+
+  /** Set the expression for the subscription. */
+  public void setExprType(String exprType) {
+    this.exprType = exprType;
+  }
+
+  /** Set the expression for the subscription. */
+  public Subscription withExprType(String exprType) {
+    setExprType(exprType);
     return this;
   }
 
@@ -97,6 +120,7 @@ public final class Subscription {
     Subscription that = (Subscription) o;
     return frequency == that.frequency
         && equalsOrNull(id, that.id)
+        && equalsOrNull(exprType, that.exprType)
         && equalsOrNull(expression, that.expression);
   }
 
@@ -106,6 +130,7 @@ public final class Subscription {
 
   @Override public int hashCode() {
     int result = hashCodeOrZero(id);
+    result = 31 * result + hashCodeOrZero(exprType);
     result = 31 * result + hashCodeOrZero(expression);
     result = 31 * result + (int) (frequency ^ (frequency >>> 32));
     return result;
@@ -116,6 +141,6 @@ public final class Subscription {
   }
 
   @Override public String toString() {
-    return "Subscription(" + id + ",[" + expression + "]," + frequency + ")";
+    return "Subscription(" + id + "," + exprType + ",[" + expression + "]," + frequency + ")";
   }
 }
