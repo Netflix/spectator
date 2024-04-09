@@ -122,6 +122,7 @@ public final class HostSanitizer {
     return pos >= 0 ? host.substring(0, pos) : host;
   }
 
+  @SuppressWarnings("PMD")
   private static String sanitizeSegments(String host, Set<String> allowed) {
     HostStringBuilder builder = new HostStringBuilder();
 
