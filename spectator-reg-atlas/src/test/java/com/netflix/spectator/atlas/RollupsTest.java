@@ -271,4 +271,29 @@ public class RollupsTest {
       }
     }
   }
+
+  @Test
+  public void fromRulesDrop() {
+    registry.counter("notDropped").increment();
+    for (int i = 0; i < 10; ++i) {
+      registry.counter("test", "i", "" + i).increment();
+    }
+    clock.setWallTime(5000);
+    List<Measurement> input = registry.measurements().collect(Collectors.toList());
+    List<RollupPolicy.Rule> rules = new ArrayList<>();
+    rules.add(new RollupPolicy.Rule("i,:has", list(), RollupPolicy.Operation.DROP));
+    RollupPolicy policy = Rollups.fromRules(map("app", "foo", "node", "i-123"), rules);
+
+    List<RollupPolicy.Result> results = policy.apply(input);
+    Assertions.assertEquals(1, results.size());
+    for (RollupPolicy.Result result : results) {
+      Assertions.assertEquals(1, result.measurements().size());
+      String name = result.measurements().get(0).id().name();
+      if ("notDropped".equals(name)) {
+        Assertions.assertEquals(map("app", "foo", "node", "i-123"), result.commonTags());
+      } else {
+        Assertions.fail("data not dropped");
+      }
+    }
+  }
 }
