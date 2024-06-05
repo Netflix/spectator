@@ -76,7 +76,7 @@ public class Server {
 
   public Response handle(Request req) {
     final long s = System.nanoTime();
-    requestLatency.record(() -> {
+    requestLatency.recordRunnable(() -> {
       try {
         Response res = doSomething(req);
 
