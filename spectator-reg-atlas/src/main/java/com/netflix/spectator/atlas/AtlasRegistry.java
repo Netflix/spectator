@@ -196,7 +196,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // Shutdown background tasks to collect data
       scheduler.shutdown();
       scheduler = null;
-      logger.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
+      logger.info("stopped collecting metrics every {} reporting to {}", step, uri);
 
       // Flush data to Atlas
       try {
