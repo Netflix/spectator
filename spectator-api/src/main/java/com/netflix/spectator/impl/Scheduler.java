@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,15 +170,28 @@ public class Scheduler {
 
   /**
    * Shutdown and cleanup resources associated with the scheduler. All threads will be
-   * interrupted, but this method does not block for them to all finish execution.
+   * interrupted and this method will block until they are shutdown.
    */
   public void shutdown() {
     lock.lock();
     try {
       shutdown = true;
+
+      // Interrupt threads to shutdown
+      for (Thread thread : threads) {
+        if (thread != null && thread.isAlive()) {
+          thread.interrupt();
+        }
+      }
+
+      // Wait for all threads to complete
       for (int i = 0; i < threads.length; ++i) {
-        if (threads[i] != null && threads[i].isAlive()) {
-          threads[i].interrupt();
+        if (threads[i] != null) {
+          try {
+            threads[i].join();
+          } catch (Exception e) {
+            LOGGER.debug("exception while shutting down thread {}", threads[i].getName(), e);
+          }
           threads[i] = null;
         }
       }
@@ -188,6 +201,13 @@ public class Scheduler {
   }
 
   private void startThreads() {
+    // Normally when a thread exits, it will try to restart, if shutting down
+    // exit early before trying to get the lock.
+    if (shutdown) {
+      return;
+    }
+
+    // Start threads if setting up the scheduler or if a thread failed.
     lock.lock();
     try {
       if (!shutdown) {
@@ -478,7 +498,7 @@ public class Scheduler {
       try {
         // Note: do not use Thread.interrupted() because it will clear the interrupt
         // status of the thread.
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!shutdown && !Thread.currentThread().isInterrupted()) {
           try {
             DelayedTask task = queue.take();
             stats.incrementActiveTaskCount();
