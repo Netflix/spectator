@@ -116,6 +116,11 @@ public class QueryIndexTest {
     }
     for (int i = 0; i < 4; ++i) {
       Assertions.assertEquals(expected, sort(idx.findMatches(Query.toMap(id)::get)));
+      // Only check could match case here since couldMatch should be a superset of actual
+      // matches
+      if (!expected.isEmpty()) {
+        Assertions.assertTrue(idx.couldMatch(Query.toMap(id)::get));
+      }
     }
   }
 
@@ -550,5 +555,25 @@ public class QueryIndexTest {
       );
       Assertions.assertEquals(5, queries.size());
     });
+  }
+
+  @Test
+  public void couldMatchPartial() {
+    Registry registry = new NoopRegistry();
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+    Query q = Parser.parseQuery("name,foo,:eq,id,bar,:eq,:and,app,baz,:re,:and");
+    idx.add(q, 42);
+
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo"))::get));
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "id", "bar"))::get));
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "app", "baz-main"))::get));
+
+    // Since `id` is after `app` and `app` is missing in tags, it will short-circuit and
+    // assume it could match
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "id", "baz"))::get));
+
+    // Filtered out
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo2", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "bar-main"))::get));
   }
 }
