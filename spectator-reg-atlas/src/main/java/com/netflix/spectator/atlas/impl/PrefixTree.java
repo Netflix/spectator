@@ -27,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * Simple tree for finding all values associated with a prefix that matches the search
@@ -276,6 +277,58 @@ final class PrefixTree {
         node.inQueries.forEach(consumer);
       }
     }
+  }
+
+  /**
+   * Invokes the predicate function for each value associated with a prefix of the search key
+   * until a match is found.
+   *
+   * @param key
+   *     Key to compare against the prefixes.
+   * @param predicate
+   *     Function to call to see if there is a match.
+   */
+  boolean exists(String key, Predicate<Query.KeyQuery> predicate) {
+    // In queries cannot have an empty value, so cannot be in the root set
+    if (exists(otherQueries, predicate)) {
+      return true;
+    }
+    Node node = root;
+    return node != null && existsImpl(node, key, 0, predicate);
+  }
+
+  private boolean existsImpl(Node node, String key, int offset, Predicate<Query.KeyQuery> predicate) {
+    final int prefixLength = node.prefix.length();
+    final int keyLength = key.length() - offset;
+    final int commonLength = commonPrefixLength(node.prefix, key, offset);
+
+    if (commonLength == prefixLength) {
+      // Prefix matches, consume other queries
+      if (exists(node.otherQueries, predicate)) {
+        return true;
+      }
+
+      if (commonLength < keyLength) {
+        // There is more to the key, check if there are also matches for child nodes
+        int childOffset = offset + commonLength;
+        int pos = find(node.children, key, childOffset);
+        return pos >= 0 && existsImpl(node.children[pos], key, childOffset, predicate);
+      } else {
+        // It is an exact match, consume in queries
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private boolean exists(Set<Query.KeyQuery> qs, Predicate<Query.KeyQuery> predicate) {
+    for (Query.KeyQuery kq : qs) {
+      if (predicate.test(kq)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**

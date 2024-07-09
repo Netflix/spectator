@@ -526,10 +526,82 @@ public final class QueryIndex<T> {
     }
   }
 
+  /**
+   * Check the set of tags, which could be a partial set, and return true if it is possible
+   * that it would match some set of expressions. This method can be used as a cheap pre-filter
+   * check. In some cases this can be useful to avoid expensive transforms to get the final
+   * set of tags for matching.
+   *
+   * @param tags
+   *     Partial set of tags to check against the index. Function is used to look up the
+   *     value for a given tag key. The function should return {@code null} if there is no
+   *     value for the key.
+   * @return
+   *     True if it is possible there would be a match based on the partial set of tags.
+   */
+  @SuppressWarnings("PMD.NPathComplexity")
+  public boolean couldMatch(Function<String, String> tags) {
+    // Matches for this level
+    if (!matches.isEmpty()) {
+      return true;
+    }
+
+    boolean keyPresent = false;
+    if (key != null) {
+      String v = tags.apply(key);
+      if (v != null) {
+        keyPresent = true;
+
+        // Check exact matches
+        QueryIndex<T> eqIdx = equalChecks.get(v);
+        if (eqIdx != null && eqIdx.couldMatch(tags)) {
+          return true;
+        }
+
+        // Scan for matches with other conditions
+        if (!otherChecks.isEmpty()) {
+          boolean otherMatches = otherChecksTree.exists(v, kq -> {
+            if (kq instanceof Query.In || couldMatch(kq, v)) {
+              QueryIndex<T> idx = otherChecks.get(kq);
+              return idx != null && idx.couldMatch(tags);
+            }
+            return false;
+          });
+          if (otherMatches) {
+            return true;
+          }
+        }
+
+        // Check matches for has key
+        if (hasKeyIdx != null && hasKeyIdx.couldMatch(tags)) {
+          return true;
+        }
+      }
+    }
+
+    // Check matches with other keys
+    if (otherKeysIdx != null && otherKeysIdx.couldMatch(tags)) {
+      return true;
+    }
+
+    // Check matches with missing keys
+    return !keyPresent;
+  }
+
   private boolean matches(Query.KeyQuery kq, String value) {
     if (kq instanceof Query.Regex) {
       Query.Regex re = (Query.Regex) kq;
       return re.pattern().matchesAfterPrefix(value);
+    } else {
+      return kq.matches(value);
+    }
+  }
+
+  private boolean couldMatch(Query.KeyQuery kq, String value) {
+    if (kq instanceof Query.Regex) {
+      // For this possible matches prefix check is sufficient, avoid full regex to
+      // keep the pre-filter checks cheap.
+      return true;
     } else {
       return kq.matches(value);
     }
