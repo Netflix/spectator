@@ -37,7 +37,11 @@ import java.util.stream.Stream;
 
 /**
  * A {@link RequestMetricCollector} that captures request level metrics for AWS clients.
+ *
+ * @deprecated Users should migrate to AWS SDK for Java V2. AWS will drop support
+ * for V1 after 2025.
  */
+@Deprecated
 public class SpectatorRequestMetricCollector extends RequestMetricCollector {
 
   /**
