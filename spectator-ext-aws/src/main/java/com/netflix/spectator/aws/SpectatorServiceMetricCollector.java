@@ -27,7 +27,11 @@ import java.util.concurrent.TimeUnit;
 /**
  * A {@link ServiceMetricCollector} that captures the time it takes to get a connection
  * from the pool.
+ *
+ * @deprecated Users should migrate to AWS SDK for Java V2. AWS will drop support
+ * for V1 after 2025.
  */
+@Deprecated
 class SpectatorServiceMetricCollector extends ServiceMetricCollector {
 
   private final Timer clientGetConnectionTime;
