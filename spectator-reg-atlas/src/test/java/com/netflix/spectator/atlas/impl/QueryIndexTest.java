@@ -558,6 +558,19 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void couldMatchEmpty() {
+    Registry registry = new NoopRegistry();
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "baz-main"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "id", "baz"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo2", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "bar-main"))::get));
+  }
+
+  @Test
   public void couldMatchPartial() {
     Registry registry = new NoopRegistry();
     QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
