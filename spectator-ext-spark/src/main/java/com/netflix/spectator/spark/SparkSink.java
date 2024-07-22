@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 /**
  * Sink for exporting spark metrics.
  */
-public class SparkSink implements Sink {
+public final class SparkSink implements Sink {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SparkSink.class);
 
