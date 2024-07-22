@@ -21,7 +21,7 @@ plugins {
   id 'com.netflix.nebula.dependency-recommender' version '12.5.0'
   id 'com.netflix.nebula.netflixoss' version '11.5.0'
   // Need to override as transitive from netflixoss has git.user error
-  id 'com.netflix.nebula.release' version '19.0.8'
+  id 'com.netflix.nebula.release' version '19.0.10'
 }
 
 // Establish version and status
