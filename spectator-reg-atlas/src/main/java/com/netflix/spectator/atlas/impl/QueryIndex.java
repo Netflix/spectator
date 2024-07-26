@@ -94,10 +94,8 @@ public final class QueryIndex<T> {
    * This allows the {@link Id} to be traversed in order while performing the lookup.
    */
   private static int compare(String k1, String k2) {
-    if ("name".equals(k1) && "name".equals(k2)) {
-      return 0;
-    } else if ("name".equals(k1)) {
-      return -1;
+    if ("name".equals(k1)) {
+      return "name".equals(k2) ? 0 : -1;
     } else if ("name".equals(k2)) {
       return 1;
     } else {
