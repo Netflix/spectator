@@ -23,6 +23,8 @@ import com.netflix.spectator.jvm.Jmx;
 import com.netflix.spectator.sidecar.SidecarRegistry;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigResolveOptions;
+import com.typesafe.config.ConfigResolver;
 import org.apache.spark.metrics.sink.Sink;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +58,7 @@ public final class SparkSink implements Sink {
       Properties properties,
       MetricRegistry registry,
       org.apache.spark.SecurityManager manager) {
-    final Config config = loadConfig();
+    final Config config = loadConfig(properties);
     sidecarRegistry = new SidecarRegistry(
         Clock.SYSTEM, new SpectatorConfig(config.getConfig("spectator.spark.sidecar")));
     reporter = SpectatorReporter.forRegistry(registry)
@@ -76,8 +78,24 @@ public final class SparkSink implements Sink {
     }
   }
 
-  private Config loadConfig() {
-    return ConfigFactory.load(pickClassLoader());
+  private Config loadConfig(Properties properties) {
+    ClassLoader classLoader = pickClassLoader();
+    String resolverClassName = properties.getProperty("resolver");
+    if (resolverClassName == null) {
+      return ConfigFactory.load(classLoader);
+    }
+    ConfigResolver configResolver = getConfigResolver(resolverClassName, classLoader);
+    ConfigResolveOptions resolveOptions = ConfigResolveOptions.defaults().appendResolver(configResolver);
+    return ConfigFactory.load(classLoader, resolveOptions);
+  }
+
+  private static ConfigResolver getConfigResolver(String resolverClassName, ClassLoader classLoader) {
+    try {
+      LOGGER.info("Creating ConfigResolver instance for {}", resolverClassName);
+      return (ConfigResolver) classLoader.loadClass(resolverClassName).getDeclaredConstructor().newInstance();
+    } catch (Exception e) {
+      throw new IllegalArgumentException(String.format("Error creating instance for %s", resolverClassName), e);
+    }
   }
 
   @SuppressWarnings("PMD.UseProperClassLoader")
