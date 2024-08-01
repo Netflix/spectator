@@ -272,4 +272,19 @@ public class Hash64Test {
       hashes.add(h);
     }
   }
+
+  @Test
+  public void reduce() {
+    int n = 10;
+    int[] counts = new int[n];
+    Random r = new Random();
+    for (int i = 0; i < 100_000; ++i) {
+      long hash = r.nextLong();
+      ++counts[Hash64.reduce(hash, n)];
+    }
+    for (int count : counts) {
+      int delta = Math.abs(10_000 - count);
+      Assertions.assertTrue(delta < 1000);
+    }
+  }
 }
