@@ -414,4 +414,22 @@ public final class Hash64 {
     reset();
     return h;
   }
+
+  /**
+   * Helper to efficiently reduce hash from to range of {@code [0, n)}. Based on
+   * <a href="https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/">fast
+   * alternative to modulo reduction</a> post.
+   */
+  public static int reduce(long hash, int n) {
+    return reduce((int) hash, n);
+  }
+
+  /**
+   * Helper to efficiently reduce hash from to range of {@code [0, n)}. Based on
+   * <a href="https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/">fast
+   * alternative to modulo reduction</a> post.
+   */
+  public static int reduce(int hash, int n) {
+    return (int) (((hash & 0xFFFFFFFFL) * (n & 0xFFFFFFFFL)) >>> 32);
+  }
 }
