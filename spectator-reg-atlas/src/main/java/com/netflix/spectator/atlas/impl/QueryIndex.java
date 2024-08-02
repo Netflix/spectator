@@ -383,12 +383,13 @@ public final class QueryIndex<T> {
         String v = tags.getValue(j);
         int cmp = compare(k, keyRef);
         if (cmp == 0) {
+          final int nextPos = j + 1;
           keyPresent = true;
 
           // Find exact matches
           QueryIndex<T> eqIdx = equalChecks.get(v);
           if (eqIdx != null) {
-            eqIdx.forEachMatch(tags, i + 1, consumer);
+            eqIdx.forEachMatch(tags, nextPos, consumer);
           }
 
           // Scan for matches with other conditions
@@ -403,7 +404,7 @@ public final class QueryIndex<T> {
                   QueryIndex<T> idx = otherChecks.get(kq);
                   if (idx != null) {
                     tmp.add(idx);
-                    idx.forEachMatch(tags, i + 1, consumer);
+                    idx.forEachMatch(tags, nextPos, consumer);
                   }
                 }
               });
@@ -414,14 +415,14 @@ public final class QueryIndex<T> {
             // size/get avoids the allocation and has better throughput.
             int n = otherMatches.size();
             for (int p = 0; p < n; ++p) {
-              otherMatches.get(p).forEachMatch(tags, i + 1, consumer);
+              otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
             }
           }
 
           // Check matches for has key
           final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
           if (hasKeyIdxRef != null) {
-            hasKeyIdxRef.forEachMatch(tags, i, consumer);
+            hasKeyIdxRef.forEachMatch(tags, j, consumer);
           }
         }
 
