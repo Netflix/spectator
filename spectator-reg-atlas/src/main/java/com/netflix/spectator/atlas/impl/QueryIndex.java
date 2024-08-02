@@ -333,9 +333,13 @@ public final class QueryIndex<T> {
     return matches.isEmpty()
         && equalChecks.values().stream().allMatch(QueryIndex::isEmpty)
         && otherChecks.values().stream().allMatch(QueryIndex::isEmpty)
-        && (hasKeyIdx == null || hasKeyIdx.isEmpty())
-        && (otherKeysIdx == null || otherKeysIdx.isEmpty())
-        && (missingKeysIdx == null || missingKeysIdx.isEmpty());
+        && isEmpty(hasKeyIdx)
+        && isEmpty(otherKeysIdx)
+        && isEmpty(missingKeysIdx);
+  }
+
+  private boolean isEmpty(QueryIndex<T> idx) {
+    return idx == null || idx.isEmpty();
   }
 
   /**
@@ -369,14 +373,15 @@ public final class QueryIndex<T> {
     // Matches for this level
     matches.forEach(consumer);
 
-    if (key != null) {
+    final String keyRef = key;
+    if (keyRef != null) {
 
       boolean keyPresent = false;
 
       for (int j = i; j < tags.size(); ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
-        int cmp = compare(k, key);
+        int cmp = compare(k, keyRef);
         if (cmp == 0) {
           keyPresent = true;
 
@@ -414,8 +419,9 @@ public final class QueryIndex<T> {
           }
 
           // Check matches for has key
-          if (hasKeyIdx != null) {
-            hasKeyIdx.forEachMatch(tags, i, consumer);
+          final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+          if (hasKeyIdxRef != null) {
+            hasKeyIdxRef.forEachMatch(tags, i, consumer);
           }
         }
 
@@ -426,13 +432,15 @@ public final class QueryIndex<T> {
       }
 
       // Check matches with other keys
-      if (otherKeysIdx != null) {
-        otherKeysIdx.forEachMatch(tags, i, consumer);
+      final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+      if (otherKeysIdxRef != null) {
+        otherKeysIdxRef.forEachMatch(tags, i, consumer);
       }
 
       // Check matches with missing keys
-      if (missingKeysIdx != null && !keyPresent) {
-        missingKeysIdx.forEachMatch(tags, i, consumer);
+      final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+      if (missingKeysIdxRef != null && !keyPresent) {
+        missingKeysIdxRef.forEachMatch(tags, i, consumer);
       }
     }
   }
@@ -468,8 +476,9 @@ public final class QueryIndex<T> {
     matches.forEach(consumer);
 
     boolean keyPresent = false;
-    if (key != null) {
-      String v = tags.apply(key);
+    final String keyRef = key;
+    if (keyRef != null) {
+      String v = tags.apply(keyRef);
       if (v != null) {
         keyPresent = true;
 
@@ -507,20 +516,23 @@ public final class QueryIndex<T> {
         }
 
         // Check matches for has key
-        if (hasKeyIdx != null) {
-          hasKeyIdx.forEachMatch(tags, consumer);
+        final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+        if (hasKeyIdxRef != null) {
+          hasKeyIdxRef.forEachMatch(tags, consumer);
         }
       }
     }
 
     // Check matches with other keys
-    if (otherKeysIdx != null) {
-      otherKeysIdx.forEachMatch(tags, consumer);
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
+      otherKeysIdxRef.forEachMatch(tags, consumer);
     }
 
     // Check matches with missing keys
-    if (missingKeysIdx != null && !keyPresent) {
-      missingKeysIdx.forEachMatch(tags, consumer);
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null && !keyPresent) {
+      missingKeysIdxRef.forEachMatch(tags, consumer);
     }
   }
 
@@ -545,8 +557,9 @@ public final class QueryIndex<T> {
     }
 
     boolean keyPresent = false;
-    if (key != null) {
-      String v = tags.apply(key);
+    final String keyRef = key;
+    if (keyRef != null) {
+      String v = tags.apply(keyRef);
       if (v != null) {
         keyPresent = true;
 
@@ -571,14 +584,16 @@ public final class QueryIndex<T> {
         }
 
         // Check matches for has key
-        if (hasKeyIdx != null && hasKeyIdx.couldMatch(tags)) {
+        final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+        if (hasKeyIdxRef != null && hasKeyIdxRef.couldMatch(tags)) {
           return true;
         }
       }
     }
 
     // Check matches with other keys
-    if (otherKeysIdx != null && otherKeysIdx.couldMatch(tags)) {
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null && otherKeysIdxRef.couldMatch(tags)) {
       return true;
     }
 
@@ -625,11 +640,12 @@ public final class QueryIndex<T> {
       Deque<String> path,
       BiConsumer<List<String>, List<Query.KeyQuery>> consumer
   ) {
-    if (key != null) {
-      path.addLast("K=" + key);
+    final String keyRef = key;
+    if (keyRef != null) {
+      path.addLast("K=" + keyRef);
 
       equalChecks.forEach((v, idx) -> {
-        path.addLast(key + "," + v + ",:eq");
+        path.addLast(keyRef + "," + v + ",:eq");
         idx.findHotSpots(threshold, path, consumer);
         path.removeLast();
       });
@@ -646,24 +662,27 @@ public final class QueryIndex<T> {
       });
       path.removeLast();
 
-      if (hasKeyIdx != null) {
+      final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+      if (hasKeyIdxRef != null) {
         path.addLast("has");
-        hasKeyIdx.findHotSpots(threshold, path, consumer);
+        hasKeyIdxRef.findHotSpots(threshold, path, consumer);
         path.removeLast();
       }
 
       path.removeLast();
     }
 
-    if (otherKeysIdx != null) {
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
       path.addLast("other-keys");
-      otherKeysIdx.findHotSpots(threshold, path, consumer);
+      otherKeysIdxRef.findHotSpots(threshold, path, consumer);
       path.removeLast();
     }
 
-    if (missingKeysIdx != null) {
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null) {
       path.addLast("missing-keys");
-      missingKeysIdx.findHotSpots(threshold, path, consumer);
+      missingKeysIdxRef.findHotSpots(threshold, path, consumer);
       path.removeLast();
     }
   }
@@ -682,8 +701,9 @@ public final class QueryIndex<T> {
   }
 
   private void buildString(StringBuilder builder, int n) {
-    if (key != null) {
-      indent(builder, n).append("key: [").append(key).append("]\n");
+    final String keyRef = key;
+    if (keyRef != null) {
+      indent(builder, n).append("key: [").append(keyRef).append("]\n");
     }
     if (!equalChecks.isEmpty()) {
       indent(builder, n).append("equal checks:\n");
@@ -699,17 +719,20 @@ public final class QueryIndex<T> {
         idx.buildString(builder, n + 1);
       });
     }
-    if (hasKeyIdx != null) {
+    final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+    if (hasKeyIdxRef != null) {
       indent(builder, n).append("has key:\n");
-      hasKeyIdx.buildString(builder, n + 1);
+      hasKeyIdxRef.buildString(builder, n + 1);
     }
-    if (otherKeysIdx != null) {
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
       indent(builder, n).append("other keys:\n");
-      otherKeysIdx.buildString(builder, n + 1);
+      otherKeysIdxRef.buildString(builder, n + 1);
     }
-    if (missingKeysIdx != null) {
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null) {
       indent(builder, n).append("missing keys:\n");
-      missingKeysIdx.buildString(builder, n + 1);
+      missingKeysIdxRef.buildString(builder, n + 1);
     }
     if (!matches.isEmpty()) {
       indent(builder, n).append("matches:\n");

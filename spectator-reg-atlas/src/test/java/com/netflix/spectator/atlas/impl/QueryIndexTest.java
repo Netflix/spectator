@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class QueryIndexTest {
@@ -588,5 +589,51 @@ public class QueryIndexTest {
     // Filtered out
     Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo2", "id", "bar"))::get));
     Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "bar-main"))::get));
+  }
+
+  @Test
+  public void updateRaceCondition() throws Exception {
+    Query q1 = Parser.parseQuery("name,test,:eq");
+    // Will be placed in otherKeysIdx for parent
+    Query q2 = Parser.parseQuery("foo,bar,:eq");
+
+    QueryIndex<Query> idx = QueryIndex.newInstance(new NoopRegistry());
+    idx.add(q1, q1);
+
+    final int N = 1_000_000;
+    final List<Thread> threads = new ArrayList<>(16);
+
+    // Query tasks
+    final AtomicInteger matches = new AtomicInteger();
+    final Id id = Id.create("test").withTag("foo", "bar");
+    for (int i = 0; i < 16; ++i) {
+      Thread t = new Thread(() -> {
+        for (int j = 0; j < N; ++j) {
+          matches.addAndGet(idx.findMatches(id).size());
+        }
+      });
+      t.start();
+      threads.add(t);
+    }
+
+    // Update by adding and removing q2 to lead to race condition for accessing
+    // volatile reference
+    Thread updater = new Thread(() -> {
+      for (int j = 0; j < N; ++j) {
+        idx.add(q2, q2);
+        idx.remove(q2, q2);
+      }
+    });
+    updater.start();
+    updater.join();
+
+    // Wait for read tasks to complete
+    threads.forEach(t -> {
+      try {
+        t.join();
+      } catch (Exception e) {
+        Assertions.fail(e);
+      }
+    });
   }
 }
