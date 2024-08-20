@@ -58,7 +58,7 @@ public class IpcLogger {
   /**
    * Create a new instance.
    */
-  IpcLogger(Registry registry, Logger logger, IpcLoggerConfig config) {
+  public IpcLogger(Registry registry, Logger logger, IpcLoggerConfig config) {
     this.registry = registry;
     this.clock = registry.clock();
     this.logger = logger;
