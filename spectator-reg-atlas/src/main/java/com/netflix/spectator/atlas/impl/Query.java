@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.StringJoiner;
 
 /**
  * Query for matching based on tags. For more information see
@@ -497,7 +498,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + ",:has";
+      return Parser.escape(k) + ",:has";
     }
 
     @Override public boolean equals(Object obj) {
@@ -542,7 +543,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + ",:eq";
+      return Parser.escape(k) + "," + Parser.escape(v) + ",:eq";
     }
 
     @Override public boolean equals(Object obj) {
@@ -609,8 +610,11 @@ public interface Query {
     }
 
     @Override public String toString() {
-      String values = String.join(",", vs);
-      return k + ",(," + values + ",),:in";
+      StringJoiner joiner = new StringJoiner(",");
+      for (String v : vs) {
+        joiner.add(Parser.escape(v));
+      }
+      return Parser.escape(k) + ",(," + joiner + ",),:in";
     }
 
     @Override public boolean equals(Object obj) {
@@ -654,7 +658,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + ",:lt";
+      return Parser.escape(k) + "," + Parser.escape(v) + ",:lt";
     }
 
     @Override public boolean equals(Object obj) {
@@ -694,7 +698,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + ",:le";
+      return Parser.escape(k) + "," + Parser.escape(v) + ",:le";
     }
 
     @Override public boolean equals(Object obj) {
@@ -734,7 +738,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + ",:gt";
+      return Parser.escape(k) + "," + Parser.escape(v) + ",:gt";
     }
 
     @Override public boolean equals(Object obj) {
@@ -774,7 +778,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + ",:ge";
+      return Parser.escape(k) + "," + Parser.escape(v) + ",:ge";
     }
 
     @Override public boolean equals(Object obj) {
@@ -841,7 +845,7 @@ public interface Query {
     }
 
     @Override public String toString() {
-      return k + "," + v + "," + name;
+      return Parser.escape(k) + "," + Parser.escape(v) + "," + name;
     }
 
     @Override public boolean equals(Object obj) {
