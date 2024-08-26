@@ -260,6 +260,7 @@ public final class Parser {
   /**
    * Escape special characters in the input string to unicode escape sequences (uXXXX).
    */
+  @SuppressWarnings("PMD")
   public static String escape(String str) {
     final int length = str.length();
     StringBuilder builder = new StringBuilder(length);
@@ -279,6 +280,7 @@ public final class Parser {
    * Unescape unicode characters in the input string. Ignore any invalid or unrecognized
    * escape sequences.
    */
+  @SuppressWarnings("PMD")
   public static String unescape(String str) {
     final int length = str.length();
     StringBuilder builder = new StringBuilder(length);
