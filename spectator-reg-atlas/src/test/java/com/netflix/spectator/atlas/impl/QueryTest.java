@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2021 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -624,5 +624,118 @@ public class QueryTest {
   public void simplifyFalse() {
     Query q = Parser.parseQuery(":false");
     Assertions.assertSame(q, q.simplify(tags("nf.cluster", "foo")));
+  }
+
+  @Test
+  public void keysAndValuesWithSpecialChars() {
+    String[] ops = {"eq", "lt", "le", "gt", "ge"};
+    for (String op : ops) {
+      String k = "foo\\u002cbar";
+      String v = "a\\u002cb\\u002cc";
+      String expr = k + "," + v + ",:" + op;
+      Query q = Parser.parseQuery(expr);
+      Assertions.assertEquals(expr, q.toString());
+
+      Query.KeyQuery kq = (Query.KeyQuery) q;
+      Assertions.assertEquals("foo,bar", kq.key());
+      if ("lt".equals(op)) {
+        Assertions.assertTrue(kq.matches("a,b,b"));
+      } else if ("gt".equals(op)) {
+        Assertions.assertTrue(kq.matches("a,b,d"));
+      } else {
+        Assertions.assertTrue(kq.matches("a,b,c"));
+      }
+    }
+  }
+
+  @Test
+  public void inClauseWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String vs = "(,a\\u002cb\\u002cc,d,)";
+    String expr = k + "," + vs + ",:in";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(expr, q.toString());
+
+    Query.In in = (Query.In) q;
+    Assertions.assertEquals("foo,bar", in.key());
+    Assertions.assertTrue(in.matches("a,b,c"));
+    Assertions.assertTrue(in.matches("d"));
+  }
+
+  @Test
+  public void hasWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String expr = k + ",:has";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(expr, q.toString());
+
+    Query.Has has = (Query.Has) q;
+    Assertions.assertEquals("foo,bar", has.key());
+  }
+
+  @Test
+  public void reWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String v = "a\\u002cb\\u002cc";
+    String expr = k + "," + v + ",:re";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(expr, q.toString());
+
+    Query.Regex re = (Query.Regex) q;
+    Assertions.assertEquals("foo,bar", re.key());
+    Assertions.assertTrue(re.matches("a,b,c"));
+  }
+
+  @Test
+  public void reicWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String v = "a\\u002cb\\u002cc";
+    String expr = k + "," + v + ",:reic";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(expr, q.toString());
+
+    Query.Regex re = (Query.Regex) q;
+    Assertions.assertEquals("foo,bar", re.key());
+    Assertions.assertTrue(re.matches("a,b,c"));
+    Assertions.assertTrue(re.matches("a,B,c"));
+  }
+
+  @Test
+  public void startsWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String v = "a\\u002cb\\u002cc";
+    String expr = k + "," + v + ",:starts";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(k + "," + v + ",:re", q.toString());
+
+    Query.Regex re = (Query.Regex) q;
+    Assertions.assertEquals("foo,bar", re.key());
+    Assertions.assertTrue(re.matches("a,b,c"));
+  }
+
+  @Test
+  public void endsWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String v = "a\\u002cb\\u002cc";
+    String expr = k + "," + v + ",:ends";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(k + ",.*" + v + "$,:re", q.toString());
+
+    Query.Regex re = (Query.Regex) q;
+    Assertions.assertEquals("foo,bar", re.key());
+    Assertions.assertTrue(re.matches("a,b,c"));
+  }
+
+  @Test
+  public void containsWithSpecialChars() {
+    String k = "foo\\u002cbar";
+    String v = "a\\u002cb\\u002cc";
+    String expr = k + "," + v + ",:contains";
+    Query q = Parser.parseQuery(expr);
+    Assertions.assertEquals(k + ",.*" + v + ",:re", q.toString());
+
+    Query.Regex re = (Query.Regex) q;
+    Assertions.assertEquals("foo,bar", re.key());
+    Assertions.assertTrue(re.matches("a,b,c"));
   }
 }

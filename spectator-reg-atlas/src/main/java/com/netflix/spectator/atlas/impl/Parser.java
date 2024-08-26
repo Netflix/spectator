@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ public final class Parser {
     String[] parts = expr.split(",");
     Deque<Object> stack = new ArrayDeque<>(parts.length);
     for (String p : parts) {
-      String token = p.trim();
+      String token = unescape(p.trim());
       if (token.isEmpty()) {
         continue;
       }
@@ -237,5 +237,75 @@ public final class Parser {
       stack.push(new Query.Equal(k, values.get(0)));
     else
       stack.push(new Query.In(k, new HashSet<>(values)));
+  }
+
+  static boolean isSpecial(int codePoint) {
+    return codePoint == ',' || Character.isWhitespace(codePoint);
+  }
+
+  static void zeroPad(String str, StringBuilder builder) {
+    final int width = 4;
+    final int n = width - str.length();
+    for (int i = 0; i < n; ++i) {
+      builder.append('0');
+    }
+    builder.append(str);
+  }
+
+  private static void escapeCodePoint(int codePoint, StringBuilder builder) {
+    builder.append("\\u");
+    zeroPad(Integer.toHexString(codePoint), builder);
+  }
+
+  /**
+   * Escape special characters in the input string to unicode escape sequences (uXXXX).
+   */
+  public static String escape(String str) {
+    final int length = str.length();
+    StringBuilder builder = new StringBuilder(length);
+    for (int i = 0; i < length;) {
+      final int cp = str.codePointAt(i);
+      final int len = Character.charCount(cp);
+      if (isSpecial(cp))
+        escapeCodePoint(cp, builder);
+      else
+        builder.appendCodePoint(cp);
+      i += len;
+    }
+    return builder.toString();
+  }
+
+  /**
+   * Unescape unicode characters in the input string. Ignore any invalid or unrecognized
+   * escape sequences.
+   */
+  public static String unescape(String str) {
+    final int length = str.length();
+    StringBuilder builder = new StringBuilder(length);
+    for (int i = 0; i < length; ++i) {
+      final char c = str.charAt(i);
+      if (c == '\\') {
+        // Ensure there is enough space for an encoded character, there must be at
+        // least 5 characters left in the string (uXXXX).
+        if (length - i <= 5) {
+          builder.append(str.substring(i));
+          i = length;
+        } else if (str.charAt(i + 1) == 'u') {
+          try {
+            int cp = Integer.parseInt(str.substring(i + 2, i + 6), 16);
+            builder.appendCodePoint(cp);
+            i += 5;
+          } catch (NumberFormatException e) {
+            builder.append(c);
+          }
+        } else {
+          // Some other escape, copy into buffer and move on
+          builder.append(c);
+        }
+      } else {
+        builder.append(c);
+      }
+    }
+    return builder.toString();
   }
 }
