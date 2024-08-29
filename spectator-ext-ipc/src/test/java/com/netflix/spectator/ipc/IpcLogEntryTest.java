@@ -147,6 +147,16 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void statusCode() {
+    String expected = "deadline_exceeded";
+    String actual = (String) entry
+            .withStatusCode(expected)
+            .convert(this::toMap)
+            .get("statusCode");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
   public void statusDetail() {
     String expected = "connection_failed";
     String actual = (String) entry
@@ -185,6 +195,26 @@ public class IpcLogEntryTest {
         .withAttempt(7)
         .convert(this::toMap)
         .get("attempt");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void attemptReason() {
+    String expected = IpcAttemptReason.retry.value();
+    String actual = (String) entry
+            .withAttemptReason(IpcAttemptReason.retry)
+            .convert(this::toMap)
+            .get("attemptReason");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void customAttemptReason() {
+    String expected = "unknown";
+    String actual = (String) entry
+            .withAttemptReason(expected)
+            .convert(this::toMap)
+            .get("attemptReason");
     Assertions.assertEquals(expected, actual);
   }
 
@@ -238,6 +268,27 @@ public class IpcLogEntryTest {
         .get("endpoint");
     Assertions.assertEquals("unknown", actual);
   }
+
+  @Test
+  public void method() {
+    String expected = IpcMethod.get.value();
+    String actual = (String) entry
+            .withMethod(IpcMethod.get)
+            .convert(this::toMap)
+            .get("method");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void customMethod() {
+    String expected = "websocket";
+    String actual = (String) entry
+            .withMethod(expected)
+            .convert(this::toMap)
+            .get("method");
+    Assertions.assertEquals(expected, actual);
+  }
+
 
   @Test
   public void clientNode() {
