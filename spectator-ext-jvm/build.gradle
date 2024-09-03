@@ -18,6 +18,7 @@ sourceSets {
 dependencies {
   api project(':spectator-api')
   implementation 'com.typesafe:config'
+  testImplementation 'com.google.code.findbugs:annotations:3.0.1u2'
 }
 
 def java17Compiler = javaToolchains.compilerFor {

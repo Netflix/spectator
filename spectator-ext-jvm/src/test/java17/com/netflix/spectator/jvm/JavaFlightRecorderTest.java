@@ -20,6 +20,7 @@ import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Registry;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class JavaFlightRecorderTest {
 
+  @SuppressFBWarnings
   public static volatile Object obj;
 
   @Test
