@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Registry;
@@ -105,6 +104,7 @@ public class JavaFlightRecorder {
   }
 
   private static void collectVirtualThreadEvents(Registry registry, RecordingStream rs) {
+    // 20ms threshold set to match default behavior
     consume(VirtualThreadPinned, rs, event ->
       registry.timer("jvm.vt.pinned").record(event.getDuration())
     ).withThreshold(Duration.ofMillis(20));
@@ -114,6 +114,9 @@ public class JavaFlightRecorder {
   }
 
   private static void collectGcEvents(Registry registry, RecordingStream rs) {
+    // ZGC and Shenandoah are not covered by the generic event, there is
+    // a ZGC specific event to get coverage there, right now there doesn't
+    // appear to be similar data available for Shenandoah
     Consumer<RecordedEvent> tenuringThreshold = event ->
       registry.gauge("jvm.gc.tenuringThreshold")
         .set(event.getLong("tenuringThreshold"));
