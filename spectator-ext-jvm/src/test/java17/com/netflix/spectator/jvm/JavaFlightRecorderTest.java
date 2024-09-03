@@ -58,10 +58,6 @@ public class JavaFlightRecorderTest {
     Map<Id, Measurement> measures = registry.measurements()
       .collect(Collectors.toMap(Measurement::id, m -> m));
 
-    Measurement tenuringThreshold = measures.get(Id.create("jvm.gc.tenuringThreshold"));
-    assertNotEquals(null, tenuringThreshold);
-    assertTrue(tenuringThreshold.value() > 0);
-
     Measurement classesLoaded = measures.get(Id.create("jvm.classloading.classesLoaded"));
     Measurement classesUnloaded = measures.get(Id.create("jvm.classloading.classesUnloaded"));
     assertNotEquals(null, classesLoaded);

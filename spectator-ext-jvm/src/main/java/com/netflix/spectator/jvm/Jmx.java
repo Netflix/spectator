@@ -27,6 +27,8 @@ import java.lang.management.CompilationMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.ThreadMXBean;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Helpers for working with JMX mbeans.
@@ -42,6 +44,15 @@ public final class Jmx {
    * mbeans from the local jvm.
    */
   public static void registerStandardMXBeans(Registry registry) {
+    if (JavaFlightRecorder.isSupported()) {
+      Executor executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "spectator-jfr");
+        t.setDaemon(true);
+        return t;
+      });
+      JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+      return;
+    }
     monitorClassLoadingMXBean(registry);
     monitorThreadMXBean(registry);
     monitorCompilationMXBean(registry);
