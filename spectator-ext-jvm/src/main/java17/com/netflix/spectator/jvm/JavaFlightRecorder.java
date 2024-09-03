@@ -35,9 +35,9 @@ public class JavaFlightRecorder {
   private static final String JavaThreadStatistics = PREFIX + "JavaThreadStatistics";
   private static final String VirtualThreadPinned = PREFIX + "VirtualThreadPinned";
   private static final String VirtualThreadSubmitFailed = PREFIX + "VirtualThreadSubmitFailed";
+  private static final String YoungGarbageCollection = PREFIX + "YoungGarbageCollection";
   private static final String ZAllocationStall = PREFIX + "ZAllocationStall";
   private static final String ZYoungGarbageCollection = PREFIX + "ZYoungGarbageCollection";
-  private static final String ZOldGarbageCollection = PREFIX + "ZOldGarbageCollection";
 
   private JavaFlightRecorder() {
   }
@@ -62,7 +62,7 @@ public class JavaFlightRecorder {
     collectCompilerStatistics(registry, rs);
     collectThreadStatistics(registry, rs);
     collectVirtualThreadEvents(registry, rs);
-    collectZgcEvents(registry, rs);
+    collectGcEvents(registry, rs);
     executor.execute(rs::start);
     return rs::close;
   }
@@ -113,17 +113,15 @@ public class JavaFlightRecorder {
     );
   }
 
-  private static void collectZgcEvents(Registry registry, RecordingStream rs) {
-    consume(ZYoungGarbageCollection, rs, event ->
-      registry.timer("jvm.zgc.youngCollection", "tenuringThreshold", event.getString("tenuringThreshold"))
-        .record(event.getDuration()));
-
-    consume(ZOldGarbageCollection, rs, event ->
-      registry.timer("jvm.zgc.oldCollection")
-        .record(event.getDuration()));
+  private static void collectGcEvents(Registry registry, RecordingStream rs) {
+    Consumer<RecordedEvent> tenuringThreshold = event ->
+      registry.gauge("jvm.gc.tenuringThreshold")
+        .set(event.getLong("tenuringThreshold"));
+    consume(YoungGarbageCollection, rs, tenuringThreshold);
+    consume(ZYoungGarbageCollection, rs, tenuringThreshold);
 
     consume(ZAllocationStall, rs, event ->
-      registry.timer("jvm.zgc.allocationStall", "type", event.getString("type"))
+      registry.timer("jvm.gc.allocationStall", "type", event.getString("type"))
         .record(event.getDuration()));
   }
 

@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class JavaFlightRecorderTest {
 
+  public static volatile Object obj;
+
   @Test
   public void isSupported() {
     assertTrue(JavaFlightRecorder.isSupported());
@@ -41,12 +43,22 @@ public class JavaFlightRecorderTest {
     Registry registry = new DefaultRegistry();
     ExecutorService executor = Executors.newSingleThreadExecutor();
     try (var closable = JavaFlightRecorder.monitorDefaultEvents(registry, executor)) {
+      // allocate rapidly to trigger a GC, black holing using the approach from
+      // https://github.com/openjdk/jdk/blob/master/test/hotspot/jtreg/gc/testlibrary/Allocation.java
+      for (int i = 0; i < 100; i++) {
+        obj = new byte[4 * 1024 * 1024];
+        obj = null;
+      }
       Thread.sleep(6000);
     }
     executor.shutdownNow();
 
     Map<Id, Measurement> measures = registry.measurements()
       .collect(Collectors.toMap(Measurement::id, m -> m));
+
+    Measurement tenuringThreshold = measures.get(Id.create("jvm.gc.tenuringThreshold"));
+    assertNotEquals(null, tenuringThreshold);
+    assertTrue(tenuringThreshold.value() > 0);
 
     Measurement classesLoaded = measures.get(Id.create("jvm.classloading.classesLoaded"));
     Measurement classesUnloaded = measures.get(Id.create("jvm.classloading.classesUnloaded"));
