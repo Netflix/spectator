@@ -56,7 +56,6 @@ public final class Jmx {
       monitorThreadMXBean(registry);
       monitorCompilationMXBean(registry);
     }
-    maybeRegisterHotspotInternal(registry);
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
