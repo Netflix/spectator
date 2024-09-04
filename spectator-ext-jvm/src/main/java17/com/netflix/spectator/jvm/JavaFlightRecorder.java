@@ -15,7 +15,10 @@
  */
 package com.netflix.spectator.jvm;
 
+import com.netflix.spectator.api.Counter;
+import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 import jdk.jfr.EventSettings;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
@@ -67,29 +70,33 @@ public class JavaFlightRecorder {
   }
 
   private static void collectClassLoadingStatistics(Registry registry, RecordingStream rs) {
+    Counter classesLoaded = registry.counter("jvm.classloading.classesLoaded");
     AtomicLong prevLoadedClassCount = new AtomicLong();
+    Counter classesUnloaded = registry.counter("jvm.classloading.classesUnloaded");
     AtomicLong prevUnloadedClassCount = new AtomicLong();
     consume(ClassLoadingStatistics, rs, event -> {
-      long classesLoaded = event.getLong("loadedClassCount");
-      classesLoaded = classesLoaded - prevLoadedClassCount.getAndSet(classesLoaded);
-      registry.counter("jvm.classloading.classesLoaded").increment(classesLoaded);
+      long loadedClassCount = event.getLong("loadedClassCount");
+      loadedClassCount = loadedClassCount - prevLoadedClassCount.getAndSet(loadedClassCount);
+      classesLoaded.increment(loadedClassCount);
 
-      long classesUnloaded = event.getLong("unloadedClassCount");
-      classesUnloaded = classesUnloaded - prevUnloadedClassCount.getAndSet(classesUnloaded);
-      registry.counter("jvm.classloading.classesUnloaded").increment(classesUnloaded);
+      long unloadedClassCount = event.getLong("unloadedClassCount");
+      unloadedClassCount = unloadedClassCount - prevUnloadedClassCount.getAndSet(unloadedClassCount);
+      classesUnloaded.increment(unloadedClassCount);
     });
   }
 
   private static void collectCompilerStatistics(Registry registry, RecordingStream rs) {
+    Counter compilationTime = registry.counter("jvm.compilation.compilationTime");
     AtomicLong prevTotalTimeSpent = new AtomicLong();
     consume(CompilerStatistics, rs, event -> {
       long totalTimeSpent = event.getLong("totalTimeSpent");
       totalTimeSpent = totalTimeSpent - prevTotalTimeSpent.getAndAdd(totalTimeSpent);
-      registry.counter("jvm.compilation.compilationTime").add(totalTimeSpent / 1000.0);
+      compilationTime.add(totalTimeSpent / 1000.0);
     });
   }
 
   private static void collectThreadStatistics(Registry registry, RecordingStream rs) {
+    Counter threadsStarted = registry.counter("jvm.thread.threadsStarted");
     AtomicLong prevAccumulatedCount = new AtomicLong();
     consume(JavaThreadStatistics, rs, event -> {
       long activeCount = event.getLong("activeCount");
@@ -98,18 +105,20 @@ public class JavaFlightRecorder {
       registry.gauge("jvm.thread.threadCount", "id", "non-daemon").set(nonDaemonCount);
       registry.gauge("jvm.thread.threadCount", "id", "daemon").set(daemonCount);
       long accumulatedCount = event.getLong("accumulatedCount");
-      long threadsStarted = accumulatedCount - prevAccumulatedCount.getAndSet(accumulatedCount);
-      registry.counter("jvm.thread.threadsStarted").increment(threadsStarted);
+      accumulatedCount = accumulatedCount - prevAccumulatedCount.getAndSet(accumulatedCount);
+      threadsStarted.increment(accumulatedCount);
     });
   }
 
   private static void collectVirtualThreadEvents(Registry registry, RecordingStream rs) {
+    Timer pinned = registry.timer("jvm.vt.pinned");
+    Counter submitFailed = registry.counter("jvm.vt.submitFailed");
     // 20ms threshold set to match default behavior
     consume(VirtualThreadPinned, rs, event ->
-      registry.timer("jvm.vt.pinned").record(event.getDuration())
+      pinned.record(event.getDuration())
     ).withThreshold(Duration.ofMillis(20));
     consume(VirtualThreadSubmitFailed, rs, event ->
-      registry.counter("jvm.vt.submitFailed").increment()
+      submitFailed.increment()
     );
   }
 
@@ -117,11 +126,11 @@ public class JavaFlightRecorder {
     // ZGC and Shenandoah are not covered by the generic event, there is
     // a ZGC specific event to get coverage there, right now there doesn't
     // appear to be similar data available for Shenandoah
-    Consumer<RecordedEvent> tenuringThreshold = event ->
-      registry.gauge("jvm.gc.tenuringThreshold")
-        .set(event.getLong("tenuringThreshold"));
-    consume(YoungGarbageCollection, rs, tenuringThreshold);
-    consume(ZYoungGarbageCollection, rs, tenuringThreshold);
+      Gauge tenuringThreshold = registry.gauge("jvm.gc.tenuringThreshold");
+      Consumer<RecordedEvent> tenuringThresholdFn = event ->
+        tenuringThreshold.set(event.getLong("tenuringThreshold"));
+    consume(YoungGarbageCollection, rs, tenuringThresholdFn);
+    consume(ZYoungGarbageCollection, rs, tenuringThresholdFn);
 
     consume(ZAllocationStall, rs, event ->
       registry.timer("jvm.gc.allocationStall", "type", event.getString("type"))
