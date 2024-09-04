@@ -53,9 +53,9 @@ public final class Jmx {
       JavaFlightRecorder.monitorDefaultEvents(registry, executor);
       return;
     } else {
-        monitorClassLoadingMXBean(registry);
-        monitorThreadMXBean(registry);
-        monitorCompilationMXBean(registry);
+      monitorClassLoadingMXBean(registry);
+      monitorThreadMXBean(registry);
+      monitorCompilationMXBean(registry);
     }
     maybeRegisterHotspotInternal(registry);
 
