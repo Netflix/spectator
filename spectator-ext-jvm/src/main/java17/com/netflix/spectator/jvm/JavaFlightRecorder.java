@@ -96,14 +96,16 @@ public class JavaFlightRecorder {
   }
 
   private static void collectThreadStatistics(Registry registry, RecordingStream rs) {
+    Gauge nonDaemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "non-daemon");
+    Gauge daemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "daemon");
     Counter threadsStarted = registry.counter("jvm.thread.threadsStarted");
     AtomicLong prevAccumulatedCount = new AtomicLong();
     consume(JavaThreadStatistics, rs, event -> {
       long activeCount = event.getLong("activeCount");
       long daemonCount = event.getLong("daemonCount");
       long nonDaemonCount = activeCount - daemonCount;
-      registry.gauge("jvm.thread.threadCount", "id", "non-daemon").set(nonDaemonCount);
-      registry.gauge("jvm.thread.threadCount", "id", "daemon").set(daemonCount);
+      nonDaemonThreadCount.set(nonDaemonCount);
+      daemonThreadCount.set(daemonCount);
       long accumulatedCount = event.getLong("accumulatedCount");
       accumulatedCount = accumulatedCount - prevAccumulatedCount.getAndSet(accumulatedCount);
       threadsStarted.increment(accumulatedCount);
@@ -126,8 +128,8 @@ public class JavaFlightRecorder {
     // ZGC and Shenandoah are not covered by the generic event, there is
     // a ZGC specific event to get coverage there, right now there doesn't
     // appear to be similar data available for Shenandoah
-      Gauge tenuringThreshold = registry.gauge("jvm.gc.tenuringThreshold");
-      Consumer<RecordedEvent> tenuringThresholdFn = event ->
+    Gauge tenuringThreshold = registry.gauge("jvm.gc.tenuringThreshold");
+    Consumer<RecordedEvent> tenuringThresholdFn = event ->
         tenuringThreshold.set(event.getLong("tenuringThreshold"));
     consume(YoungGarbageCollection, rs, tenuringThresholdFn);
     consume(ZYoungGarbageCollection, rs, tenuringThresholdFn);
