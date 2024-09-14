@@ -18,6 +18,7 @@ package com.netflix.spectator.impl;
 import com.netflix.spectator.api.Clock;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Utility class for managing a set of AtomicLong instances mapped to a particular step interval.
@@ -37,7 +38,10 @@ public class StepLong implements StepValue {
   private volatile long previous;
   private final AtomicLong current;
 
-  private final AtomicLong lastInitPos;
+  private volatile long lastInitPos;
+
+  private static final AtomicLongFieldUpdater<StepLong> LAST_INIT_POS_UPDATER = AtomicLongFieldUpdater.newUpdater(
+          StepLong.class, "lastInitPos");
 
   /** Create a new instance. */
   public StepLong(long init, Clock clock, long step) {
@@ -46,13 +50,13 @@ public class StepLong implements StepValue {
     this.step = step;
     previous = init;
     current = new AtomicLong(init);
-    lastInitPos = new AtomicLong(clock.wallTime() / step);
+    lastInitPos = clock.wallTime() / step;
   }
 
   private void rollCount(long now) {
     final long stepTime = now / step;
-    final long lastInit = lastInitPos.get();
-    if (lastInit < stepTime && lastInitPos.compareAndSet(lastInit, stepTime)) {
+    final long lastInit = lastInitPos;
+    if (lastInit < stepTime && LAST_INIT_POS_UPDATER.compareAndSet(this, lastInit, stepTime)) {
       final long v = current.getAndSet(init);
       // Need to check if there was any activity during the previous step interval. If there was
       // then the init position will move forward by 1, otherwise it will be older. No activity
@@ -97,13 +101,13 @@ public class StepLong implements StepValue {
 
   /** Get the timestamp for the end of the last completed interval. */
   @Override public long timestamp() {
-    return lastInitPos.get() * step;
+    return lastInitPos * step;
   }
 
   @Override public String toString() {
     return "StepLong{init="  + init
         + ", previous=" + previous
         + ", current=" + current.get()
-        + ", lastInitPos=" + lastInitPos.get() + '}';
+        + ", lastInitPos=" + lastInitPos + '}';
   }
 }

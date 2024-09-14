@@ -122,4 +122,12 @@ public class AtomicDoubleTest {
     v.max(Double.POSITIVE_INFINITY);
     Assertions.assertEquals(0.0, v.get(), 1e-12);
   }
+
+  @Test
+  public void testToString() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    Assertions.assertEquals("0.0", v.toString());
+    v.set(-100.5);
+    Assertions.assertEquals("-100.5", v.toString());
+  }
 }
