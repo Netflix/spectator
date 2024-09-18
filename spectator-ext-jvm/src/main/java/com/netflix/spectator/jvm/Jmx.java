@@ -50,7 +50,6 @@ public final class Jmx {
         return t;
       });
       JavaFlightRecorder.monitorDefaultEvents(registry, executor);
-      return;
     } else {
       monitorClassLoadingMXBean(registry);
       monitorThreadMXBean(registry);
