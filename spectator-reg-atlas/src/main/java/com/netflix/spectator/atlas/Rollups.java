@@ -95,7 +95,7 @@ final class Rollups {
       }
 
       // Convert to final result type
-      List<RollupPolicy.Result> results = new ArrayList<>();
+      List<RollupPolicy.Result> results = new ArrayList<>(aggregates.size());
       for (Map.Entry<Map<String, String>, Map<Id, Aggregator>> entry : aggregates.entrySet()) {
         results.add(new RollupPolicy.Result(entry.getKey(), toMeasurements(entry.getValue())));
       }
