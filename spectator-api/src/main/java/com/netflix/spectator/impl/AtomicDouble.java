@@ -15,7 +15,7 @@
  */
 package com.netflix.spectator.impl;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Wrapper around AtomicLong to make working with double values easier.
@@ -26,22 +26,25 @@ import java.util.concurrent.atomic.AtomicLong;
 @SuppressWarnings("PMD.MissingSerialVersionUID")
 public class AtomicDouble extends Number {
 
-  private final AtomicLong value;
+  private volatile long value;
+
+  private static final AtomicLongFieldUpdater<AtomicDouble> VALUE_UPDATER = AtomicLongFieldUpdater.newUpdater(
+          AtomicDouble.class, "value");
 
   /** Create an instance with an initial value of 0. */
   public AtomicDouble() {
-    this(0.0);
+    super();
   }
 
   /** Create an instance with an initial value of {@code init}. */
   public AtomicDouble(double init) {
     super();
-    value = new AtomicLong(Double.doubleToLongBits(init));
+    this.value = Double.doubleToLongBits(init);
   }
 
   /** Return the current value. */
   public double get() {
-    return Double.longBitsToDouble(value.get());
+    return Double.longBitsToDouble(value);
   }
 
   /** Add {@code amount} to the value and return the new value. */
@@ -51,11 +54,11 @@ public class AtomicDouble extends Number {
     double n;
     long next;
     do {
-      v = value.get();
+      v = value;
       d = Double.longBitsToDouble(v);
       n = d + amount;
       next = Double.doubleToLongBits(n);
-    } while (!value.compareAndSet(v, next));
+    } while (!VALUE_UPDATER.compareAndSet(this, v, next));
     return n;
   }
 
@@ -66,17 +69,17 @@ public class AtomicDouble extends Number {
     double n;
     long next;
     do {
-      v = value.get();
+      v = value;
       d = Double.longBitsToDouble(v);
       n = d + amount;
       next = Double.doubleToLongBits(n);
-    } while (!value.compareAndSet(v, next));
+    } while (!VALUE_UPDATER.compareAndSet(this, v, next));
     return d;
   }
 
   /** Set the value to  {@code amount} and return the previous value. */
   public double getAndSet(double amount) {
-    long v = value.getAndSet(Double.doubleToLongBits(amount));
+    long v = VALUE_UPDATER.getAndSet(this, Double.doubleToLongBits(amount));
     return Double.longBitsToDouble(v);
   }
 
@@ -87,15 +90,15 @@ public class AtomicDouble extends Number {
   public boolean compareAndSet(double expect, double update) {
     long e = Double.doubleToLongBits(expect);
     long u = Double.doubleToLongBits(update);
-    return value.compareAndSet(e, u);
+    return VALUE_UPDATER.compareAndSet(this, e, u);
   }
 
   /** Set the current value to {@code amount}. */
   public void set(double amount) {
-    value.set(Double.doubleToLongBits(amount));
+    value = Double.doubleToLongBits(amount);
   }
 
-  private boolean isGreaterThan(double v1, double v2) {
+  private static boolean isGreaterThan(double v1, double v2) {
     return v1 > v2 || Double.isNaN(v2);
   }
 
@@ -123,5 +126,10 @@ public class AtomicDouble extends Number {
 
   @Override public double doubleValue() {
     return get();
+  }
+
+  @Override
+  public String toString() {
+    return Double.toString(get());
   }
 }
