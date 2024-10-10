@@ -89,7 +89,7 @@ subprojects {
     useJUnitPlatform()
   }
 
-  [17, 21].each { additionalJDK ->
+  [17, 21, 23].each { additionalJDK ->
     def additionalTestTask = tasks.register("testJDK$additionalJDK", Test) {
       description = "Runs tests against JDK $additionalJDK."
       group = 'verification'
