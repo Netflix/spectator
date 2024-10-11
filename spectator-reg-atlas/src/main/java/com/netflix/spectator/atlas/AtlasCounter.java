@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,8 +47,8 @@ class AtlasCounter extends AtlasMeter implements Counter {
 
   @Override public void add(double amount) {
     if (Double.isFinite(amount) && amount > 0.0) {
-      long now = clock.wallTime();
-      value.getCurrent(now).addAndGet(amount);
+      final long now = clock.wallTime();
+      value.addAndGet(now, amount);
       updateLastModTime(now);
     }
   }
