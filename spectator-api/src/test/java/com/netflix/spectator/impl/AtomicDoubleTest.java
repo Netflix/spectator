@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,55 @@ public class AtomicDoubleTest {
     AtomicDouble v = new AtomicDouble(13.0);
     Assertions.assertEquals(13.0, v.getAndAdd(42.0), 1e-12);
     Assertions.assertEquals(55.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minGt() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.min(2.0);
+    Assertions.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minLt() {
+    AtomicDouble v = new AtomicDouble(2.0);
+    v.min(0.0);
+    Assertions.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minNegative() {
+    AtomicDouble v = new AtomicDouble(-42.0);
+    v.min(-41.0);
+    Assertions.assertEquals(-42.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minNaN() {
+    AtomicDouble v = new AtomicDouble(Double.NaN);
+    v.min(0.0);
+    Assertions.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minValueNaN() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.min(Double.NaN);
+    Assertions.assertEquals(0.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minNegativeNaN() {
+    AtomicDouble v = new AtomicDouble(Double.NaN);
+    v.min(-42.0);
+    Assertions.assertEquals(-42.0, v.get(), 1e-12);
+  }
+
+  @Test
+  public void minValueInfinity() {
+    AtomicDouble v = new AtomicDouble(0.0);
+    v.min(Double.NEGATIVE_INFINITY);
+    Assertions.assertEquals(0.0, v.get(), 1e-12);
   }
 
   @Test

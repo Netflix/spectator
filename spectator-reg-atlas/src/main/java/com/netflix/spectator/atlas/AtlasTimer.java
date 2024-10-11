@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import com.netflix.spectator.impl.StepValue;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Timer that reports four measurements to Atlas:
@@ -100,12 +99,12 @@ class AtlasTimer extends AtlasMeter implements Timer {
 
   @Override public void record(long amount, TimeUnit unit) {
     long now = clock.wallTime();
-    count.getCurrent(now).incrementAndGet();
+    count.incrementAndGet(now);
     if (amount > 0) {
       final long nanos = unit.toNanos(amount);
-      total.getCurrent(now).addAndGet(nanos);
-      totalOfSquares.getCurrent(now).addAndGet((double) nanos * nanos);
-      updateMax(max.getCurrent(now), nanos);
+      total.addAndGet(now, nanos);
+      totalOfSquares.addAndGet(now, (double) nanos * nanos);
+      max.max(now, nanos);
     }
     updateLastModTime(now);
   }
@@ -129,10 +128,10 @@ class AtlasTimer extends AtlasMeter implements Timer {
 
     // issue updates as a batch
     final long now = clock.wallTime();
-    count.getCurrent(now).addAndGet(limit);
-    total.getCurrent(now).addAndGet(accumulatedTotal);
-    totalOfSquares.getCurrent(now).addAndGet(accumulatedTotalOfSquares);
-    updateMax(max.getCurrent(now), accumulatedMax);
+    count.addAndGet(now, limit);
+    total.addAndGet(now, accumulatedTotal);
+    totalOfSquares.addAndGet(now, accumulatedTotalOfSquares);
+    max.max(now, accumulatedMax);
     updateLastModTime(now);
   }
 
@@ -155,18 +154,11 @@ class AtlasTimer extends AtlasMeter implements Timer {
 
     // issue updates as a batch
     final long now = clock.wallTime();
-    count.getCurrent(now).addAndGet(limit);
-    total.getCurrent(now).addAndGet(accumulatedTotal);
-    totalOfSquares.getCurrent(now).addAndGet(accumulatedTotalOfSquares);
-    updateMax(max.getCurrent(now), accumulatedMax);
+    count.addAndGet(now, limit);
+    total.addAndGet(now, accumulatedTotal);
+    totalOfSquares.addAndGet(now, accumulatedTotalOfSquares);
+    max.max(now, accumulatedMax);
     updateLastModTime(now);
-  }
-
-  private void updateMax(AtomicLong maxValue, long v) {
-    long p = maxValue.get();
-    while (v > p && !maxValue.compareAndSet(p, v)) {
-      p = maxValue.get();
-    }
   }
 
   @Override public long count() {
@@ -191,9 +183,9 @@ class AtlasTimer extends AtlasMeter implements Timer {
    */
   void update(long count, double total, double totalOfSquares, long max) {
     long now = clock.wallTime();
-    this.count.getCurrent(now).addAndGet(count);
-    this.total.getCurrent(now).addAndGet(total);
-    this.totalOfSquares.getCurrent(now).addAndGet(totalOfSquares);
-    updateMax(this.max.getCurrent(now), max);
+    this.count.addAndGet(now, count);
+    this.total.addAndGet(now, total);
+    this.totalOfSquares.addAndGet(now, totalOfSquares);
+    this.max.max(now, max);
   }
 }

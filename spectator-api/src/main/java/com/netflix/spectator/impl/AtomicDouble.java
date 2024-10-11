@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ public class AtomicDouble extends Number {
 
   private volatile long value;
 
-  private static final AtomicLongFieldUpdater<AtomicDouble> VALUE_UPDATER = AtomicLongFieldUpdater.newUpdater(
-          AtomicDouble.class, "value");
+  private static final AtomicLongFieldUpdater<AtomicDouble> VALUE_UPDATER =
+      AtomicLongFieldUpdater.newUpdater(AtomicDouble.class, "value");
 
   /** Create an instance with an initial value of 0. */
   public AtomicDouble() {
@@ -98,6 +98,20 @@ public class AtomicDouble extends Number {
     value = Double.doubleToLongBits(amount);
   }
 
+  private static boolean isLessThan(double v1, double v2) {
+    return v1 < v2 || Double.isNaN(v2);
+  }
+
+  /** Set the current value to the maximum of the current value or the provided value. */
+  public void min(double v) {
+    if (Double.isFinite(v)) {
+      double min = get();
+      while (isLessThan(v, min) && !compareAndSet(min, v)) {
+        min = get();
+      }
+    }
+  }
+
   private static boolean isGreaterThan(double v1, double v2) {
     return v1 > v2 || Double.isNaN(v2);
   }
@@ -128,8 +142,7 @@ public class AtomicDouble extends Number {
     return get();
   }
 
-  @Override
-  public String toString() {
+  @Override public String toString() {
     return Double.toString(get());
   }
 }
