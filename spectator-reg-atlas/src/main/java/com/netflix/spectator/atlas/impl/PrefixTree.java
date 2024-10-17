@@ -475,7 +475,7 @@ final class PrefixTree {
       } else if (inQueries.isEmpty() && otherQueries.isEmpty() && cs.size() == 1) {
         Node c = cs.get(0);
         String p = prefix + c.prefix;
-        return new Node(p, EMPTY, c.inQueries, c.otherQueries);
+        return new Node(p, c.children, c.inQueries, c.otherQueries);
       } else {
         return new Node(prefix, cs.toArray(EMPTY), inQueries, otherQueries);
       }

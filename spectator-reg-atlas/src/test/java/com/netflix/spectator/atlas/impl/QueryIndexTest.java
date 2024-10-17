@@ -636,4 +636,34 @@ public class QueryIndexTest {
       }
     });
   }
+
+  @Test
+  public void otherChecksBug() {
+    Query q1 = Parser.parseQuery("name,foo,:eq,path,abcdef,:re,:and");
+    Query q2 = Parser.parseQuery("name,foo,:eq,path,abcghi,:re,:and");
+    Query q3 = Parser.parseQuery("name,foo,:eq,path,xyz,:re,:and");
+
+    QueryIndex<Integer> idx = QueryIndex.newInstance(new NoopRegistry());
+    idx.add(q1, 1);
+    idx.add(q2, 2);
+    idx.add(q3, 3);
+    Assertions.assertEquals(
+        Collections.singletonList(1),
+        idx.findMatches(id("foo", "path", "abcdef")));
+    Assertions.assertEquals(
+        Collections.singletonList(2),
+        idx.findMatches(id("foo", "path", "abcghijkl")));
+    Assertions.assertEquals(
+        Collections.singletonList(3),
+        idx.findMatches(id("foo", "path", "xyz")));
+
+    idx.remove(q3, 3);
+    Assertions.assertEquals(
+        Collections.singletonList(1),
+        idx.findMatches(id("foo", "path", "abcdef")));
+    Assertions.assertEquals(
+        Collections.singletonList(2),
+        idx.findMatches(id("foo", "path", "abcghijkl")));
+    Assertions.assertTrue(idx.findMatches(id("foo", "path", "xyz")).isEmpty());
+  }
 }
