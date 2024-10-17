@@ -203,6 +203,31 @@ public class PrefixTreeTest {
   }
 
   @Test
+  public void compressWithSingleChildHavingNoDirectMatches() {
+    PrefixTree tree = new PrefixTree();
+    tree.put(re("abcdef"));
+    tree.put(re("abcghi"));
+    tree.put(re("xyz"));
+    Assertions.assertEquals(3, tree.size());
+
+    tree.remove(re("xyz"));
+    Assertions.assertEquals(2, tree.size());
+  }
+
+  @Test
+  public void compressWithSingleChildHavingDirectMatches() {
+    PrefixTree tree = new PrefixTree();
+    tree.put(re("abc"));
+    tree.put(re("abcdef"));
+    tree.put(re("abcghi"));
+    tree.put(re("xyz"));
+    Assertions.assertEquals(4, tree.size());
+
+    tree.remove(re("xyz"));
+    Assertions.assertEquals(3, tree.size());
+  }
+
+  @Test
   public void commonPrefixNoMatch() {
     Assertions.assertEquals(0, PrefixTree.commonPrefixLength("abcdef", "defghi", 0));
     Assertions.assertEquals(0, PrefixTree.commonPrefixLength("abcdef", "abcdef", 3));
