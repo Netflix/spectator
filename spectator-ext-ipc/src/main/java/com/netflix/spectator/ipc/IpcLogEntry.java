@@ -56,14 +56,17 @@ public final class IpcLogEntry {
   private String protocol;
 
   private IpcStatus status;
+  private String statusCode;
   private String statusDetail;
   private Throwable exception;
 
   private IpcAttempt attempt;
+  private String attemptReason;
   private IpcAttemptFinal attemptFinal;
 
   private String vip;
   private String endpoint;
+  private String method;
 
   private String clientRegion;
   private String clientZone;
@@ -218,6 +221,14 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Set the implementation specific status code for the request.
+   */
+  public IpcLogEntry withStatusCode(String statusCode) {
+    this.statusCode = statusCode;
+    return this;
+  }
+
+  /**
    * Set the detailed implementation specific status for the request. In most cases it
    * is preferable to use {@link #withException(Throwable)} or {@link #withHttpStatus(int)}
    * instead of calling this directly.
@@ -283,6 +294,22 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Set the reason for the attempt for the request.
+   * See {@link IpcAttemptReason} for possible values.
+   */
+  public IpcLogEntry withAttemptReason(IpcAttemptReason attemptReason) {
+    return withAttemptReason(attemptReason.value());
+  }
+
+  /**
+   * Set the reason for the attempt for the request.
+   */
+  public IpcLogEntry withAttemptReason(String attemptReason) {
+    this.attemptReason = attemptReason;
+    return this;
+  }
+
+  /**
    * Set whether or not this is the final attempt for the request.
    */
   public IpcLogEntry withAttemptFinal(boolean isFinal) {
@@ -304,6 +331,22 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withEndpoint(String endpoint) {
     this.endpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * Set the method used for this request.
+   * See {@link IpcMethod} for possible values.
+   */
+  public IpcLogEntry withMethod(IpcMethod method) {
+    return withMethod(method.value());
+  }
+
+  /**
+   * Set the method used for this request.
+   */
+  public IpcLogEntry withMethod(String method) {
+    this.method = method;
     return this;
   }
 
@@ -899,6 +942,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
+        .addField("method", method)
         .addField("endpoint", endpoint)
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
@@ -916,9 +960,11 @@ public final class IpcLogEntry {
         .addField("remoteAddress", remoteAddress)
         .addField("remotePort", remotePort)
         .addField("attempt", attempt)
+        .addField("attemptReason", attemptReason)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
         .addField("status", status)
+        .addField("statusCode", statusCode)
         .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
         .addField("exceptionMessage", getExceptionMessage())
