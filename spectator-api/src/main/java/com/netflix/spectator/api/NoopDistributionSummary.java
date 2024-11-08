@@ -34,6 +34,9 @@ enum NoopDistributionSummary implements DistributionSummary {
   @Override public void record(long amount) {
   }
 
+  @Override public void record(long[] amounts, int n) {
+  }
+
   @Override public Iterable<Measurement> measure() {
     return Collections.emptyList();
   }
@@ -44,5 +47,23 @@ enum NoopDistributionSummary implements DistributionSummary {
 
   @Override public long totalAmount() {
     return 0L;
+  }
+
+  @Override
+  public BatchUpdater batchUpdater(int batchSize) {
+    return NoopBatchUpdater.INSTANCE;
+  }
+
+  private enum NoopBatchUpdater implements BatchUpdater {
+    INSTANCE;
+
+    @Override public void flush() {
+    }
+
+    @Override public void record(long amount) {
+    }
+
+    @Override public void close() {
+    }
   }
 }

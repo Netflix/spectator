@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,10 @@ public final class PercentileBuckets {
       long nextB = BUCKET_VALUES[i];
       while (pctIdx < pcts.length && nextP >= pcts[pctIdx]) {
         double f = (pcts[pctIdx] - prevP) / (nextP - prevP);
-        results[pctIdx] = f * (nextB - prevB) + prevB;
+        if (Double.isNaN(f))
+          results[pctIdx] = 0.0;
+        else
+          results[pctIdx] = f * (nextB - prevB) + prevB;
         ++pctIdx;
       }
       if (pctIdx >= pcts.length) break;
@@ -155,6 +158,84 @@ public final class PercentileBuckets {
    *     The calculated percentile value.
    */
   public static double percentile(long[] counts, double p) {
+    double[] pcts = {p};
+    double[] results = new double[1];
+    percentiles(counts, pcts, results);
+    return results[0];
+  }
+
+  /**
+   * Compute a set of percentiles based on the counts for the buckets.
+   *
+   * @param counts
+   *     Counts for each of the buckets. The values should be a non-negative finite double
+   *     indicating the relative amount for that bucket. The size must be the same as
+   *     {@link #length()} and the positions must correspond to the positions of the bucket values.
+   * @param pcts
+   *     Array with the requested percentile values. The length must be at least 1 and the
+   *     array should be sorted. Each value, {@code v}, should adhere to {@code 0.0 <= v <= 100.0}.
+   * @param results
+   *     The calculated percentile values will be written to the results array. It should have the
+   *     same length as {@code pcts}.
+   */
+  public static void percentiles(double[] counts, double[] pcts, double[] results) {
+    Preconditions.checkArg(counts.length == BUCKET_VALUES.length,
+        "counts is not the same size as buckets array");
+    Preconditions.checkArg(pcts.length > 0, "pct array cannot be empty");
+    Preconditions.checkArg(pcts.length == results.length,
+        "pcts is not the same size as results array");
+
+    double total = 0.0;
+    for (double c : counts) {
+      if (c > 0.0 && Double.isFinite(c))
+        total += c;
+    }
+
+    int pctIdx = 0;
+
+    double prev = 0.0;
+    double prevP = 0.0;
+    long prevB = 0;
+    for (int i = 0; i < BUCKET_VALUES.length; ++i) {
+      double next = prev + counts[i];
+      double nextP = 100.0 * next / total;
+      long nextB = BUCKET_VALUES[i];
+      while (pctIdx < pcts.length && nextP >= pcts[pctIdx]) {
+        double f = (pcts[pctIdx] - prevP) / (nextP - prevP);
+        if (Double.isNaN(f))
+          results[pctIdx] = 0.0;
+        else
+          results[pctIdx] = f * (nextB - prevB) + prevB;
+        ++pctIdx;
+      }
+      if (pctIdx >= pcts.length) break;
+      prev = next;
+      prevP = nextP;
+      prevB = nextB;
+    }
+
+    double nextP = 100.0;
+    long nextB = Long.MAX_VALUE;
+    while (pctIdx < pcts.length) {
+      double f = (pcts[pctIdx] - prevP) / (nextP - prevP);
+      results[pctIdx] = f * (nextB - prevB) + prevB;
+      ++pctIdx;
+    }
+  }
+
+  /**
+   * Compute a percentile based on the counts for the buckets.
+   *
+   * @param counts
+   *     Counts for each of the buckets. The values should be a non-negative finite double
+   *     indicating the relative amount for that bucket. The size must be the same as
+   *     {@link #length()} and the positions must correspond to the positions of the bucket values.
+   * @param p
+   *     Percentile to compute, the value should be {@code 0.0 <= p <= 100.0}.
+   * @return
+   *     The calculated percentile value.
+   */
+  public static double percentile(double[] counts, double p) {
     double[] pcts = {p};
     double[] results = new double[1];
     percentiles(counts, pcts, results);

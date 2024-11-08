@@ -38,6 +38,18 @@ public class NoopDistributionSummaryTest {
     NoopDistributionSummary t = NoopDistributionSummary.INSTANCE;
     t.record(42);
     Assertions.assertFalse(t.measure().iterator().hasNext());
+    t.record(new long[] { 1L, 2L, 3L }, 3);
+    Assertions.assertFalse(t.measure().iterator().hasNext());
   }
 
+  @Test
+  public void testBatchUpdate() throws Exception {
+    NoopDistributionSummary t = NoopDistributionSummary.INSTANCE;
+    try (DistributionSummary.BatchUpdater batchUpdater = t.batchUpdater(10)) {
+      for (long i = 0; i < 100; i++) {
+        batchUpdater.record(i);
+      }
+    }
+    Assertions.assertFalse(t.measure().iterator().hasNext());
+  }
 }

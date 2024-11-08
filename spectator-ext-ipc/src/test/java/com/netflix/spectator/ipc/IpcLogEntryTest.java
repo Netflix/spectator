@@ -20,6 +20,7 @@ import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
 import com.netflix.spectator.api.patterns.CardinalityLimiters;
@@ -35,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class IpcLogEntryTest {
 
@@ -939,5 +942,13 @@ public class IpcLogEntryTest {
     registry.counters().forEach(c -> {
       Assertions.assertEquals("unknown", Utils.getTagValue(c.id(), "ipc.endpoint"));
     });
+  }
+
+  @Test
+  public void markNullLogger() {
+    IpcLogEntry entry = new IpcLogEntry(clock)
+        .withRegistry(new NoopRegistry());
+    entry.markStart();
+    assertSame(entry, entry.markEnd());
   }
 }

@@ -159,7 +159,7 @@ public final class IpcLogEntry {
    * the request completes it is recommended to call {@link #markEnd()}.
    */
   public IpcLogEntry markStart() {
-    if (registry != null && !disableMetrics && logger.inflightEnabled()) {
+    if (registry != null && !disableMetrics && logger != null && logger.inflightEnabled()) {
       inflightId = getInflightId();
       int n = logger.inflightRequests(inflightId).incrementAndGet();
       registry.distributionSummary(inflightId).record(n);
