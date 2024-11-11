@@ -34,7 +34,7 @@ public enum IpcTagKey {
 
   /**
    * Indicates where the result was ultimately sourced from such as cache, direct,
-   * proxy, fallback, etc.
+   * proxy, fallback, etc. See {@link IpcSource} for possible values.
    */
   source("ipc.source"),
 
@@ -44,13 +44,6 @@ public enum IpcTagKey {
    * for permitted values.
    */
   status("ipc.status"),
-
-  /**
-   * Dimension indicating the transport-specific code that aligns to the IPC status.
-   * The values for this are implementation specific. For example with HTTP,
-   * the status code value would be used here.
-   */
-  statusCode("ipc.status.code"),
 
   /**
    * Optional dimension indicating a more detailed status. The values for this are
@@ -85,11 +78,6 @@ public enum IpcTagKey {
    * Indicates the attempt number for the request.
    */
   attempt("ipc.attempt"),
-
-  /**
-   * Indicates the reason for the attempt. See {@link IpcAttemptReason} for possible values.
-   */
-  attemptReason("ipc.attempt.reason"),
 
   /**
    * Indicates if this is the final attempt for the request. For example, if the client

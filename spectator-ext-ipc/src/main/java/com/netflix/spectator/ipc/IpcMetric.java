@@ -49,7 +49,6 @@ public enum IpcMetric {
           IpcTagKey.status
       ),
       EnumSet.of(
-          IpcTagKey.attemptReason,
           IpcTagKey.endpoint,
           IpcTagKey.method,
           IpcTagKey.failureInjected,
@@ -60,7 +59,6 @@ public enum IpcMetric {
           IpcTagKey.serverApp,
           IpcTagKey.serverCluster,
           IpcTagKey.serverAsg,
-          IpcTagKey.statusCode,
           IpcTagKey.statusDetail,
           IpcTagKey.vip
       )
@@ -87,7 +85,6 @@ public enum IpcMetric {
           IpcTagKey.httpStatus,
           IpcTagKey.id,
           IpcTagKey.protocol,
-          IpcTagKey.statusCode,
           IpcTagKey.statusDetail,
           IpcTagKey.vip
       )
