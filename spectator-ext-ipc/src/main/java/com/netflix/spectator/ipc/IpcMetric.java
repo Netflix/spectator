@@ -49,6 +49,7 @@ public enum IpcMetric {
           IpcTagKey.status
       ),
       EnumSet.of(
+          IpcTagKey.source,
           IpcTagKey.endpoint,
           IpcTagKey.method,
           IpcTagKey.failureInjected,
@@ -75,6 +76,7 @@ public enum IpcMetric {
           IpcTagKey.status
       ),
       EnumSet.of(
+          IpcTagKey.source,
           IpcTagKey.endpoint,
           IpcTagKey.method,
           IpcTagKey.clientApp,

@@ -480,6 +480,15 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void source() {
+    String expected = IpcSource.direct.value();
+    String actual = (String) entry
+            .withSource(IpcSource.direct)
+            .convert(this::toMap).get("source");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
   public void httpStatusOk() {
     String actual = (String) entry
         .withHttpStatus(200)

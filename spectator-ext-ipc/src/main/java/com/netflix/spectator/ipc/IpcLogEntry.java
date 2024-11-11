@@ -52,6 +52,7 @@ public final class IpcLogEntry {
 
   private String owner;
   private IpcResult result;
+  private IpcSource source;
 
   private String protocol;
 
@@ -206,6 +207,14 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withResult(IpcResult result) {
     this.result = result;
+    return this;
+  }
+
+  /**
+   * Set the source for this request. See {@link IpcSource} for more information.
+   */
+  public IpcLogEntry withSource(IpcSource source) {
+    this.source = source;
     return this;
   }
 
@@ -936,6 +945,7 @@ public final class IpcLogEntry {
         .addField("attempt", attempt)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
+        .addField("source", source)
         .addField("status", status)
         .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
