@@ -41,11 +41,6 @@ public enum IpcStatus implements Tag {
   bad_request,
 
   /**
-   * The request data was not found.
-   */
-  not_found,
-
-  /**
    * The client or server encountered an unexpected error processing the request.
    */
   unexpected_error,
