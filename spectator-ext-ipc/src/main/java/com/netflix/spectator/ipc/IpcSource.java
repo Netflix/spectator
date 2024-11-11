@@ -18,13 +18,14 @@ package com.netflix.spectator.ipc;
 import com.netflix.spectator.api.Tag;
 
 public enum IpcSource implements Tag {
+    
     /**
      * No call was made due to errors potentially.
      */
     none,
 
     /**
-     * Data source directly from EVCache as the cache implementation (when the exact cache is known).
+     * Data sourced directly from EVCache as the cache implementation (when the exact cache is known).
      */
     evcache,
 
@@ -34,7 +35,7 @@ public enum IpcSource implements Tag {
     cache,
 
     /**
-     * Static fallback used to fetch the data.
+     * Static fallback was used to fetch the data.
      */
     fallback,
 
