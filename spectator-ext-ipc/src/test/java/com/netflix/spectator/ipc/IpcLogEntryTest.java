@@ -262,7 +262,6 @@ public class IpcLogEntryTest {
     Assertions.assertEquals(expected, actual);
   }
 
-
   @Test
   public void clientNode() {
     String expected = "i-12345";
