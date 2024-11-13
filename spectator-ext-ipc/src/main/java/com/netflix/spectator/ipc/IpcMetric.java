@@ -294,8 +294,7 @@ public enum IpcMetric {
                   IpcTagKey.id
           ),
           EnumSet.noneOf(IpcTagKey.class)
-  ),
-  ;
+  );
 
   private final String metricName;
   private final EnumSet<IpcTagKey> requiredDimensions;

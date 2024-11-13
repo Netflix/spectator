@@ -18,7 +18,7 @@ package com.netflix.spectator.ipc;
 import com.netflix.spectator.api.Tag;
 
 public enum IpcSource implements Tag {
-    
+
     /**
      * No call was made due to errors potentially.
      */
