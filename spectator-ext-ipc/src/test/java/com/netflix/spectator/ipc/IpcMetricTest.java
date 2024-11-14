@@ -269,17 +269,6 @@ public class IpcMetricTest {
   }
 
   @Test
-  public void validateApiInflightOk() {
-    Id id = registry.createId(IpcMetric.apiClientInflight.metricName())
-            .withTag(IpcTagKey.owner.tag("test"))
-            .withTag(IpcTagKey.vip.tag("localhost"))
-            .withTag(IpcMethod.get)
-            .withTag(IpcTagKey.endpoint.tag("hello"))
-            .withTag(IpcTagKey.id.tag("HelloEndpoint"));
-    IpcMetric.apiClientInflight.validate(id, true);
-  }
-
-  @Test
   public void validateApiServerIdOk() {
     Id id = registry.createId(IpcMetric.apiServerCall.metricName())
             .withTag(IpcTagKey.owner.tag("test"))
@@ -291,15 +280,5 @@ public class IpcMetricTest {
             .withTag(IpcStatus.success)
             .withTag(IpcTagKey.statusDetail.tag("200"));
     IpcMetric.apiServerCall.validate(id, true);
-  }
-
-  @Test
-  public void validateApiServerInflightOk() {
-    Id id = registry.createId(IpcMetric.apiServerInflight.metricName())
-            .withTag(IpcTagKey.owner.tag("test"))
-            .withTag(IpcMethod.get)
-            .withTag(IpcTagKey.endpoint.tag("hello"))
-            .withTag(IpcTagKey.id.tag("HelloEndpoint"));
-    IpcMetric.apiServerInflight.validate(id, true);
   }
 }

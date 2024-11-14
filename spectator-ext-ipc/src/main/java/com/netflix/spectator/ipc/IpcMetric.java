@@ -265,35 +265,6 @@ public enum IpcMetric {
                   IpcTagKey.statusDetail
           ),
           EnumSet.noneOf(IpcTagKey.class)
-  ),
-
-  /**
-   * V2 - Number of outbound requests that are currently in flight.
-   */
-  apiClientInflight(
-          "api.client.inflight",
-          EnumSet.of(
-                  IpcTagKey.vip,
-                  IpcTagKey.method,
-                  IpcTagKey.endpoint,
-                  IpcTagKey.owner,
-                  IpcTagKey.id
-          ),
-          EnumSet.noneOf(IpcTagKey.class)
-  ),
-
-  /**
-   * V2 - Number of inbound requests that are currently in flight.
-   */
-  apiServerInflight(
-          "api.server.inflight",
-          EnumSet.of(
-                  IpcTagKey.method,
-                  IpcTagKey.endpoint,
-                  IpcTagKey.owner,
-                  IpcTagKey.id
-          ),
-          EnumSet.noneOf(IpcTagKey.class)
   );
 
   private final String metricName;
