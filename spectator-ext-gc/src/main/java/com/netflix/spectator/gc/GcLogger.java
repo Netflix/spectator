@@ -252,7 +252,8 @@ public final class GcLogger {
       .withTag("action", info.getGcAction())
       .withTag("cause", info.getGcCause());
     Timer timer = Spectator.globalRegistry().timer(eventId);
-    timer.record(info.getGcInfo().getDuration(), TimeUnit.MILLISECONDS);
+    long duration = Math.max(1, info.getGcInfo().getDuration());
+    timer.record(duration, TimeUnit.MILLISECONDS);
 
     // Update promotion and allocation counters
     updateMetrics(info.getGcName(), info.getGcInfo());
