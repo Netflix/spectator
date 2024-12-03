@@ -243,6 +243,26 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void method() {
+    String expected = IpcMethod.get.value();
+    String actual = (String) entry
+            .withMethod(IpcMethod.get)
+            .convert(this::toMap)
+            .get("method");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void customMethod() {
+    String expected = "websocket";
+    String actual = (String) entry
+            .withMethod(expected)
+            .convert(this::toMap)
+            .get("method");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
   public void clientNode() {
     String expected = "i-12345";
     String actual = (String) entry
@@ -456,6 +476,15 @@ public class IpcLogEntryTest {
         .addResponseHeader(NetflixHeader.Endpoint.headerName(), "/api/v1/test")
         .convert(this::toMap);
     Assertions.assertEquals("/api/v1/test", map.get("endpoint"));
+  }
+
+  @Test
+  public void source() {
+    String expected = IpcSource.direct.value();
+    String actual = (String) entry
+            .withSource(IpcSource.direct)
+            .convert(this::toMap).get("source");
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test

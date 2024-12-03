@@ -252,4 +252,33 @@ public class IpcMetricTest {
       IpcMetric.clientCall.validate(id);
     });
   }
+
+  @Test
+  public void validateApiIdOk() {
+    Id id = registry.createId(IpcMetric.apiClientCall.metricName())
+            .withTag(IpcTagKey.owner.tag("test"))
+            .withTag(IpcTagKey.vip.tag("localhost"))
+            .withTag(IpcMethod.get)
+            .withTag(IpcTagKey.endpoint.tag("hello"))
+            .withTag(IpcTagKey.id.tag("HelloEndpoint"))
+            .withTag(IpcSource.direct)
+            .withTag(IpcResult.success)
+            .withTag(IpcStatus.success)
+            .withTag(IpcTagKey.statusDetail.tag("200"));
+    IpcMetric.apiClientCall.validate(id, true);
+  }
+
+  @Test
+  public void validateApiServerIdOk() {
+    Id id = registry.createId(IpcMetric.apiServerCall.metricName())
+            .withTag(IpcTagKey.owner.tag("test"))
+            .withTag(IpcMethod.get)
+            .withTag(IpcTagKey.endpoint.tag("hello"))
+            .withTag(IpcTagKey.id.tag("HelloEndpoint"))
+            .withTag(IpcSource.direct)
+            .withTag(IpcResult.success)
+            .withTag(IpcStatus.success)
+            .withTag(IpcTagKey.statusDetail.tag("200"));
+    IpcMetric.apiServerCall.validate(id, true);
+  }
 }
