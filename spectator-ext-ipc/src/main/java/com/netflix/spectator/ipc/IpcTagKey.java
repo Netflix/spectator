@@ -33,6 +33,12 @@ public enum IpcTagKey {
   result("ipc.result"),
 
   /**
+   * Indicates where the result was ultimately sourced from such as cache, direct,
+   * proxy, fallback, etc. See {@link IpcSource} for possible values.
+   */
+  source("ipc.source"),
+
+  /**
    * Dimension indicating a high level status for the request. These values are the same
    * for all implementations to make it easier to query across services. See {@link IpcStatus}
    * for permitted values.
@@ -41,8 +47,9 @@ public enum IpcTagKey {
 
   /**
    * Optional dimension indicating a more detailed status. The values for this are
-   * implementation specific. For example with HTTP, the status code would be a likely
-   * value used here.
+   * implementation specific. For example, the {@link #status} may be
+   * {@code connection_error} and {@code statusDetail} would be {@code no_servers},
+   * {@code connect_timeout}, {@code ssl_handshake_failure}, etc.
    */
   statusDetail("ipc.status.detail"),
 
@@ -102,6 +109,11 @@ public enum IpcTagKey {
    * Protocol used for the request. For example {@code http_1} or {@code http_2}.
    */
   protocol("ipc.protocol"),
+
+  /**
+   * Method used to make the IPC request. See {@link IpcMethod} for possible values.
+   */
+  method("ipc.method"),
 
   /**
    * Region where the client is located.

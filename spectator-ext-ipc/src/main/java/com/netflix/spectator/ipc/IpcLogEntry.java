@@ -52,6 +52,7 @@ public final class IpcLogEntry {
 
   private String owner;
   private IpcResult result;
+  private IpcSource source;
 
   private String protocol;
 
@@ -64,6 +65,7 @@ public final class IpcLogEntry {
 
   private String vip;
   private String endpoint;
+  private String method;
 
   private String clientRegion;
   private String clientZone;
@@ -209,6 +211,14 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Set the source for this request. See {@link IpcSource} for more information.
+   */
+  public IpcLogEntry withSource(IpcSource source) {
+    this.source = source;
+    return this;
+  }
+
+  /**
    * Set the high level status for the request. See {@link IpcStatus} for more
    * information.
    */
@@ -304,6 +314,22 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withEndpoint(String endpoint) {
     this.endpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * Set the method used for this request.
+   * See {@link IpcMethod} for possible values.
+   */
+  public IpcLogEntry withMethod(IpcMethod method) {
+    return withMethod(method.value());
+  }
+
+  /**
+   * Set the method used for this request.
+   */
+  public IpcLogEntry withMethod(String method) {
+    this.method = method;
     return this;
   }
 
@@ -899,6 +925,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
+        .addField("method", method)
         .addField("endpoint", endpoint)
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
@@ -918,6 +945,7 @@ public final class IpcLogEntry {
         .addField("attempt", attempt)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
+        .addField("source", source)
         .addField("status", status)
         .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
