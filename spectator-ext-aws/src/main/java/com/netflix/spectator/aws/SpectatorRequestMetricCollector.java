@@ -143,18 +143,21 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
     this.customTags = new HashMap<>();
     customTags.forEach((key, value) -> {
       if (ALL_DEFAULT_TAGS.contains(key)) {
-        registry.propagate(new IllegalArgumentException("Invalid custom tag " + key
-              + " - cannot override built-in tag"));
+        registry.propagate(new IllegalArgumentException(
+            "Invalid custom tag " + key + " - cannot override built-in tag"));
+      } else if (value == null) {
+        registry.propagate(new NullPointerException(
+            "Custom tag value for key " + key + " is null"));
       } else {
         this.customTags.put(key, value);
       }
     });
     Preconditions.checkNotNull(handlerContextKey, "handlerContextKey");
     this.handlerContextKey = handlerContextKey;
-    if (ALL_DEFAULT_TAGS.contains(this.handlerContextKey.getName())) {
-      registry.propagate(new IllegalArgumentException("Invalid handler context key "
-                                                      + this.handlerContextKey.getName()
-                                                      + " - cannot override built-in tag"));
+    final String keyName = this.handlerContextKey.getName();
+    if (ALL_DEFAULT_TAGS.contains(keyName)) {
+      registry.propagate(new IllegalArgumentException(
+          "Invalid handler context key " + keyName + " - cannot override built-in tag"));
     }
   }
 
