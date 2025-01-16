@@ -191,6 +191,15 @@ public class SpectatorRequestMetricCollectorTest {
   }
 
   @Test
+  public void testCustomTagsNull() {
+    Map<String, String> customTags = new HashMap<>();
+    customTags.put("tagname", null);
+    collector = new SpectatorRequestMetricCollector(registry, customTags);
+    execRequest("http://monitoring", 503);
+    assertEquals(set(), valueSet("tagname"));
+  }
+
+  @Test
   public void testHandlerContextKey() {
     String contextKeyName = "myContextKey";
     HandlerContextKey<String> handlerContextKey = new HandlerContextKey<>(contextKeyName);
