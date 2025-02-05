@@ -89,7 +89,7 @@ public final class SpectatorModule extends AbstractModule {
         .toInstance(Clock.SYSTEM);
     OptionalBinder.newOptionalBinder(binder(), Registry.class)
         .setDefault()
-        .to(AtlasRegistry.class)
+        .toProvider(RegistryProvider.class)
         .in(Scopes.SINGLETON);
   }
 
@@ -113,6 +113,20 @@ public final class SpectatorModule extends AbstractModule {
         atlasConfig = NetflixConfig.createConfig(config);
       }
       return atlasConfig;
+    }
+  }
+
+  @Singleton
+  private static class RegistryProvider implements Provider<Registry> {
+
+    @Inject
+    private Clock clock;
+
+    @Inject
+    private AtlasConfig config;
+
+    @Override public Registry get() {
+      return new AtlasRegistry(clock, config);
     }
   }
 
