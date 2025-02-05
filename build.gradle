@@ -36,13 +36,18 @@ subprojects {
 
   group = "com.netflix.${githubProjectName}"
 
+  // Use 17 for most build tasks as many plugins have updated to require newer versions
   java {
     toolchain {
-      languageVersion = JavaLanguageVersion.of(8)
+      languageVersion = JavaLanguageVersion.of(17)
     }
   }
 
-  tasks.withType(JavaCompile) {
+  // Use 8 for the compilation tasks to ensure the class files generated are compatible
+  tasks.withType(JavaCompile).configureEach {
+    javaCompiler = javaToolchains.compilerFor {
+      languageVersion = JavaLanguageVersion.of(8)
+    }
     options.encoding = 'UTF-8'
   }
 
@@ -54,7 +59,7 @@ subprojects {
 
   javadoc {
     options {
-      links = ['https://docs.oracle.com/javase/8/docs/api/']
+      links = ['https://docs.oracle.com/en/java/javase/17/docs/api/']
     }
   }
 
