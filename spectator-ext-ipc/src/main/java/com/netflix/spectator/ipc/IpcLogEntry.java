@@ -29,6 +29,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -52,6 +53,7 @@ public final class IpcLogEntry {
 
   private String owner;
   private IpcResult result;
+  private IpcSource source;
 
   private String protocol;
 
@@ -64,6 +66,7 @@ public final class IpcLogEntry {
 
   private String vip;
   private String endpoint;
+  private IpcMethod method;
 
   private String clientRegion;
   private String clientZone;
@@ -79,7 +82,6 @@ public final class IpcLogEntry {
   private String serverAsg;
   private String serverNode;
 
-  private String httpMethod;
   private int httpStatus;
 
   private String uri;
@@ -209,6 +211,14 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Set the source for this request. See {@link IpcSource} for more information.
+   */
+  public IpcLogEntry withSource(IpcSource source) {
+    this.source = source;
+    return this;
+  }
+
+  /**
    * Set the high level status for the request. See {@link IpcStatus} for more
    * information.
    */
@@ -304,6 +314,14 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withEndpoint(String endpoint) {
     this.endpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * Set the method used for this request. See {@link IpcMethod} for possible values.
+   */
+  public IpcLogEntry withMethod(IpcMethod method) {
+    this.method = method;
     return this;
   }
 
@@ -459,7 +477,13 @@ public final class IpcLogEntry {
    * Set the HTTP method used for this request.
    */
   public IpcLogEntry withHttpMethod(String method) {
-    this.httpMethod = method;
+    try {
+      IpcMethod m = IpcMethod.valueOf(method.toLowerCase(Locale.US));
+      withMethod(m);
+    } catch (Exception e) {
+      // Ignore invalid methods
+      withMethod(IpcMethod.unknown);
+    }
     return this;
   }
 
@@ -625,6 +649,12 @@ public final class IpcLogEntry {
     }
   }
 
+  private void putTag(Map<String, String> tags, String k, Enum<?> v) {
+    if (v != null) {
+      putTag(tags, k, v.name());
+    }
+  }
+
   private void finalizeFields() {
     // Do final checks and update fields that haven't been explicitly set if needed
     // before logging.
@@ -685,7 +715,7 @@ public final class IpcLogEntry {
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);
     putTag(tags, IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
-    putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
+    putTag(tags, IpcTagKey.httpMethod.key(), method);
 
     return registry.createId(name, tags);
   }
@@ -855,6 +885,7 @@ public final class IpcLogEntry {
     putInMDC("uri", uri);
     putInMDC("path", path);
     putInMDC(IpcTagKey.endpoint.key(), endpoint);
+    putInMDC(method);
 
     putInMDC(IpcTagKey.owner.key(), owner);
     putInMDC(IpcTagKey.protocol.key(), protocol);
@@ -881,10 +912,10 @@ public final class IpcLogEntry {
     putInMDC(attemptFinal);
 
     putInMDC(result);
+    putInMDC(source);
     putInMDC(status);
     putInMDC(IpcTagKey.statusDetail.key(), statusDetail);
 
-    putInMDC(IpcTagKey.httpMethod.key(), httpMethod);
     putInMDC(IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
   }
 
@@ -899,6 +930,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
+        .addField("method", method)
         .addField("endpoint", endpoint)
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
@@ -918,11 +950,11 @@ public final class IpcLogEntry {
         .addField("attempt", attempt)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
+        .addField("source", source)
         .addField("status", status)
         .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
         .addField("exceptionMessage", getExceptionMessage())
-        .addField("httpMethod", httpMethod)
         .addField("httpStatus", httpStatus)
         .addField("requestContentLength", requestContentLength)
         .addField("responseContentLength", responseContentLength)
@@ -945,6 +977,7 @@ public final class IpcLogEntry {
     latency = -1L;
     owner = null;
     result = null;
+    source = null;
     protocol = null;
     status = null;
     statusDetail = null;
@@ -953,6 +986,7 @@ public final class IpcLogEntry {
     attemptFinal = null;
     vip = null;
     endpoint = null;
+    method = null;
     clientRegion = null;
     clientZone = null;
     clientApp = null;
@@ -965,7 +999,6 @@ public final class IpcLogEntry {
     serverCluster = null;
     serverAsg = null;
     serverNode = null;
-    httpMethod = null;
     httpStatus = -1;
     uri = null;
     path = null;
