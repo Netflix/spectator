@@ -234,37 +234,37 @@ public enum IpcMetric {
    * V2 - Timer recording the number and latency of outbound requests.
    */
   apiClientCall(
-          "api.client.call",
-          EnumSet.of(
-                  IpcTagKey.vip,
-                  IpcTagKey.method,
-                  IpcTagKey.endpoint,
-                  IpcTagKey.owner,
-                  IpcTagKey.id,
-                  IpcTagKey.source,
-                  IpcTagKey.result,
-                  IpcTagKey.status,
-                  IpcTagKey.statusDetail
-          ),
-          EnumSet.noneOf(IpcTagKey.class)
+      "api.client.call",
+      EnumSet.of(
+          IpcTagKey.vip,
+          IpcTagKey.method,
+          IpcTagKey.endpoint,
+          IpcTagKey.owner,
+          IpcTagKey.id,
+          IpcTagKey.source,
+          IpcTagKey.result,
+          IpcTagKey.status,
+          IpcTagKey.statusDetail
+      ),
+      EnumSet.noneOf(IpcTagKey.class)
   ),
 
   /**
    * V2 - Timer recording the number and latency of inbound requests.
    */
   apiServerCall(
-          "api.server.call",
-          EnumSet.of(
-                  IpcTagKey.method,
-                  IpcTagKey.endpoint,
-                  IpcTagKey.owner,
-                  IpcTagKey.id,
-                  IpcTagKey.source,
-                  IpcTagKey.result,
-                  IpcTagKey.status,
-                  IpcTagKey.statusDetail
-          ),
-          EnumSet.noneOf(IpcTagKey.class)
+      "api.server.call",
+      EnumSet.of(
+          IpcTagKey.method,
+          IpcTagKey.endpoint,
+          IpcTagKey.owner,
+          IpcTagKey.id,
+          IpcTagKey.source,
+          IpcTagKey.result,
+          IpcTagKey.status,
+          IpcTagKey.statusDetail
+      ),
+      EnumSet.noneOf(IpcTagKey.class)
   );
 
   private final String metricName;

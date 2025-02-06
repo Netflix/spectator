@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -246,9 +247,9 @@ public class IpcLogEntryTest {
   public void method() {
     String expected = IpcMethod.get.value();
     String actual = (String) entry
-            .withMethod(IpcMethod.get)
-            .convert(this::toMap)
-            .get("method");
+        .withMethod(IpcMethod.get)
+        .convert(this::toMap)
+        .get("method");
     Assertions.assertEquals(expected, actual);
   }
 
@@ -256,10 +257,10 @@ public class IpcLogEntryTest {
   public void customMethod() {
     String expected = "websocket";
     String actual = (String) entry
-            .withMethod(expected)
-            .convert(this::toMap)
-            .get("method");
-    Assertions.assertEquals(expected, actual);
+        .withHttpMethod(expected)
+        .convert(this::toMap)
+        .get("method");
+    Assertions.assertEquals("unknown", actual);
   }
 
   @Test
@@ -482,8 +483,8 @@ public class IpcLogEntryTest {
   public void source() {
     String expected = IpcSource.direct.value();
     String actual = (String) entry
-            .withSource(IpcSource.direct)
-            .convert(this::toMap).get("source");
+        .withSource(IpcSource.direct)
+        .convert(this::toMap).get("source");
     Assertions.assertEquals(expected, actual);
   }
 
@@ -539,8 +540,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpMethod(expected)
         .convert(this::toMap)
-        .get("httpMethod");
-    Assertions.assertEquals(expected, actual);
+        .get("method");
+    Assertions.assertEquals(expected.toLowerCase(Locale.US), actual);
   }
 
   @Test
