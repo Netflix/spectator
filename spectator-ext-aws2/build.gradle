@@ -1,6 +1,7 @@
 dependencies {
   implementation project(":spectator-api")
   implementation project(":spectator-ext-ipc")
+  implementation "software.amazon.awssdk:aws-core"
   api "software.amazon.awssdk:sdk-core"
 }
 
