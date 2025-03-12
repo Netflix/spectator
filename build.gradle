@@ -78,7 +78,8 @@ subprojects {
 
   dependencies {
     implementation "org.slf4j:slf4j-api"
-    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'nl.jqno.equalsverifier:equalsverifier'
     jmh "org.slf4j:slf4j-simple"
     jmh "org.openjdk.jmh:jmh-core:1.37"
