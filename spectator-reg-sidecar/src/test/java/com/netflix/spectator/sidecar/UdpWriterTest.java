@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,23 @@ public class UdpWriterTest {
         Assertions.assertEquals("foo", server.read());
         w.write("bar");
         Assertions.assertEquals("bar", server.read());
+      }
+    }
+  }
+
+  @Test
+  public void udpReconnectIfClosed() throws IOException {
+    try (UdpServer server = new UdpServer()) {
+      try (SidecarWriter w = SidecarWriter.create(server.address())) {
+        // Used to simulate close from something like an interrupt. The next write
+        // will fail and it should try to reconnect.
+        w.close();
+        w.write("1");
+
+        w.write("2");
+        Assertions.assertEquals("2", server.read());
+        w.write("3");
+        Assertions.assertEquals("3", server.read());
       }
     }
   }
