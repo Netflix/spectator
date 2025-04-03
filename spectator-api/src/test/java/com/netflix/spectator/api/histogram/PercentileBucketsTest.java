@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,5 +165,25 @@ public class PercentileBucketsTest {
       double threshold = 0.1 * expected + 1e-12;
       Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pct), threshold);
     }
+  }
+
+  @Test
+  public void maxLongForP100() {
+    double[] counts = new double[PercentileBuckets.length()];
+    counts[128] = 0.03416666826233268;
+    counts[129] = 0.031666668225079776;
+    counts[130] = 0.008333333767950535;
+    counts[131] = 0.005833333637565375;
+    counts[132] = 0.013333334028720856;
+    counts[133] = 0.015000000689178707;
+    counts[134] = 0.005000000260770321;
+    counts[135] = 0.006666667014360428;
+    counts[136] = 0.0008333333767950535;
+    counts[137] = 0.0025000001303851606;
+    counts[138] = 0.0;
+    counts[139] = 0.0008333333767950535;
+    double v = PercentileBuckets.percentile(counts, 100.0) / 1e9;
+    Assertions.assertTrue(v < 3.94);
+    Assertions.assertTrue(v > 3.93);
   }
 }
