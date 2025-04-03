@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,10 +185,14 @@ public final class PercentileBuckets {
     Preconditions.checkArg(pcts.length == results.length,
         "pcts is not the same size as results array");
 
+    int lastNonZeroIdx = 0;
     double total = 0.0;
-    for (double c : counts) {
-      if (c > 0.0 && Double.isFinite(c))
+    for (int i = 0; i < counts.length; ++i) {
+      double c = counts[i];
+      if (c > 0.0 && Double.isFinite(c)) {
         total += c;
+        lastNonZeroIdx = i;
+      }
     }
 
     int pctIdx = 0;
@@ -196,7 +200,7 @@ public final class PercentileBuckets {
     double prev = 0.0;
     double prevP = 0.0;
     long prevB = 0;
-    for (int i = 0; i < BUCKET_VALUES.length; ++i) {
+    for (int i = 0; i <= lastNonZeroIdx; ++i) {
       double next = prev + counts[i];
       double nextP = 100.0 * next / total;
       long nextB = BUCKET_VALUES[i];
@@ -215,7 +219,7 @@ public final class PercentileBuckets {
     }
 
     double nextP = 100.0;
-    long nextB = Long.MAX_VALUE;
+    long nextB = BUCKET_VALUES[lastNonZeroIdx];
     while (pctIdx < pcts.length) {
       double f = (pcts[pctIdx] - prevP) / (nextP - prevP);
       results[pctIdx] = f * (nextB - prevB) + prevB;
