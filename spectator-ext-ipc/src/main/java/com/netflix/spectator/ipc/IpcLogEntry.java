@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ import java.util.function.Function;
  */
 @SuppressWarnings({"PMD.ExcessiveClassLength", "PMD.AvoidStringBufferField"})
 public final class IpcLogEntry {
+
+  private static final String CONTENT_LENGTH = "Content-Length";
 
   private final Clock clock;
 
@@ -526,6 +528,14 @@ public final class IpcLogEntry {
     return withUri(uri.toString(), uri.getPath());
   }
 
+  private long parseContentLength(String value) {
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      return -1L;
+    }
+  }
+
   /**
    * Set the length for the request entity if it is known at the time of logging. If the size
    * is not known, e.g. a chunked HTTP entity, then a negative value can be used and the length
@@ -559,6 +569,8 @@ public final class IpcLogEntry {
       withClientNode(value);
     } else if (vip == null && name.equalsIgnoreCase(NetflixHeader.Vip.headerName())) {
       withVip(value);
+    } else if (requestContentLength < 0L && CONTENT_LENGTH.equalsIgnoreCase(name)) {
+      withRequestContentLength(parseContentLength(value));
     } else if (isMeshRequest(name, value)) {
       disableMetrics();
     }
@@ -584,6 +596,8 @@ public final class IpcLogEntry {
       withServerNode(value);
     } else if (endpoint == null && name.equalsIgnoreCase(NetflixHeader.Endpoint.headerName())) {
       withEndpoint(value);
+    } else if (responseContentLength < 0L && CONTENT_LENGTH.equalsIgnoreCase(name)) {
+      withResponseContentLength(parseContentLength(value));
     }
     this.responseHeaders.add(new Header(name, value));
     return this;

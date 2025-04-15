@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -395,6 +395,31 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void addRequestContentLengthHeader() {
+    Map<String, Object> map = entry
+        .addRequestHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(123, map.get("requestContentLength"));
+  }
+
+  @Test
+  public void addRequestContentLengthHeaderExplicitPreferred() {
+    Map<String, Object> map = entry
+        .withRequestContentLength(456)
+        .addRequestHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(456, map.get("requestContentLength"));
+  }
+
+  @Test
+  public void addRequestContentLengthHeaderInvalid() {
+    Map<String, Object> map = entry
+        .addRequestHeader("Content-Length", "foo")
+        .convert(this::toMap);
+    Assertions.assertNull(map.get("requestContentLength"));
+  }
+
+  @Test
   public void addResponseAsgHeader() {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
@@ -477,6 +502,31 @@ public class IpcLogEntryTest {
         .addResponseHeader(NetflixHeader.Endpoint.headerName(), "/api/v1/test")
         .convert(this::toMap);
     Assertions.assertEquals("/api/v1/test", map.get("endpoint"));
+  }
+
+  @Test
+  public void addResponseContentLengthHeader() {
+    Map<String, Object> map = entry
+        .addResponseHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(123, map.get("responseContentLength"));
+  }
+
+  @Test
+  public void addResponseContentLengthHeaderExplicitPreferred() {
+    Map<String, Object> map = entry
+        .withResponseContentLength(456)
+        .addResponseHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(456, map.get("responseContentLength"));
+  }
+
+  @Test
+  public void addResponseContentLengthHeaderInvalid() {
+    Map<String, Object> map = entry
+        .addResponseHeader("Content-Length", "foo")
+        .convert(this::toMap);
+    Assertions.assertNull(map.get("responseContentLength"));
   }
 
   @Test
