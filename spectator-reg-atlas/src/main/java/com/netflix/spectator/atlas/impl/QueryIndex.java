@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,6 +61,27 @@ public final class QueryIndex<T> {
     @Override
     public Cache<String, List<QueryIndex<V>>> get() {
       return Cache.lfu(registry, "QueryIndex", 100, 1000);
+    }
+  }
+
+  /**
+   * Dedup values as they are consumed. This is used to avoid processing the same result
+   * multiple times in the case of OR clauses where multiple match the same data point.
+   */
+  private static class DedupConsumer<T> implements Consumer<T> {
+
+    private final Consumer<T> consumer;
+    private final Set<T> alreadySeen;
+
+    DedupConsumer(Consumer<T> consumer) {
+      this.consumer = consumer;
+      this.alreadySeen = new HashSet<>();
+    }
+
+    @Override public void accept(T t) {
+      if (alreadySeen.add(t)) {
+        consumer.accept(t);
+      }
     }
   }
 
@@ -365,7 +387,7 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Id id, Consumer<T> consumer) {
-    forEachMatch(id, 0, consumer);
+    forEachMatch(id, 0, new DedupConsumer<>(consumer));
   }
 
   @SuppressWarnings("PMD.NPathComplexity")
@@ -473,6 +495,10 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Function<String, String> tags, Consumer<T> consumer) {
+    forEachMatchImpl(tags, new DedupConsumer<>(consumer));
+  }
+
+  private void forEachMatchImpl(Function<String, String> tags, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 

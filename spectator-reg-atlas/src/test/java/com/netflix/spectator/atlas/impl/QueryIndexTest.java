@@ -317,6 +317,14 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void orMultiMatch() {
+    Query q = Parser.parseQuery("name,a,:eq,name,a,:re,:or");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(q, q);
+    assertEquals(list(q), idx, id("a"));
+  }
+
+  @Test
   public void manyQueries() {
     // CpuUsage for all instances
     Query cpuUsage = Parser.parseQuery("name,cpuUsage,:eq");
