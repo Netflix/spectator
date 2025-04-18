@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,8 @@ import nl.jqno.equalsverifier.Warning;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -428,14 +426,12 @@ public class QueryTest {
 
   @Test
   public void dnfListIn() {
-    List<Query> expected = new ArrayList<>();
     Set<String> values = new TreeSet<>();
     for (int i = 0; i < 5; ++i) {
       values.add("" + i);
-      expected.add(new Query.Equal("k", "" + i));
     }
     Query q = new Query.In("k", values);
-    Assertions.assertEquals(expected, q.dnfList());
+    Assertions.assertEquals(Collections.singletonList(q), q.dnfList());
 
     values.add("5");
     Assertions.assertEquals(Collections.singletonList(q), q.dnfList());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -400,7 +400,8 @@ public final class QueryIndex<T> {
 
       boolean keyPresent = false;
 
-      for (int j = i; j < tags.size(); ++j) {
+      final int tagsSize = tags.size();
+      for (int j = i; j < tagsSize; ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
         int cmp = compare(k, keyRef);
@@ -435,7 +436,7 @@ public final class QueryIndex<T> {
           } else {
             // Enhanced for loop typically results in iterator being allocated. Using
             // size/get avoids the allocation and has better throughput.
-            int n = otherMatches.size();
+            final int n = otherMatches.size();
             for (int p = 0; p < n; ++p) {
               otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
             }
@@ -536,7 +537,7 @@ public final class QueryIndex<T> {
         } else {
           // Enhanced for loop typically results in iterator being allocated. Using
           // size/get avoids the allocation and has better throughput.
-          int n = otherMatches.size();
+          final int n = otherMatches.size();
           for (int p = 0; p < n; ++p) {
             otherMatches.get(p).forEachMatch(tags, consumer);
           }
