@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -588,25 +588,6 @@ public interface Query {
 
     @Override public boolean matches(String value) {
       return value != null && vs.contains(value);
-    }
-
-    @Override public List<Query> dnfList() {
-      // For smaller sets expand to a disjunction of equal clauses. This allows them
-      // to be indexed more efficiently. The size is limited because if there are
-      // multiple large in clauses in an expression the cross product can become really
-      // large.
-      //
-      // The name key is always expanded as it is used as the root of the QueryIndex. Early
-      // filtering at the root has a big impact on matching performance.
-      if ("name".equals(k) || vs.size() <= 5) {
-        List<Query> queries = new ArrayList<>(vs.size());
-        for (String v : vs) {
-          queries.add(new Query.Equal(k, v));
-        }
-        return queries;
-      } else {
-        return Collections.singletonList(this);
-      }
     }
 
     @Override public String toString() {
