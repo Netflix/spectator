@@ -51,6 +51,9 @@ class MetricsCounter implements Counter {
   }
 
   @Override public void add(double amount) {
+    if (amount < Long.MIN_VALUE || amount > Long.MAX_VALUE) {
+      throw new IllegalArgumentException("Amount is out of range for a long: " + amount);
+    }
     impl.mark((long) amount);
   }
 
