@@ -103,9 +103,15 @@ public class IpcServletFilter implements Filter {
 
   private String getEndpoint(HttpServletRequest httpReq) {
     String servletPath = ServletPathHack.getServletPath(httpReq);
-    return (servletPath == null || servletPath.isEmpty())
+    String endpoint = (servletPath == null || servletPath.isEmpty())
         ? "/"
         : servletPath;
+    return sanitizeHeaderValue(endpoint);
+  }
+
+  private String sanitizeHeaderValue(String value) {
+    // Remove CR and LF characters to prevent HTTP response splitting
+    return value.replaceAll("[\\r\\n]", "");
   }
 
   private void addNetflixHeaders(HttpServletResponse httpRes, String endpoint) {
