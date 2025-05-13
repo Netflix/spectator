@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ public class HttpRequestBuilder {
    */
   public HttpRequestBuilder addHeader(String name, String value) {
     if (value != null) {
-      reqHeaders.put(name, value);
+      reqHeaders.put(name, HeaderSanitizer.sanitize(value));
     }
     return this;
   }
