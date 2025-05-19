@@ -37,6 +37,7 @@ abstract class SidecarWriter implements Closeable {
   /**
    * Create a new writer based on a location string.
    */
+  @SuppressWarnings("PMD.AvoidUsingHardCodedIP")
   static SidecarWriter create(String location) {
     try {
       if ("none".equals(location)) {
@@ -49,6 +50,11 @@ abstract class SidecarWriter implements Closeable {
         OutputStream out = Files.newOutputStream(Paths.get(URI.create(location)));
         PrintStream stream = new PrintStream(out, false, "UTF-8");
         return new PrintStreamWriter(location, stream);
+      } else if ("udp".equals(location)) {
+        String host = "127.0.0.1";
+        int port = 1234;
+        SocketAddress address = new InetSocketAddress(host, port);
+        return new UdpWriter(location, address);
       } else if (location.startsWith("udp://")) {
         URI uri = URI.create(location);
         String host = uri.getHost();
