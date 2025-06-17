@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class QueryIndexTest {
@@ -116,6 +117,11 @@ public class QueryIndexTest {
     }
     for (int i = 0; i < 4; ++i) {
       Assertions.assertEquals(expected, sort(idx.findMatches(Query.toMap(id)::get)));
+      // Only check could match case here since couldMatch should be a superset of actual
+      // matches
+      if (!expected.isEmpty()) {
+        Assertions.assertTrue(idx.couldMatch(Query.toMap(id)::get));
+      }
     }
   }
 
@@ -311,6 +317,14 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void orMultiMatch() {
+    Query q = Parser.parseQuery("name,a,:eq,name,a,:re,:or");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(q, q);
+    assertEquals(list(q), idx, id("a"));
+  }
+
+  @Test
   public void manyQueries() {
     // CpuUsage for all instances
     Query cpuUsage = Parser.parseQuery("name,cpuUsage,:eq");
@@ -490,8 +504,8 @@ public class QueryIndexTest {
         "    - [b]\n" +
         "        matches:\n" +
         "        - [name,a,:eq,key,b,:eq,:and]\n" +
-        "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
-        "    - [c]\n" +
+        "    other checks:\n" +
+        "    - [key,(,b,c,),:in]\n" +
         "        matches:\n" +
         "        - [name,a,:eq,key,(,b,c,),:in,:and]\n" +
         "    other keys:\n" +
@@ -550,5 +564,114 @@ public class QueryIndexTest {
       );
       Assertions.assertEquals(5, queries.size());
     });
+  }
+
+  @Test
+  public void couldMatchEmpty() {
+    Registry registry = new NoopRegistry();
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "baz-main"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "id", "baz"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo2", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "bar-main"))::get));
+  }
+
+  @Test
+  public void couldMatchPartial() {
+    Registry registry = new NoopRegistry();
+    QueryIndex<Integer> idx = QueryIndex.newInstance(registry);
+    Query q = Parser.parseQuery("name,foo,:eq,id,bar,:eq,:and,app,baz,:re,:and");
+    idx.add(q, 42);
+
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo"))::get));
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "id", "bar"))::get));
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "app", "baz-main"))::get));
+
+    // Since `id` is after `app` and `app` is missing in tags, it will short-circuit and
+    // assume it could match
+    Assertions.assertTrue(idx.couldMatch(Query.toMap(id("foo", "id", "baz"))::get));
+
+    // Filtered out
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo2", "id", "bar"))::get));
+    Assertions.assertFalse(idx.couldMatch(Query.toMap(id("foo", "app", "bar-main"))::get));
+  }
+
+  @Test
+  public void updateRaceCondition() throws Exception {
+    Query q1 = Parser.parseQuery("name,test,:eq");
+    // Will be placed in otherKeysIdx for parent
+    Query q2 = Parser.parseQuery("foo,bar,:eq");
+
+    QueryIndex<Query> idx = QueryIndex.newInstance(new NoopRegistry());
+    idx.add(q1, q1);
+
+    final int N = 1_000_000;
+    final List<Thread> threads = new ArrayList<>(16);
+
+    // Query tasks
+    final AtomicInteger matches = new AtomicInteger();
+    final Id id = Id.create("test").withTag("foo", "bar");
+    for (int i = 0; i < 16; ++i) {
+      Thread t = new Thread(() -> {
+        for (int j = 0; j < N; ++j) {
+          matches.addAndGet(idx.findMatches(id).size());
+        }
+      });
+      t.start();
+      threads.add(t);
+    }
+
+    // Update by adding and removing q2 to lead to race condition for accessing
+    // volatile reference
+    Thread updater = new Thread(() -> {
+      for (int j = 0; j < N; ++j) {
+        idx.add(q2, q2);
+        idx.remove(q2, q2);
+      }
+    });
+    updater.start();
+    updater.join();
+
+    // Wait for read tasks to complete
+    threads.forEach(t -> {
+      try {
+        t.join();
+      } catch (Exception e) {
+        Assertions.fail(e);
+      }
+    });
+  }
+
+  @Test
+  public void otherChecksBug() {
+    Query q1 = Parser.parseQuery("name,foo,:eq,path,abcdef,:re,:and");
+    Query q2 = Parser.parseQuery("name,foo,:eq,path,abcghi,:re,:and");
+    Query q3 = Parser.parseQuery("name,foo,:eq,path,xyz,:re,:and");
+
+    QueryIndex<Integer> idx = QueryIndex.newInstance(new NoopRegistry());
+    idx.add(q1, 1);
+    idx.add(q2, 2);
+    idx.add(q3, 3);
+    Assertions.assertEquals(
+        Collections.singletonList(1),
+        idx.findMatches(id("foo", "path", "abcdef")));
+    Assertions.assertEquals(
+        Collections.singletonList(2),
+        idx.findMatches(id("foo", "path", "abcghijkl")));
+    Assertions.assertEquals(
+        Collections.singletonList(3),
+        idx.findMatches(id("foo", "path", "xyz")));
+
+    idx.remove(q3, 3);
+    Assertions.assertEquals(
+        Collections.singletonList(1),
+        idx.findMatches(id("foo", "path", "abcdef")));
+    Assertions.assertEquals(
+        Collections.singletonList(2),
+        idx.findMatches(id("foo", "path", "abcghijkl")));
+    Assertions.assertTrue(idx.findMatches(id("foo", "path", "xyz")).isEmpty());
   }
 }

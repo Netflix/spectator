@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2020 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ class AtlasMaxGauge extends AtlasMeter implements Gauge {
 
   @Override public void set(double v) {
     long now = clock.wallTime();
-    value.getCurrent(now).max(v);
+    value.max(now, v);
     updateLastModTime(now);
   }
 

@@ -99,9 +99,8 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
   }
 
   @Override public long stop(long task) {
-    Long startTime = tasks.get(task);
+    Long startTime = tasks.remove(task);
     if (startTime != null) {
-      tasks.remove(task);
       return clock.monotonicTime() - startTime;
     } else {
       return -1L;

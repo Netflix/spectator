@@ -17,7 +17,6 @@ package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Statistic;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
 
@@ -27,6 +26,8 @@ import java.lang.management.CompilationMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.ThreadMXBean;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Helpers for working with JMX mbeans.
@@ -42,10 +43,18 @@ public final class Jmx {
    * mbeans from the local jvm.
    */
   public static void registerStandardMXBeans(Registry registry) {
-    monitorClassLoadingMXBean(registry);
-    monitorThreadMXBean(registry);
-    monitorCompilationMXBean(registry);
-    maybeRegisterHotspotInternal(registry);
+    if (JavaFlightRecorder.isSupported()) {
+      Executor executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "spectator-jfr");
+        t.setDaemon(true);
+        return t;
+      });
+      JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+    } else {
+      monitorClassLoadingMXBean(registry);
+      monitorThreadMXBean(registry);
+      monitorCompilationMXBean(registry);
+    }
 
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
@@ -88,33 +97,6 @@ public final class Jmx {
         .withName("jvm.compilation.compilationTime")
         .withTag("compiler", compilationMXBean.getName())
         .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
-    }
-  }
-
-  private static void maybeRegisterHotspotInternal(Registry registry) {
-    if (HotspotRuntime.isSupported()) {
-      // The safepointCount is reported as the count for both the safepointTime and
-      // safepointSyncTime. This should allow the metrics to work as normal timers and
-      // for the user to compute the average time spent per operation.
-      Object mbean = HotspotRuntime.getRuntimeMBean();
-
-      PolledMeter.using(registry)
-          .withName("jvm.hotspot.safepointTime")
-          .withTag(Statistic.count)
-          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
-      PolledMeter.using(registry)
-          .withName("jvm.hotspot.safepointTime")
-          .withTag(Statistic.totalTime)
-          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointTime() / 1000.0);
-
-      PolledMeter.using(registry)
-          .withName("jvm.hotspot.safepointSyncTime")
-          .withTag(Statistic.count)
-          .monitorMonotonicCounter(mbean, b -> HotspotRuntime.getSafepointCount());
-      PolledMeter.using(registry)
-          .withName("jvm.hotspot.safepointSyncTime")
-          .withTag(Statistic.totalTime)
-          .monitorMonotonicCounterDouble(mbean, b -> HotspotRuntime.getSafepointSyncTime() / 1000.0);
     }
   }
 

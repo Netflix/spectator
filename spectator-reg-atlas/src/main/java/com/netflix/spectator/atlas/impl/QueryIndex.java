@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,6 +65,27 @@ public final class QueryIndex<T> {
   }
 
   /**
+   * Dedup values as they are consumed. This is used to avoid processing the same result
+   * multiple times in the case of OR clauses where multiple match the same data point.
+   */
+  private static class DedupConsumer<T> implements Consumer<T> {
+
+    private final Consumer<T> consumer;
+    private final Set<T> alreadySeen;
+
+    DedupConsumer(Consumer<T> consumer) {
+      this.consumer = consumer;
+      this.alreadySeen = new HashSet<>();
+    }
+
+    @Override public void accept(T t) {
+      if (alreadySeen.add(t)) {
+        consumer.accept(t);
+      }
+    }
+  }
+
+  /**
    * Return a new instance of an index that is empty. The default caching behavior will be
    * used.
    */
@@ -94,10 +116,8 @@ public final class QueryIndex<T> {
    * This allows the {@link Id} to be traversed in order while performing the lookup.
    */
   private static int compare(String k1, String k2) {
-    if ("name".equals(k1) && "name".equals(k2)) {
-      return 0;
-    } else if ("name".equals(k1)) {
-      return -1;
+    if ("name".equals(k1)) {
+      return "name".equals(k2) ? 0 : -1;
     } else if ("name".equals(k2)) {
       return 1;
     } else {
@@ -335,9 +355,13 @@ public final class QueryIndex<T> {
     return matches.isEmpty()
         && equalChecks.values().stream().allMatch(QueryIndex::isEmpty)
         && otherChecks.values().stream().allMatch(QueryIndex::isEmpty)
-        && (hasKeyIdx == null || hasKeyIdx.isEmpty())
-        && (otherKeysIdx == null || otherKeysIdx.isEmpty())
-        && (missingKeysIdx == null || missingKeysIdx.isEmpty());
+        && isEmpty(hasKeyIdx)
+        && isEmpty(otherKeysIdx)
+        && isEmpty(missingKeysIdx);
+  }
+
+  private boolean isEmpty(QueryIndex<T> idx) {
+    return idx == null || idx.isEmpty();
   }
 
   /**
@@ -363,7 +387,7 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Id id, Consumer<T> consumer) {
-    forEachMatch(id, 0, consumer);
+    forEachMatch(id, 0, new DedupConsumer<>(consumer));
   }
 
   @SuppressWarnings("PMD.NPathComplexity")
@@ -371,21 +395,24 @@ public final class QueryIndex<T> {
     // Matches for this level
     matches.forEach(consumer);
 
-    if (key != null) {
+    final String keyRef = key;
+    if (keyRef != null) {
 
       boolean keyPresent = false;
 
-      for (int j = i; j < tags.size(); ++j) {
+      final int tagsSize = tags.size();
+      for (int j = i; j < tagsSize; ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
-        int cmp = compare(k, key);
+        int cmp = compare(k, keyRef);
         if (cmp == 0) {
+          final int nextPos = j + 1;
           keyPresent = true;
 
           // Find exact matches
           QueryIndex<T> eqIdx = equalChecks.get(v);
           if (eqIdx != null) {
-            eqIdx.forEachMatch(tags, i + 1, consumer);
+            eqIdx.forEachMatch(tags, nextPos, consumer);
           }
 
           // Scan for matches with other conditions
@@ -400,7 +427,7 @@ public final class QueryIndex<T> {
                   QueryIndex<T> idx = otherChecks.get(kq);
                   if (idx != null) {
                     tmp.add(idx);
-                    idx.forEachMatch(tags, i + 1, consumer);
+                    idx.forEachMatch(tags, nextPos, consumer);
                   }
                 }
               });
@@ -409,15 +436,16 @@ public final class QueryIndex<T> {
           } else {
             // Enhanced for loop typically results in iterator being allocated. Using
             // size/get avoids the allocation and has better throughput.
-            int n = otherMatches.size();
+            final int n = otherMatches.size();
             for (int p = 0; p < n; ++p) {
-              otherMatches.get(p).forEachMatch(tags, i + 1, consumer);
+              otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
             }
           }
 
           // Check matches for has key
-          if (hasKeyIdx != null) {
-            hasKeyIdx.forEachMatch(tags, i, consumer);
+          final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+          if (hasKeyIdxRef != null) {
+            hasKeyIdxRef.forEachMatch(tags, j, consumer);
           }
         }
 
@@ -428,13 +456,15 @@ public final class QueryIndex<T> {
       }
 
       // Check matches with other keys
-      if (otherKeysIdx != null) {
-        otherKeysIdx.forEachMatch(tags, i, consumer);
+      final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+      if (otherKeysIdxRef != null) {
+        otherKeysIdxRef.forEachMatch(tags, i, consumer);
       }
 
       // Check matches with missing keys
-      if (missingKeysIdx != null && !keyPresent) {
-        missingKeysIdx.forEachMatch(tags, i, consumer);
+      final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+      if (missingKeysIdxRef != null && !keyPresent) {
+        missingKeysIdxRef.forEachMatch(tags, i, consumer);
       }
     }
   }
@@ -466,12 +496,17 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Function<String, String> tags, Consumer<T> consumer) {
+    forEachMatchImpl(tags, new DedupConsumer<>(consumer));
+  }
+
+  private void forEachMatchImpl(Function<String, String> tags, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
     boolean keyPresent = false;
-    if (key != null) {
-      String v = tags.apply(key);
+    final String keyRef = key;
+    if (keyRef != null) {
+      String v = tags.apply(keyRef);
       if (v != null) {
         keyPresent = true;
 
@@ -502,34 +537,112 @@ public final class QueryIndex<T> {
         } else {
           // Enhanced for loop typically results in iterator being allocated. Using
           // size/get avoids the allocation and has better throughput.
-          int n = otherMatches.size();
+          final int n = otherMatches.size();
           for (int p = 0; p < n; ++p) {
             otherMatches.get(p).forEachMatch(tags, consumer);
           }
         }
 
         // Check matches for has key
-        if (hasKeyIdx != null) {
-          hasKeyIdx.forEachMatch(tags, consumer);
+        final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+        if (hasKeyIdxRef != null) {
+          hasKeyIdxRef.forEachMatch(tags, consumer);
         }
       }
     }
 
     // Check matches with other keys
-    if (otherKeysIdx != null) {
-      otherKeysIdx.forEachMatch(tags, consumer);
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
+      otherKeysIdxRef.forEachMatch(tags, consumer);
     }
 
     // Check matches with missing keys
-    if (missingKeysIdx != null && !keyPresent) {
-      missingKeysIdx.forEachMatch(tags, consumer);
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null && !keyPresent) {
+      missingKeysIdxRef.forEachMatch(tags, consumer);
     }
+  }
+
+  /**
+   * Check the set of tags, which could be a partial set, and return true if it is possible
+   * that it would match some set of expressions. This method can be used as a cheap pre-filter
+   * check. In some cases this can be useful to avoid expensive transforms to get the final
+   * set of tags for matching.
+   *
+   * @param tags
+   *     Partial set of tags to check against the index. Function is used to look up the
+   *     value for a given tag key. The function should return {@code null} if there is no
+   *     value for the key.
+   * @return
+   *     True if it is possible there would be a match based on the partial set of tags.
+   */
+  @SuppressWarnings("PMD.NPathComplexity")
+  public boolean couldMatch(Function<String, String> tags) {
+    // Matches for this level
+    if (!matches.isEmpty()) {
+      return true;
+    }
+
+    boolean keyPresent = false;
+    final String keyRef = key;
+    if (keyRef != null) {
+      String v = tags.apply(keyRef);
+      if (v != null) {
+        keyPresent = true;
+
+        // Check exact matches
+        QueryIndex<T> eqIdx = equalChecks.get(v);
+        if (eqIdx != null && eqIdx.couldMatch(tags)) {
+          return true;
+        }
+
+        // Scan for matches with other conditions
+        if (!otherChecks.isEmpty()) {
+          boolean otherMatches = otherChecksTree.exists(v, kq -> {
+            if (kq instanceof Query.In || couldMatch(kq, v)) {
+              QueryIndex<T> idx = otherChecks.get(kq);
+              return idx != null && idx.couldMatch(tags);
+            }
+            return false;
+          });
+          if (otherMatches) {
+            return true;
+          }
+        }
+
+        // Check matches for has key
+        final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+        if (hasKeyIdxRef != null && hasKeyIdxRef.couldMatch(tags)) {
+          return true;
+        }
+      }
+    }
+
+    // Check matches with other keys
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null && otherKeysIdxRef.couldMatch(tags)) {
+      return true;
+    }
+
+    // Check matches with missing keys
+    return !keyPresent;
   }
 
   private boolean matches(Query.KeyQuery kq, String value) {
     if (kq instanceof Query.Regex) {
       Query.Regex re = (Query.Regex) kq;
       return re.pattern().matchesAfterPrefix(value);
+    } else {
+      return kq.matches(value);
+    }
+  }
+
+  private boolean couldMatch(Query.KeyQuery kq, String value) {
+    if (kq instanceof Query.Regex) {
+      // For this possible matches prefix check is sufficient, avoid full regex to
+      // keep the pre-filter checks cheap.
+      return true;
     } else {
       return kq.matches(value);
     }
@@ -555,11 +668,12 @@ public final class QueryIndex<T> {
       Deque<String> path,
       BiConsumer<List<String>, List<Query.KeyQuery>> consumer
   ) {
-    if (key != null) {
-      path.addLast("K=" + key);
+    final String keyRef = key;
+    if (keyRef != null) {
+      path.addLast("K=" + keyRef);
 
       equalChecks.forEach((v, idx) -> {
-        path.addLast(key + "," + v + ",:eq");
+        path.addLast(keyRef + "," + v + ",:eq");
         idx.findHotSpots(threshold, path, consumer);
         path.removeLast();
       });
@@ -576,24 +690,27 @@ public final class QueryIndex<T> {
       });
       path.removeLast();
 
-      if (hasKeyIdx != null) {
+      final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+      if (hasKeyIdxRef != null) {
         path.addLast("has");
-        hasKeyIdx.findHotSpots(threshold, path, consumer);
+        hasKeyIdxRef.findHotSpots(threshold, path, consumer);
         path.removeLast();
       }
 
       path.removeLast();
     }
 
-    if (otherKeysIdx != null) {
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
       path.addLast("other-keys");
-      otherKeysIdx.findHotSpots(threshold, path, consumer);
+      otherKeysIdxRef.findHotSpots(threshold, path, consumer);
       path.removeLast();
     }
 
-    if (missingKeysIdx != null) {
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null) {
       path.addLast("missing-keys");
-      missingKeysIdx.findHotSpots(threshold, path, consumer);
+      missingKeysIdxRef.findHotSpots(threshold, path, consumer);
       path.removeLast();
     }
   }
@@ -612,8 +729,9 @@ public final class QueryIndex<T> {
   }
 
   private void buildString(StringBuilder builder, int n) {
-    if (key != null) {
-      indent(builder, n).append("key: [").append(key).append("]\n");
+    final String keyRef = key;
+    if (keyRef != null) {
+      indent(builder, n).append("key: [").append(keyRef).append("]\n");
     }
     if (!equalChecks.isEmpty()) {
       indent(builder, n).append("equal checks:\n");
@@ -629,17 +747,20 @@ public final class QueryIndex<T> {
         idx.buildString(builder, n + 1);
       });
     }
-    if (hasKeyIdx != null) {
+    final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
+    if (hasKeyIdxRef != null) {
       indent(builder, n).append("has key:\n");
-      hasKeyIdx.buildString(builder, n + 1);
+      hasKeyIdxRef.buildString(builder, n + 1);
     }
-    if (otherKeysIdx != null) {
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
       indent(builder, n).append("other keys:\n");
-      otherKeysIdx.buildString(builder, n + 1);
+      otherKeysIdxRef.buildString(builder, n + 1);
     }
-    if (missingKeysIdx != null) {
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null) {
       indent(builder, n).append("missing keys:\n");
-      missingKeysIdx.buildString(builder, n + 1);
+      missingKeysIdxRef.buildString(builder, n + 1);
     }
     if (!matches.isEmpty()) {
       indent(builder, n).append("matches:\n");

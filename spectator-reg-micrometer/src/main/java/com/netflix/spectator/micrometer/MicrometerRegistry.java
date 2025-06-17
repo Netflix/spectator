@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,12 +133,13 @@ public final class MicrometerRegistry implements Registry {
   @Override public Gauge maxGauge(Id id) {
     // Note: micrometer doesn't support this type directly so it uses an arbitrary
     // window of 1m
-    StepDouble value = new StepDouble(Double.NaN, clock(), 60000L);
+    final Clock clk = clock();
+    StepDouble value = new StepDouble(Double.NaN, clk, 60000L);
     io.micrometer.core.instrument.Gauge gauge = io.micrometer.core.instrument.Gauge
         .builder(id.name(), value, StepDouble::poll)
         .tags(convert(id.tags()))
         .register(impl);
-    return new MicrometerGauge(id, v -> value.getCurrent().max(v), gauge);
+    return new MicrometerGauge(id, v -> value.max(clk.wallTime(), v), gauge);
   }
 
   @Override public Meter get(Id id) {

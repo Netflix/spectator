@@ -58,11 +58,16 @@ final class Rollups {
       for (Measurement m : ms) {
         List<RollupPolicy.Rule> matches = index.findMatches(m.id());
         if (matches.isEmpty()) {
-          // No matches for the id, but we sill need to treat as an aggregate because
+          // No matches for the id, but we still need to treat as an aggregate because
           // rollup on another id could cause a collision
           Map<Id, Aggregator> idMap = aggregates.computeIfAbsent(commonTags, k -> new HashMap<>());
           updateAggregate(idMap, m.id(), m);
         } else {
+          // Skip measurement if one of the rules indicates it should be dropped
+          if (shouldDrop(matches)) {
+            continue;
+          }
+
           // For matching rules, find dimensions from common tags and others that are part
           // of the id
           Set<String> commonDimensions = new HashSet<>();
@@ -77,7 +82,7 @@ final class Rollups {
             }
           }
 
-          // Peform rollup by removing the dimensions
+          // Perform rollup by removing the dimensions
           Map<String, String> tags = commonDimensions.isEmpty()
               ? commonTags
               : rollup(commonTags, commonDimensions);
@@ -90,12 +95,21 @@ final class Rollups {
       }
 
       // Convert to final result type
-      List<RollupPolicy.Result> results = new ArrayList<>();
+      List<RollupPolicy.Result> results = new ArrayList<>(aggregates.size());
       for (Map.Entry<Map<String, String>, Map<Id, Aggregator>> entry : aggregates.entrySet()) {
         results.add(new RollupPolicy.Result(entry.getKey(), toMeasurements(entry.getValue())));
       }
       return results;
     };
+  }
+
+  private static boolean shouldDrop(List<RollupPolicy.Rule> rules) {
+    for (RollupPolicy.Rule rule : rules) {
+      if (rule.operation() == RollupPolicy.Operation.DROP) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Map<String, String> rollup(Map<String, String> tags, Set<String> dimensions) {

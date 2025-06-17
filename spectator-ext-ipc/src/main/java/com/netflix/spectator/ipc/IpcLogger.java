@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,32 +47,40 @@ public class IpcLogger {
   private final Registry registry;
   private final Clock clock;
   private final Logger logger;
+  private final IpcLoggerConfig config;
 
+  private final boolean inflightEnabled;
   private final ConcurrentHashMap<Id, AtomicInteger> inflightRequests;
   private final ConcurrentHashMap<String, Function<String, String>> limiters;
 
   private final LinkedBlockingQueue<IpcLogEntry> entries;
 
   /**
-   * Create a new instance. Allows the clock to be explicitly set for unit tests.
+   * Create a new instance.
    */
-  IpcLogger(Registry registry, Clock clock, Logger logger) {
+  public IpcLogger(Registry registry, Logger logger, IpcLoggerConfig config) {
     this.registry = registry;
-    this.clock = clock;
+    this.clock = registry.clock();
     this.logger = logger;
+    this.config = config;
+    this.inflightEnabled = config.inflightMetricsEnabled();
     this.inflightRequests = new ConcurrentHashMap<>();
     this.limiters = new ConcurrentHashMap<>();
-    this.entries = new LinkedBlockingQueue<>(1000);
+    this.entries = new LinkedBlockingQueue<>(config.entryQueueSize());
   }
 
   /** Create a new instance. */
   public IpcLogger(Registry registry, Logger logger) {
-    this(registry, registry.clock(), logger);
+    this(registry, logger, k -> null);
   }
 
   /** Create a new instance. */
   public IpcLogger(Registry registry) {
-    this(registry, registry.clock(), LoggerFactory.getLogger(IpcLogger.class));
+    this(registry, LoggerFactory.getLogger(IpcLogger.class), k -> null);
+  }
+
+  boolean inflightEnabled() {
+    return inflightEnabled;
   }
 
   /** Return the number of inflight requests associated with the given id. */
@@ -85,7 +93,10 @@ public class IpcLogger {
    * backend from a metrics explosion if some dimensions have a high cardinality.
    */
   Function<String, String> limiterForKey(String key) {
-    return Utils.computeIfAbsent(limiters, key, k -> CardinalityLimiters.rollup(25));
+    return Utils.computeIfAbsent(limiters, key, k -> {
+      final int n = config.cardinalityLimit(k);
+      return CardinalityLimiters.rollup(n);
+    });
   }
 
   private IpcLogEntry newEntry() {

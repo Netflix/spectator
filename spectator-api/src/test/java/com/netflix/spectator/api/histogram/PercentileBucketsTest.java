@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,5 +125,65 @@ public class PercentileBucketsTest {
       double threshold = 0.1 * expected + 1e-12;
       Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pct), threshold);
     }
+  }
+
+  @Test
+  public void percentilesDouble() {
+    double[] counts = new double[PercentileBuckets.length()];
+    for (int i = 0; i < 100_000; ++i) {
+      // simulate it as a rate per minute
+      counts[PercentileBuckets.indexOf(i)] += 1.0 / 60.0;
+    }
+
+    double[] pcts = new double[] {0.0, 25.0, 50.0, 75.0, 90.0, 95.0, 98.0, 99.0, 99.5, 100.0};
+    double[] results = new double[pcts.length];
+
+    PercentileBuckets.percentiles(counts, pcts, results);
+
+    double[] expected = new double[] {0.0, 25e3, 50e3, 75e3, 90e3, 95e3, 98e3, 99e3, 99.5e3, 100e3};
+    double threshold = 0.1 * 100_000; // quick check, should be within 10% of total
+    Assertions.assertArrayEquals(expected, results, threshold);
+
+    // Further check each value is within 10% of actual percentile
+    for (int i = 0 ; i < results.length; ++i) {
+      threshold = 0.1 * expected[i] + 1e-12;
+      Assertions.assertEquals(expected[i], results[i], threshold);
+    }
+  }
+
+  @Test
+  public void percentileDouble() {
+    double[] counts = new double[PercentileBuckets.length()];
+    for (int i = 0; i < 100_000; ++i) {
+      // simulate it as a rate per minute
+      counts[PercentileBuckets.indexOf(i)] += 1.0 / 60.0;
+    }
+
+    double[] pcts = new double[] {0.0, 25.0, 50.0, 75.0, 90.0, 95.0, 98.0, 99.0, 99.5, 100.0};
+    for (double pct : pcts) {
+      double expected = pct * 1e3;
+      double threshold = 0.1 * expected + 1e-12;
+      Assertions.assertEquals(expected, PercentileBuckets.percentile(counts, pct), threshold);
+    }
+  }
+
+  @Test
+  public void maxLongForP100() {
+    double[] counts = new double[PercentileBuckets.length()];
+    counts[128] = 0.03416666826233268;
+    counts[129] = 0.031666668225079776;
+    counts[130] = 0.008333333767950535;
+    counts[131] = 0.005833333637565375;
+    counts[132] = 0.013333334028720856;
+    counts[133] = 0.015000000689178707;
+    counts[134] = 0.005000000260770321;
+    counts[135] = 0.006666667014360428;
+    counts[136] = 0.0008333333767950535;
+    counts[137] = 0.0025000001303851606;
+    counts[138] = 0.0;
+    counts[139] = 0.0008333333767950535;
+    double v = PercentileBuckets.percentile(counts, 100.0) / 1e9;
+    Assertions.assertTrue(v < 3.94);
+    Assertions.assertTrue(v > 3.93);
   }
 }

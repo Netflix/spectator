@@ -36,8 +36,6 @@ import com.netflix.spectator.atlas.impl.PublishPayload;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -56,7 +54,6 @@ import java.util.stream.StreamSupport;
 /**
  * Registry for reporting metrics to Atlas.
  */
-@Singleton
 public final class AtlasRegistry extends AbstractRegistry implements AutoCloseable {
 
   private static final String PUBLISH_TASK_TIMER = "spectator.atlas.publishTaskTime";
@@ -98,7 +95,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   private final ConcurrentHashMap<String, Lock> publishTaskLocks = new ConcurrentHashMap<>();
 
   /** Create a new instance. */
-  @Inject
   public AtlasRegistry(Clock clock, AtlasConfig config) {
     this(clock, config, null);
   }
@@ -196,7 +192,7 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
       // Shutdown background tasks to collect data
       scheduler.shutdown();
       scheduler = null;
-      logger.info("stopped collecting metrics every {}ms reporting to {}", step, uri);
+      logger.info("stopped collecting metrics every {} reporting to {}", step, uri);
 
       // Flush data to Atlas
       try {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.NetflixHeader;
 import com.netflix.spectator.ipc.NetflixHeaders;
+import com.netflix.spectator.ipc.http.HeaderSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +118,7 @@ public class IpcServletFilter implements Filter {
 
   private void addIfNotPresent(HttpServletResponse httpRes, String name, String value) {
     if (httpRes.getHeader(name) == null) {
-      httpRes.addHeader(name, value);
+      httpRes.addHeader(name, HeaderSanitizer.sanitize(value));
     }
   }
 

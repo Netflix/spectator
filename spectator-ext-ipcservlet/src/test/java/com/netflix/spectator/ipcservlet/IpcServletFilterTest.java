@@ -80,7 +80,7 @@ public class IpcServletFilterTest {
     client.get(baseUri.resolve("/test/foo/12345?q=54321")).send();
     checkResult(registry, "success");
     checkStatus(registry, "200");
-    checkMethod(registry, "GET");
+    checkMethod(registry, "get");
     checkEndpoint(registry, "/test/foo");
     IpcMetric.validate(registry, true);
   }
@@ -105,7 +105,7 @@ public class IpcServletFilterTest {
     checkResult(registry, "failure");
     checkErrorReason(registry, null);
     checkStatus(registry, "400");
-    checkMethod(registry, "POST");
+    checkMethod(registry, "post");
     checkEndpoint(registry, "/bad");
     IpcMetric.validate(registry, true);
   }
@@ -116,7 +116,7 @@ public class IpcServletFilterTest {
     checkResult(registry, "failure");
     checkClientErrorReason(registry, null);
     checkServerErrorReason(registry, "RuntimeException");
-    checkMethod(registry, "GET");
+    checkMethod(registry, "get");
     checkClientEndpoint(registry, "_throw_-");
     checkServerEndpoint(registry, "/throw");
     IpcMetric.validate(registry, true);
@@ -127,7 +127,7 @@ public class IpcServletFilterTest {
     client.delete(baseUri.resolve("/endpoint/foo/12345?q=54321")).send();
     checkResult(registry, "success");
     checkStatus(registry, "200");
-    checkMethod(registry, "DELETE");
+    checkMethod(registry, "delete");
     checkEndpoint(registry, "/servlet"); // header set in the servlet
     IpcMetric.validate(registry, true);
   }

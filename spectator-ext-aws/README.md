@@ -1,4 +1,10 @@
 # spectator-ext-aws
+
+**DEPRECATED:** AWS SDK for Java V1 will no longer be supported [after 2025]. Users
+should move to AWS SDK for Java V2.
+
+[after 2025]: https://aws.amazon.com/blogs/developer/announcing-end-of-support-for-aws-sdk-for-java-v1-x-on-december-31-2025/
+
 Use Spectator as the Metrics backend for AWS SDK Request Metrics.
 
 # Usage

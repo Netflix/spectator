@@ -1,12 +1,59 @@
+sourceSets {
+  java17 {
+    java {
+      srcDirs = ['src/main/java17']
+      compileClasspath = configurations.compileClasspath
+      runtimeClasspath = configurations.runtimeClasspath
+    }
+  }
+  java17Test {
+    java {
+      srcDirs = ['src/test/java17']
+      compileClasspath = jar.outputs.files + configurations.testCompileClasspath
+      runtimeClasspath = jar.outputs.files + runtimeClasspath + configurations.testRuntimeClasspath
+    }
+  }
+}
+
 dependencies {
   api project(':spectator-api')
   implementation 'com.typesafe:config'
+  testImplementation 'com.google.code.findbugs:annotations:3.0.1u2'
 }
 
-jar {
+def java17Compiler = javaToolchains.compilerFor {
+  languageVersion = JavaLanguageVersion.of(17)
+}
+
+tasks.named('compileJava17Java', JavaCompile).configure {
+  javaCompiler = java17Compiler
+}
+
+tasks.named('compileJava17TestJava', JavaCompile).configure {
+  javaCompiler = java17Compiler
+}
+
+tasks.named('jar').configure {
+  into('META-INF/versions/17') {
+    from sourceSets.java17.output
+  }
   manifest {
     attributes(
-      "Automatic-Module-Name": "com.netflix.spectator.jvm"
+      'Automatic-Module-Name': 'com.netflix.spectator.jvm',
+      'Multi-Release': 'true'
     )
   }
 }
+
+def testJava17 = tasks.register('testJava17', Test) {
+  description = "Runs tests for java17Test sourceset."
+  group = 'verification'
+
+  testClassesDirs = sourceSets.java17Test.output.classesDirs
+  classpath = sourceSets.java17Test.runtimeClasspath
+
+  javaLauncher = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+check.dependsOn testJava17

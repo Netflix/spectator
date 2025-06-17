@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2024 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.netflix.spectator.ipc.http;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.ipc.IpcLogger;
-import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 
@@ -49,9 +48,7 @@ public interface HttpClient {
    * Default {@link IpcLogger} instance. It will report metrics to
    * {@link Spectator#globalRegistry()}.
    */
-  IpcLogger DEFAULT_LOGGER = new IpcLogger(
-      Spectator.globalRegistry(),
-      LoggerFactory.getLogger(HttpClient.class));
+  IpcLogger DEFAULT_LOGGER = Defaults.IPC_LOGGER;
 
   /**
    * Default client instance that can be used in static contexts where it is not
@@ -68,7 +65,7 @@ public interface HttpClient {
    *     Client instance based on {@link java.net.HttpURLConnection}.
    */
   static HttpClient create(Registry registry) {
-    return create(new IpcLogger(registry, LoggerFactory.getLogger(HttpClient.class)));
+    return create(new IpcLogger(registry, Defaults.LOGGER));
   }
 
   /**

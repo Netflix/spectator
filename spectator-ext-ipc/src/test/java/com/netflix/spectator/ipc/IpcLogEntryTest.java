@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import com.netflix.spectator.api.BasicTag;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.ManualClock;
+import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Utils;
+import com.netflix.spectator.api.patterns.CardinalityLimiters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,9 +31,14 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class IpcLogEntryTest {
 
@@ -237,6 +244,26 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void method() {
+    String expected = IpcMethod.get.value();
+    String actual = (String) entry
+        .withMethod(IpcMethod.get)
+        .convert(this::toMap)
+        .get("method");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void customMethod() {
+    String expected = "websocket";
+    String actual = (String) entry
+        .withHttpMethod(expected)
+        .convert(this::toMap)
+        .get("method");
+    Assertions.assertEquals("unknown", actual);
+  }
+
+  @Test
   public void clientNode() {
     String expected = "i-12345";
     String actual = (String) entry
@@ -368,6 +395,31 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void addRequestContentLengthHeader() {
+    Map<String, Object> map = entry
+        .addRequestHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(123, map.get("requestContentLength"));
+  }
+
+  @Test
+  public void addRequestContentLengthHeaderExplicitPreferred() {
+    Map<String, Object> map = entry
+        .withRequestContentLength(456)
+        .addRequestHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(456, map.get("requestContentLength"));
+  }
+
+  @Test
+  public void addRequestContentLengthHeaderInvalid() {
+    Map<String, Object> map = entry
+        .addRequestHeader("Content-Length", "foo")
+        .convert(this::toMap);
+    Assertions.assertNull(map.get("requestContentLength"));
+  }
+
+  @Test
   public void addResponseAsgHeader() {
     Map<String, Object> map = entry
         .addResponseHeader(NetflixHeader.ASG.headerName(), "www-test-v011")
@@ -453,6 +505,40 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void addResponseContentLengthHeader() {
+    Map<String, Object> map = entry
+        .addResponseHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(123, map.get("responseContentLength"));
+  }
+
+  @Test
+  public void addResponseContentLengthHeaderExplicitPreferred() {
+    Map<String, Object> map = entry
+        .withResponseContentLength(456)
+        .addResponseHeader("Content-Length", "123")
+        .convert(this::toMap);
+    Assertions.assertEquals(456, map.get("responseContentLength"));
+  }
+
+  @Test
+  public void addResponseContentLengthHeaderInvalid() {
+    Map<String, Object> map = entry
+        .addResponseHeader("Content-Length", "foo")
+        .convert(this::toMap);
+    Assertions.assertNull(map.get("responseContentLength"));
+  }
+
+  @Test
+  public void source() {
+    String expected = IpcSource.direct.value();
+    String actual = (String) entry
+        .withSource(IpcSource.direct)
+        .convert(this::toMap).get("source");
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
   public void httpStatusOk() {
     String actual = (String) entry
         .withHttpStatus(200)
@@ -504,8 +590,8 @@ public class IpcLogEntryTest {
     String actual = (String) entry
         .withHttpMethod(expected)
         .convert(this::toMap)
-        .get("httpMethod");
-    Assertions.assertEquals(expected, actual);
+        .get("method");
+    Assertions.assertEquals(expected.toLowerCase(Locale.US), actual);
   }
 
   @Test
@@ -661,10 +747,66 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void keyLimiterDefault() {
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
+    for (int i = 0; i < 200; ++i) {
+      logger.createClientEntry()
+          .markStart()
+          .addTag("id", Integer.toString(i))
+          .markEnd()
+          .log();
+    }
+    AtomicInteger count = new AtomicInteger();
+    registry
+        .counters()
+        .filter(c -> "ipc.client.call".equals(c.id().name()))
+        .forEach(c -> {
+          count.incrementAndGet();
+          String id = Utils.getTagValue(c.id(), "id");
+          if (CardinalityLimiters.AUTO_ROLLUP.equals(id)) {
+            Assertions.assertEquals(175, c.count());
+          } else {
+            Assertions.assertEquals(1, c.count());
+          }
+        });
+    Assertions.assertEquals(26, count.get());
+  }
+
+  @Test
+  public void keyLimiterCustom() {
+    Map<String, String> props = Collections
+        .singletonMap("spectator.ipc.cardinality-limit.id", "100");
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()), props::get);
+    for (int i = 0; i < 200; ++i) {
+      logger.createClientEntry()
+          .markStart()
+          .addTag("id", Integer.toString(i))
+          .markEnd()
+          .log();
+    }
+    AtomicInteger count = new AtomicInteger();
+    registry
+        .counters()
+        .filter(c -> "ipc.client.call".equals(c.id().name()))
+        .forEach(c -> {
+          count.incrementAndGet();
+          String id = Utils.getTagValue(c.id(), "id");
+          if (CardinalityLimiters.AUTO_ROLLUP.equals(id)) {
+            Assertions.assertEquals(100, c.count());
+          } else {
+            Assertions.assertEquals(1, c.count());
+          }
+        });
+    Assertions.assertEquals(101, count.get());
+  }
+
+  @Test
   public void inflightRequests() {
-    Registry registry = new DefaultRegistry();
+    Registry registry = new DefaultRegistry(clock);
     DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
     IpcLogEntry logEntry = logger.createClientEntry();
 
     Assertions.assertEquals(0L, summary.totalAmount());
@@ -675,10 +817,26 @@ public class IpcLogEntryTest {
   }
 
   @Test
-  public void inflightRequestsMany() {
-    Registry registry = new DefaultRegistry();
+  public void inflightRequestsDisabled() {
+    Map<String, String> props = Collections
+        .singletonMap("spectator.ipc.inflight-metrics-enabled", "false");
+    Registry registry = new DefaultRegistry(clock);
     DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()), props::get);
+    IpcLogEntry logEntry = logger.createClientEntry();
+
+    Assertions.assertEquals(0L, summary.totalAmount());
+    logEntry.markStart();
+    Assertions.assertEquals(0L, summary.totalAmount());
+    logEntry.markEnd();
+    Assertions.assertEquals(0L, summary.totalAmount());
+  }
+
+  @Test
+  public void inflightRequestsMany() {
+    Registry registry = new DefaultRegistry(clock);
+    DistributionSummary summary = registry.distributionSummary("ipc.client.inflight");
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     for (int i = 0; i < 10; ++i) {
       logger.createClientEntry().markStart().markEnd();
@@ -689,8 +847,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void clientMetricsValidate() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createClientEntry()
         .withOwner("test")
@@ -703,8 +861,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void clientMetricsValidateHttpSuccess() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createClientEntry()
         .withOwner("test")
@@ -720,8 +878,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void clientMetricsDisbled() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createClientEntry()
         .withOwner("test")
@@ -735,8 +893,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void serverMetricsValidate() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createServerEntry()
         .withOwner("test")
@@ -749,8 +907,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void serverMetricsDisabled() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createServerEntry()
         .withOwner("test")
@@ -764,8 +922,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void serverMetricsDisabledViaHeader() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createServerEntry()
         .withOwner("test")
@@ -779,8 +937,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void serverMetricsDisabledReuseEntry() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createServerEntry()
         .withOwner("test")
@@ -801,8 +959,8 @@ public class IpcLogEntryTest {
 
   @Test
   public void endpointUnknownIfNotSet() {
-    Registry registry = new DefaultRegistry();
-    IpcLogger logger = new IpcLogger(registry, clock, LoggerFactory.getLogger(getClass()));
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
 
     logger.createServerEntry()
         .withOwner("test")
@@ -813,5 +971,13 @@ public class IpcLogEntryTest {
     registry.counters().forEach(c -> {
       Assertions.assertEquals("unknown", Utils.getTagValue(c.id(), "ipc.endpoint"));
     });
+  }
+
+  @Test
+  public void markNullLogger() {
+    IpcLogEntry entry = new IpcLogEntry(clock)
+        .withRegistry(new NoopRegistry());
+    entry.markStart();
+    assertSame(entry, entry.markEnd());
   }
 }

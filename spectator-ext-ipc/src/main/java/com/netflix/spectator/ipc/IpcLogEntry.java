@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -38,6 +39,8 @@ import java.util.function.Function;
  */
 @SuppressWarnings({"PMD.ExcessiveClassLength", "PMD.AvoidStringBufferField"})
 public final class IpcLogEntry {
+
+  private static final String CONTENT_LENGTH = "Content-Length";
 
   private final Clock clock;
 
@@ -52,6 +55,7 @@ public final class IpcLogEntry {
 
   private String owner;
   private IpcResult result;
+  private IpcSource source;
 
   private String protocol;
 
@@ -64,6 +68,7 @@ public final class IpcLogEntry {
 
   private String vip;
   private String endpoint;
+  private IpcMethod method;
 
   private String clientRegion;
   private String clientZone;
@@ -79,7 +84,6 @@ public final class IpcLogEntry {
   private String serverAsg;
   private String serverNode;
 
-  private String httpMethod;
   private int httpStatus;
 
   private String uri;
@@ -156,7 +160,7 @@ public final class IpcLogEntry {
    * the request completes it is recommended to call {@link #markEnd()}.
    */
   public IpcLogEntry markStart() {
-    if (registry != null && !disableMetrics) {
+    if (registry != null && !disableMetrics && logger != null && logger.inflightEnabled()) {
       inflightId = getInflightId();
       int n = logger.inflightRequests(inflightId).incrementAndGet();
       registry.distributionSummary(inflightId).record(n);
@@ -205,6 +209,14 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withResult(IpcResult result) {
     this.result = result;
+    return this;
+  }
+
+  /**
+   * Set the source for this request. See {@link IpcSource} for more information.
+   */
+  public IpcLogEntry withSource(IpcSource source) {
+    this.source = source;
     return this;
   }
 
@@ -304,6 +316,14 @@ public final class IpcLogEntry {
    */
   public IpcLogEntry withEndpoint(String endpoint) {
     this.endpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * Set the method used for this request. See {@link IpcMethod} for possible values.
+   */
+  public IpcLogEntry withMethod(IpcMethod method) {
+    this.method = method;
     return this;
   }
 
@@ -459,7 +479,13 @@ public final class IpcLogEntry {
    * Set the HTTP method used for this request.
    */
   public IpcLogEntry withHttpMethod(String method) {
-    this.httpMethod = method;
+    try {
+      IpcMethod m = IpcMethod.valueOf(method.toLowerCase(Locale.US));
+      withMethod(m);
+    } catch (Exception e) {
+      // Ignore invalid methods
+      withMethod(IpcMethod.unknown);
+    }
     return this;
   }
 
@@ -502,6 +528,14 @@ public final class IpcLogEntry {
     return withUri(uri.toString(), uri.getPath());
   }
 
+  private long parseContentLength(String value) {
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException e) {
+      return -1L;
+    }
+  }
+
   /**
    * Set the length for the request entity if it is known at the time of logging. If the size
    * is not known, e.g. a chunked HTTP entity, then a negative value can be used and the length
@@ -535,6 +569,8 @@ public final class IpcLogEntry {
       withClientNode(value);
     } else if (vip == null && name.equalsIgnoreCase(NetflixHeader.Vip.headerName())) {
       withVip(value);
+    } else if (requestContentLength < 0L && CONTENT_LENGTH.equalsIgnoreCase(name)) {
+      withRequestContentLength(parseContentLength(value));
     } else if (isMeshRequest(name, value)) {
       disableMetrics();
     }
@@ -560,6 +596,8 @@ public final class IpcLogEntry {
       withServerNode(value);
     } else if (endpoint == null && name.equalsIgnoreCase(NetflixHeader.Endpoint.headerName())) {
       withEndpoint(value);
+    } else if (responseContentLength < 0L && CONTENT_LENGTH.equalsIgnoreCase(name)) {
+      withResponseContentLength(parseContentLength(value));
     }
     this.responseHeaders.add(new Header(name, value));
     return this;
@@ -625,6 +663,12 @@ public final class IpcLogEntry {
     }
   }
 
+  private void putTag(Map<String, String> tags, String k, Enum<?> v) {
+    if (v != null) {
+      putTag(tags, k, v.name());
+    }
+  }
+
   private void finalizeFields() {
     // Do final checks and update fields that haven't been explicitly set if needed
     // before logging.
@@ -685,7 +729,7 @@ public final class IpcLogEntry {
     putTag(tags, IpcTagKey.protocol.key(), protocol);
     putTag(tags, IpcTagKey.statusDetail.key(), statusDetail);
     putTag(tags, IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
-    putTag(tags, IpcTagKey.httpMethod.key(), httpMethod);
+    putTag(tags, IpcTagKey.httpMethod.key(), method);
 
     return registry.createId(name, tags);
   }
@@ -855,6 +899,7 @@ public final class IpcLogEntry {
     putInMDC("uri", uri);
     putInMDC("path", path);
     putInMDC(IpcTagKey.endpoint.key(), endpoint);
+    putInMDC(method);
 
     putInMDC(IpcTagKey.owner.key(), owner);
     putInMDC(IpcTagKey.protocol.key(), protocol);
@@ -881,10 +926,10 @@ public final class IpcLogEntry {
     putInMDC(attemptFinal);
 
     putInMDC(result);
+    putInMDC(source);
     putInMDC(status);
     putInMDC(IpcTagKey.statusDetail.key(), statusDetail);
 
-    putInMDC(IpcTagKey.httpMethod.key(), httpMethod);
     putInMDC(IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
   }
 
@@ -899,6 +944,7 @@ public final class IpcLogEntry {
         .addField("protocol", protocol)
         .addField("uri", uri)
         .addField("path", path)
+        .addField("method", method)
         .addField("endpoint", endpoint)
         .addField("vip", vip)
         .addField("clientRegion", clientRegion)
@@ -918,11 +964,11 @@ public final class IpcLogEntry {
         .addField("attempt", attempt)
         .addField("attemptFinal", attemptFinal)
         .addField("result", result)
+        .addField("source", source)
         .addField("status", status)
         .addField("statusDetail", statusDetail)
         .addField("exceptionClass", getExceptionClass())
         .addField("exceptionMessage", getExceptionMessage())
-        .addField("httpMethod", httpMethod)
         .addField("httpStatus", httpStatus)
         .addField("requestContentLength", requestContentLength)
         .addField("responseContentLength", responseContentLength)
@@ -945,6 +991,7 @@ public final class IpcLogEntry {
     latency = -1L;
     owner = null;
     result = null;
+    source = null;
     protocol = null;
     status = null;
     statusDetail = null;
@@ -953,6 +1000,7 @@ public final class IpcLogEntry {
     attemptFinal = null;
     vip = null;
     endpoint = null;
+    method = null;
     clientRegion = null;
     clientZone = null;
     clientApp = null;
@@ -965,7 +1013,6 @@ public final class IpcLogEntry {
     serverCluster = null;
     serverAsg = null;
     serverNode = null;
-    httpMethod = null;
     httpStatus = -1;
     uri = null;
     path = null;

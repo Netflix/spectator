@@ -72,12 +72,38 @@ public interface RollupPolicy extends Function<List<Measurement>, List<RollupPol
     return Rollups.fromRules(commonTags, rules);
   }
 
+  /** Operation associated with a rule. */
+  enum Operation {
+    /** Rollup data by removing specified dimensions. */
+    ROLLUP,
+
+    /** Drop the data that matches the query. */
+    DROP
+  }
+
   /**
    * Rule for matching a set of measurements and removing specified dimensions.
    */
   final class Rule {
     private final String query;
     private final List<String> rollup;
+    private final Operation operation;
+
+    /**
+     * Create a new instance.
+     *
+     * @param query
+     *     Atlas query expression that indicates the set of measurements matching this rule.
+     * @param rollup
+     *     Set of dimensions to remove from the matching measurements.
+     * @param operation
+     *     Operation to perform if there is a match to the query.
+     */
+    public Rule(String query, List<String> rollup, Operation operation) {
+      this.query = Preconditions.checkNotNull(query, "query");
+      this.rollup = Preconditions.checkNotNull(rollup, "rollup");
+      this.operation = Preconditions.checkNotNull(operation, "operation");
+    }
 
     /**
      * Create a new instance.
@@ -88,8 +114,7 @@ public interface RollupPolicy extends Function<List<Measurement>, List<RollupPol
      *     Set of dimensions to remove from the matching measurements.
      */
     public Rule(String query, List<String> rollup) {
-      this.query = Preconditions.checkNotNull(query, "query");
-      this.rollup = Preconditions.checkNotNull(rollup, "rollup");
+      this(query, rollup, Operation.ROLLUP);
     }
 
     /** Return the query expression string. */
@@ -102,18 +127,24 @@ public interface RollupPolicy extends Function<List<Measurement>, List<RollupPol
       return rollup;
     }
 
+    /** Return the operation to perform if the query matches. */
+    public Operation operation() {
+      return operation;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
       if (!(o instanceof Rule)) return false;
       Rule rule = (Rule) o;
       return query.equals(rule.query)
-          && rollup.equals(rule.rollup);
+          && rollup.equals(rule.rollup)
+          && operation == rule.operation;
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(query, rollup);
+      return Objects.hash(query, rollup, operation);
     }
   }
 

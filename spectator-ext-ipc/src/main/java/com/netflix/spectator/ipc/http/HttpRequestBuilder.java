@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -62,12 +60,6 @@ public class HttpRequestBuilder {
 
   private static final StreamHelper STREAM_HELPER = new StreamHelper();
 
-  private static final Lock LOCK = new ReentrantLock();
-
-  // Should not be used directly, use the method of the same name that will create the
-  // executor if needed on the first access.
-  private static volatile ExecutorService defaultExecutor;
-
   private static ThreadFactory newThreadFactory() {
     return new ThreadFactory() {
       private final AtomicInteger next = new AtomicInteger();
@@ -82,18 +74,12 @@ public class HttpRequestBuilder {
   }
 
   private static ExecutorService defaultExecutor() {
-    ExecutorService executor = defaultExecutor;
-    if (executor != null) {
-      return executor;
-    }
-    LOCK.lock();
-    try {
-      defaultExecutor = Executors.newFixedThreadPool(
-          Runtime.getRuntime().availableProcessors(), newThreadFactory());
-      return defaultExecutor;
-    } finally {
-      LOCK.unlock();
-    }
+    return DefaultExecutorHolder.DEFAULT_EXECUTOR;
+  }
+
+  private static final class DefaultExecutorHolder {
+    private static final ExecutorService DEFAULT_EXECUTOR = Executors.newFixedThreadPool(
+            Runtime.getRuntime().availableProcessors(), newThreadFactory());
   }
 
   private final URI uri;
@@ -137,7 +123,7 @@ public class HttpRequestBuilder {
    */
   public HttpRequestBuilder addHeader(String name, String value) {
     if (value != null) {
-      reqHeaders.put(name, value);
+      reqHeaders.put(name, HeaderSanitizer.sanitize(value));
     }
     return this;
   }

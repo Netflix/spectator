@@ -23,7 +23,11 @@ import com.netflix.spectator.impl.Preconditions;
 
 /**
  * A MetricCollector that captures SDK metrics.
+ *
+ * @deprecated Users should migrate to AWS SDK for Java V2. AWS will drop support
+ * for V1 after 2025.
  */
+@Deprecated
 public class SpectatorMetricCollector extends MetricCollector {
     private final RequestMetricCollector requestMetricCollector;
     private final ServiceMetricCollector serviceMetricCollector;

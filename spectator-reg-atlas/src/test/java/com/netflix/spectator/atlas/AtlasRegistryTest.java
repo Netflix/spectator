@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
@@ -283,6 +284,19 @@ public class AtlasRegistryTest {
 
     Assertions.assertEquals(1.0 / 60.0, getValue(payloads.get(0)));
     Assertions.assertEquals(1.0, getValue(payloads.get(1)));
+  }
+
+  @Test
+  public void batchUpdateExpiration() throws Exception {
+    Counter.BatchUpdater b = registry.counter("test").batchUpdater(2);
+    final long step = 10_000L;
+    final long ttl = step * 6 * 20;
+    clock.setWallTime(step * ttl);
+    registry.removeExpiredMeters();
+    b.increment();
+    b.flush();
+    clock.setWallTime(step * (ttl + 1));
+    Assertions.assertEquals(1, registry.counter("test").count());
   }
 
   private double getValue(PublishPayload payload) {

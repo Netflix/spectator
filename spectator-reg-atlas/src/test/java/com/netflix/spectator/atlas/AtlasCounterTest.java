@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Measurement;
@@ -123,5 +124,25 @@ public class AtlasCounterTest {
     AtlasCounter c = new AtlasCounter(id, clock, step, step);
     Id actual = c.measure().iterator().next().id();
     Assertions.assertEquals(id.withTag(DsType.rate), actual);
+  }
+
+  @Test
+  public void batchUpdate() throws Exception {
+    try (Counter.BatchUpdater b = counter.batchUpdater(2)) {
+      b.increment();
+      b.add(Double.POSITIVE_INFINITY);
+      b.add(Double.NaN);
+      b.add(-1.0);
+      clock.setWallTime(step + 1);
+      Assertions.assertEquals(0, counter.count());
+      b.increment();
+      clock.setWallTime(step * 2 + 1);
+      Assertions.assertEquals(2, counter.count());
+      b.increment(42);
+      clock.setWallTime(step * 3 + 1);
+      Assertions.assertEquals(0, counter.count());
+    }
+    clock.setWallTime(step * 4 + 1);
+    Assertions.assertEquals(42, counter.count());
   }
 }

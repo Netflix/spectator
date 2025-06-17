@@ -599,7 +599,9 @@ public final class PolledMeter {
       if (pairs.isEmpty()) {
         LOGGER.trace("gauge [{}] has expired", gauge.id());
       }
-      LOGGER.trace("setting gauge [{}] to {}", gauge.id(), sum);
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("setting gauge [{}] to {}", gauge.id(), sum);
+      }
       gauge.set(sum);
     }
   }
@@ -671,7 +673,9 @@ public final class PolledMeter {
 
     @Override protected void update(Registry registry) {
       for (Measurement m : measure()) {
-        LOGGER.trace("setting gauge [{}] to {}", m.id(), m.value());
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace("setting gauge [{}] to {}", m.id(), m.value());
+        }
         registry.gauge(m.id()).set(m.value());
       }
     }
@@ -736,9 +740,11 @@ public final class PolledMeter {
         double current = f.applyAsDouble(obj);
         if (current > previous) {
           final double delta = current - previous;
-          LOGGER.trace("incrementing counter [{}] by {}", counter.id(), delta);
+          if (LOGGER.isTraceEnabled()) {
+            LOGGER.trace("incrementing counter [{}] by {}", counter.id(), delta);
+          }
           counter.add(delta);
-        } else {
+        } else if (LOGGER.isTraceEnabled()) {
           LOGGER.trace("no update to counter [{}]: previous = {}, current = {}",
               counter.id(), previous, current);
         }

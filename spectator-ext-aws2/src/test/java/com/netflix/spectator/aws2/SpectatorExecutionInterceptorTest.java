@@ -130,7 +130,7 @@ public class SpectatorExecutionInterceptorTest {
     Assertions.assertEquals(millis(42), t.totalTime());
     Assertions.assertEquals("EC2.DescribeInstances", get(t.id(), "ipc.endpoint"));
     Assertions.assertEquals("200", get(t.id(), "http.status"));
-    Assertions.assertEquals("POST", get(t.id(), "http.method"));
+    Assertions.assertEquals("post", get(t.id(), "http.method"));
   }
 
   @Test

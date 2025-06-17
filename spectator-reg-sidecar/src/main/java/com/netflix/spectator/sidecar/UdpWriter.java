@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,48 @@
  */
 package com.netflix.spectator.sidecar;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
 
 /** Writer that outputs data to UDP socket. */
 final class UdpWriter extends SidecarWriter {
 
-  private final DatagramChannel channel;
+  private static final Logger LOGGER = LoggerFactory.getLogger(UdpWriter.class);
+
+  private final SocketAddress address;
+  private DatagramChannel channel;
 
   /** Create a new instance. */
   UdpWriter(String location, SocketAddress address) throws IOException {
     super(location);
-    this.channel = DatagramChannel.open();
-    this.channel.connect(address);
+    this.address = address;
+    connect();
+  }
+
+  private void connect() throws IOException {
+    channel = DatagramChannel.open();
+    channel.connect(address);
   }
 
   @Override public void writeImpl(String line) throws IOException {
     ByteBuffer buffer = ByteBuffer.wrap(line.getBytes(StandardCharsets.UTF_8));
-    channel.write(buffer);
+    try {
+      channel.write(buffer);
+    } catch (ClosedChannelException e) {
+      try {
+        connect();
+      } catch (IOException ex) {
+        LOGGER.warn("channel closed, failed to reconnect", ex);
+      }
+      throw e;
+    }
   }
 
   @Override public void close() throws IOException {
