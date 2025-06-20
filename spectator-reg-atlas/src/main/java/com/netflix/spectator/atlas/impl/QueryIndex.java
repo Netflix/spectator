@@ -236,8 +236,9 @@ public final class QueryIndex<T> {
         } else {
           QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(cacheSupplier));
           idx.add(queries, j, value);
-          otherChecksTree.put(kq);
-          otherChecksCache.clear();
+          if (otherChecksTree.put(kq)) {
+            otherChecksCache.clear();
+          }
 
           // Not queries should match if the key is missing from the id, so they need to
           // be included in the other keys sub-tree as well. Check this by seeing if it will
@@ -320,10 +321,11 @@ public final class QueryIndex<T> {
           QueryIndex<T> idx = otherChecks.get(kq);
           if (idx != null && idx.remove(queries, j, value)) {
             result = true;
-            otherChecksCache.clear();
             if (idx.isEmpty()) {
               otherChecks.remove(kq);
-              otherChecksTree.remove(kq);
+              if (otherChecksTree.remove(kq)) {
+                otherChecksCache.clear();
+              }
             }
           }
 

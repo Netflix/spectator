@@ -47,14 +47,13 @@ final class PrefixTree {
     this.otherQueries = newSet();
   }
 
-  private Node addQuery(Node node, Query.KeyQuery query) {
+  private boolean addQuery(Node node, Query.KeyQuery query) {
     if (query instanceof Query.In) {
       Query.In q = (Query.In) query;
-      node.inQueries.add(q);
+      return node.inQueries.add(q);
     } else {
-      node.otherQueries.add(query);
+      return node.otherQueries.add(query);
     }
-    return node;
   }
 
   private boolean removeQuery(Node node, Query.KeyQuery query) {
@@ -71,18 +70,22 @@ final class PrefixTree {
    *
    * @param query
    *     Query to add, the prefix will be extracted from the query clause.
+   * @return
+   *     True if the tree did not already contain the query.
    */
-  void put(Query.KeyQuery query) {
+  boolean put(Query.KeyQuery query) {
     if (query instanceof Query.In) {
+      boolean added = false;
       Query.In q = (Query.In) query;
       for (String v : q.values()) {
-        put(v, q);
+        added |= put(v, q);
       }
+      return added;
     } else if (query instanceof Query.Regex) {
       Query.Regex q = (Query.Regex) query;
-      put(q.pattern().prefix(), q);
+      return put(q.pattern().prefix(), q);
     } else {
-      otherQueries.add(query);
+      return otherQueries.add(query);
     }
   }
 
@@ -93,19 +96,27 @@ final class PrefixTree {
    *     ASCII string that represents a prefix for the search key.
    * @param value
    *     Value to associate with the prefix.
+   * @return
+   *     True if the tree did not already contain the query.
    */
-  void put(String prefix, Query.KeyQuery value) {
+  boolean put(String prefix, Query.KeyQuery value) {
     if (prefix == null) {
-      otherQueries.add(value);
+      return otherQueries.add(value);
     } else {
       lock.lock();
       try {
         Node node = root;
         if (node == null) {
           root = new Node(prefix, EMPTY);
-          addQuery(root, value);
+          return addQuery(root, value);
         } else {
-          root = putImpl(node, prefix, 0, value);
+          node = putImpl(node, prefix, 0, value);
+          if (node != null) {
+            root = node;
+            return true;
+          } else {
+            return false;
+          }
         }
       } finally {
         lock.unlock();
@@ -119,35 +130,38 @@ final class PrefixTree {
     final int commonLength = commonPrefixLength(node.prefix, key, offset);
     if (commonLength == 0 && prefixLength > 0) {
       // No common prefix
-      Node n = addQuery(new Node(key.substring(offset), EMPTY), value);
+      Node n = new Node(key.substring(offset), EMPTY);
+      addQuery(n, value);
       return new Node("", new Node[] {n, node});
     } else if (keyLength == prefixLength && commonLength == prefixLength) {
       // Fully matches, add the value to this node
-      addQuery(node, value);
-      return node;
+      return addQuery(node, value) ? node : null;
     } else if (keyLength > prefixLength && commonLength == prefixLength) {
       // key.startsWith(prefix), put the value into a child
       int childOffset = offset + commonLength;
       int pos = find(node.children, key, childOffset);
       if (pos >= 0) {
         Node n = putImpl(node.children[pos], key, childOffset, value);
-        return node.replaceChild(n, pos);
+        return n == null ? null : node.replaceChild(n, pos);
       } else {
-        Node n = addQuery(new Node(key.substring(childOffset), EMPTY), value);
+        Node n = new Node(key.substring(childOffset), EMPTY);
+        addQuery(n, value);
         return node.addChild(n);
       }
     } else if (prefixLength > keyLength && commonLength == keyLength) {
       // prefix.startsWith(key), make new parent node and add this node as a child
       int childOffset = offset + commonLength;
       Node n = new Node(node.prefix.substring(commonLength), node.children, node.inQueries, node.otherQueries);
-      return addQuery(new Node(key.substring(offset, childOffset), new Node[] {n}), value);
+      Node p = new Node(key.substring(offset, childOffset), new Node[] {n});
+      addQuery(p, value);
+      return p;
     } else {
       // Common prefix is a subset of both
       int childOffset = offset + commonLength;
-      Node[] children = {
-          new Node(node.prefix.substring(commonLength), node.children, node.inQueries, node.otherQueries),
-          addQuery(new Node(key.substring(childOffset), EMPTY), value)
-      };
+      Node c1 = new Node(node.prefix.substring(commonLength), node.children, node.inQueries, node.otherQueries);
+      Node c2 = new Node(key.substring(childOffset), EMPTY);
+      addQuery(c2, value);
+      Node[] children = {c1, c2};
       return new Node(node.prefix.substring(0, commonLength), children);
     }
   }
