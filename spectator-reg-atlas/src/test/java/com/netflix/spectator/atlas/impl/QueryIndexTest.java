@@ -48,8 +48,7 @@ public class QueryIndexTest {
 
         @Override
         public List<QueryIndex<Query>> get(String key) {
-          // Cache for a single call
-          return data.remove(key);
+          return data.get(key);
         }
 
         @Override
@@ -487,6 +486,38 @@ public class QueryIndexTest {
 
     idx.remove(q1, q1);
     assertEquals(list(q2), idx, id);
+  }
+
+  @Test
+  public void cacheRefreshedOnAdd() {
+    Query q1 = Parser.parseQuery("name,test,:eq,a,foo,:re,:and,b,bar,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q1, q1);
+
+    // Run query that will cache matches for `foo_bar`
+    Id id = id("test", "a", "foo_bar", "b", "bar", "c", "_");
+    assertEquals(list(q1), idx, id);
+
+    // Add another query that will match and ensure the cache is refreshed
+    Query q2 = Parser.parseQuery("name,test,:eq,a,foo_,:re,:and,c,_,:eq,:and");
+    idx.add(q2, q2);
+    assertEquals(list(q1, q2), idx, id);
+  }
+
+  @Test
+  public void cacheRefreshedOnRemove() {
+    Query q1 = Parser.parseQuery("name,test,:eq,a,foo,:re,:and,b,bar,:eq,:and");
+    Query q2 = Parser.parseQuery("name,test,:eq,a,foo_,:re,:and,c,_,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier)
+        .add(q1, q1)
+        .add(q2, q2);
+
+    // Run query that will cache matches for `foo_bar`
+    Id id = id("test", "a", "foo_bar", "b", "bar", "c", "_");
+    assertEquals(list(q1, q2), idx, id);
+
+    // Remove a query that will match and ensure the cache is refreshed
+    idx.remove(q2, q2);
+    assertEquals(list(q1), idx, id);
   }
 
   @Test
