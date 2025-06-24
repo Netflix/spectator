@@ -1,6 +1,6 @@
 dependencies {
   api project(':spectator-api')
-  api 'io.dropwizard.metrics:metrics-core:3.1.2'
+  api 'io.dropwizard.metrics:metrics-core'
   jmh project(':spectator-api')
 }
 

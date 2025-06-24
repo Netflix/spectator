@@ -117,7 +117,7 @@ public class IpcServletFilterTest {
     checkClientErrorReason(registry, null);
     checkServerErrorReason(registry, "RuntimeException");
     checkMethod(registry, "get");
-    checkClientEndpoint(registry, "_throw_-");
+    checkClientEndpoint(registry, "/throw");
     checkServerEndpoint(registry, "/throw");
     IpcMetric.validate(registry, true);
   }
