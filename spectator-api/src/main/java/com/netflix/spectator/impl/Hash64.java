@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package com.netflix.spectator.impl;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Helper to compute a 64-bit hash incrementally based on a set of primitives and primitive
@@ -122,20 +124,52 @@ public final class Hash64 {
 
   /** Update the hash with the specified character sequence value. */
   public Hash64 updateString(CharSequence str) {
-    if (str instanceof String && UnsafeUtils.stringValueSupported()) {
-      if (UnsafeUtils.stringValueBytes()) {
-        byte[] vs = UnsafeUtils.getStringValueBytes((String) str);
-        updateBytes(vs, 0, vs.length);
-      } else {
-        char[] vs = UnsafeUtils.getStringValueChars((String) str);
-        updateChars(vs, 0, vs.length);
-      }
+    if (str instanceof String) {
+      updateBytes(((String) str).getBytes(StandardCharsets.UTF_8));
     } else {
-      for (int i = 0; i < str.length(); ++i) {
-        updateChar(str.charAt(i));
-      }
+      updateCharSequence(str);
     }
     return this;
+  }
+
+  private void updateCharSequence(CharSequence str) {
+    for (int i = 0; i < str.length(); ++i) {
+      char c = str.charAt(i);
+
+      if (c < 0x80) {
+        // 1-byte ASCII
+        updateByte((byte) c);
+
+      } else if (c < 0x800) {
+        // 2-byte encoding
+        updateByte((byte) (0xC0 | (c >>> 6)));
+        updateByte((byte) (0x80 | (c & 0x3F)));
+
+      } else if (Character.isHighSurrogate(c)) {
+        // Check for valid surrogate pair
+        if (i + 1 < str.length() && Character.isLowSurrogate(str.charAt(i + 1))) {
+          char low = str.charAt(++i);
+          int cp = Character.toCodePoint(c, low);
+          updateByte((byte) (0xF0 | (cp >>> 18)));
+          updateByte((byte) (0x80 | ((cp >>> 12) & 0x3F)));
+          updateByte((byte) (0x80 | ((cp >>> 6) & 0x3F)));
+          updateByte((byte) (0x80 | (cp & 0x3F)));
+        } else {
+          // Unpaired high surrogate → '?'
+          updateByte((byte) 0x3F);
+        }
+
+      } else if (Character.isLowSurrogate(c)) {
+        // Unpaired low surrogate → '?'
+        updateByte((byte) 0x3F);
+
+      } else {
+        // 3-byte encoding
+        updateByte((byte) (0xE0 | (c >>> 12)));
+        updateByte((byte) (0x80 | ((c >>> 6) & 0x3F)));
+        updateByte((byte) (0x80 | (c & 0x3F)));
+      }
+    }
   }
 
   /** Update the hash with the specified byte value. */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,6 @@ public final class UnsafeUtils {
 
   private static final Unsafe UNSAFE;
 
-  private static final long STRING_VALUE_OFFSET;
-  private static final boolean STRING_VALUE_BYTES;
-
   static {
     Unsafe instance;
     try {
@@ -44,25 +41,6 @@ public final class UnsafeUtils {
       instance = null;
     }
     UNSAFE = instance;
-
-    if (UNSAFE != null) {
-      long stringValueOffset;
-      boolean stringValueBytes;
-      try {
-        final Field value = String.class.getDeclaredField("value");
-        stringValueOffset = UNSAFE.objectFieldOffset(value);
-        Object obj = UNSAFE.getObject("value", stringValueOffset);
-        stringValueBytes = obj instanceof byte[];
-      } catch (Exception e) {
-        stringValueOffset = -1L;
-        stringValueBytes = false;
-      }
-      STRING_VALUE_OFFSET = stringValueOffset;
-      STRING_VALUE_BYTES = stringValueBytes;
-    } else {
-      STRING_VALUE_OFFSET =  -1L;
-      STRING_VALUE_BYTES = false;
-    }
   }
 
   private UnsafeUtils() {
@@ -74,26 +52,6 @@ public final class UnsafeUtils {
    */
   public static boolean supported() {
     return UNSAFE != null;
-  }
-
-  /** Returns true if extracting the underlying value array for a String is supported. */
-  public static boolean stringValueSupported() {
-    return STRING_VALUE_OFFSET > 0L;
-  }
-
-  /** Returns true if it is a newer JDK that uses a byte array for the characters. */
-  public static boolean stringValueBytes() {
-    return STRING_VALUE_BYTES;
-  }
-
-  /** Get the value array for a String as an array of bytes. */
-  public static byte[] getStringValueBytes(String str) {
-    return (byte[]) UNSAFE.getObject(str, STRING_VALUE_OFFSET);
-  }
-
-  /** Get the value array for a String as an array of characters. */
-  public static char[] getStringValueChars(String str) {
-    return (char[]) UNSAFE.getObject(str, STRING_VALUE_OFFSET);
   }
 
   /** Treat a seq of 8 bytes at the given offset as a long value. */

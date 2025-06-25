@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,12 +103,12 @@ public class Hash64Test {
 
   private long checkString(String str) {
     long a = new Hash64().updateString(str).compute();
-    long b = new Hash64().updateChars(str.toCharArray()).compute();
+    long b = new Hash64().updateBytes(str.getBytes(StandardCharsets.UTF_8)).compute();
     long c = new Hash64()
         .updateString(new StringBuilder().append(str))
         .compute();
-    Assertions.assertEquals(a, b);
-    Assertions.assertEquals(a, c);
+    Assertions.assertEquals(a, b, str);
+    Assertions.assertEquals(a, c, str);
     return a;
   }
 
