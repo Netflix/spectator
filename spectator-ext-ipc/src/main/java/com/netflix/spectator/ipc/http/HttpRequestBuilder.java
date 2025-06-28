@@ -27,6 +27,7 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -85,7 +86,7 @@ public class HttpRequestBuilder {
   private final URI uri;
   private final IpcLogEntry entry;
   private String method = "GET";
-  private Map<String, String> reqHeaders = new LinkedHashMap<>();
+  private final Map<String, String> reqHeaders = new LinkedHashMap<>();
   private byte[] entity = HttpUtils.EMPTY;
   private boolean reuseResponseStreams = false;
 
@@ -380,7 +381,8 @@ public class HttpRequestBuilder {
       }
 
       try (InputStream in = (status >= 400) ? con.getErrorStream() : con.getInputStream()) {
-        byte[] data = readAll(in);
+        int contentLength = con.getContentLength();
+        byte[] data = readAll(in, contentLength);
         entry.withResponseContentLength(data.length);
         return new HttpResponse(status, headers, data);
       }
@@ -393,20 +395,34 @@ public class HttpRequestBuilder {
   }
 
   @SuppressWarnings("PMD.AssignmentInOperand")
-  private byte[] readAll(InputStream in) throws IOException {
+  private byte[] readAll(InputStream in, int contentLength) throws IOException {
     if (in == null) {
       // For error status codes with a content-length of 0 we see this case
-      return new byte[0];
-    } else {
-      ByteArrayOutputStream baos = reuseResponseStreams
-          ? STREAM_HELPER.getOrCreateStream()
-          : new ByteArrayOutputStream();
-      byte[] buffer = new byte[4096];
-      int length;
-      while ((length = in.read(buffer)) > 0) {
-        baos.write(buffer, 0, length);
+      return HttpUtils.EMPTY;
+    } else if (contentLength != -1) {
+      byte[] buffer = new byte[contentLength];
+      int total = 0;
+      while (total < contentLength) {
+        int read = in.read(buffer, total, contentLength - total);
+        if (read == -1) {
+          break;
+        }
+        total += read;
       }
-      return baos.toByteArray();
+      if (total != contentLength) {
+        throw new EOFException("reached end of stream after reading " + total + " bytes; " + contentLength + " bytes expected");
+      }
+      return buffer;
     }
+
+    ByteArrayOutputStream baos = reuseResponseStreams
+            ? STREAM_HELPER.getOrCreateStream()
+            : new ByteArrayOutputStream();
+    byte[] buffer = new byte[4096];
+    int length;
+    while ((length = in.read(buffer)) > 0) {
+      baos.write(buffer, 0, length);
+    }
+    return baos.toByteArray();
   }
 }
