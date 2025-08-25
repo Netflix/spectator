@@ -4,6 +4,13 @@ dependencies {
   jmh project(':spectator-api')
 }
 
+java {
+  toolchain {
+    // dropwizard metrics5 requires Java 17
+    languageVersion = JavaLanguageVersion.of(17)
+  }
+}
+
 jar {
   manifest {
     attributes(
