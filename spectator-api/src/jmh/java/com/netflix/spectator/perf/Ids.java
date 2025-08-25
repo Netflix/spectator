@@ -18,6 +18,8 @@ package com.netflix.spectator.perf;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.TagList;
+import com.netflix.spectator.api.TagListBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
@@ -29,21 +31,47 @@ import java.util.Map;
 
 /**
  * <pre>
- * Benchmark                         Mode  Cnt          Score         Error  Units
- * Ids.append1                      thrpt   10   22,932,447.185 ±  558909.207  ops/s
- * Ids.append2                      thrpt   10   14,126,066.627 ± 2205349.084  ops/s
- * Ids.append4                      thrpt   10    5,165,821.740 ±  144524.852  ops/s
- * Ids.append4sorted                thrpt   10    5,923,827.749 ±  258122.285  ops/s
- * Ids.baseline                     thrpt   10   14,868,887.021 ± 4627616.416  ops/s
- * Ids.emptyAppend1                 thrpt   10   63,193,729.846 ± 1158843.888  ops/s
- * Ids.emptyAppend2                 thrpt   10   28,797,024.419 ± 2348775.496  ops/s
- * Ids.emptyAppend4                 thrpt   10    9,818,389.953 ±  227597.860  ops/s
- * Ids.emptyAppend4sorted           thrpt   10   11,342,478.015 ±  315543.929  ops/s
- * Ids.justName                     thrpt   10  166,275,032.184 ± 5252541.293  ops/s
- * Ids.withTag                      thrpt   10    1,586,379.085 ±   40204.926  ops/s
- * Ids.withTagsMap                  thrpt   10    1,841,867.329 ±   32378.659  ops/s
- * Ids.withTagsVararg               thrpt   10    1,946,970.522 ±   37919.937  ops/s
- * Ids.withTagsVarargSorted         thrpt   10    3,426,008.758 ±  115232.165  ops/s
+ * Benchmark               Throughput (ops/s)      Error
+ * -----------------------------------------------------------
+ * append1                 56,794,079.309      ±1,529,009.842
+ * append2                 29,813,536.825        ±242,156.195
+ * append4                  6,473,803.925        ±915,892.515
+ * append4sorted            7,021,400.576        ±251,550.333
+ * baseline                49,883,390.694        ±431,626.254
+ * emptyAppend1           200,362,500.375      ±1,438,114.615
+ * emptyAppend2            78,510,857.178        ±125,060.880
+ * emptyAppend4            14,228,870.597        ±350,789.283
+ * emptyAppend4sorted      16,585,176.379        ±387,667.119
+ * justName               437,797,027.428     ±24,884,978.092
+ * unsafeCreate            12,531,161.873      ±4,295,429.889
+ * withTag                  3,294,585.839        ±124,723.980
+ * withTagsBuilder          3,213,126.689         ±37,382.051
+ * withTagsBuilderSorted   10,095,083.206        ±569,033.538
+ * withTagsMap              4,088,836.194        ±104,959.027
+ * withTagsVararg           2,860,050.248         ±39,131.668
+ * withTagsVarargSorted     8,168,124.655        ±154,663.209
+ * </pre>
+ *
+ * <pre>
+ * Benchmark               Alloc Rate Norm (B/op)   Error
+ * -----------------------------------------------------------
+ * append1                 136.008                ±0.001
+ * append2                 208.015                ±0.001
+ * append4                 256.071                ±0.011
+ * append4sorted           256.066                ±0.002
+ * baseline                312.009                ±0.001
+ * emptyAppend1             72.002                ±0.001
+ * emptyAppend2            112.006                ±0.001
+ * emptyAppend4            144.032                ±0.001
+ * emptyAppend4sorted      144.027                ±0.001
+ * justName                 24.001                ±0.001
+ * unsafeCreate             48.036                ±0.013
+ * withTag               1,416.133                ±0.005
+ * withTagsBuilder         184.140                ±0.003
+ * withTagsBuilderSorted   184.044                ±0.003
+ * withTagsMap             224.115                ±0.002
+ * withTagsVararg          296.167                ±0.002
+ * withTagsVarargSorted    296.058                ±0.001
  * </pre>
  */
 @State(Scope.Thread)
@@ -96,6 +124,8 @@ public class Ids {
       .withTag( "nf.region", "us-east-1")
       .withTag(   "nf.zone", "us-east-1e")
       .withTag(   "nf.node", "i-1234567890");
+
+  private final TagListBuilder builder = TagListBuilder.create();
 
   @Threads(1)
   @Benchmark
@@ -183,6 +213,48 @@ public class Ids {
            "nf.zone", "us-east-1e",
             "status", "200"
     );
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsBuilder(Blackhole bh) {
+    TagList ts = builder
+        .add("nf.app", "test_app")
+        .add("nf.cluster", "test_app-main")
+        .add("nf.asg", "test_app-main-v042")
+        .add("nf.stack", "main")
+        .add("nf.ami", "ami-0987654321")
+        .add("nf.region", "us-east-1")
+        .add("nf.zone", "us-east-1e")
+        .add("nf.node", "i-1234567890")
+        .add("country", "US")
+        .add("device", "xbox")
+        .add("status", "200")
+        .add("client", "ab")
+        .buildAndReset();
+    Id id = registry.createId("http.req.complete").withTags(ts);
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsBuilderSorted(Blackhole bh) {
+    TagList ts = builder
+        .add("client", "ab")
+        .add("country", "US")
+        .add("device", "xbox")
+        .add("nf.ami", "ami-0987654321")
+        .add("nf.app", "test_app")
+        .add("nf.asg", "test_app-main-v042")
+        .add("nf.cluster", "test_app-main")
+        .add("nf.node", "i-1234567890")
+        .add("nf.region", "us-east-1")
+        .add("nf.stack", "main")
+        .add("nf.zone", "us-east-1e")
+        .add("status", "200")
+        .buildAndReset();
+    Id id = registry.createId("http.req.complete").withTags(ts);
     bh.consume(id);
   }
 
