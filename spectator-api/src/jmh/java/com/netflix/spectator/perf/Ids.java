@@ -18,6 +18,8 @@ package com.netflix.spectator.perf;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.TagList;
+import com.netflix.spectator.api.TagListBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
@@ -96,6 +98,8 @@ public class Ids {
       .withTag( "nf.region", "us-east-1")
       .withTag(   "nf.zone", "us-east-1e")
       .withTag(   "nf.node", "i-1234567890");
+
+  private final TagListBuilder builder = TagListBuilder.create();
 
   @Threads(1)
   @Benchmark
@@ -183,6 +187,48 @@ public class Ids {
            "nf.zone", "us-east-1e",
             "status", "200"
     );
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsBuilder(Blackhole bh) {
+    TagList ts = builder
+        .add("nf.app", "test_app")
+        .add("nf.cluster", "test_app-main")
+        .add("nf.asg", "test_app-main-v042")
+        .add("nf.stack", "main")
+        .add("nf.ami", "ami-0987654321")
+        .add("nf.region", "us-east-1")
+        .add("nf.zone", "us-east-1e")
+        .add("nf.node", "i-1234567890")
+        .add("country", "US")
+        .add("device", "xbox")
+        .add("status", "200")
+        .add("client", "ab")
+        .buildAndReset();
+    Id id = registry.createId("http.req.complete").withTags(ts);
+    bh.consume(id);
+  }
+
+  @Threads(1)
+  @Benchmark
+  public void withTagsBuilderSorted(Blackhole bh) {
+    TagList ts = builder
+        .add("client", "ab")
+        .add("country", "US")
+        .add("device", "xbox")
+        .add("nf.ami", "ami-0987654321")
+        .add("nf.app", "test_app")
+        .add("nf.asg", "test_app-main-v042")
+        .add("nf.cluster", "test_app-main")
+        .add("nf.node", "i-1234567890")
+        .add("nf.region", "us-east-1")
+        .add("nf.stack", "main")
+        .add("nf.zone", "us-east-1e")
+        .add("status", "200")
+        .buildAndReset();
+    Id id = registry.createId("http.req.complete").withTags(ts);
     bh.consume(id);
   }
 

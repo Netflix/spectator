@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -216,7 +216,7 @@ final class ArrayTagSet implements TagList {
   }
 
   /** Add a collection of tags to the set. */
-  private ArrayTagSet addAll(String[] ts, int tsLength, boolean sorted, boolean distinct) {
+  ArrayTagSet addAll(String[] ts, int tsLength, boolean sorted, boolean distinct) {
     if (tsLength == 0) {
       return this;
     } else if (length == 0) {
