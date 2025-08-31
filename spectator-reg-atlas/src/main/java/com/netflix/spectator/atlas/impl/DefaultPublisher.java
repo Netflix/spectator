@@ -46,7 +46,7 @@ public final class DefaultPublisher implements Publisher {
 
   private static final String CLOCK_SKEW_TIMER = "spectator.atlas.clockSkew";
 
-  private final Logger logger = LoggerFactory.getLogger(AtlasRegistry.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AtlasRegistry.class);
 
   private final StreamHelper streamHelper = new StreamHelper();
 
@@ -93,7 +93,7 @@ public final class DefaultPublisher implements Publisher {
     this.jsonMapper = JsonUtils.createMapper(new JsonFactory(), replacementFunc);
     this.smileMapper = JsonUtils.createMapper(new SmileFactory(), replacementFunc);
 
-    this.validationHelper = new ValidationHelper(logger, jsonMapper, debugRegistry);
+    this.validationHelper = new ValidationHelper(LOGGER, jsonMapper, debugRegistry);
   }
 
   @Override
@@ -135,7 +135,7 @@ public final class DefaultPublisher implements Publisher {
    */
   private void recordClockSkew(long responseTimestamp) {
     if (responseTimestamp == 0L) {
-      logger.debug("no date timestamp on response, cannot record skew");
+      LOGGER.debug("no date timestamp on response, cannot record skew");
     } else {
       final long delta = debugRegistry.clock().wallTime() - responseTimestamp;
       if (delta >= 0L) {
@@ -149,7 +149,7 @@ public final class DefaultPublisher implements Publisher {
         // values so we negate and record it with a different id.
         debugRegistry.timer(CLOCK_SKEW_TIMER, "id", "slow").record(-delta, TimeUnit.MILLISECONDS);
       }
-      logger.debug("clock skew between client and server: {}ms", delta);
+      LOGGER.debug("clock skew between client and server: {}ms", delta);
     }
   }
 
@@ -157,8 +157,8 @@ public final class DefaultPublisher implements Publisher {
   public CompletableFuture<Void> publish(PublishPayload payload) {
     Runnable task = () -> {
       try {
-        if (logger.isTraceEnabled()) {
-          logger.trace("publish payload: {}", jsonMapper.writeValueAsString(payload));
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace("publish payload: {}", jsonMapper.writeValueAsString(payload));
         }
         HttpResponse res = client.post(uri)
             .withConnectTimeout(connectTimeout)
@@ -170,7 +170,7 @@ public final class DefaultPublisher implements Publisher {
         recordClockSkew((date == null) ? 0L : date.toEpochMilli());
         validationHelper.recordResults(payload.getMetrics().size(), res);
       } catch (Exception e) {
-        logger.warn("failed to send metrics (uri={})", uri, e);
+        LOGGER.warn("failed to send metrics (uri={})", uri, e);
         validationHelper.incrementDroppedHttp(payload.getMetrics().size());
       }
     };
@@ -182,8 +182,8 @@ public final class DefaultPublisher implements Publisher {
     Runnable task = () -> {
       try {
         String json = jsonMapper.writeValueAsString(payload);
-        if (logger.isTraceEnabled()) {
-          logger.trace("eval payload: {}", json);
+        if (LOGGER.isTraceEnabled()) {
+          LOGGER.trace("eval payload: {}", json);
         }
         client.post(evalUri)
             .withConnectTimeout(connectTimeout)
@@ -191,7 +191,7 @@ public final class DefaultPublisher implements Publisher {
             .withJsonContent(json)
             .send();
       } catch (Exception e) {
-        logger.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
+        LOGGER.warn("failed to send metrics for subscriptions (uri={})", evalUri, e);
       }
     };
     return CompletableFuture.runAsync(task, senderPool);
