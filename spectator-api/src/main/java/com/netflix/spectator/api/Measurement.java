@@ -63,8 +63,8 @@ public final class Measurement {
     final int prime = 31;
     int hc = prime;
     hc = prime * hc + id.hashCode();
-    hc = prime * hc + Long.valueOf(timestamp).hashCode();
-    hc = prime * hc + Double.valueOf(value).hashCode();
+    hc = prime * hc + Long.hashCode(timestamp);
+    hc = prime * hc + Double.hashCode(value);
     return hc;
   }
 
