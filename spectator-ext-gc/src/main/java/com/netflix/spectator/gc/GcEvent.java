@@ -109,7 +109,7 @@ public class GcEvent {
   }
 
   /** Order events from oldest to newest. */
-  public static final Comparator<GcEvent> TIME_ORDER = Comparator.comparing(GcEvent::getStartTime);
+  public static final Comparator<GcEvent> TIME_ORDER = Comparator.comparingLong(GcEvent::getStartTime);
 
   /** Order events from newest to oldest. */
   public static final Comparator<GcEvent> REVERSE_TIME_ORDER = TIME_ORDER.reversed();
