@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.Preconditions;
+
 import java.util.Arrays;
 
 /**
@@ -52,8 +54,24 @@ public final class TagListBuilder {
    * @return a new builder instance
    */
   public static TagListBuilder create() {
-    return new TagListBuilder();
+    return new TagListBuilder(ArrayTagSet.EMPTY);
   }
+
+  /**
+   * Creates a new TagListBuilder instance with a set of base tags that will be included
+   * in all TagLists built by this builder. The base tags are automatically added when
+   * the builder is created and after each {@link #buildAndReset()} call.
+   *
+   * @param baseTags the base tags to include in all built TagLists, must not be null
+   * @return a new builder instance with the specified base tags
+   */
+  public static TagListBuilder create(TagList baseTags) {
+    return new TagListBuilder(Preconditions.checkNotNull(baseTags, "baseTags"));
+  }
+
+  private final int basePos;
+  private final String baseKey;
+  private final boolean baseSorted;
 
   private String[] tags;
   private int pos;
@@ -64,11 +82,18 @@ public final class TagListBuilder {
   /**
    * Creates a new builder with initial capacity for 10 key-value pairs.
    */
-  TagListBuilder() {
-    tags = new String[20];
+  TagListBuilder(TagList baseTags) {
+    int n = baseTags.size() * 2 + 20;
+    tags = new String[n];
     pos = 0;
     lastKey = null;
     sorted = true;
+
+    // Add base tags and keep track of state for the reset
+    add(baseTags);
+    basePos = pos;
+    baseKey = lastKey;
+    baseSorted = sorted;
   }
 
   /**
@@ -98,6 +123,20 @@ public final class TagListBuilder {
    */
   private boolean isGreaterThanLastKey(String key) {
     return lastKey == null || lastKey.compareTo(key) < 0;
+  }
+
+  /**
+   * Adds all tags from the provided TagList to this builder.
+   *
+   * @param tags the TagList containing tags to add, must not be null
+   * @return this builder for method chaining
+   */
+  public TagListBuilder add(TagList tags) {
+    final int n = tags.size();
+    for (int i = 0; i < n; ++i) {
+      add(tags.getKey(i), tags.getValue(i));
+    }
+    return this;
   }
 
   /**
@@ -136,9 +175,9 @@ public final class TagListBuilder {
    * Resets the builder to its initial empty state, allowing it to be reused.
    */
   public void reset() {
-    pos = 0;
-    lastKey = null;
-    sorted = true;
+    pos = basePos;
+    lastKey = baseKey;
+    sorted = baseSorted;
   }
 
   /**

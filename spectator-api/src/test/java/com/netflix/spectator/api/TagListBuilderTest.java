@@ -81,11 +81,11 @@ public class TagListBuilderTest {
   @Test
   public void builderReuse() {
     TagListBuilder builder = TagListBuilder.create();
-    
+
     TagList ts1 = builder.add("a", "1").buildAndReset();
     Assertions.assertEquals(1, ts1.size());
     Assertions.assertEquals("a", ts1.getKey(0));
-    
+
     TagList ts2 = builder.add("b", "2").buildAndReset();
     Assertions.assertEquals(1, ts2.size());
     Assertions.assertEquals("b", ts2.getKey(0));
@@ -174,7 +174,7 @@ public class TagListBuilderTest {
   @Test
   public void sortedStatePreservedAfterReuse() {
     TagListBuilder builder = TagListBuilder.create();
-    
+
     // First use: add sorted tags
     builder
         .add("a", "1")
@@ -182,7 +182,7 @@ public class TagListBuilderTest {
         .add("c", "3");
     Assertions.assertTrue(builder.isSorted());
     builder.buildAndReset();
-    
+
     // Second use: add sorted tags again - should still be considered sorted
     builder
         .add("x", "1")
@@ -190,8 +190,119 @@ public class TagListBuilderTest {
         .add("z", "3");
     Assertions.assertTrue(builder.isSorted());
     builder.buildAndReset();
-    
+
     // Third use: empty builder should be sorted
     Assertions.assertTrue(builder.isSorted());
+  }
+
+  @Test
+  public void createWithBaseTags() {
+    TagList baseTags = ArrayTagSet.EMPTY
+        .add("base1", "value1")
+        .add("base2", "value2");
+
+    TagListBuilder builder = TagListBuilder.create(baseTags);
+    TagList ts = builder.buildAndReset();
+
+    Assertions.assertEquals(2, ts.size());
+    Assertions.assertEquals("base1", ts.getKey(0));
+    Assertions.assertEquals("value1", ts.getValue(0));
+    Assertions.assertEquals("base2", ts.getKey(1));
+    Assertions.assertEquals("value2", ts.getValue(1));
+  }
+
+  @Test
+  public void createWithBaseTagsAndAddMore() {
+    TagList baseTags = ArrayTagSet.EMPTY
+        .add("base", "basevalue");
+
+    TagListBuilder builder = TagListBuilder.create(baseTags);
+    TagList ts = builder
+        .add("additional", "addvalue")
+        .buildAndReset();
+
+    Assertions.assertEquals(2, ts.size());
+    Assertions.assertEquals("additional", ts.getKey(0));
+    Assertions.assertEquals("addvalue", ts.getValue(0));
+    Assertions.assertEquals("base", ts.getKey(1));
+    Assertions.assertEquals("basevalue", ts.getValue(1));
+  }
+
+  @Test
+  public void createWithBaseTagsReuse() {
+    TagList baseTags = ArrayTagSet.EMPTY
+        .add("common", "value");
+
+    TagListBuilder builder = TagListBuilder.create(baseTags);
+
+    // First use
+    TagList ts1 = builder.add("tag1", "value1").buildAndReset();
+    Assertions.assertEquals(2, ts1.size());
+    Assertions.assertEquals("common", ts1.getKey(0));
+    Assertions.assertEquals("tag1", ts1.getKey(1));
+
+    // Second use - base tags should be included again
+    TagList ts2 = builder.add("tag2", "value2").buildAndReset();
+    Assertions.assertEquals(2, ts2.size());
+    Assertions.assertEquals("common", ts2.getKey(0));
+    Assertions.assertEquals("tag2", ts2.getKey(1));
+  }
+
+  @Test
+  public void addTagList() {
+    TagList tagsToAdd = ArrayTagSet.EMPTY
+        .add("tag1", "value1")
+        .add("tag2", "value2");
+
+    TagListBuilder builder = TagListBuilder.create();
+    TagList ts = builder.add(tagsToAdd).buildAndReset();
+
+    Assertions.assertEquals(2, ts.size());
+    Assertions.assertEquals("tag1", ts.getKey(0));
+    Assertions.assertEquals("value1", ts.getValue(0));
+    Assertions.assertEquals("tag2", ts.getKey(1));
+    Assertions.assertEquals("value2", ts.getValue(1));
+  }
+
+  @Test
+  public void addTagListWithExistingTags() {
+    TagList tagsToAdd = ArrayTagSet.EMPTY
+        .add("tag3", "value3")
+        .add("tag4", "value4");
+
+    TagListBuilder builder = TagListBuilder.create();
+    TagList ts = builder
+        .add("tag1", "value1")
+        .add("tag2", "value2")
+        .add(tagsToAdd)
+        .buildAndReset();
+
+    Assertions.assertEquals(4, ts.size());
+    Assertions.assertEquals("tag1", ts.getKey(0));
+    Assertions.assertEquals("value1", ts.getValue(0));
+    Assertions.assertEquals("tag2", ts.getKey(1));
+    Assertions.assertEquals("value2", ts.getValue(1));
+    Assertions.assertEquals("tag3", ts.getKey(2));
+    Assertions.assertEquals("value3", ts.getValue(2));
+    Assertions.assertEquals("tag4", ts.getKey(3));
+    Assertions.assertEquals("value4", ts.getValue(3));
+  }
+
+  @Test
+  public void addEmptyTagList() {
+    TagList emptyTags = ArrayTagSet.EMPTY;
+
+    TagListBuilder builder = TagListBuilder.create();
+    TagList ts = builder
+        .add("tag1", "value1")
+        .add(emptyTags)
+        .add("tag2", "value2")
+        .buildAndReset();
+
+    Assertions.assertEquals(2, ts.size());
+    Assertions.assertEquals("tag1", ts.getKey(0));
+    Assertions.assertEquals("value1", ts.getValue(0));
+    Assertions.assertEquals("tag2", ts.getKey(1));
+    Assertions.assertEquals("value2", ts.getValue(1));
   }
 }
