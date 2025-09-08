@@ -1,7 +1,7 @@
 import java.util.zip.ZipFile
 
 plugins {
-    id "com.github.johnrengelman.shadow"
+    id "com.gradleup.shadow"
 }
 
 dependencies {
@@ -33,9 +33,9 @@ shadowJar {
   archiveClassifier.set('')
   configurations = [project.configurations.runtimeClasspath]
   dependencies {
-    exclude(dependency {
-      !shouldBeShaded(it.moduleName)
-    })
+    exclude { dependency ->
+      !shouldBeShaded(dependency.moduleName)
+    }
   }
   minimize()
   exclude('module-info.class')

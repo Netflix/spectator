@@ -1,27 +1,13 @@
-// Needed until shadow plugin is updated for JDK21. For more details see
-// https://github.com/Netflix/spectator/issues/1113
-buildscript {
-  configurations.configureEach { configuration ->
-    configuration.resolutionStrategy {
-      eachDependency { DependencyResolveDetails details ->
-        if (details.requested.group == 'org.ow2.asm') {
-          details.useVersion '9.6'
-          details.because "Asm 9.6 is required for JDK 21+ support"
-        }
-      }
-    }
-  }
-}
 
 plugins {
   id 'com.github.ben-manes.versions' version '0.52.0'
   id 'com.github.spotbugs' version '5.2.5' apply false
-  id "com.github.johnrengelman.shadow" version "8.1.1" apply false
+  id "com.gradleup.shadow" version "9.1.0" apply false
   id 'me.champeau.jmh' version '0.7.2'
-  id 'com.netflix.nebula.dependency-recommender' version '12.5.1'
-  id 'com.netflix.nebula.netflixoss' version '11.6.0'
+  id 'com.netflix.nebula.dependency-recommender' version '13.0.1'
+  id 'com.netflix.nebula.netflixoss' version '12.0.0'
   // Need to override as transitive from netflixoss has git.user error
-  id 'com.netflix.nebula.release' version '19.0.10'
+  id 'com.netflix.nebula.release' version '21.0.0'
 }
 
 // Establish version and status
