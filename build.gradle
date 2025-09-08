@@ -100,7 +100,7 @@ subprojects {
     profilers = ['stack', 'gc']
     includeTests = false
     duplicateClassesStrategy = DuplicatesStrategy.WARN
-    includes = ['.*IdHash.*']
+    includes = ['.*Ids.*']
   }
 
   checkstyle {
