@@ -33,7 +33,7 @@ public class TagMeasurementFilter implements Predicate<Measurement> {
   private final Pattern tagValuePattern;
 
   private static Pattern regexToPatternOrNull(String regex) {
-    if (regex != null && !regex.isEmpty() && !regex.equals(".*")) {
+    if (regex != null && !regex.isEmpty() && !".*".equals(regex)) {
       return Pattern.compile(regex);
     }
     return null;
@@ -55,7 +55,6 @@ public class TagMeasurementFilter implements Predicate<Measurement> {
   /**
    * Implements MeasurementFilter interface.
    */
-  @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
   @Override public boolean test(Measurement measurement) {
     Id id = measurement.id();
     if (!stringMatches(id.name(), meterNamePattern)) {

@@ -1,7 +1,7 @@
 
 plugins {
   id 'com.github.ben-manes.versions' version '0.52.0'
-  id 'com.github.spotbugs' version '5.2.5' apply false
+  id 'com.github.spotbugs' version '6.3.0' apply false
   id "com.gradleup.shadow" version "9.1.0" apply false
   id 'me.champeau.jmh' version '0.7.2'
   id 'com.netflix.nebula.dependency-recommender' version '13.0.1'
@@ -104,15 +104,23 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '9.3'
+    toolVersion = '10.18.0'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     configDirectory = rootProject.file("codequality")
     sourceSets = [sourceSets.main]
   }
   
+  tasks.withType(Checkstyle) {
+    // Use the JVM running Gradle (JDK 17) instead of the project toolchain (JDK 8)
+    javaLauncher = javaToolchains.launcherFor {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
+
   spotbugs {
-    toolVersion = '4.8.6'
+    toolVersion = '4.9.4'
+    useJavaToolchains = false
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
     spotbugsMain.enabled = true
@@ -127,11 +135,18 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '6.55.0'
+    toolVersion = '7.16.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
     ruleSetFiles = rootProject.files("codequality/pmd.xml")
+  }
+
+  tasks.withType(Pmd) {
+    // Use the JVM running Gradle (JDK 17) instead of the project toolchain (JDK 8)
+    javaLauncher = javaToolchains.launcherFor {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
   }
 }
 

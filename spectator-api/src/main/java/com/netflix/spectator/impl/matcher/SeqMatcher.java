@@ -133,7 +133,7 @@ final class SeqMatcher implements Matcher, Serializable {
     for (int i = 0; i < n; ++i) {
       ms[i] = matchers[i].rewrite(f);
     }
-    return f.apply(SeqMatcher.create(ms));
+    return f.apply(create(ms));
   }
 
   @Override
@@ -142,7 +142,7 @@ final class SeqMatcher implements Matcher, Serializable {
     Matcher[] ms = new Matcher[n];
     System.arraycopy(matchers, 0, ms, 0, n - 1);
     ms[n - 1] = matchers[n - 1].rewriteEnd(f);
-    return f.apply(SeqMatcher.create(ms));
+    return f.apply(create(ms));
   }
 
   @Override

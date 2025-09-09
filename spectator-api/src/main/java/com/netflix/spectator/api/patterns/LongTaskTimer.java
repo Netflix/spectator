@@ -71,7 +71,7 @@ public final class LongTaskTimer implements com.netflix.spectator.api.LongTaskTi
     return (LongTaskTimer) obj;
   }
 
-  private static final double NANOS_PER_SECOND = (double) TimeUnit.SECONDS.toNanos(1L);
+  private static final double NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1L);
 
   private final Clock clock;
   private final Id id;

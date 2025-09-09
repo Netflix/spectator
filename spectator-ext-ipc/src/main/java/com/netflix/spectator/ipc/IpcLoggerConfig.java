@@ -18,6 +18,7 @@ package com.netflix.spectator.ipc;
 /**
  * Configuration settings for IpcLogger.
  */
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface IpcLoggerConfig {
 
   /**

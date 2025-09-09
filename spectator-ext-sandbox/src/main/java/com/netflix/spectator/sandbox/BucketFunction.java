@@ -24,6 +24,7 @@ import java.util.function.LongFunction;
  * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
+@FunctionalInterface
 public interface BucketFunction extends LongFunction<String> {
   /**
    * Returns a bucket for the specified amount.

@@ -42,6 +42,7 @@ import java.net.URI;
  * };
  * </pre>
  */
+@FunctionalInterface
 public interface HttpClient {
 
   /**

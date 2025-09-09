@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 Netflix, Inc.
+ * Copyright 2014-2025 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -363,7 +363,7 @@ public class Scheduler {
     private final Runnable task;
 
     private final long initialExecutionTime;
-    private long nextExecutionTime;
+    private volatile long nextExecutionTime;
 
     private volatile Thread thread = null;
     private volatile boolean cancelled = false;
@@ -399,21 +399,23 @@ public class Scheduler {
      *     skipped when using {@link Policy#FIXED_RATE_SKIP_IF_LONG}.
      */
     void updateNextExecutionTime(Counter skipped) {
+      long nextTime = nextExecutionTime;
       switch (options.schedulingPolicy) {
         case FIXED_DELAY:
-          nextExecutionTime = clock.wallTime() + options.frequencyMillis;
+          nextTime = clock.wallTime() + options.frequencyMillis;
           break;
         case FIXED_RATE_SKIP_IF_LONG:
           final long now = clock.wallTime();
-          nextExecutionTime += options.frequencyMillis;
-          while (nextExecutionTime < now) {
-            nextExecutionTime += options.frequencyMillis;
+          nextTime += options.frequencyMillis;
+          while (nextTime < now) {
+            nextTime += options.frequencyMillis;
             skipped.increment();
           }
           break;
         default:
           break;
       }
+      nextExecutionTime = nextTime;
     }
 
     /**

@@ -56,7 +56,7 @@ public final class Utils {
   /** Return a method supplying a value for a gauge. */
   static Method getGaugeMethod(Registry registry, Id id, Object obj, String method) {
     try {
-      final Method m = Utils.getMethod(obj.getClass(), method);
+      final Method m = getMethod(obj.getClass(), method);
       try {
         // Make sure we can cast the response to a Number
         final Number n = (Number) m.invoke(obj);

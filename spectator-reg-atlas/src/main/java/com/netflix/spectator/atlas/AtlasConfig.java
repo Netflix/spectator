@@ -26,6 +26,7 @@ import java.util.Map;
 /**
  * Configuration for Atlas registry.
  */
+@FunctionalInterface
 public interface AtlasConfig extends RegistryConfig {
 
   /**

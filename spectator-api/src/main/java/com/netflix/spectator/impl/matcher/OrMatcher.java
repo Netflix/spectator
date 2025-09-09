@@ -104,7 +104,7 @@ final class OrMatcher implements GreedyMatcher, Serializable {
     for (int i = 0; i < n; ++i) {
       ms[i] = SeqMatcher.create(matchers[i], after);
     }
-    return OrMatcher.create(ms);
+    return create(ms);
   }
 
   @Override
@@ -114,7 +114,7 @@ final class OrMatcher implements GreedyMatcher, Serializable {
     for (int i = 0; i < n; ++i) {
       ms[i] = matchers[i].rewrite(f);
     }
-    return f.apply(OrMatcher.create(ms));
+    return f.apply(create(ms));
   }
 
   @Override
@@ -123,7 +123,7 @@ final class OrMatcher implements GreedyMatcher, Serializable {
     for (Matcher m : matchers) {
       ms.add(m.rewriteEnd(f));
     }
-    return f.apply(OrMatcher.create(ms));
+    return f.apply(create(ms));
   }
 
   @Override

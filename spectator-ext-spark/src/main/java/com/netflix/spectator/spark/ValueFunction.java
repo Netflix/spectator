@@ -20,6 +20,7 @@ package com.netflix.spectator.spark;
  * that data can be made to follow common conventions with other sources (e.g. always use base
  * units and do conversions as part of presentation).
  */
+@FunctionalInterface
 public interface ValueFunction {
   /** Convert the value for a given metric name. */
   double convert(String name, double v);

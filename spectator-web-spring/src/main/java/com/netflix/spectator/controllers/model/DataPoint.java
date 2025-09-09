@@ -27,7 +27,6 @@ import java.util.Objects;
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
-@SuppressWarnings("PMD.DataClass")
 public class DataPoint {
   /**
    * Factory method to create a DataPoint from a Measurement.

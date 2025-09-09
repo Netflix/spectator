@@ -312,7 +312,7 @@ public class Evaluator {
    * Consumer that allows the measurement data to be mutated. This can be used to avoid
    * allocating instances of the closure when calling forEachMatch on the query index.
    */
-  private static class SubscriptionEntryConsumer implements Consumer<SubscriptionEntry> {
+  private static final class SubscriptionEntryConsumer implements Consumer<SubscriptionEntry> {
     private Id id;
     private long timestamp;
     private double value;

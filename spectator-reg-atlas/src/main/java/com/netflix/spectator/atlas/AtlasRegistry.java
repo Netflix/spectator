@@ -345,7 +345,6 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
    * from third parties. Behavior may change in the future. It is strongly advised to only
    * interact with AtlasRegistry using the interface provided by Registry.
    */
-  @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override public void removeExpiredMeters() {
     long now = clock().wallTime();
     int total = 0;

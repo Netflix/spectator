@@ -20,6 +20,7 @@ import com.netflix.servo.monitor.Monitor;
 import java.util.List;
 
 /** Meter that can return a servo monitor. */
+@FunctionalInterface
 interface ServoMeter {
   /** Returns the monitor corresponding to this meter. */
   void addMonitors(List<Monitor<?>> monitors);

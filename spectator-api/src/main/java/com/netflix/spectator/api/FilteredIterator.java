@@ -56,13 +56,10 @@ class FilteredIterator<T> implements Iterator<T> {
     return item != null;
   }
 
-  @SuppressWarnings("PMD.UnnecessaryLocalBeforeReturn")
   @Override public T next() {
     if (item == null) {
       throw new NoSuchElementException("next() called after reaching end of iterator");
     }
-    // Note: PMD flags this, but the local tmp is necessary because findNext will change
-    // the value of item
     T tmp = item;
     findNext();
     return tmp;

@@ -69,8 +69,7 @@ final class ServoPollers {
     StringBuilder builder = new StringBuilder();
     builder.append(a[0]);
     for (int i = 1; i < a.length; ++i) {
-      builder.append(',');
-      builder.append(a[i]);
+      builder.append(',').append(a[i]);
     }
     return builder.toString();
   }

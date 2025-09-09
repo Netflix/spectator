@@ -30,6 +30,7 @@ import java.util.function.Function;
  * removing some dimensions from the ids and combining the results into an aggregate
  * measurement.
  */
+@FunctionalInterface
 public interface RollupPolicy extends Function<List<Measurement>, List<RollupPolicy.Result>> {
 
   /** Does nothing, returns the input list without modification. */
