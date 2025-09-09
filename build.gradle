@@ -104,13 +104,20 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '9.3'
+    toolVersion = '10.18.0'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     configDirectory = rootProject.file("codequality")
     sourceSets = [sourceSets.main]
   }
   
+  tasks.withType(Checkstyle) {
+    // Use the JVM running Gradle (JDK 17) instead of the project toolchain (JDK 8)
+    javaLauncher = javaToolchains.launcherFor {
+      languageVersion = JavaLanguageVersion.of(17)
+    }
+  }
+
   spotbugs {
     toolVersion = '4.9.4'
     useJavaToolchains = false

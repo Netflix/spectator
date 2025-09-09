@@ -102,7 +102,7 @@ public final class SpectatorModule extends AbstractModule {
   }
 
   @Singleton
-  private static class ConfigProvider implements Provider<Config> {
+  private static final class ConfigProvider implements Provider<Config> {
     @Inject(optional = true)
     private Config config;
 
@@ -117,7 +117,7 @@ public final class SpectatorModule extends AbstractModule {
   }
 
   @Singleton
-  private static class RegistryProvider implements Provider<Registry> {
+  private static final class RegistryProvider implements Provider<Registry> {
 
     @Inject
     private Clock clock;

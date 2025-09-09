@@ -286,7 +286,7 @@ public final class GcLogger {
         || info.getGcName().endsWith(" Cycles");       // Shenandoah, ZGC
   }
 
-  private class GcNotificationListener implements NotificationListener {
+  private final class GcNotificationListener implements NotificationListener {
     @Override public void handleNotification(Notification notification, Object ref) {
       final String type = notification.getType();
       if (GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION.equals(type)) {

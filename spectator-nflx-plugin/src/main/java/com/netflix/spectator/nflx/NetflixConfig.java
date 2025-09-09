@@ -109,7 +109,7 @@ public final class NetflixConfig {
     return NetflixTagging.commonTagsForAtlas();
   }
 
-  private static class Env {
+  private static final class Env {
     private static final String OWNER = "EC2_OWNER_ID";
     private static final String REGION = "EC2_REGION";
 
