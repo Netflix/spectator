@@ -8,7 +8,8 @@ Simple library for instrumenting code to record dimensional time series.
 
 ## Requirements
 
-* Java 8 or higher.
+* Java 8 or higher at runtime, Java 17 or higher for building
+* Java 8 or higher for spectator 1.8.x or earlier.
 * Java 7 or higher for spectator 0.27.x or earlier.
 
 ## Documentation
