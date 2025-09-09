@@ -28,7 +28,6 @@ import java.util.List;
 /**
  * Validation failure response from Atlas aggregator endpoint.
  */
-@SuppressWarnings("PMD.DataClass")
 final class ValidationResponse {
 
   private final String type;

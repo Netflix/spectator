@@ -359,14 +359,14 @@ public enum IpcMetric {
    *     strictly compliant to ensure consistency for users.
    */
   public static void validate(Registry registry, boolean strict) {
-    validateIpcMeter(registry, IpcMetric.clientCall, Timer.class, strict);
-    validateIpcMeter(registry, IpcMetric.serverCall, Timer.class, strict);
-    validateIpcMeter(registry, IpcMetric.clientCallSizeInbound, DistributionSummary.class, strict);
-    validateIpcMeter(registry, IpcMetric.clientCallSizeOutbound, DistributionSummary.class, strict);
-    validateIpcMeter(registry, IpcMetric.serverCallSizeInbound, DistributionSummary.class, strict);
-    validateIpcMeter(registry, IpcMetric.serverCallSizeOutbound, DistributionSummary.class, strict);
-    validateIpcMeter(registry, IpcMetric.clientInflight, DistributionSummary.class, strict);
-    validateIpcMeter(registry, IpcMetric.serverInflight, DistributionSummary.class, strict);
+    validateIpcMeter(registry, clientCall, Timer.class, strict);
+    validateIpcMeter(registry, serverCall, Timer.class, strict);
+    validateIpcMeter(registry, clientCallSizeInbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, clientCallSizeOutbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, serverCallSizeInbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, serverCallSizeOutbound, DistributionSummary.class, strict);
+    validateIpcMeter(registry, clientInflight, DistributionSummary.class, strict);
+    validateIpcMeter(registry, serverInflight, DistributionSummary.class, strict);
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")

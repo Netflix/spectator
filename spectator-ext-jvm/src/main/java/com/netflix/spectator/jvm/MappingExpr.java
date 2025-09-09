@@ -42,7 +42,6 @@ final class MappingExpr {
    *     String with values substituted in. If no matching key is found for a
    *     placeholder, then it will not be modified and left in place.
    */
-  @SuppressWarnings("PMD.NPathComplexity")
   static String substitute(String pattern, Map<String, String> vars) {
     int openBracePos = pattern.indexOf('{');
     if (openBracePos == -1) {
@@ -100,7 +99,6 @@ final class MappingExpr {
    *     Double value for the expression. If the expression cannot be evaluated
    *     properly, then null will be returned.
    */
-  @SuppressWarnings("PMD")
   static Double eval(String expr, Map<String, ? extends Number> vars) {
     Deque<Double> stack = new ArrayDeque<>();
     String[] parts = expr.split("[,\\s]+");

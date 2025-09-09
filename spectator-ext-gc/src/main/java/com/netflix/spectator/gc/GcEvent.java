@@ -18,8 +18,8 @@ package com.netflix.spectator.gc;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
 
+import java.time.Instant;
 import java.util.Comparator;
-import java.util.Date;
 
 /**
  * Metadata about a garbage collection event.
@@ -101,9 +101,9 @@ public class GcEvent {
     String percentChange = String.format(
       "%.1f%% => %.1f%%", 100.0 * totalBefore / max, 100.0 * totalAfter / max);
 
-    final Date d = new Date(startTime);
+    final Instant instant = Instant.ofEpochMilli(startTime);
     return type.toString() + ": "
-        + name + ", id=" + gcInfo.getId() + ", at=" + d.toString()
+        + name + ", id=" + gcInfo.getId() + ", at=" + instant.toString()
         + ", duration=" + gcInfo.getDuration() + "ms" + ", cause=[" + info.getGcCause() + "]"
         + ", " + change + " (" + percentChange + ")";
   }

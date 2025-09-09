@@ -43,6 +43,7 @@ import java.net.URI;
  * thin wrapper to preserve compatibility. This class is scheduled for removal in a future release.
  */
 @Deprecated
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface HttpClient {
 
   /** Client implementation based on {@link java.net.HttpURLConnection}. */

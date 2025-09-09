@@ -37,7 +37,7 @@ import java.util.function.Function;
 /**
  * Builder used to fill in and submit a log entry associated with an IPC request.
  */
-@SuppressWarnings({"PMD.ExcessiveClassLength", "PMD.AvoidStringBufferField"})
+@SuppressWarnings("PMD.AvoidStringBufferField")
 public final class IpcLogEntry {
 
   private static final String CONTENT_LENGTH = "Content-Length";

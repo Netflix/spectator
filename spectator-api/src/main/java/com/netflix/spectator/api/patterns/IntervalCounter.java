@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class IntervalCounter implements Counter {
 
-  private static final double MILLIS_PER_SECOND = (double) TimeUnit.SECONDS.toMillis(1L);
+  private static final double MILLIS_PER_SECOND = TimeUnit.SECONDS.toMillis(1L);
 
   /**
    * Create a new instance.

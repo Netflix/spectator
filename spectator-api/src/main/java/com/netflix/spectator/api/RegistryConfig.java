@@ -20,6 +20,7 @@ import java.time.Duration;
 /**
  * Configuration settings for the registry.
  */
+@FunctionalInterface
 public interface RegistryConfig {
 
   /**

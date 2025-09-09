@@ -22,6 +22,7 @@ import java.util.Map;
 /**
  * Configuration for sidecar registry.
  */
+@FunctionalInterface
 public interface SidecarConfig extends RegistryConfig {
 
   /**

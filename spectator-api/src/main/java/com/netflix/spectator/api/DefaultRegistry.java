@@ -59,7 +59,6 @@ public final class DefaultRegistry extends AbstractRegistry {
    * possible for some reason, this method can be used to reset the state before a given
    * unit test.
    */
-  @SuppressWarnings("PMD.UselessOverridingMethod")
   @Override public void reset() {
     // Overridden to increase visibility from protected in base class to public
     super.reset();

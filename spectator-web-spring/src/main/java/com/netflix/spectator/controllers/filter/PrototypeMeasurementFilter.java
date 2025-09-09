@@ -64,10 +64,10 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
 
       String keySpec = spec.getKey();
       String valueSpec = spec.getValue();
-      if (keySpec != null && !keySpec.isEmpty() && !keySpec.equals(".*")) {
+      if (keySpec != null && !keySpec.isEmpty() && !".*".equals(keySpec)) {
         key = Pattern.compile(keySpec);
       }
-      if (valueSpec != null && !valueSpec.isEmpty() && !valueSpec.equals(".*")) {
+      if (valueSpec != null && !valueSpec.isEmpty() && !".*".equals(valueSpec)) {
         value = Pattern.compile(valueSpec);
       }
     }
@@ -87,7 +87,6 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     /**
      * Implements the MeasurementFilter interface.
      */
-    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
     public boolean test(Tag tag) {
       if ((key != null) && !key.matcher(tag.key()).matches()) return false;
 
@@ -157,7 +156,6 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     /**
      * Implements the MeasurementFilter interface.
      */
-    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
     public boolean test(Iterable<Tag> sourceTags) {
       for (TagFilterPattern tagPattern : this.tags) {
         if (!patternInList(tagPattern, sourceTags)) {
@@ -284,7 +282,6 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
     /**
      * Implements the MeasurementFilter interface.
      */
-    @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
     public boolean test(Measurement measurement) {
       boolean ok = include.isEmpty();
       for (ValueFilterPattern pattern : include) {
@@ -322,7 +319,6 @@ public class PrototypeMeasurementFilter implements Predicate<Measurement> {
   /**
    * Implements the MeasurementFilter interface.
    */
-  @SuppressWarnings("PMD.JUnit4TestShouldUseTestAnnotation")
   @Override public boolean test(Measurement measurement) {
     IncludeExcludePatterns patterns = metricToPatterns(measurement.id().name());
     return patterns != null && patterns.test(measurement);

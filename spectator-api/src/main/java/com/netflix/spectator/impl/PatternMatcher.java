@@ -39,6 +39,7 @@ import java.util.SortedSet;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface PatternMatcher {
 
   /**

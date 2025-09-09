@@ -52,7 +52,7 @@ public final class PatternUtils {
     if (p.length() > 0) {
       p = "^.*(" + p + ").*$";
     }
-    Parser parser = new Parser(PatternUtils.expandEscapedChars(p));
+    Parser parser = new Parser(expandEscapedChars(p));
     Matcher m = Optimizer.optimize(parser.parse());
     return ignoreCase ? m.ignoreCase() : m;
   }

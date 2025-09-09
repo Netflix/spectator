@@ -24,7 +24,6 @@ import java.util.Objects;
  *
  * This is only public for testing purposes so implements equals but not hash.
  */
-@SuppressWarnings("PMD.DataClass")
 public class ApplicationRegistry {
   private static final long START_TIME = ManagementFactory.getRuntimeMXBean().getStartTime();
   private String applicationName;

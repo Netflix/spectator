@@ -63,7 +63,7 @@ final class ServoMaxGauge<T extends Number> extends AbstractMonitor<Double>
 
   @Override public Iterable<Measurement> measure() {
     long now = clock.wallTime();
-    double v = impl.getValue(0).doubleValue();
+    double v = impl.getValue(0);
     return Collections.singleton(new Measurement(id(), now, v));
   }
 
@@ -73,7 +73,7 @@ final class ServoMaxGauge<T extends Number> extends AbstractMonitor<Double>
   }
 
   @Override public double value() {
-    return hasExpired() ? Double.NaN : impl.getValue(0).doubleValue();
+    return hasExpired() ? Double.NaN : impl.getValue(0);
   }
 
   @Override public Double getValue(int pollerIndex) {

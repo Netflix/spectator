@@ -363,7 +363,7 @@ public final class PolledMeter {
      *     statement.
      */
     public <T> T monitorMonotonicCounter(T obj, ToLongFunction<T> f) {
-      return monitorMonotonicCounterDouble(obj, o -> (double) f.applyAsLong(o));
+      return monitorMonotonicCounterDouble(obj, f::applyAsLong);
     }
 
     /**

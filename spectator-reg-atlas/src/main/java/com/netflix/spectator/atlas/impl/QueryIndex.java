@@ -46,6 +46,7 @@ public final class QueryIndex<T> {
    * be fine for most uses, but heavy uses with many expressions and high throughput may
    * benefit from an alternate implementation.
    */
+  @FunctionalInterface
   public interface CacheSupplier<V> extends Supplier<Cache<String, List<QueryIndex<V>>>> {
   }
 
@@ -579,7 +580,6 @@ public final class QueryIndex<T> {
    * @return
    *     True if it is possible there would be a match based on the partial set of tags.
    */
-  @SuppressWarnings("PMD.NPathComplexity")
   public boolean couldMatch(Function<String, String> tags) {
     // Matches for this level
     if (!matches.isEmpty()) {

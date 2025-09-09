@@ -36,6 +36,7 @@ import java.util.StringJoiner;
  * <p><b>Classes in this package are only intended for use internally within spectator.
  * They may change at any time and without notice.</b>
  */
+@FunctionalInterface
 public interface Query {
 
   /** Convert {@code id} to a map. */

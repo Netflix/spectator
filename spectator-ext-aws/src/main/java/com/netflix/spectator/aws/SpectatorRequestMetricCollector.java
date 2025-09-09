@@ -49,7 +49,7 @@ public class SpectatorRequestMetricCollector extends RequestMetricCollector {
    * at this key in a request, that key/value pair is an additional tag on each
    * metrics for that request.
    */
-  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = new HandlerContextKey("ClientIdKey");
+  public static final HandlerContextKey<String> DEFAULT_HANDLER_CONTEXT_KEY = new HandlerContextKey<>("ClientIdKey");
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SpectatorRequestMetricCollector.class);
 

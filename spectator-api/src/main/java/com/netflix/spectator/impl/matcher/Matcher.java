@@ -26,6 +26,7 @@ import java.util.function.Function;
  * Internal interface for matcher implementations. Provides some additional methods
  * that are not exposed on the public {@link PatternMatcher} interface.
  */
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 interface Matcher extends PatternMatcher {
 
   /**

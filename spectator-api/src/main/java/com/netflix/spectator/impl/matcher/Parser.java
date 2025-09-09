@@ -336,6 +336,7 @@ class Parser {
         if (matcher instanceof RepeatMatcher) {
           return matcher;
         }
+        // fall through
       case "??":
       case "?+":
         return new ZeroOrOneMatcher(matcher, term());

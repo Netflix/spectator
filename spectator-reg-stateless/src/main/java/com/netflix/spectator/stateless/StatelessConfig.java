@@ -24,6 +24,7 @@ import java.util.Map;
 /**
  * Configuration for stateless registry.
  */
+@FunctionalInterface
 public interface StatelessConfig extends RegistryConfig {
 
   /**

@@ -73,7 +73,7 @@ enum LevelTag implements Tag {
   private static final LevelTag[] LEVELS = new LevelTag[8];
 
   static {
-    for (LevelTag level : LevelTag.values()) {
+    for (LevelTag level : values()) {
       LEVELS[level.ordinal()] = level;
     }
   }

@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Id;
 /**
  * Maps a name used for the metrics registry into an id for spectator.
  */
+@FunctionalInterface
 public interface NameFunction {
   /**
    * Return the id corresponding to the name, or null if the name cannot be mapped and the value
