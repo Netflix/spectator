@@ -11,7 +11,7 @@ jobs:
     if: ${{ github.repository == 'Netflix/spectator' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Gradle wrapper validation
         uses: gradle/wrapper-validation-action@v3
       - name: Set up JDK 8
