@@ -44,8 +44,17 @@ final class UdpWriter extends SidecarWriter {
   private void connect() throws IOException {
     synchronized (lock) {
       DatagramChannel newChannel = DatagramChannel.open();
-      newChannel.connect(address);
-      channel = newChannel;
+      try {
+        newChannel.connect(address);
+        channel = newChannel;
+      } catch (Throwable t) {
+        try {
+          newChannel.close();
+        } catch (IOException ignored) {
+          // Suppress close exception during error handling
+        }
+        throw t;
+      }
     }
   }
 
@@ -60,12 +69,26 @@ final class UdpWriter extends SidecarWriter {
         if (channel == ch) {
           try {
             connect();
+            // After successful reconnection, retry the write once
+            buffer.rewind();
+            channel.write(buffer);
+            return; // Write succeeded after reconnection
           } catch (IOException ex) {
             LOGGER.warn("channel closed, failed to reconnect", ex);
+            throw ex;
+          }
+        } else {
+          // Another thread reconnected, retry the write once with new channel
+          try {
+            buffer.rewind();
+            channel.write(buffer);
+            return; // Write succeeded with reconnected channel
+          } catch (IOException ex) {
+            LOGGER.warn("failed to write after reconnection by another thread", ex);
+            throw ex;
           }
         }
       }
-      throw e;
     }
   }
 

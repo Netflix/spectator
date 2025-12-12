@@ -44,9 +44,11 @@ public class UdpWriterTest {
     try (UdpServer server = new UdpServer()) {
       try (SidecarWriter w = SidecarWriter.create(server.address())) {
         // Used to simulate close from something like an interrupt. The next write
-        // will fail and it should try to reconnect.
+        // will trigger reconnection and retry the write.
         w.close();
         w.write("1");
+        // After reconnection, the write should succeed (retry logic)
+        Assertions.assertEquals("1", server.read());
 
         w.write("2");
         Assertions.assertEquals("2", server.read());
