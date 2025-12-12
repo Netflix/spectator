@@ -56,6 +56,69 @@ public class UdpWriterTest {
     }
   }
 
+  @Test
+  public void concurrentReconnect() throws Exception {
+    try (UdpServer server = new UdpServer()) {
+      try (SidecarWriter w = SidecarWriter.create(server.address())) {
+        // Close the channel to force reconnection on next write
+        w.close();
+
+        // Multiple threads attempting to write simultaneously should trigger
+        // concurrent reconnection attempts. The key test is that we don't get
+        // IllegalStateException from "Connect already invoked"
+        Thread[] threads = new Thread[10];
+        List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
+        for (int i = 0; i < threads.length; ++i) {
+          final int n = i;
+          Runnable task = () -> {
+            try {
+              // All threads will hit ClosedChannelException and try to reconnect
+              w.write("thread-" + n);
+            } catch (Exception e) {
+              exceptions.add(e);
+            }
+          };
+          threads[i] = new Thread(task);
+        }
+
+        // Start all threads at once to maximize race condition probability
+        for (Thread t : threads) {
+          t.start();
+        }
+        for (Thread t : threads) {
+          t.join();
+        }
+
+        // The key assertion: should not get IllegalStateException from concurrent connect()
+        for (Exception e : exceptions) {
+          Assertions.assertFalse(
+              e instanceof IllegalStateException,
+              "Should not throw IllegalStateException: " + e.getMessage()
+          );
+        }
+
+        // Give time for any pending UDP packets to arrive, then drain them
+        Thread.sleep(100);
+
+        // Verify the writer still works after concurrent reconnection attempts
+        // by writing a unique marker and reading until we find it
+        String marker = "final-test-marker";
+        w.write(marker);
+
+        // Read messages until we find our marker (with timeout protection)
+        int attempts = 0;
+        String received = null;
+        while (attempts++ < 20) {
+          received = server.read();
+          if (marker.equals(received)) {
+            break;
+          }
+        }
+        Assertions.assertEquals(marker, received);
+      }
+    }
+  }
+
   // Disabled because it can have issues on CI
   @Test
   @Disabled

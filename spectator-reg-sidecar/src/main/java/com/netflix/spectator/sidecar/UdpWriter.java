@@ -31,7 +31,8 @@ final class UdpWriter extends SidecarWriter {
   private static final Logger LOGGER = LoggerFactory.getLogger(UdpWriter.class);
 
   private final SocketAddress address;
-  private DatagramChannel channel;
+  private final Object lock = new Object();
+  private volatile DatagramChannel channel;
 
   /** Create a new instance. */
   UdpWriter(String location, SocketAddress address) throws IOException {
@@ -41,25 +42,36 @@ final class UdpWriter extends SidecarWriter {
   }
 
   private void connect() throws IOException {
-    channel = DatagramChannel.open();
-    channel.connect(address);
+    synchronized (lock) {
+      DatagramChannel newChannel = DatagramChannel.open();
+      newChannel.connect(address);
+      channel = newChannel;
+    }
   }
 
   @Override public void writeImpl(String line) throws IOException {
     ByteBuffer buffer = ByteBuffer.wrap(line.getBytes(StandardCharsets.UTF_8));
+    DatagramChannel ch = channel;
     try {
-      channel.write(buffer);
+      ch.write(buffer);
     } catch (ClosedChannelException e) {
-      try {
-        connect();
-      } catch (IOException ex) {
-        LOGGER.warn("channel closed, failed to reconnect", ex);
+      synchronized (lock) {
+        // Double-check: another thread may have already reconnected
+        if (channel == ch) {
+          try {
+            connect();
+          } catch (IOException ex) {
+            LOGGER.warn("channel closed, failed to reconnect", ex);
+          }
+        }
       }
       throw e;
     }
   }
 
   @Override public void close() throws IOException {
-    channel.close();
+    synchronized (lock) {
+      channel.close();
+    }
   }
 }
