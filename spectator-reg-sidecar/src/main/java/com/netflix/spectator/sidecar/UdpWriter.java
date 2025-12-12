@@ -48,7 +48,7 @@ final class UdpWriter extends SidecarWriter {
     try {
       newChannel.connect(address);
       channel = newChannel;
-    } catch (IOException e) {
+    } catch (Exception e) {
       try {
         newChannel.close();
       } catch (IOException ignored) {
