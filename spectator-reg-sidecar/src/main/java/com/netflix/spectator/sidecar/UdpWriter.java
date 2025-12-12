@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.locks.ReentrantLock;
 
 /** Writer that outputs data to UDP socket. */
 final class UdpWriter extends SidecarWriter {
@@ -31,30 +32,29 @@ final class UdpWriter extends SidecarWriter {
   private static final Logger LOGGER = LoggerFactory.getLogger(UdpWriter.class);
 
   private final SocketAddress address;
-  private final Object lock = new Object();
+  private final ReentrantLock lock;
   private volatile DatagramChannel channel;
 
   /** Create a new instance. */
   UdpWriter(String location, SocketAddress address) throws IOException {
     super(location);
     this.address = address;
+    this.lock = new ReentrantLock();
     connect();
   }
 
   private void connect() throws IOException {
-    synchronized (lock) {
-      DatagramChannel newChannel = DatagramChannel.open();
+    DatagramChannel newChannel = DatagramChannel.open();
+    try {
+      newChannel.connect(address);
+      channel = newChannel;
+    } catch (IOException e) {
       try {
-        newChannel.connect(address);
-        channel = newChannel;
-      } catch (Throwable t) {
-        try {
-          newChannel.close();
-        } catch (IOException ignored) {
-          // Suppress close exception during error handling
-        }
-        throw t;
+        newChannel.close();
+      } catch (IOException ignored) {
+        // Suppress close exception during error handling
       }
+      throw e;
     }
   }
 
@@ -64,7 +64,8 @@ final class UdpWriter extends SidecarWriter {
     try {
       ch.write(buffer);
     } catch (ClosedChannelException e) {
-      synchronized (lock) {
+      lock.lock();
+      try {
         // Double-check: another thread may have already reconnected
         if (channel == ch) {
           try {
@@ -72,9 +73,10 @@ final class UdpWriter extends SidecarWriter {
             // After successful reconnection, retry the write once
             buffer.rewind();
             channel.write(buffer);
-            return; // Write succeeded after reconnection
+            // Write succeeded after reconnection
           } catch (IOException ex) {
             LOGGER.warn("channel closed, failed to reconnect", ex);
+            ex.initCause(e);
             throw ex;
           }
         } else {
@@ -82,19 +84,27 @@ final class UdpWriter extends SidecarWriter {
           try {
             buffer.rewind();
             channel.write(buffer);
-            return; // Write succeeded with reconnected channel
+            // Write succeeded with reconnected channel
           } catch (IOException ex) {
             LOGGER.warn("failed to write after reconnection by another thread", ex);
+            ex.initCause(e);
             throw ex;
           }
         }
+      } finally {
+        lock.unlock();
       }
     }
   }
 
   @Override public void close() throws IOException {
-    synchronized (lock) {
-      channel.close();
+    lock.lock();
+    try {
+      if (channel != null) {
+        channel.close();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 }
