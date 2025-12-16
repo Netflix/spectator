@@ -42,27 +42,27 @@ public class QueryIndexTest {
 
   private final QueryIndex.CacheSupplier<Query> cacheSupplier = new QueryIndex.CacheSupplier<Query>() {
     @Override
-    public Cache<String, List<QueryIndex<Query>>> get() {
-      return new Cache<String, List<QueryIndex<Query>>>() {
-        private final Map<String, List<QueryIndex<Query>>> data = new HashMap<>();
+    public Cache<String, QueryIndex.CacheValue<Query>> get() {
+      return new Cache<String, QueryIndex.CacheValue<Query>>() {
+        private final Map<String, QueryIndex.CacheValue<Query>> data = new HashMap<>();
 
         @Override
-        public List<QueryIndex<Query>> get(String key) {
+        public QueryIndex.CacheValue<Query> get(String key) {
           return data.get(key);
         }
 
         @Override
-        public List<QueryIndex<Query>> peek(String key) {
+        public QueryIndex.CacheValue<Query> peek(String key) {
           return null;
         }
 
         @Override
-        public void put(String key, List<QueryIndex<Query>> value) {
+        public void put(String key, QueryIndex.CacheValue<Query> value) {
           data.put(key, value);
         }
 
         @Override
-        public List<QueryIndex<Query>> computeIfAbsent(String key, Function<String, List<QueryIndex<Query>>> f) {
+        public QueryIndex.CacheValue<Query> computeIfAbsent(String key, Function<String, QueryIndex.CacheValue<Query>> f) {
           return data.computeIfAbsent(key, f);
         }
 
@@ -77,7 +77,7 @@ public class QueryIndexTest {
         }
 
         @Override
-        public Map<String, List<QueryIndex<Query>>> asMap() {
+        public Map<String, QueryIndex.CacheValue<Query>> asMap() {
           return new HashMap<>(data);
         }
       };

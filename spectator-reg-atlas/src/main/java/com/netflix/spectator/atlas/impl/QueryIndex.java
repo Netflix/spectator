@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -41,13 +42,32 @@ import java.util.function.Supplier;
 @SuppressWarnings("PMD.LinguisticNaming")
 public final class QueryIndex<T> {
 
+  public static class CacheValue<V> {
+
+    private final long version;
+    private final List<QueryIndex<V>> indices;
+
+    public CacheValue(long version, List<QueryIndex<V>> indices) {
+      this.version = version;
+      this.indices = indices;
+    }
+
+    public long version() {
+      return version;
+    }
+
+    public List<QueryIndex<V>> indices() {
+      return indices;
+    }
+  }
+
   /**
    * Supplier to create a new instance of a cache used for other checks. The default should
    * be fine for most uses, but heavy uses with many expressions and high throughput may
    * benefit from an alternate implementation.
    */
   @FunctionalInterface
-  public interface CacheSupplier<V> extends Supplier<Cache<String, List<QueryIndex<V>>>> {
+  public interface CacheSupplier<V> extends Supplier<Cache<String, CacheValue<V>>> {
   }
 
   /** Default supplier based on a simple LFU cache. */
@@ -60,7 +80,7 @@ public final class QueryIndex<T> {
     }
 
     @Override
-    public Cache<String, List<QueryIndex<V>>> get() {
+    public Cache<String, CacheValue<V>> get() {
       return Cache.lfu(registry, "QueryIndex", 100, 1000);
     }
   }
@@ -138,7 +158,8 @@ public final class QueryIndex<T> {
   // as much as possible.
   private final ConcurrentHashMap<Query.KeyQuery, QueryIndex<T>> otherChecks;
   private final PrefixTree otherChecksTree;
-  private final Cache<String, List<QueryIndex<T>>> otherChecksCache;
+  private final Cache<String, CacheValue<T>> otherChecksCache;
+  private final AtomicLong otherChecksVersion;
 
   // Index for :has queries
   private volatile QueryIndex<T> hasKeyIdx;
@@ -160,6 +181,7 @@ public final class QueryIndex<T> {
     this.otherChecks = new ConcurrentHashMap<>();
     this.otherChecksTree = new PrefixTree();
     this.otherChecksCache = cacheSupplier.get();
+    this.otherChecksVersion = new AtomicLong();
     this.hasKeyIdx = null;
     this.otherKeysIdx = null;
     this.missingKeysIdx = null;
@@ -238,7 +260,7 @@ public final class QueryIndex<T> {
           QueryIndex<T> idx = otherChecks.computeIfAbsent(kq, id -> QueryIndex.empty(cacheSupplier));
           idx.add(queries, j, value);
           if (otherChecksTree.put(kq)) {
-            otherChecksCache.clear();
+            otherChecksVersion.incrementAndGet();
           }
 
           // Not queries should match if the key is missing from the id, so they need to
@@ -325,7 +347,7 @@ public final class QueryIndex<T> {
             if (idx.isEmpty()) {
               otherChecks.remove(kq);
               if (otherChecksTree.remove(kq)) {
-                otherChecksCache.clear();
+                otherChecksVersion.incrementAndGet();
               }
             }
           }
@@ -349,6 +371,32 @@ public final class QueryIndex<T> {
     }
 
     return result;
+  }
+
+  /** Get cached matches for the value or compute a new one. */
+  private List<QueryIndex<T>> otherChecksComputeIfAbsent(String value) {
+    CacheValue<T> cacheValue = otherChecksCache.get(value);
+    long version = otherChecksVersion.get();
+    if (cacheValue != null && cacheValue.version == version) {
+      // Cached value on consistent version of other checks, use the cached value
+      return cacheValue.indices;
+    } else if (otherChecks.isEmpty()) {
+      // No other checks, use empty list
+      return Collections.emptyList();
+    } else {
+      // Compute a new value
+      List<QueryIndex<T>> tmp = new ArrayList<>();
+      otherChecksTree.forEach(value, kq -> {
+        if (kq instanceof Query.In || matches(kq, value)) {
+          QueryIndex<T> idx = otherChecks.get(kq);
+          if (idx != null) {
+            tmp.add(idx);
+          }
+        }
+      });
+      otherChecksCache.put(value, new CacheValue<>(version, tmp));
+      return tmp;
+    }
   }
 
   /**
@@ -393,7 +441,6 @@ public final class QueryIndex<T> {
     forEachMatch(id, 0, new DedupConsumer<>(consumer));
   }
 
-  @SuppressWarnings("PMD.NPathComplexity")
   private void forEachMatch(Id tags, int i, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
@@ -419,30 +466,13 @@ public final class QueryIndex<T> {
           }
 
           // Scan for matches with other conditions
-          List<QueryIndex<T>> otherMatches = otherChecksCache.get(v);
-          if (otherMatches == null) {
-            // Avoid the list and cache allocations if there are no other checks at
-            // this level
-            if (!otherChecks.isEmpty()) {
-              List<QueryIndex<T>> tmp = new ArrayList<>();
-              otherChecksTree.forEach(v, kq -> {
-                if (kq instanceof Query.In || kq.matches(v)) {
-                  QueryIndex<T> idx = otherChecks.get(kq);
-                  if (idx != null) {
-                    tmp.add(idx);
-                    idx.forEachMatch(tags, nextPos, consumer);
-                  }
-                }
-              });
-              otherChecksCache.put(v, tmp);
-            }
-          } else {
-            // Enhanced for loop typically results in iterator being allocated. Using
-            // size/get avoids the allocation and has better throughput.
-            final int n = otherMatches.size();
-            for (int p = 0; p < n; ++p) {
-              otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
-            }
+          List<QueryIndex<T>> otherMatches = otherChecksComputeIfAbsent(v);
+
+          // Enhanced for loop typically results in iterator being allocated. Using
+          // size/get avoids the allocation and has better throughput.
+          final int n = otherMatches.size();
+          for (int p = 0; p < n; ++p) {
+            otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
           }
 
           // Check matches for has key
@@ -520,30 +550,13 @@ public final class QueryIndex<T> {
         }
 
         // Scan for matches with other conditions
-        List<QueryIndex<T>> otherMatches = otherChecksCache.get(v);
-        if (otherMatches == null) {
-          // Avoid the list and cache allocations if there are no other checks at
-          // this level
-          if (!otherChecks.isEmpty()) {
-            List<QueryIndex<T>> tmp = new ArrayList<>();
-            otherChecksTree.forEach(v, kq -> {
-              if (kq instanceof Query.In || matches(kq, v)) {
-                QueryIndex<T> idx = otherChecks.get(kq);
-                if (idx != null) {
-                  tmp.add(idx);
-                  idx.forEachMatch(tags, consumer);
-                }
-              }
-            });
-            otherChecksCache.put(v, tmp);
-          }
-        } else {
-          // Enhanced for loop typically results in iterator being allocated. Using
-          // size/get avoids the allocation and has better throughput.
-          final int n = otherMatches.size();
-          for (int p = 0; p < n; ++p) {
-            otherMatches.get(p).forEachMatch(tags, consumer);
-          }
+        List<QueryIndex<T>> otherMatches = otherChecksComputeIfAbsent(v);
+
+        // Enhanced for loop typically results in iterator being allocated. Using
+        // size/get avoids the allocation and has better throughput.
+        final int n = otherMatches.size();
+        for (int p = 0; p < n; ++p) {
+          otherMatches.get(p).forEachMatch(tags, consumer);
         }
 
         // Check matches for has key
