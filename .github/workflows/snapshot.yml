@@ -10,6 +10,7 @@ jobs:
   build:
     if: ${{ github.repository == 'Netflix/spectator' }}
     runs-on: ubuntu-latest
+    environment: Publish
     steps:
       - uses: actions/checkout@v6
         with:
