@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.locks.ReentrantLock;
 
 /** Writer that outputs data to UDP socket. */
 final class UdpWriter extends SidecarWriter {
@@ -31,35 +32,79 @@ final class UdpWriter extends SidecarWriter {
   private static final Logger LOGGER = LoggerFactory.getLogger(UdpWriter.class);
 
   private final SocketAddress address;
-  private DatagramChannel channel;
+  private final ReentrantLock lock;
+  private volatile DatagramChannel channel;
 
   /** Create a new instance. */
   UdpWriter(String location, SocketAddress address) throws IOException {
     super(location);
     this.address = address;
+    this.lock = new ReentrantLock();
     connect();
   }
 
   private void connect() throws IOException {
-    channel = DatagramChannel.open();
-    channel.connect(address);
-  }
-
-  @Override public void writeImpl(String line) throws IOException {
-    ByteBuffer buffer = ByteBuffer.wrap(line.getBytes(StandardCharsets.UTF_8));
+    DatagramChannel newChannel = DatagramChannel.open();
     try {
-      channel.write(buffer);
-    } catch (ClosedChannelException e) {
+      newChannel.connect(address);
+      channel = newChannel;
+    } catch (Exception e) {
       try {
-        connect();
-      } catch (IOException ex) {
-        LOGGER.warn("channel closed, failed to reconnect", ex);
+        newChannel.close();
+      } catch (IOException ignored) {
+        // Suppress close exception during error handling
       }
       throw e;
     }
   }
 
+  @Override public void writeImpl(String line) throws IOException {
+    ByteBuffer buffer = ByteBuffer.wrap(line.getBytes(StandardCharsets.UTF_8));
+    DatagramChannel ch = channel;
+    try {
+      ch.write(buffer);
+    } catch (ClosedChannelException e) {
+      lock.lock();
+      try {
+        // Double-check: another thread may have already reconnected
+        if (channel == ch) {
+          try {
+            connect();
+            // After successful reconnection, retry the write once
+            buffer.rewind();
+            channel.write(buffer);
+            // Write succeeded after reconnection
+          } catch (IOException ex) {
+            LOGGER.warn("channel closed, failed to reconnect", ex);
+            ex.initCause(e);
+            throw ex;
+          }
+        } else {
+          // Another thread reconnected, retry the write once with new channel
+          try {
+            buffer.rewind();
+            channel.write(buffer);
+            // Write succeeded with reconnected channel
+          } catch (IOException ex) {
+            LOGGER.warn("failed to write after reconnection by another thread", ex);
+            ex.initCause(e);
+            throw ex;
+          }
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+  }
+
   @Override public void close() throws IOException {
-    channel.close();
+    lock.lock();
+    try {
+      if (channel != null) {
+        channel.close();
+      }
+    } finally {
+      lock.unlock();
+    }
   }
 }
