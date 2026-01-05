@@ -119,7 +119,7 @@ subprojects {
   }
 
   spotbugs {
-    toolVersion = '4.9.4'
+    toolVersion = '4.9.8'
     useJavaToolchains = false
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
