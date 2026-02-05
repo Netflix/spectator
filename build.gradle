@@ -4,7 +4,7 @@ plugins {
   id 'com.github.spotbugs' version '6.4.8' apply false
   id 'com.gradleup.shadow' version '9.3.1' apply false
   id 'me.champeau.jmh' version '0.7.2'
-  id 'com.netflix.nebula.dependency-recommender' version '13.0.1'
+  id 'com.netflix.nebula.dependency-recommender' version '14.0.0'
   id 'com.netflix.nebula.netflixoss' version '13.0.0'
 }
 
