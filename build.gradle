@@ -102,7 +102,7 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '10.18.0'
+    toolVersion = '13.1.0'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     configDirectory = rootProject.file("codequality")
@@ -110,9 +110,9 @@ subprojects {
   }
   
   tasks.withType(Checkstyle) {
-    // Use the JVM running Gradle (JDK 17) instead of the project toolchain (JDK 8)
+    // Use the JVM running Gradle (JDK 25) instead of the project toolchain (JDK 8)
     javaLauncher = javaToolchains.launcherFor {
-      languageVersion = JavaLanguageVersion.of(17)
+      languageVersion = JavaLanguageVersion.of(25)
     }
   }
 

@@ -429,9 +429,16 @@ final class PrefixTree {
 
   private static class Node {
 
+    /** Prefix string for this node. */
     final String prefix;
+
+    /** Child nodes in the tree. */
     final Node[] children;
+
+    /** Set of queries using the in operator associated with this node. */
     final Set<Query.In> inQueries;
+
+    /** Set of other key queries associated with this node. */
     final Set<Query.KeyQuery> otherQueries;
 
     Node(String prefix, Node[] children, Set<Query.In> inQueries, Set<Query.KeyQuery> otherQueries) {
