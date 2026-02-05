@@ -5,9 +5,7 @@ plugins {
   id 'com.gradleup.shadow' version '9.3.1' apply false
   id 'me.champeau.jmh' version '0.7.2'
   id 'com.netflix.nebula.dependency-recommender' version '13.0.1'
-  id 'com.netflix.nebula.netflixoss' version '12.0.0'
-  // Need to override as transitive from netflixoss has git.user error
-  id 'com.netflix.nebula.release' version '21.0.0'
+  id 'com.netflix.nebula.netflixoss' version '13.0.0'
 }
 
 // Establish version and status
