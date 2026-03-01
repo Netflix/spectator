@@ -64,6 +64,9 @@ public class TagsBuilder<T extends TagsBuilder<T>> {
 
   /** Add additional tag values. */
   public T withTags(String... tags) {
+    if ((tags.length & 1) != 0) {
+      throw new IllegalArgumentException("withTags requires an even number of arguments (key/value pairs)");
+    }
     for (int i = 0; i < tags.length; i += 2) {
       extraTags.add(new BasicTag(tags[i], tags[i + 1]));
     }

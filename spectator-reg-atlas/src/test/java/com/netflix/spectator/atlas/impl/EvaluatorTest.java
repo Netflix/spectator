@@ -82,6 +82,9 @@ public class EvaluatorTest {
 
   private Map<String, String> tags(String... ts) {
     Map<String, String> map = new HashMap<>();
+    if ((ts.length & 1) == 1) {
+      throw new IllegalArgumentException("tags must be provided as key/value pairs");
+    }
     for (int i = 0; i < ts.length; i += 2) {
       map.put(ts[i], ts[i + 1]);
     }

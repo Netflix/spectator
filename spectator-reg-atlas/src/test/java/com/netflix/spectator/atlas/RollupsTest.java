@@ -202,6 +202,10 @@ public class RollupsTest {
   }
 
   private static Map<String, String> map(String... ts) {
+    if ((ts.length & 1) != 0) {
+      throw new IllegalArgumentException(
+          "Expected an even number of arguments (key/value pairs), but got " + ts.length);
+    }
     Map<String, String> m = new HashMap<>();
     for (int i = 0; i < ts.length; i += 2) {
       m.put(ts[i], ts[i + 1]);
