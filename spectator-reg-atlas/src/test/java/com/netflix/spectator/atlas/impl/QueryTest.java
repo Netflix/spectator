@@ -516,6 +516,9 @@ public class QueryTest {
 
   private Map<String, String> tags(String... vs) {
     Map<String, String> tmp = new LinkedHashMap<>();
+    if ((vs.length & 1) != 0) {
+      throw new IllegalArgumentException("tags must be specified as key/value pairs");
+    }
     for (int i = 0; i < vs.length; i += 2) {
       tmp.put(vs[i], vs[i + 1]);
     }

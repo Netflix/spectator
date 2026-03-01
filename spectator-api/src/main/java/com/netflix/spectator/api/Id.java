@@ -107,6 +107,10 @@ public interface Id extends TagList {
 
   /** Return a new id with additional tag values. */
   default Id withTags(String... tags) {
+    if ((tags.length & 1) != 0) {
+      throw new IllegalArgumentException(
+          "withTags requires an even number of arguments (key/value pairs), got: " + tags.length);
+    }
     Id tmp = this;
     for (int i = 0; i < tags.length; i += 2) {
       tmp = tmp.withTag(tags[i], tags[i + 1]);
