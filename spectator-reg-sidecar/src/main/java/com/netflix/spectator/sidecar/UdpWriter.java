@@ -15,12 +15,10 @@
  */
 package com.netflix.spectator.sidecar;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
@@ -28,8 +26,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /** Writer that outputs data to UDP socket. */
 final class UdpWriter extends SidecarWriter {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(UdpWriter.class);
 
   private final SocketAddress address;
   private final ReentrantLock lock;
@@ -63,6 +59,12 @@ final class UdpWriter extends SidecarWriter {
     DatagramChannel ch = channel;
     try {
       ch.write(buffer);
+    } catch (ClosedByInterruptException e) {
+      // Thread was interrupted (e.g., Spark task cancellation). Reconnection is futile
+      // because the thread is still in an interrupted state and any new channel I/O will
+      // immediately fail. Re-throw to let SidecarWriter suppress repeated warnings.
+      Thread.currentThread().interrupt();
+      throw e;
     } catch (ClosedChannelException e) {
       lock.lock();
       try {
@@ -75,7 +77,6 @@ final class UdpWriter extends SidecarWriter {
             channel.write(buffer);
             // Write succeeded after reconnection
           } catch (IOException ex) {
-            LOGGER.warn("channel closed, failed to reconnect", ex);
             ex.initCause(e);
             throw ex;
           }
@@ -86,7 +87,6 @@ final class UdpWriter extends SidecarWriter {
             channel.write(buffer);
             // Write succeeded with reconnected channel
           } catch (IOException ex) {
-            LOGGER.warn("failed to write after reconnection by another thread", ex);
             ex.initCause(e);
             throw ex;
           }
