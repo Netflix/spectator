@@ -102,7 +102,7 @@ subprojects {
   }
 
   checkstyle {
-    toolVersion = '13.1.0'
+    toolVersion = '13.3.0'
     ignoreFailures = false 
     configFile = rootProject.file('codequality/checkstyle.xml')
     configDirectory = rootProject.file("codequality")
