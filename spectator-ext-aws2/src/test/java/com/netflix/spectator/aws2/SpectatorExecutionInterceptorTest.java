@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.aws2;
 
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.SdkRequest;
@@ -39,6 +41,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 
 import java.io.InputStream;
 import java.net.ConnectException;
@@ -97,9 +100,20 @@ public class SpectatorExecutionInterceptorTest {
   }
 
   private ExecutionAttributes createAttributes(String service, String op) {
+    return createAttributes(service, op, Region.US_EAST_1, "123456789012");
+  }
+
+  private ExecutionAttributes createAttributes(
+      String service, String op, Region region, String accountId) {
     ExecutionAttributes attrs = new ExecutionAttributes();
     attrs.putAttribute(SdkExecutionAttribute.SERVICE_NAME, service);
     attrs.putAttribute(SdkExecutionAttribute.OPERATION_NAME, op);
+    if (region != null) {
+      attrs.putAttribute(AwsExecutionAttribute.AWS_REGION, region);
+    }
+    if (accountId != null) {
+      attrs.putAttribute(AwsExecutionAttribute.AWS_AUTH_ACCOUNT_ID, accountId);
+    }
     return attrs;
   }
 
@@ -109,6 +123,13 @@ public class SpectatorExecutionInterceptorTest {
 
   private long millis(long v) {
     return TimeUnit.MILLISECONDS.toNanos(v);
+  }
+
+  private Counter findCounter(String name) {
+    return registry.counters()
+        .filter(c -> c.id().name().equals(name))
+        .findFirst()
+        .orElse(null);
   }
 
   @Test
@@ -264,6 +285,112 @@ public class SpectatorExecutionInterceptorTest {
   @Test
   public void parseRetryHeaderBadFormat() {
     parseRetryHeaderTest("unknown", "foo");
+  }
+
+  @Test
+  public void requestCountSuccess() {
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(200)
+        .build();
+    TestContext context = new TestContext(request, response);
+    execute(context, createAttributes("EC2", "DescribeInstances"), millis(42));
+
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("EC2", get(c.id(), "aws.service"));
+    Assertions.assertEquals("DescribeInstances", get(c.id(), "aws.op"));
+    Assertions.assertEquals("us-east-1", get(c.id(), "aws.region"));
+    Assertions.assertEquals("123456789012", get(c.id(), "aws.account"));
+    Assertions.assertEquals("success", get(c.id(), "result"));
+  }
+
+  @Test
+  public void requestCountFailure() {
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(403)
+        .build();
+    Throwable error = AwsServiceException.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("AccessDenied")
+            .errorMessage("credentials have expired")
+            .build())
+        .build();
+    TestContext context = new TestContext(request, response, error);
+    execute(context, createAttributes("EC2", "DescribeInstances"), millis(30));
+
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("failure", get(c.id(), "result"));
+  }
+
+  @Test
+  public void requestCountThrottled() {
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(400)
+        .build();
+    Throwable error = AwsServiceException.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("Throttling")
+            .errorMessage("too many requests")
+            .build())
+        .build();
+    TestContext context = new TestContext(request, response, error);
+    execute(context, createAttributes("EC2", "DescribeInstances"), millis(30));
+
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("throttled", get(c.id(), "result"));
+  }
+
+  @Test
+  public void requestCountNoRegionOrAccount() {
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(200)
+        .build();
+    TestContext context = new TestContext(request, response);
+    execute(context, createAttributes("EC2", "DescribeInstances", null, null), millis(42));
+
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("EC2", get(c.id(), "aws.service"));
+    Assertions.assertEquals("unknown", get(c.id(), "aws.region"));
+    Assertions.assertEquals("unknown", get(c.id(), "aws.account"));
+  }
+
+  @Test
+  public void requestCountNetworkFailure() {
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    Throwable error = new ConnectException("failed to connect");
+    TestContext context = new TestContext(request, null, error);
+    execute(context, createAttributes("EC2", "DescribeInstances"), millis(30));
+
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("failure", get(c.id(), "result"));
   }
 
   private static class TestContext implements Context.AfterExecution {

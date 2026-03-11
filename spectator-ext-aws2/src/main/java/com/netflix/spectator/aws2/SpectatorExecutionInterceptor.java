@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.aws2;
 
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.ipc.IpcAttempt;
@@ -22,6 +23,7 @@ import com.netflix.spectator.ipc.IpcLogEntry;
 import com.netflix.spectator.ipc.IpcLogger;
 import com.netflix.spectator.ipc.IpcProtocol;
 import com.netflix.spectator.ipc.IpcStatus;
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttribute;
@@ -30,6 +32,7 @@ import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.interceptor.SdkExecutionAttribute;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 
 import java.util.List;
 
@@ -46,6 +49,7 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
   private static final ExecutionAttribute<Boolean> STATUS_IS_SET =
       new ExecutionAttribute<>("SpectatorIpcStatusIsSet");
 
+  private final Registry registry;
   private final IpcLogger logger;
 
   /**
@@ -62,6 +66,7 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
    *     Registry to use for managing the collected metrics.
    */
   public SpectatorExecutionInterceptor(Registry registry) {
+    this.registry = registry;
     this.logger = new IpcLogger(registry);
   }
 
@@ -159,22 +164,44 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
     response.headers().forEach((k, vs) -> vs.forEach(v -> logEntry.addResponseHeader(k, v)));
   }
 
+  private Id createRequestCountId(ExecutionAttributes attrs, String result) {
+    String serviceName = attrs.getAttribute(SdkExecutionAttribute.SERVICE_NAME);
+    String opName = attrs.getAttribute(SdkExecutionAttribute.OPERATION_NAME);
+
+    Id id = registry.createId("aws.requests")
+        .withTag("aws.service", serviceName)
+        .withTag("aws.op", opName)
+        .withTag("result", result);
+
+    Region region = attrs.getAttribute(AwsExecutionAttribute.AWS_REGION);
+    id = id.withTag("aws.region", region != null ? region.id() : "unknown");
+
+    String accountId = attrs.getAttribute(AwsExecutionAttribute.AWS_AUTH_ACCOUNT_ID);
+    id = id.withTag("aws.account", accountId != null ? accountId : "unknown");
+
+    return id;
+  }
+
   @Override
   public void afterExecution(Context.AfterExecution context, ExecutionAttributes attrs) {
     attrs.getAttribute(LOG_ENTRY).log();
+    registry.counter(createRequestCountId(attrs, "success")).increment();
   }
 
   @Override
   public void onExecutionFailure(Context.FailedExecution context, ExecutionAttributes attrs) {
     IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY);
     Throwable t = context.exception();
+    String result = "failure";
     if (t instanceof AwsServiceException) {
       AwsServiceException exception = ((AwsServiceException) t);
       if (exception.isThrottlingException()) {
         logEntry.withStatus(IpcStatus.throttled);
+        result = "throttled";
       }
       logEntry.withStatusDetail(exception.awsErrorDetails().errorCode());
     }
     logEntry.withException(context.exception()).log();
+    registry.counter(createRequestCountId(attrs, result)).increment();
   }
 }
