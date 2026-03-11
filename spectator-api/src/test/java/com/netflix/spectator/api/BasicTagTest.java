@@ -80,4 +80,22 @@ public class BasicTagTest {
         NullPointerException.class, () -> new BasicTag("k", null));
     Assertions.assertEquals("parameter 'value' cannot be null (key=k)", e.getMessage());
   }
+
+  @Test
+  public void convertBasicTagReturnsSameInstance() {
+    BasicTag tag = new BasicTag("k", "v");
+    Assertions.assertSame(tag, BasicTag.convert(tag));
+  }
+
+  @Test
+  public void convertNonBasicTag() {
+    Tag tag = new Tag() {
+      @Override public String key() { return "k"; }
+      @Override public String value() { return "v"; }
+    };
+    BasicTag result = BasicTag.convert(tag);
+    Assertions.assertEquals("k", result.key());
+    Assertions.assertEquals("v", result.value());
+    Assertions.assertEquals(new BasicTag("k", "v"), result);
+  }
 }

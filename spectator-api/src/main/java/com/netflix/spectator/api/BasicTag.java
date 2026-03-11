@@ -28,7 +28,7 @@ public final class BasicTag implements Tag {
    * implementations will likely vary the hashCode/equals causing ids that should
    * be equivalent to not match as expected.
    */
-  static BasicTag convert(Tag t) {
+  public static BasicTag convert(Tag t) {
     return (t instanceof BasicTag) ? (BasicTag) t : new BasicTag(t.key(), t.value());
   }
 
