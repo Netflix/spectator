@@ -20,12 +20,9 @@ import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
 
-import java.lang.management.BufferPoolMXBean;
-import java.lang.management.ClassLoadingMXBean;
-import java.lang.management.CompilationMXBean;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.ThreadMXBean;
+import java.lang.management.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -55,13 +52,37 @@ public final class Jmx {
       monitorThreadMXBean(registry);
       monitorCompilationMXBean(registry);
     }
-
+    monitorGcOverhead(registry);
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       registry.register(new MemoryPoolMeter(registry, mbean));
     }
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       registry.register(new BufferPoolMeter(registry, mbean));
     }
+  }
+
+  private static void monitorGcOverhead(Registry registry) {
+    PolledMeter.using(registry)
+            .withName("jvm.gc.overhead")
+            .monitorStaticMethodValue(Jmx::getGcOverhead);
+  }
+
+  @SuppressWarnings("PMD.EmptyCatchBlock")
+  private static double getGcOverhead() {
+    try {
+      com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean)
+              ManagementFactory.getOperatingSystemMXBean();
+      MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
+      Method getTotalGcCpuTime = MemoryMXBean.class.getMethod("getTotalGcCpuTime");
+        long gcCpuTime = (long) getTotalGcCpuTime.invoke(memory);
+        long processCpuTime = os.getProcessCpuTime();
+        return processCpuTime <= 0 ? Double.NaN : (double) gcCpuTime / processCpuTime;
+    } catch (ClassCastException | NoSuchMethodException ignore) {
+      // OpenJDK 26 and later - see https://bugs.openjdk.org/browse/JDK-8368529
+    } catch (InvocationTargetException | IllegalAccessException e) {
+        throw new RuntimeException(e);
+    }
+    return Double.NaN;
   }
 
   private static void monitorClassLoadingMXBean(Registry registry) {
