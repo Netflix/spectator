@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class Jmx {
 
-  private static final AtomicLong prevGcCpuTime = new AtomicLong(-1L);
-  private static final AtomicLong prevProcessCpuTime = new AtomicLong(-1L);
-  private static final Method gcCpuTimeMethod = getGcCpuTimeMethod();
+  private static final AtomicLong PREV_GC_CPU_TIME = new AtomicLong(-1L);
+  private static final AtomicLong PREV_PROCESS_CPU_TIME = new AtomicLong(-1L);
+  private static final Method GC_CPU_TIME_METHOD = getGcCpuTimeMethod();
 
   private Jmx() {
   }
@@ -83,17 +83,17 @@ public final class Jmx {
   }
 
   private static double getGcOverhead() {
-    if (gcCpuTimeMethod == null) {
+    if (GC_CPU_TIME_METHOD == null) {
       return Double.NaN;
     }
     try {
       com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean)
               ManagementFactory.getOperatingSystemMXBean();
       MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
-      long gcCpuTime = (long) gcCpuTimeMethod.invoke(memory);
+      long gcCpuTime = (long) GC_CPU_TIME_METHOD.invoke(memory);
       long processCpuTime = os.getProcessCpuTime();
-      long prevGc = prevGcCpuTime.getAndSet(gcCpuTime);
-      long prevProcess = prevProcessCpuTime.getAndSet(processCpuTime);
+      long prevGc = PREV_GC_CPU_TIME.getAndSet(gcCpuTime);
+      long prevProcess = PREV_PROCESS_CPU_TIME.getAndSet(processCpuTime);
       if (prevGc < 0 || prevProcess < 0) {
         return Double.NaN;
       }
