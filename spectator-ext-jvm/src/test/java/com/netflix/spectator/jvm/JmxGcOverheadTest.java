@@ -39,7 +39,11 @@ public class JmxGcOverheadTest {
   public void gcOverheadMeterMeasure() {
     Registry registry = new DefaultRegistry();
     Jmx.registerStandardMXBeans(registry);
+    // First poll establishes the baseline, value will be NaN
+    PolledMeter.update(registry);
+    // Trigger GC activity between polls
     System.gc();
+    // Second poll computes the delta from the baseline
     PolledMeter.update(registry);
     assertTrue(registry.gauge(Id.create("jvm.gc.overhead")).value() > 0);
   }

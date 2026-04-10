@@ -25,11 +25,16 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Helpers for working with JMX mbeans.
  */
 public final class Jmx {
+
+  private static final AtomicLong prevGcCpuTime = new AtomicLong(-1L);
+  private static final AtomicLong prevProcessCpuTime = new AtomicLong(-1L);
+  private static final Method gcCpuTimeMethod = getGcCpuTimeMethod();
 
   private Jmx() {
   }
@@ -68,21 +73,36 @@ public final class Jmx {
   }
 
   @SuppressWarnings("PMD.EmptyCatchBlock")
+  private static Method getGcCpuTimeMethod() {
+    try {
+      // OpenJDK 26 and later - see https://bugs.openjdk.org/browse/JDK-8368529
+      return MemoryMXBean.class.getMethod("getTotalGcCpuTime");
+    } catch (NoSuchMethodException ignore) {
+      return null;
+    }
+  }
+
   private static double getGcOverhead() {
+    if (gcCpuTimeMethod == null) {
+      return Double.NaN;
+    }
     try {
       com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean)
               ManagementFactory.getOperatingSystemMXBean();
       MemoryMXBean memory = ManagementFactory.getMemoryMXBean();
-      Method getTotalGcCpuTime = MemoryMXBean.class.getMethod("getTotalGcCpuTime");
-        long gcCpuTime = (long) getTotalGcCpuTime.invoke(memory);
-        long processCpuTime = os.getProcessCpuTime();
-        return processCpuTime <= 0 ? Double.NaN : (double) gcCpuTime / processCpuTime;
-    } catch (ClassCastException | NoSuchMethodException ignore) {
-      // OpenJDK 26 and later - see https://bugs.openjdk.org/browse/JDK-8368529
+      long gcCpuTime = (long) gcCpuTimeMethod.invoke(memory);
+      long processCpuTime = os.getProcessCpuTime();
+      long prevGc = prevGcCpuTime.getAndSet(gcCpuTime);
+      long prevProcess = prevProcessCpuTime.getAndSet(processCpuTime);
+      if (prevGc < 0 || prevProcess < 0) {
+        return Double.NaN;
+      }
+      long deltaProcess = processCpuTime - prevProcess;
+      long deltaGc = gcCpuTime - prevGc;
+      return deltaProcess <= 0 ? Double.NaN : (double) deltaGc / deltaProcess;
     } catch (InvocationTargetException | IllegalAccessException e) {
-        throw new RuntimeException(e);
+      throw new RuntimeException(e);
     }
-    return Double.NaN;
   }
 
   private static void monitorClassLoadingMXBean(Registry registry) {
