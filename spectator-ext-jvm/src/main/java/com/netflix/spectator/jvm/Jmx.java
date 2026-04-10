@@ -72,7 +72,6 @@ public final class Jmx {
             .monitorStaticMethodValue(Jmx::getGcOverhead);
   }
 
-  @SuppressWarnings("PMD.EmptyCatchBlock")
   private static Method getGcCpuTimeMethod() {
     try {
       // OpenJDK 26 and later - see https://bugs.openjdk.org/browse/JDK-8368529
