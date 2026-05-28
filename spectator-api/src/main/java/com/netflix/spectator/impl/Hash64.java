@@ -122,60 +122,86 @@ public final class Hash64 {
     return updateChars(values, 0, values.length);
   }
 
-  /** Update the hash with the specified character sequence value. */
+  /**
+   * Threshold above which {@link #updateString(CharSequence)} hands a {@code String} off
+   * to {@code getBytes(UTF_8) + updateBytes}. Below this length the inline char-loop is
+   * faster (no per-call setup amortization) and structurally non-allocating; above it,
+   * the intrinsified UTF-8 encoder plus Unsafe long-stride writes pull ahead. 128 chars
+   * is the empirical crossover on JDK 25 — see IdHash JMH numbers.
+   */
+  static final int LONG_STRING_THRESHOLD = 128;
+
+  /**
+   * Update the hash with the specified character sequence value. The string is hashed
+   * as its UTF-8 byte sequence. The result matches
+   * {@code updateBytes(s.getBytes(UTF_8))} bit-for-bit, so output is portable to other
+   * languages that hash UTF-8 bytes.
+   *
+   * <p>For short strings (length ≤ {@value #LONG_STRING_THRESHOLD}) and any non-String
+   * {@code CharSequence}, encodes in-place via a char loop with no transient byte
+   * array. For longer {@code String} inputs, falls back to {@code getBytes(UTF_8)}
+   * followed by the Unsafe long-stride {@code updateBytes} path — that one allocates a
+   * transient byte[] (typically JIT-scalar-replaced) but throughput is 2–3× higher on
+   * long strings.</p>
+   */
   public Hash64 updateString(CharSequence str) {
-    if (str instanceof String) {
-      updateBytes(((String) str).getBytes(StandardCharsets.UTF_8));
-    } else {
-      updateCharSequence(str);
+    final int len = str.length();
+    if (len > LONG_STRING_THRESHOLD && str instanceof String) {
+      return updateBytes(((String) str).getBytes(StandardCharsets.UTF_8));
+    }
+    int i = 0;
+    while (i < len) {
+      char c = str.charAt(i++);
+      if (c < 0x80) {
+        // 1-byte ASCII (hot path)
+        writeByte((byte) c);
+      } else if (c < 0x800) {
+        // 2-byte encoding
+        writeByte((byte) (0xC0 | (c >>> 6)));
+        writeByte((byte) (0x80 | (c & 0x3F)));
+      } else if (Character.isHighSurrogate(c)) {
+        if (i < len && Character.isLowSurrogate(str.charAt(i))) {
+          char low = str.charAt(i++);
+          int cp = Character.toCodePoint(c, low);
+          writeByte((byte) (0xF0 | (cp >>> 18)));
+          writeByte((byte) (0x80 | ((cp >>> 12) & 0x3F)));
+          writeByte((byte) (0x80 | ((cp >>> 6) & 0x3F)));
+          writeByte((byte) (0x80 | (cp & 0x3F)));
+        } else {
+          // Unpaired high surrogate → '?'
+          writeByte((byte) 0x3F);
+        }
+      } else if (Character.isLowSurrogate(c)) {
+        // Unpaired low surrogate → '?'
+        writeByte((byte) 0x3F);
+      } else {
+        // 3-byte encoding
+        writeByte((byte) (0xE0 | (c >>> 12)));
+        writeByte((byte) (0x80 | ((c >>> 6) & 0x3F)));
+        writeByte((byte) (0x80 | (c & 0x3F)));
+      }
     }
     return this;
   }
 
-  private void updateCharSequence(CharSequence str) {
-    for (int i = 0; i < str.length(); ++i) {
-      char c = str.charAt(i);
-
-      if (c < 0x80) {
-        // 1-byte ASCII
-        updateByte((byte) c);
-
-      } else if (c < 0x800) {
-        // 2-byte encoding
-        updateByte((byte) (0xC0 | (c >>> 6)));
-        updateByte((byte) (0x80 | (c & 0x3F)));
-
-      } else if (Character.isHighSurrogate(c)) {
-        // Check for valid surrogate pair
-        if (i + 1 < str.length() && Character.isLowSurrogate(str.charAt(i + 1))) {
-          char low = str.charAt(++i);
-          int cp = Character.toCodePoint(c, low);
-          updateByte((byte) (0xF0 | (cp >>> 18)));
-          updateByte((byte) (0x80 | ((cp >>> 12) & 0x3F)));
-          updateByte((byte) (0x80 | ((cp >>> 6) & 0x3F)));
-          updateByte((byte) (0x80 | (cp & 0x3F)));
-        } else {
-          // Unpaired high surrogate → '?'
-          updateByte((byte) 0x3F);
-        }
-
-      } else if (Character.isLowSurrogate(c)) {
-        // Unpaired low surrogate → '?'
-        updateByte((byte) 0x3F);
-
-      } else {
-        // 3-byte encoding
-        updateByte((byte) (0xE0 | (c >>> 12)));
-        updateByte((byte) (0x80 | ((c >>> 6) & 0x3F)));
-        updateByte((byte) (0x80 | (c & 0x3F)));
+  // Tight check-and-write for a single byte. Used by updateString's hot loop directly
+  // (so the JIT keeps the per-char path small) and by updateByte (which previously
+  // duplicated this logic via checkSpace + updateByteImpl).
+  private void writeByte(byte value) {
+    if (bitPos == Long.SIZE) {
+      if (++stripePos == stripe.length) {
+        processStripe();
       }
+      bitPos = 0;
+      stripe[stripePos] = 0L;
     }
+    stripe[stripePos] |= ((long) value & 0xFFL) << bitPos;
+    bitPos += Byte.SIZE;
   }
 
   /** Update the hash with the specified byte value. */
   public Hash64 updateByte(byte value) {
-    checkSpace(Byte.SIZE);
-    updateByteImpl(value);
+    writeByte(value);
     return this;
   }
 
