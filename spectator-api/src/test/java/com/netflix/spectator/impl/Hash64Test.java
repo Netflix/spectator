@@ -287,4 +287,203 @@ public class Hash64Test {
       Assertions.assertTrue(delta < 1000);
     }
   }
+
+  @Test
+  public void hashBytesMatchesXxHashSpec() {
+    // Cross-validate against the openhft xxHash64 reference across input lengths
+    // 0..256. Prior versions of consumeRemainingInput produced non-spec output
+    // for any length that wasn't a multiple of 8 bytes; this guards against
+    // regressions to that bug and verifies cross-language portability of the
+    // hash values.
+    final LongHashFunction xx64 = LongHashFunction.xx();
+    final byte[] data = new byte[256];
+    for (int i = 0; i < data.length; ++i) {
+      data[i] = (byte) i;
+    }
+    for (int len = 0; len <= data.length; ++len) {
+      long expected = xx64.hashBytes(data, 0, len);
+      long actual = new Hash64().updateBytes(data, 0, len).compute();
+      Assertions.assertEquals(expected, actual, "length=" + len);
+    }
+  }
+
+  @Test
+  public void hashStringMatchesXxHashSpec() {
+    // updateString hashes the UTF-8 byte sequence; openhft.hashBytes on the
+    // same UTF-8 bytes should match exactly for any length and any character
+    // (1-, 2-, 3-, or 4-byte UTF-8 sequences).
+    final LongHashFunction xx64 = LongHashFunction.xx();
+    final String[] samples = {
+        "", "a", "ab", "abc", "abcd", "abcde", "abcdef", "abcdefg",
+        "abcdefgh", "abcdefghi", "abcdefghijklmno", "abcdefghijklmnop",
+        "héllo", "世界", "user-42-héllo-世界",
+        repeat("x", 127), repeat("x", 128), repeat("x", 129),
+        repeat("x", 1024)
+    };
+    for (String s : samples) {
+      byte[] utf8 = s.getBytes(StandardCharsets.UTF_8);
+      long expected = xx64.hashBytes(utf8);
+      long actual = new Hash64().updateString(s).compute();
+      Assertions.assertEquals(expected, actual, "input=\"" + s + "\" (utf8 length=" + utf8.length + ")");
+    }
+  }
+
+  private static String repeat(String s, int n) {
+    StringBuilder sb = new StringBuilder(s.length() * n);
+    for (int i = 0; i < n; ++i) sb.append(s);
+    return sb.toString();
+  }
+
+  // ------------------------------------------------------------------------
+  // Static-helper tests: assert the allocation-free static methods produce
+  // identical output to (a) the instance builder API and (b) openhft xxHash64.
+  // ------------------------------------------------------------------------
+
+  @Test
+  public void staticHashLong() {
+    LongHashFunction xx = LongHashFunction.xx();
+    long[] values = {0L, 1L, -1L, Long.MIN_VALUE, Long.MAX_VALUE, 42L, 0xDEADBEEFCAFEBABEL};
+    for (long v : values) {
+      long fromBuilder = new Hash64().updateLong(v).compute();
+      long fromStatic = Hash64.hashLong(v);
+      long fromXx = xx.hashLong(v);
+      Assertions.assertEquals(fromBuilder, fromStatic, "builder vs static, value=" + v);
+      Assertions.assertEquals(fromXx, fromStatic, "openhft vs static, value=" + v);
+    }
+  }
+
+  @Test
+  public void staticHashLongWithSeed() {
+    long[] values = {0L, 1L, -1L, 42L};
+    long[] seeds = {0L, 1L, -1L, 0xCAFEBABECAFEBABEL};
+    for (long seed : seeds) {
+      LongHashFunction xx = LongHashFunction.xx(seed);
+      for (long v : values) {
+        long fromStatic = Hash64.hashLong(v, seed);
+        long fromXx = xx.hashLong(v);
+        Assertions.assertEquals(fromXx, fromStatic,
+            "openhft vs static, value=" + v + ", seed=" + seed);
+      }
+    }
+  }
+
+  @Test
+  public void staticHashInt() {
+    LongHashFunction xx = LongHashFunction.xx();
+    int[] values = {0, 1, -1, Integer.MIN_VALUE, Integer.MAX_VALUE, 42};
+    for (int v : values) {
+      long fromBuilder = new Hash64().updateInt(v).compute();
+      long fromStatic = Hash64.hashInt(v);
+      long fromXx = xx.hashInt(v);
+      Assertions.assertEquals(fromBuilder, fromStatic, "builder vs static, value=" + v);
+      Assertions.assertEquals(fromXx, fromStatic, "openhft vs static, value=" + v);
+    }
+  }
+
+  @Test
+  public void staticHashBytes() {
+    LongHashFunction xx = LongHashFunction.xx();
+    byte[] data = new byte[256];
+    for (int i = 0; i < data.length; ++i) {
+      data[i] = (byte) i;
+    }
+    for (int len = 0; len <= data.length; ++len) {
+      long fromBuilder = new Hash64().updateBytes(data, 0, len).compute();
+      long fromStatic = Hash64.hashBytes(data, 0, len);
+      long fromXx = xx.hashBytes(data, 0, len);
+      Assertions.assertEquals(fromBuilder, fromStatic, "builder vs static, length=" + len);
+      Assertions.assertEquals(fromXx, fromStatic, "openhft vs static, length=" + len);
+    }
+  }
+
+  @Test
+  public void staticHashBytesWithSeed() {
+    long seed = 0xCAFEBABEL;
+    LongHashFunction xx = LongHashFunction.xx(seed);
+    byte[] data = new byte[128];
+    for (int i = 0; i < data.length; ++i) {
+      data[i] = (byte) (i * 7);
+    }
+    for (int len = 0; len <= data.length; ++len) {
+      long fromStatic = Hash64.hashBytes(data, 0, len, seed);
+      long fromXx = xx.hashBytes(data, 0, len);
+      Assertions.assertEquals(fromXx, fromStatic, "length=" + len);
+    }
+  }
+
+  @Test
+  public void staticHashBytesOffset() {
+    // Same payload viewed via different offsets must produce the same hash.
+    byte[] padded = new byte[300];
+    byte[] payload = "hello world this is a test string".getBytes(StandardCharsets.UTF_8);
+    System.arraycopy(payload, 0, padded, 50, payload.length);
+
+    long fromPayload = Hash64.hashBytes(payload);
+    long fromOffset = Hash64.hashBytes(padded, 50, payload.length);
+    Assertions.assertEquals(fromPayload, fromOffset);
+  }
+
+  @Test
+  public void staticHashString() {
+    LongHashFunction xx = LongHashFunction.xx();
+    String[] samples = {
+        "", "a", "ab", "abc", "abcdefgh", "abcdefghi",
+        "héllo", "世界", "user-42-héllo-世界",
+        repeat("x", 31), repeat("x", 32), repeat("x", 33),
+        repeat("x", 127), repeat("x", 128), repeat("x", 129),
+        repeat("abc", 100)
+    };
+    for (String s : samples) {
+      byte[] utf8 = s.getBytes(StandardCharsets.UTF_8);
+      long fromBuilder = new Hash64().updateString(s).compute();
+      long fromStatic = Hash64.hashString(s);
+      long fromXx = xx.hashBytes(utf8);
+      Assertions.assertEquals(fromBuilder, fromStatic,
+          "builder vs static, input=\"" + s + "\" (utf8 len=" + utf8.length + ")");
+      Assertions.assertEquals(fromXx, fromStatic,
+          "openhft vs static, input=\"" + s + "\" (utf8 len=" + utf8.length + ")");
+    }
+  }
+
+  @Test
+  public void staticHashStringCharSequence() {
+    // Non-String CharSequence takes the inline path even for long inputs;
+    // verify the same byte sequence still produces the same hash.
+    String base = repeat("abc", 100);
+    StringBuilder sb = new StringBuilder(base);
+    long fromString = Hash64.hashString(base);
+    long fromBuilder = Hash64.hashString(sb);
+    Assertions.assertEquals(fromString, fromBuilder);
+  }
+
+  @Test
+  public void staticHashStringCharSequenceMultibyte() {
+    // Long non-String CharSequence (which stays on the inline encoder regardless
+    // of length) with 2-, 3-, and 4-byte UTF-8 code points, sized to cross 8-byte
+    // lane and 32-byte stripe boundaries in the inline encoder.
+    LongHashFunction xx = LongHashFunction.xx();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < 50; ++i) {
+      sb.append("a")        // 1-byte
+        .append("é")       // 2-byte (Latin-1)
+        .append("世")       // 3-byte (CJK)
+        .append("😀");  // 4-byte (surrogate pair, U+1F600 grinning face)
+    }
+    byte[] utf8 = sb.toString().getBytes(StandardCharsets.UTF_8);
+    long fromStatic = Hash64.hashString(sb);
+    long fromXx = xx.hashBytes(utf8);
+    Assertions.assertEquals(fromXx, fromStatic, "utf8 length=" + utf8.length);
+  }
+
+  @Test
+  public void staticHashStringWithSeed() {
+    long seed = 0xC0FFEEL;
+    LongHashFunction xx = LongHashFunction.xx(seed);
+    String[] samples = {"", "a", "abcdefgh", "héllo", repeat("x", 200)};
+    for (String s : samples) {
+      long fromStatic = Hash64.hashString(s, seed);
+      long fromXx = xx.hashBytes(s.getBytes(StandardCharsets.UTF_8));
+      Assertions.assertEquals(fromXx, fromStatic, "input=\"" + s + "\"");
+    }
+  }
 }
