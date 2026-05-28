@@ -385,13 +385,13 @@ public final class Hash64 {
     stripe[0] = 0L;
   }
 
-  private long round(long acc, long lane) {
+  private static long round(long acc, long lane) {
     acc += lane * PRIME64_2;
     acc = Long.rotateLeft(acc, 31);
     return acc * PRIME64_1;
   }
 
-  private long mergeAccumulator(long acc, long accN) {
+  private static long mergeAccumulator(long acc, long accN) {
     acc ^= round(0L, accN);
     acc *= PRIME64_1;
     return acc + PRIME64_4;
@@ -407,27 +407,31 @@ public final class Hash64 {
     }
 
     long buffer = stripe[stripePos];
-    if (bitPos >= 4) {
+    // bitPos is in bits; 32 bits = 4 bytes, 8 bits = 1 byte. Prior versions used
+    // 4 and 1 here directly, which made the byte-by-byte loop run 8x too many
+    // times on non-multiple-of-8 inputs and produced a deterministic but
+    // non-spec-compliant hash. Cross-validated against net.openhft xxHash64.
+    if (bitPos >= 32) {
       long lane = buffer & 0xFFFFFFFFL;
       acc ^= (lane * PRIME64_1);
       acc = Long.rotateLeft(acc, 23) * PRIME64_2;
       acc += PRIME64_3;
       buffer >>>= 32;
-      bitPos -= 4;
+      bitPos -= 32;
     }
 
-    while (bitPos >= 1) {
+    while (bitPos >= 8) {
       long lane = buffer & 0xFFL;
       acc ^= (lane * PRIME64_5);
       acc = Long.rotateLeft(acc, 11) * PRIME64_1;
       buffer >>>= 8;
-      bitPos -= 1;
+      bitPos -= 8;
     }
 
     return acc;
   }
 
-  private long avalanche(long acc) {
+  private static long avalanche(long acc) {
     acc ^= acc >>> 33;
     acc *= PRIME64_2;
     acc ^= acc >>> 29;
@@ -473,6 +477,293 @@ public final class Hash64 {
     long h = compute();
     reset();
     return h;
+  }
+
+  // ------------------------------------------------------------------------
+  // Allocation-free static helpers for hashing a single value.
+  //
+  // The instance API (new Hash64().updateX(...)...compute()) is the right fit
+  // when composing the hash of multiple values, but for the common "hash one
+  // long / string / byte[]" case the instance allocation and the per-call
+  // ThreadLocal pattern that callers reach for are both undesirable —
+  // ThreadLocals are particularly bad on virtual threads. These statics
+  // compute the same xxHash64 output as the instance API with no allocation
+  // (except hashString on inputs longer than LONG_STRING_THRESHOLD, which
+  // routes through getBytes(UTF_8) + hashBytes for throughput).
+  // ------------------------------------------------------------------------
+
+  /** xxHash64 of a single {@code long} value with seed 0. Allocation-free. */
+  public static long hashLong(long value) {
+    return hashLong(value, 0L);
+  }
+
+  /** xxHash64 of a single {@code long} value with the given seed. Allocation-free. */
+  public static long hashLong(long value, long seed) {
+    long acc = seed + PRIME64_5 + 8L;
+    acc ^= round(0L, value);
+    acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
+    return avalanche(acc);
+  }
+
+  /** xxHash64 of a single {@code int} value with seed 0. Allocation-free. */
+  public static long hashInt(int value) {
+    return hashInt(value, 0L);
+  }
+
+  /** xxHash64 of a single {@code int} value with the given seed. Allocation-free. */
+  public static long hashInt(int value, long seed) {
+    long acc = seed + PRIME64_5 + 4L;
+    acc ^= (((long) value) & 0xFFFFFFFFL) * PRIME64_1;
+    acc = Long.rotateLeft(acc, 23) * PRIME64_2 + PRIME64_3;
+    return avalanche(acc);
+  }
+
+  /** xxHash64 of {@code bytes} with seed 0. Allocation-free. */
+  public static long hashBytes(byte[] bytes) {
+    return hashBytes(bytes, 0, bytes.length, 0L);
+  }
+
+  /** xxHash64 of {@code bytes} with the given seed. Allocation-free. */
+  public static long hashBytes(byte[] bytes, long seed) {
+    return hashBytes(bytes, 0, bytes.length, seed);
+  }
+
+  /** xxHash64 of {@code bytes[offset, offset+length)} with seed 0. Allocation-free. */
+  public static long hashBytes(byte[] bytes, int offset, int length) {
+    return hashBytes(bytes, offset, length, 0L);
+  }
+
+  /**
+   * xxHash64 of {@code bytes[offset, offset+length)} with the given seed.
+   * Allocation-free.
+   */
+  public static long hashBytes(byte[] bytes, int offset, int length, long seed) {
+    long acc;
+    int i = offset;
+    final int end = offset + length;
+
+    if (length >= 32) {
+      long acc1 = seed + PRIME64_1 + PRIME64_2;
+      long acc2 = seed + PRIME64_2;
+      long acc3 = seed;
+      long acc4 = seed - PRIME64_1;
+      final int stripeEnd = offset + (length & ~31);
+      while (i < stripeEnd) {
+        acc1 = round(acc1, readLongLE(bytes, i));
+        acc2 = round(acc2, readLongLE(bytes, i + 8));
+        acc3 = round(acc3, readLongLE(bytes, i + 16));
+        acc4 = round(acc4, readLongLE(bytes, i + 24));
+        i += 32;
+      }
+      acc = Long.rotateLeft(acc1, 1) + Long.rotateLeft(acc2, 7)
+          + Long.rotateLeft(acc3, 12) + Long.rotateLeft(acc4, 18);
+      acc = mergeAccumulator(acc, acc1);
+      acc = mergeAccumulator(acc, acc2);
+      acc = mergeAccumulator(acc, acc3);
+      acc = mergeAccumulator(acc, acc4);
+    } else {
+      acc = seed + PRIME64_5;
+    }
+
+    acc += length;
+    return avalanche(consumeBytesTail(acc, bytes, i, end));
+  }
+
+  // Consume up to 31 trailing bytes: as many 8-byte chunks as fit, then one
+  // 4-byte chunk if possible, then byte-by-byte.
+  private static long consumeBytesTail(long acc, byte[] bytes, int i, int end) {
+    while (end - i >= 8) {
+      acc ^= round(0L, readLongLE(bytes, i));
+      acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
+      i += 8;
+    }
+    if (end - i >= 4) {
+      acc ^= readIntLE(bytes, i) * PRIME64_1;
+      acc = Long.rotateLeft(acc, 23) * PRIME64_2 + PRIME64_3;
+      i += 4;
+    }
+    while (i < end) {
+      acc ^= ((long) bytes[i] & 0xFFL) * PRIME64_5;
+      acc = Long.rotateLeft(acc, 11) * PRIME64_1;
+      ++i;
+    }
+    return acc;
+  }
+
+  private static long readLongLE(byte[] bytes, int offset) {
+    if (UnsafeUtils.supported()) {
+      return UnsafeUtils.getLong(bytes, offset);
+    }
+    return ((long) bytes[offset]     & 0xFFL)
+        | (((long) bytes[offset + 1] & 0xFFL) << 8)
+        | (((long) bytes[offset + 2] & 0xFFL) << 16)
+        | (((long) bytes[offset + 3] & 0xFFL) << 24)
+        | (((long) bytes[offset + 4] & 0xFFL) << 32)
+        | (((long) bytes[offset + 5] & 0xFFL) << 40)
+        | (((long) bytes[offset + 6] & 0xFFL) << 48)
+        | (((long) bytes[offset + 7] & 0xFFL) << 56);
+  }
+
+  private static long readIntLE(byte[] bytes, int offset) {
+    return ((long) bytes[offset]     & 0xFFL)
+        | (((long) bytes[offset + 1] & 0xFFL) << 8)
+        | (((long) bytes[offset + 2] & 0xFFL) << 16)
+        | (((long) bytes[offset + 3] & 0xFFL) << 24);
+  }
+
+  /**
+   * xxHash64 of the UTF-8 byte sequence of {@code str} with seed 0.
+   *
+   * <p>Allocation behavior: a {@code String} longer than {@value #LONG_STRING_THRESHOLD}
+   * chars routes through {@code getBytes(UTF_8) + hashBytes} for throughput (allocates
+   * a transient byte[], matches {@link #updateString(CharSequence)}'s hybrid). All other
+   * inputs — short {@code String}s and any non-{@code String} {@link CharSequence}
+   * regardless of length — take the inline UTF-8 encoder and allocate nothing. Long
+   * non-{@code String} {@code CharSequence}s pay the inline path's throughput cost
+   * since {@code getBytes} is not available on them.</p>
+   */
+  public static long hashString(CharSequence str) {
+    return hashString(str, 0L);
+  }
+
+  /**
+   * xxHash64 of the UTF-8 byte sequence of {@code str} with the given seed. See
+   * {@link #hashString(CharSequence)} for allocation behavior.
+   */
+  public static long hashString(CharSequence str, long seed) {
+    if (str.length() > LONG_STRING_THRESHOLD && str instanceof String) {
+      return hashBytes(((String) str).getBytes(StandardCharsets.UTF_8), seed);
+    }
+    return hashStringInline(str, seed);
+  }
+
+  // Inline xxHash64 of the UTF-8 byte sequence of str with no byte[] allocation.
+  // Buffers up to a 32-byte stripe in local state; full stripes are folded into
+  // the four accumulators; partial trailing input is consumed at finalize.
+  private static long hashStringInline(CharSequence str, long seed) {
+    long acc1 = seed + PRIME64_1 + PRIME64_2;
+    long acc2 = seed + PRIME64_2;
+    long acc3 = seed;
+    long acc4 = seed - PRIME64_1;
+    // Stripe buffer kept as four named locals (not a long[4]) so the method is
+    // structurally non-allocating regardless of JIT escape analysis.
+    long s0 = 0L, s1 = 0L, s2 = 0L;
+    long currentLane = 0L;
+    int bitPos = 0;
+    int laneIdx = 0;
+    long inputLength = 0L;
+
+    final int charLen = str.length();
+    for (int ci = 0; ci < charLen; ++ci) {
+      char c = str.charAt(ci);
+
+      // Encode one char into 1-4 UTF-8 bytes packed into bytesPacked (low-to-high).
+      int numBytes;
+      long bytesPacked;
+      if (c < 0x80) {
+        bytesPacked = c;
+        numBytes = 1;
+      } else if (c < 0x800) {
+        bytesPacked = (0xC0L | (c >>> 6))
+            | ((0x80L | (c & 0x3F)) << 8);
+        numBytes = 2;
+      } else if (Character.isHighSurrogate(c)) {
+        if (ci + 1 < charLen && Character.isLowSurrogate(str.charAt(ci + 1))) {
+          int cp = Character.toCodePoint(c, str.charAt(++ci));
+          bytesPacked = (0xF0L | (cp >>> 18))
+              | ((0x80L | ((cp >>> 12) & 0x3F)) << 8)
+              | ((0x80L | ((cp >>> 6) & 0x3F)) << 16)
+              | ((0x80L | (cp & 0x3F)) << 24);
+          numBytes = 4;
+        } else {
+          bytesPacked = 0x3F; // unpaired high surrogate → '?'
+          numBytes = 1;
+        }
+      } else if (Character.isLowSurrogate(c)) {
+        bytesPacked = 0x3F; // unpaired low surrogate → '?'
+        numBytes = 1;
+      } else {
+        bytesPacked = (0xE0L | (c >>> 12))
+            | ((0x80L | ((c >>> 6) & 0x3F)) << 8)
+            | ((0x80L | (c & 0x3F)) << 16);
+        numBytes = 3;
+      }
+
+      // Append bytes into the stripe buffer; on lane fill, advance laneIdx;
+      // on full 32-byte stripe, apply rounds and reset.
+      for (int bi = 0; bi < numBytes; ++bi) {
+        currentLane |= (bytesPacked & 0xFFL) << bitPos;
+        bytesPacked >>>= 8;
+        bitPos += 8;
+        if (bitPos == 64) {
+          if (laneIdx == 3) {
+            // 4th lane just filled — fold the whole stripe into the accumulators.
+            acc1 = round(acc1, s0);
+            acc2 = round(acc2, s1);
+            acc3 = round(acc3, s2);
+            acc4 = round(acc4, currentLane);
+            inputLength += 32;
+            laneIdx = 0;
+          } else {
+            switch (laneIdx) {
+              case 0: s0 = currentLane; break;
+              case 1: s1 = currentLane; break;
+              default: s2 = currentLane; break;  // laneIdx == 2
+            }
+            ++laneIdx;
+          }
+          currentLane = 0L;
+          bitPos = 0;
+        }
+      }
+    }
+
+    final long tailBytes = laneIdx * 8L + bitPos / 8L;
+    final long totalBytes = inputLength + tailBytes;
+    long acc;
+    if (totalBytes < 32L) {
+      acc = seed + PRIME64_5;
+    } else {
+      acc = Long.rotateLeft(acc1, 1) + Long.rotateLeft(acc2, 7)
+          + Long.rotateLeft(acc3, 12) + Long.rotateLeft(acc4, 18);
+      acc = mergeAccumulator(acc, acc1);
+      acc = mergeAccumulator(acc, acc2);
+      acc = mergeAccumulator(acc, acc3);
+      acc = mergeAccumulator(acc, acc4);
+    }
+    acc += totalBytes;
+
+    // Consume buffered complete lanes (laneIdx of them, in order) as 8-byte tail
+    // chunks. Unrolled to keep the lane state in named locals.
+    if (laneIdx >= 1) {
+      acc ^= round(0L, s0);
+      acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
+    }
+    if (laneIdx >= 2) {
+      acc ^= round(0L, s1);
+      acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
+    }
+    if (laneIdx >= 3) {
+      acc ^= round(0L, s2);
+      acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
+    }
+    // Then partial-lane bytes from currentLane (bitPos in bits, multiple of 8).
+    long buffer = currentLane;
+    int remainingBits = bitPos;
+    if (remainingBits >= 32) {
+      long lane = buffer & 0xFFFFFFFFL;
+      acc ^= lane * PRIME64_1;
+      acc = Long.rotateLeft(acc, 23) * PRIME64_2 + PRIME64_3;
+      buffer >>>= 32;
+      remainingBits -= 32;
+    }
+    while (remainingBits >= 8) {
+      acc ^= (buffer & 0xFFL) * PRIME64_5;
+      acc = Long.rotateLeft(acc, 11) * PRIME64_1;
+      buffer >>>= 8;
+      remainingBits -= 8;
+    }
+    return avalanche(acc);
   }
 
   /**
