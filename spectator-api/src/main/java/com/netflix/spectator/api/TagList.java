@@ -25,6 +25,8 @@ import java.util.Spliterators;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
  * Base type for a collection of tags. Allows access to the keys and values without allocations
@@ -35,6 +37,29 @@ public interface TagList extends Iterable<Tag>, Comparable<TagList> {
   /** Create a new tag list from a map. */
   static TagList create(Map<String, String> tags) {
     return ArrayTagSet.create(tags);
+  }
+
+  /**
+   * Returns a new {@code TagList} containing the given tags.
+   *
+   * @throws NullPointerException if {@code tags} is null or contains a null tag
+   */
+  static TagList create(Iterable<? extends Tag> tags) {
+    return ArrayTagSet.create(tags);
+  }
+
+  /**
+   * Returns the empty {@code TagList}.
+   */
+  static TagList empty() {
+    return ArrayTagSet.EMPTY;
+  }
+
+  /**
+   * Returns a {@code Collector} that accumulates the input tags into a new {@code TagList}.
+   */
+  static Collector<Tag, ?, TagList> toTagList() {
+    return Collectors.collectingAndThen(Collectors.toList(), TagList::create);
   }
 
   /** Return the key at the specified index. */

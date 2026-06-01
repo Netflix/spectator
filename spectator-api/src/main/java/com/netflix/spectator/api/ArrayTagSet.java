@@ -50,7 +50,7 @@ final class ArrayTagSet implements TagList {
   }
 
   /** Create a new tag set. */
-  static ArrayTagSet create(Iterable<Tag> tags) {
+  static ArrayTagSet create(Iterable<? extends Tag> tags) {
     return (tags instanceof ArrayTagSet) ? (ArrayTagSet) tags : EMPTY.addAll(tags);
   }
 
@@ -146,9 +146,9 @@ final class ArrayTagSet implements TagList {
   }
 
   /** Add a collection of tags to the set. */
-  ArrayTagSet addAll(Iterable<Tag> ts) {
+  ArrayTagSet addAll(Iterable<? extends Tag> ts) {
     if (ts instanceof Collection) {
-      Collection<Tag> data = (Collection<Tag>) ts;
+      Collection<? extends Tag> data = (Collection<? extends Tag>) ts;
       if (data.isEmpty()) {
         return this;
       } else {
