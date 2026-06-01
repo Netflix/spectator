@@ -50,7 +50,6 @@ public interface TagList extends Iterable<Tag>, Comparable<TagList> {
 
   /**
    * Returns the empty {@code TagList}.
-   *
    */
   static TagList empty() {
     return ArrayTagSet.EMPTY;
@@ -58,7 +57,6 @@ public interface TagList extends Iterable<Tag>, Comparable<TagList> {
 
   /**
    * Returns a {@code Collector} that accumulates the input tags into a new {@code TagList}.
-   *
    */
   static Collector<Tag, ?, TagList> toTagList() {
     return Collectors.collectingAndThen(Collectors.toList(), TagList::create);
