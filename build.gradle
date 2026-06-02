@@ -100,10 +100,12 @@ subprojects {
     duplicateClassesStrategy = DuplicatesStrategy.WARN
     includes = ['.*Ids.*']
     // Run benchmarks on a modern JDK rather than the project's JDK 8 toolchain;
-    // JDK 8 compatibility is a library-source constraint, not a perf target.
-    javaLauncher = javaToolchains.launcherFor {
+    // JDK 8 compatibility is a library-source constraint, not a perf target. The
+    // jmh extension's javaLauncher does not steer the forked benchmark JVM, so
+    // point the JMH 'jvm' option directly at the JDK 25 launcher.
+    jvm = javaToolchains.launcherFor {
       languageVersion = JavaLanguageVersion.of(25)
-    }
+    }.get().executablePath.asFile.absolutePath
   }
 
   checkstyle {
