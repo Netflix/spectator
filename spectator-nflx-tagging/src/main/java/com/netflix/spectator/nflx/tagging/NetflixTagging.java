@@ -57,11 +57,6 @@ public final class NetflixTagging {
     tagKeys.add("nf.stack");
     tagKeys.add("nf.vmtype");
     tagKeys.add("nf.zone");
-    // Stratum function tagging. fnFqName is intentionally excluded — fully-qualified
-    // class names are high-cardinality and churn with refactors, so they are kept for
-    // logs/traces only.
-    tagKeys.add("fnGroup");
-    tagKeys.add("shortFnName");
 
     DEFAULT_ATLAS_TAG_KEYS = Collections.unmodifiableSet(tagKeys);
   }
@@ -144,22 +139,6 @@ public final class NetflixTagging {
     putIfNotEmptyOrNull(getenv, tags, "mantisWorkerNumber", "MANTIS_WORKER_NUMBER");
     putIfNotEmptyOrNull(getenv, tags, "mantisWorkerStageNumber", "MANTIS_WORKER_STAGE_NUMBER");
     putIfNotEmptyOrNull(getenv, tags, "mantisUser", "MANTIS_USER");
-
-    // Stratum function info. shortFnName is composed from group + name to match the
-    // FunctionNameSummarizer used elsewhere in the Stratum stack; it is only emitted
-    // when both pieces are present. fnFqName is included for logs/traces but excluded
-    // from the Atlas tag set (see DEFAULT_ATLAS_TAG_KEYS). isEmptyOrNull treats
-    // whitespace-only values as absent, so the composed value cannot have a leading
-    // or trailing dash from a whitespace-only piece.
-    String fnGroup = getenv.apply("STRATUM_FUNCTION_GROUP");
-    String fnName = getenv.apply("STRATUM_FUNCTION_NAME");
-    if (!isEmptyOrNull(fnGroup)) {
-      tags.put("fnGroup", fnGroup.trim());
-      if (!isEmptyOrNull(fnName)) {
-        tags.put("shortFnName", fnGroup.trim() + "-" + fnName.trim());
-      }
-    }
-    putIfNotEmptyOrNull(getenv, tags, "fnFqName", "STRATUM_FUNCTION_FQNAME");
 
     return tags;
   }
