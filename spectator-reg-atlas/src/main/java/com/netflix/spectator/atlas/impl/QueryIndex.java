@@ -154,6 +154,23 @@ public final class QueryIndex<T> {
     }
   }
 
+  /**
+   * Compare a tag key at a given position against the fixed key for a node while traversing
+   * an id. Only position 0 holds the synthesized {@code name} key, so it needs the full
+   * name-first comparison. Positions {@code >= 1} come from the tag list, which is sorted by
+   * {@link String#compareTo}, so the name-first special-casing can be skipped there: even if
+   * a tag is literally keyed {@code name}, any {@code keyRef} that sorts before {@code name}
+   * cannot appear after that entry in the sorted scan, so a plain comparison never skips a
+   * match.
+   */
+  private static int compareTagKey(String k, String keyRef, boolean keyRefIsName, int position) {
+    if (position == 0) {
+      return compare(k, keyRef, keyRefIsName);
+    } else {
+      return keyRefIsName ? 1 : k.compareTo(keyRef);
+    }
+  }
+
   private final CacheSupplier<T> cacheSupplier;
 
   private volatile String key;
@@ -466,15 +483,7 @@ public final class QueryIndex<T> {
       for (int j = i; j < tagsSize; ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
-        // Only position 0 holds the synthesized "name" key, so it needs the full
-        // name-first comparison. Positions >= 1 come from the tag list, which is sorted
-        // by String.compareTo. The name-first special-casing can be skipped there: even
-        // if a tag is literally keyed "name", any keyRef that sorts before "name" cannot
-        // appear after that entry in the sorted scan, so a plain comparison never skips a
-        // match.
-        int cmp = (j == 0)
-            ? compare(k, keyRef, keyRefIsName)
-            : (keyRefIsName ? 1 : k.compareTo(keyRef));
+        int cmp = compareTagKey(k, keyRef, keyRefIsName, j);
         if (cmp == 0) {
           final int nextPos = j + 1;
           keyPresent = true;
