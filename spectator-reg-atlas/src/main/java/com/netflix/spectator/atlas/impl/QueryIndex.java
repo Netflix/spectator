@@ -137,12 +137,37 @@ public final class QueryIndex<T> {
    * This allows the {@link Id} to be traversed in order while performing the lookup.
    */
   private static int compare(String k1, String k2) {
+    return compare(k1, k2, "name".equals(k2));
+  }
+
+  /**
+   * Variant of {@link #compare(String, String)} where the caller has already determined
+   * whether {@code k2} is the {@code name} key. In the hot matching path {@code k2} is the
+   * fixed key for a node, so this check can be hoisted out of the per-tag loop rather than
+   * recomputed on every comparison.
+   */
+  private static int compare(String k1, String k2, boolean k2IsName) {
     if ("name".equals(k1)) {
-      return "name".equals(k2) ? 0 : -1;
-    } else if ("name".equals(k2)) {
-      return 1;
+      return k2IsName ? 0 : -1;
     } else {
-      return k1.compareTo(k2);
+      return k2IsName ? 1 : k1.compareTo(k2);
+    }
+  }
+
+  /**
+   * Compare a tag key at a given position against the fixed key for a node while traversing
+   * an id. Only position 0 holds the synthesized {@code name} key, so it needs the full
+   * name-first comparison. Positions {@code >= 1} come from the tag list, which is sorted by
+   * {@link String#compareTo}, so the name-first special-casing can be skipped there: even if
+   * a tag is literally keyed {@code name}, any {@code keyRef} that sorts before {@code name}
+   * cannot appear after that entry in the sorted scan, so a plain comparison never skips a
+   * match.
+   */
+  private static int compareTagKey(String k, String keyRef, boolean keyRefIsName, int position) {
+    if (position == 0) {
+      return compare(k, keyRef, keyRefIsName);
+    } else {
+      return keyRefIsName ? 1 : k.compareTo(keyRef);
     }
   }
 
@@ -450,11 +475,15 @@ public final class QueryIndex<T> {
 
       boolean keyPresent = false;
 
+      // keyRef is fixed for this node, so the "name" check only needs to be done once
+      // here rather than on every comparison within the loop below.
+      final boolean keyRefIsName = "name".equals(keyRef);
+
       final int tagsSize = tags.size();
       for (int j = i; j < tagsSize; ++j) {
         String k = tags.getKey(j);
         String v = tags.getValue(j);
-        int cmp = compare(k, keyRef);
+        int cmp = compareTagKey(k, keyRef, keyRefIsName, j);
         if (cmp == 0) {
           final int nextPos = j + 1;
           keyPresent = true;
