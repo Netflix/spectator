@@ -30,7 +30,15 @@ public class ParserTest {
   public void escape() {
     for (char i = 0; i < Short.MAX_VALUE; ++i) {
       String str = Character.toString(i);
-      String expected = Parser.isSpecial(i) ? "\\u" + zeroPad(i) : str;
+      final String expected;
+      if ("(".equals(str)) {
+        // A standalone parenthesis is structural and is always escaped when used as a value.
+        expected = "\\u0028";
+      } else if (")".equals(str)) {
+        expected = "\\u0029";
+      } else {
+        expected = Parser.isSpecial(i) ? "\\u" + zeroPad(i) : str;
+      }
       Assertions.assertEquals(expected, Parser.escape(str));
     }
   }

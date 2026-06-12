@@ -734,4 +734,61 @@ public class QueryTest {
     Assertions.assertEquals("foo,bar", re.key());
     Assertions.assertTrue(re.matches("a,b,c"));
   }
+
+  @Test
+  public void eqValueWithEscapedColon() {
+    // A value that is an escaped operator must be treated as data, not as the `:in`
+    // operator. Previously the early unescape caused this to be parsed as an operator and
+    // throw an exception.
+    Query q = parse("name,\\u003ain,:eq");
+    Assertions.assertEquals(new Query.Equal("name", ":in"), q);
+    Assertions.assertTrue(q.matches(registry.createId(":in")));
+    Assertions.assertFalse(q.matches(registry.createId("foo")));
+  }
+
+  @Test
+  public void eqValueWithEscapedParen() {
+    Query q = parse("name,\\u0028,:eq");
+    Assertions.assertEquals(new Query.Equal("name", "("), q);
+    Assertions.assertTrue(q.matches(registry.createId("(")));
+  }
+
+  @Test
+  public void inClauseWithEscapedStructuralTokens() {
+    // Models the result of an "odd" expression where parentheses and operators end up as
+    // literal values inside an `:in` list. The escaped tokens must be treated as data so
+    // the real values still match and the structure is preserved.
+    String expr = "nf.cluster,(,\\u0028,app-foo,app-bar,"
+        + "\\u0029,\\u003ain,\\u003aand,),:in";
+    Query q = parse(expr);
+
+    Query.In in = (Query.In) q;
+    Assertions.assertEquals("nf.cluster", in.key());
+
+    // Real values match.
+    Assertions.assertTrue(q.matches(tags("nf.cluster", "app-foo")));
+    Assertions.assertTrue(q.matches(tags("nf.cluster", "app-bar")));
+
+    // The escaped structural tokens are present as literal data values.
+    Assertions.assertTrue(q.matches(tags("nf.cluster", "(")));
+    Assertions.assertTrue(q.matches(tags("nf.cluster", ")")));
+    Assertions.assertTrue(q.matches(tags("nf.cluster", ":in")));
+    Assertions.assertTrue(q.matches(tags("nf.cluster", ":and")));
+
+    // An unrelated value does not match.
+    Assertions.assertFalse(q.matches(tags("nf.cluster", "other")));
+  }
+
+  @Test
+  public void inClauseWithUnbalancedEscapedParen() {
+    // A lone escaped parenthesis as a value must not corrupt the list depth tracking or
+    // consume the real closing parenthesis. Previously this threw an exception.
+    Query q = parse("name,(,\\u0028,foo,),:in");
+
+    Query.In in = (Query.In) q;
+    Assertions.assertEquals("name", in.key());
+    Assertions.assertTrue(q.matches(registry.createId("foo")));
+    Assertions.assertTrue(q.matches(registry.createId("(")));
+    Assertions.assertFalse(q.matches(registry.createId(")")));
+  }
 }
