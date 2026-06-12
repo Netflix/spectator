@@ -70,7 +70,12 @@ public final class Parser {
     String[] parts = expr.split(",");
     Deque<Object> stack = new ArrayDeque<>(parts.length);
     for (String p : parts) {
-      String token = unescape(p.trim());
+      // Structural tokens (parentheses and `:operators`) are matched against the raw
+      // token. Unescaping is deferred until a token is consumed as a literal value (see
+      // the default case below) so that escaped special characters such as `(` or
+      // `:in` are treated as data rather than as syntax. This mirrors the behavior of
+      // the Atlas server parser (Interpreter.nextStep / popAndPushList).
+      String token = p.trim();
       if (token.isEmpty()) {
         continue;
       }
@@ -80,7 +85,9 @@ public final class Parser {
         } else if (")".equals(token)) {
           --depth;
         }
-        vs.add(token);
+        // Structure is determined from the raw token above, but the value stored in the
+        // list is unescaped so that escaped special characters are treated as data.
+        vs.add(unescape(token));
         continue;
       }
       switch (token) {
@@ -213,7 +220,7 @@ public final class Parser {
           if (token.startsWith(":")) {
             throw new IllegalArgumentException("unknown word '" + token + "'");
           }
-          stack.push(token);
+          stack.push(unescape(token));
           break;
       }
     }
@@ -240,7 +247,10 @@ public final class Parser {
   }
 
   static boolean isSpecial(int codePoint) {
-    return codePoint == ',' || Character.isWhitespace(codePoint);
+    // The comma is used as the token separator and the colon as the prefix for operators,
+    // so both need to be escaped when they appear within a key or value. This matches the
+    // set of special characters used by the Atlas server (Interpreter.isSpecial).
+    return codePoint == ',' || codePoint == ':' || Character.isWhitespace(codePoint);
   }
 
   static void zeroPad(String str, StringBuilder builder) {
@@ -262,6 +272,15 @@ public final class Parser {
    */
   @SuppressWarnings("PMD")
   public static String escape(String str) {
+    // A token consisting of a single parenthesis is structural in the stack language, so
+    // when a parenthesis is used as a value it must be escaped even though it is not
+    // treated as special in the middle of a larger string. This matches the handling in
+    // the Atlas server (Interpreter.escape).
+    if ("(".equals(str)) {
+      return "\\u0028";
+    } else if (")".equals(str)) {
+      return "\\u0029";
+    }
     final int length = str.length();
     StringBuilder builder = new StringBuilder(length);
     for (int i = 0; i < length;) {
@@ -282,6 +301,12 @@ public final class Parser {
    */
   @SuppressWarnings("PMD")
   public static String unescape(String str) {
+    // Fast path: escape sequences always start with a backslash, so if there is none the
+    // input is already unescaped and there is no need to allocate a StringBuilder. This is
+    // the common case as most keys and values do not contain special characters.
+    if (str.indexOf('\\') < 0) {
+      return str;
+    }
     final int length = str.length();
     StringBuilder builder = new StringBuilder(length);
     for (int i = 0; i < length; ++i) {
