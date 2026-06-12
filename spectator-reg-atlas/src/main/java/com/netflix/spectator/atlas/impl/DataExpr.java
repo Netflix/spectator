@@ -18,6 +18,7 @@ package com.netflix.spectator.atlas.impl;
 import com.netflix.spectator.impl.Preconditions;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -105,6 +106,15 @@ public interface DataExpr {
       aggr.update(p);
     }
     return aggr.result();
+  }
+
+  /**
+   * Escape and comma-join a set of grouping keys for rendering an expression. Keys may
+   * contain special characters such as commas or colons, so each must be escaped to ensure
+   * the rendered string round-trips through {@link Parser}.
+   */
+  static String escapeKeys(Collection<String> keys) {
+    return keys.stream().map(Parser::escape).collect(Collectors.joining(","));
   }
 
   /** Helper for incrementally computing an aggregate of a set of tag values. */
@@ -552,8 +562,7 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = String.join(",", keys);
-      return af.toString() + ",(," + keyList + ",),:by";
+      return af.toString() + ",(," + escapeKeys(keys) + ",),:by";
     }
 
     @Override public boolean equals(Object obj) {
@@ -628,8 +637,7 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = String.join(",", keys);
-      return af.toString() + ",(," + keyList + ",),:rollup-drop";
+      return af.toString() + ",(," + escapeKeys(keys) + ",),:rollup-drop";
     }
 
     @Override public boolean equals(Object obj) {
@@ -702,8 +710,7 @@ public interface DataExpr {
     }
 
     @Override public String toString() {
-      final String keyList = String.join(",", keys);
-      return af.toString() + ",(," + keyList + ",),:rollup-keep";
+      return af.toString() + ",(," + escapeKeys(keys) + ",),:rollup-keep";
     }
 
     @Override public boolean equals(Object obj) {

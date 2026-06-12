@@ -279,6 +279,30 @@ public class DataExprTest {
   }
 
   @Test
+  public void groupByKeyWithEscapeRoundTrips() {
+    // The group-by key contains a comma (escaped on input). Parsing unescapes it, so
+    // toString must re-escape it; otherwise re-parsing would split it into two keys.
+    // The parse helper asserts expr.equals(de.toString()), so this verifies the round-trip.
+    DataExpr.GroupBy expr = (DataExpr.GroupBy) parse("name,sps,:eq,:sum,(,a\\u002cb,),:by");
+    Assertions.assertEquals(Collections.singletonList("a,b"), new ArrayList<>(expr.keys()));
+  }
+
+  @Test
+  public void rollupDropKeyWithEscapeRoundTrips() {
+    // parse() asserts expr.equals(de.toString()), verifying the key round-trips.
+    parse("name,sps,:eq,:sum,(,a\\u002cb,),:rollup-drop");
+  }
+
+  @Test
+  public void rollupKeepKeyWithEscapeIsEscaped() {
+    // KeepRollup stores keys in a HashSet and implicitly adds "name", so a strict
+    // round-trip is not stable. Verify the key needing escaping is rendered escaped
+    // (and so the raw comma is not emitted as a separator).
+    DataExpr expr = Parser.parseDataExpr("name,sps,:eq,:sum,(,a\\u002cb,),:rollup-keep");
+    Assertions.assertTrue(expr.toString().contains("a\\u002cb"), expr.toString());
+  }
+
+  @Test
   public void nestedInClauses() {
     Set<String> values = new TreeSet<>();
     values.add("key");
