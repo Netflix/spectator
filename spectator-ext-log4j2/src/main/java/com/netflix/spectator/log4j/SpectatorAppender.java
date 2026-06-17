@@ -80,6 +80,12 @@ public final class SpectatorAppender extends AbstractAppender {
 
   private static final long serialVersionUID = 42L;
 
+  // Recording a message can fail inside the registry (see Registry#propagate), which logs a
+  // warning that routes back through the root logger and re-enters this appender on the same
+  // thread. Skip the re-entrant call to avoid log4j2 emitting a "Recursive call to appender"
+  // error to stdout.
+  private static final ThreadLocal<Boolean> APPENDING = ThreadLocal.withInitial(() -> false);
+
   private final transient Registry registry;
   private transient Id[] numMessages;
   private transient Id[] numStackTraces;
@@ -131,14 +137,23 @@ public final class SpectatorAppender extends AbstractAppender {
   }
 
   @Override public void append(LogEvent event) {
-    final LevelTag level = LevelTag.get(event.getLevel());
-    registry.counter(numMessages[level.ordinal()]).increment();
-    if (!ignoreExceptions() && event.getThrown() != null) {
-      final String file = (event.getSource() == null) ? "unknown" : event.getSource().getFileName();
-      Id stackTraceId = numStackTraces[level.ordinal()]
-          .withTag("exception", event.getThrown().getClass().getSimpleName())
-          .withTag("file", file == null ? "unknown" : file);
-      registry.counter(stackTraceId).increment();
+    if (APPENDING.get()) {
+      return;
+    }
+    APPENDING.set(true);
+    try {
+      final LevelTag level = LevelTag.get(event.getLevel());
+      registry.counter(numMessages[level.ordinal()]).increment();
+      if (!ignoreExceptions() && event.getThrown() != null) {
+        final String file =
+            (event.getSource() == null) ? "unknown" : event.getSource().getFileName();
+        Id stackTraceId = numStackTraces[level.ordinal()]
+            .withTag("exception", event.getThrown().getClass().getSimpleName())
+            .withTag("file", file == null ? "unknown" : file);
+        registry.counter(stackTraceId).increment();
+      }
+    } finally {
+      APPENDING.set(false);
     }
   }
 }
