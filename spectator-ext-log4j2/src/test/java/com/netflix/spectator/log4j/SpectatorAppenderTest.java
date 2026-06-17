@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 public class SpectatorAppenderTest {
@@ -123,25 +124,25 @@ public class SpectatorAppenderTest {
 
   @Test
   public void appendIsNotReentrant() {
-    // The registry can log a warning during a meter lookup (Registry#propagate), which in
-    // production routes back through the root logger and re-enters the appender on the same
-    // thread. Without a re-entrancy guard this recurses until a StackOverflowError.
     AtomicInteger lookups = new AtomicInteger();
-    SpectatorAppender[] holder = new SpectatorAppender[1];
-    Registry reentrant = new ReentrantRegistry(() -> {
+    AtomicReference<SpectatorAppender> appenderRef = new AtomicReference<>();
+    ReentrantRegistry reentrant = new ReentrantRegistry(() -> {
       lookups.incrementAndGet();
-      holder[0].append(newEvent(Level.ERROR, null));
+      appenderRef.get().append(newEvent(Level.ERROR, null));
     });
-    holder[0] = new SpectatorAppender(reentrant, "foo", null, null, false, Property.EMPTY_ARRAY);
-    holder[0].start();
+    appenderRef.set(new SpectatorAppender(
+        reentrant, "foo", null, null, false, Property.EMPTY_ARRAY));
+    appenderRef.get().start();
 
-    holder[0].append(newEvent(Level.ERROR, null));
+    appenderRef.get().append(newEvent(Level.ERROR, null));
+    appenderRef.get().append(newEvent(Level.ERROR, null));
 
-    // Only the outer append reaches the registry; the re-entrant append is skipped by the guard.
-    Assertions.assertEquals(1, lookups.get());
+    Assertions.assertEquals(2, lookups.get(), "each outer append should reach one lookup");
+    Assertions.assertEquals(2, reentrant.count(
+        "log4j.numMessages", "appender", "foo", "loglevel", "2_ERROR"));
   }
 
-  /** Registry that runs an action on every meter lookup to exercise re-entrant logging. */
+  /** Registry that runs an action before each meter lookup. */
   private static final class ReentrantRegistry extends AbstractRegistry {
     private final Registry delegate = new DefaultRegistry();
     private final Runnable onLookup;
@@ -149,6 +150,10 @@ public class SpectatorAppenderTest {
     ReentrantRegistry(Runnable onLookup) {
       super(Clock.SYSTEM);
       this.onLookup = onLookup;
+    }
+
+    double count(String name, String... tags) {
+      return delegate.counter(name, tags).count();
     }
 
     @Override protected <T extends Meter> T getOrCreate(

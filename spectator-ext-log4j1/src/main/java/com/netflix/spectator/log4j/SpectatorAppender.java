@@ -28,10 +28,9 @@ import org.apache.log4j.spi.ThrowableInformation;
  */
 public final class SpectatorAppender extends AppenderSkeleton {
 
-  // Recording a message can fail inside the registry (see Registry#propagate), which logs a
-  // warning that routes back through the root logger and re-enters this appender on the same
-  // thread. Skip the re-entrant call to avoid an infinite recursion.
-  private static final ThreadLocal<Boolean> APPENDING = ThreadLocal.withInitial(() -> false);
+  // Registry warnings can route through the root logger while this appender is recording.
+  // Drop nested calls on the same thread to avoid appender recursion.
+  private static final ThreadLocal<Boolean> APPENDING = new ThreadLocal<>();
 
   private final Registry registry;
   private final Id[] numMessages;
@@ -59,10 +58,10 @@ public final class SpectatorAppender extends AppenderSkeleton {
   }
 
   @Override protected void append(LoggingEvent event) {
-    if (APPENDING.get()) {
+    if (Boolean.TRUE.equals(APPENDING.get())) {
       return;
     }
-    APPENDING.set(true);
+    APPENDING.set(Boolean.TRUE);
     try {
       final LevelTag level = LevelTag.get(event.getLevel());
       registry.counter(numMessages[level.ordinal()]).increment();
@@ -77,7 +76,8 @@ public final class SpectatorAppender extends AppenderSkeleton {
         registry.counter(stackTraceId).increment();
       }
     } finally {
-      APPENDING.set(false);
+      // Keep the entry to avoid allocating a ThreadLocalMap entry per log event.
+      APPENDING.set(Boolean.FALSE);
     }
   }
 
