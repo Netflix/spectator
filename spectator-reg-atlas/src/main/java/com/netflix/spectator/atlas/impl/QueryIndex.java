@@ -400,14 +400,17 @@ public final class QueryIndex<T> {
 
   /** Get cached matches for the value or compute a new one. */
   private List<QueryIndex<T>> otherChecksComputeIfAbsent(String value) {
+    // Most nodes only have :eq children and no other checks. Short circuit before touching
+    // the cache so the hot matching path avoids the cache lookup and its associated counter
+    // updates (hit/miss plus per-entry frequency), which otherwise dominate when scanning ids.
+    if (otherChecks.isEmpty()) {
+      return Collections.emptyList();
+    }
     CacheValue<T> cacheValue = otherChecksCache.get(value);
     long version = otherChecksVersion.get();
     if (cacheValue != null && cacheValue.version == version) {
       // Cached value on consistent version of other checks, use the cached value
       return cacheValue.indices;
-    } else if (otherChecks.isEmpty()) {
-      // No other checks, use empty list
-      return Collections.emptyList();
     } else {
       // Compute a new value
       List<QueryIndex<T>> tmp = new ArrayList<>();
