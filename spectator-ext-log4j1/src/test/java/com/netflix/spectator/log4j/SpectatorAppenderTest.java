@@ -15,10 +15,17 @@
  */
 package com.netflix.spectator.log4j;
 
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.Timer;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
@@ -28,6 +35,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public class SpectatorAppenderTest {
 
@@ -73,6 +83,64 @@ public class SpectatorAppenderTest {
     e.fillInStackTrace();
     appender.append(newEvent(Level.DEBUG, e));
     Assertions.assertEquals(1, c.count());
+  }
+
+  @Test
+  public void appendIsNotReentrant() {
+    AtomicInteger lookups = new AtomicInteger();
+    AtomicReference<SpectatorAppender> appenderRef = new AtomicReference<>();
+    ReentrantRegistry reentrant = new ReentrantRegistry(() -> {
+      lookups.incrementAndGet();
+      appenderRef.get().append(newEvent(Level.ERROR, null));
+    });
+    appenderRef.set(new SpectatorAppender(reentrant));
+
+    appenderRef.get().append(newEvent(Level.ERROR, null));
+    appenderRef.get().append(newEvent(Level.ERROR, null));
+
+    Assertions.assertEquals(2, lookups.get(), "each outer append should reach one lookup");
+    Assertions.assertEquals(2, reentrant.count("log4j.numMessages", "loglevel", "2_ERROR"));
+  }
+
+  /** Registry that runs an action before each meter lookup. */
+  private static final class ReentrantRegistry extends AbstractRegistry {
+    private final Registry delegate = new DefaultRegistry();
+    private final Runnable onLookup;
+
+    ReentrantRegistry(Runnable onLookup) {
+      super(Clock.SYSTEM);
+      this.onLookup = onLookup;
+    }
+
+    double count(String name, String... tags) {
+      return delegate.counter(name, tags).count();
+    }
+
+    @Override protected <T extends Meter> T getOrCreate(
+        Id id, Class<T> cls, T dflt, Function<Id, T> factory) {
+      onLookup.run();
+      return super.getOrCreate(id, cls, dflt, factory);
+    }
+
+    @Override protected Counter newCounter(Id id) {
+      return delegate.counter(id);
+    }
+
+    @Override protected DistributionSummary newDistributionSummary(Id id) {
+      return delegate.distributionSummary(id);
+    }
+
+    @Override protected Timer newTimer(Id id) {
+      return delegate.timer(id);
+    }
+
+    @Override protected Gauge newGauge(Id id) {
+      return delegate.gauge(id);
+    }
+
+    @Override protected Gauge newMaxGauge(Id id) {
+      return delegate.maxGauge(id);
+    }
   }
 
   @Test

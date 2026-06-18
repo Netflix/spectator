@@ -80,6 +80,10 @@ public final class SpectatorAppender extends AbstractAppender {
 
   private static final long serialVersionUID = 42L;
 
+  // Registry warnings can route through the root logger while this appender is recording.
+  // Drop nested calls on the same thread to avoid appender recursion.
+  private static final ThreadLocal<Boolean> APPENDING = new ThreadLocal<>();
+
   private final transient Registry registry;
   private transient Id[] numMessages;
   private transient Id[] numStackTraces;
@@ -131,14 +135,24 @@ public final class SpectatorAppender extends AbstractAppender {
   }
 
   @Override public void append(LogEvent event) {
-    final LevelTag level = LevelTag.get(event.getLevel());
-    registry.counter(numMessages[level.ordinal()]).increment();
-    if (!ignoreExceptions() && event.getThrown() != null) {
-      final String file = (event.getSource() == null) ? "unknown" : event.getSource().getFileName();
-      Id stackTraceId = numStackTraces[level.ordinal()]
-          .withTag("exception", event.getThrown().getClass().getSimpleName())
-          .withTag("file", file == null ? "unknown" : file);
-      registry.counter(stackTraceId).increment();
+    if (Boolean.TRUE.equals(APPENDING.get())) {
+      return;
+    }
+    APPENDING.set(Boolean.TRUE);
+    try {
+      final LevelTag level = LevelTag.get(event.getLevel());
+      registry.counter(numMessages[level.ordinal()]).increment();
+      if (!ignoreExceptions() && event.getThrown() != null) {
+        final String file =
+            (event.getSource() == null) ? "unknown" : event.getSource().getFileName();
+        Id stackTraceId = numStackTraces[level.ordinal()]
+            .withTag("exception", event.getThrown().getClass().getSimpleName())
+            .withTag("file", file == null ? "unknown" : file);
+        registry.counter(stackTraceId).increment();
+      }
+    } finally {
+      // Keep the entry to avoid allocating a ThreadLocalMap entry per log event.
+      APPENDING.set(Boolean.FALSE);
     }
   }
 }

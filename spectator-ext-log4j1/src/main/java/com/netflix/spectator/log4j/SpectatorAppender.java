@@ -28,6 +28,10 @@ import org.apache.log4j.spi.ThrowableInformation;
  */
 public final class SpectatorAppender extends AppenderSkeleton {
 
+  // Registry warnings can route through the root logger while this appender is recording.
+  // Drop nested calls on the same thread to avoid appender recursion.
+  private static final ThreadLocal<Boolean> APPENDING = new ThreadLocal<>();
+
   private final Registry registry;
   private final Id[] numMessages;
   private final Id[] numStackTraces;
@@ -54,17 +58,26 @@ public final class SpectatorAppender extends AppenderSkeleton {
   }
 
   @Override protected void append(LoggingEvent event) {
-    final LevelTag level = LevelTag.get(event.getLevel());
-    registry.counter(numMessages[level.ordinal()]).increment();
+    if (Boolean.TRUE.equals(APPENDING.get())) {
+      return;
+    }
+    APPENDING.set(Boolean.TRUE);
+    try {
+      final LevelTag level = LevelTag.get(event.getLevel());
+      registry.counter(numMessages[level.ordinal()]).increment();
 
-    ThrowableInformation info = event.getThrowableInformation();
-    if (info != null) {
-      LocationInfo loc = event.getLocationInformation();
-      final String file = (loc == null) ? "unknown" : loc.getFileName();
-      Id stackTraceId = numStackTraces[level.ordinal()]
-          .withTag("exception", info.getThrowable().getClass().getSimpleName())
-          .withTag("file", file);
-      registry.counter(stackTraceId).increment();
+      ThrowableInformation info = event.getThrowableInformation();
+      if (info != null) {
+        LocationInfo loc = event.getLocationInformation();
+        final String file = (loc == null) ? "unknown" : loc.getFileName();
+        Id stackTraceId = numStackTraces[level.ordinal()]
+            .withTag("exception", info.getThrowable().getClass().getSimpleName())
+            .withTag("file", file);
+        registry.counter(stackTraceId).increment();
+      }
+    } finally {
+      // Keep the entry to avoid allocating a ThreadLocalMap entry per log event.
+      APPENDING.set(Boolean.FALSE);
     }
   }
 
