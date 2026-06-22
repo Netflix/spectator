@@ -108,12 +108,18 @@ public class LfuCacheTest {
   public void computeIfAbsentCompaction() {
     Cache<String, String> cache = create(1, 2);
     Assertions.assertEquals("A", cache.computeIfAbsent("a", String::toUpperCase));
-    Assertions.assertEquals("B", cache.computeIfAbsent("b", String::toUpperCase));
-    Assertions.assertEquals("B", cache.computeIfAbsent("b", String::toUpperCase));
+
+    // Frequency is sampled, so a single extra access is not reliably recorded. Access "b" enough
+    // times that its (approximate) count overwhelmingly exceeds "a" and it survives compaction.
+    // The chance that none of these accesses are sampled is ~(15/16)^n, negligible for large n.
+    int frequentAccesses = 1000;
+    for (int i = 0; i < frequentAccesses; ++i) {
+      Assertions.assertEquals("B", cache.computeIfAbsent("b", String::toUpperCase));
+    }
     Assertions.assertEquals(2, cache.size());
 
     Assertions.assertEquals("C", cache.computeIfAbsent("c", String::toUpperCase));
-    Assertions.assertEquals(1, hits());
+    Assertions.assertEquals(frequentAccesses - 1, hits());
     Assertions.assertEquals(3, misses());
     Assertions.assertEquals(1, compactions());
     Assertions.assertEquals(1, cache.size());
