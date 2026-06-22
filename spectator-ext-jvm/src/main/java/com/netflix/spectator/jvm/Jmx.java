@@ -16,6 +16,7 @@
 package com.netflix.spectator.jvm;
 
 import com.netflix.spectator.api.Gauge;
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
@@ -25,8 +26,11 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.Executor;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -47,27 +51,40 @@ public final class Jmx {
    * Add meters for the standard MXBeans provided by the jvm. This method will use
    * {@link java.lang.management.ManagementFactory#getPlatformMXBeans(Class)} to get the set of
    * mbeans from the local jvm.
+   *
+   * <p>The returned {@link AutoCloseable} can be used to stop polling and release resources.
+   * Existing callers that do not need lifecycle management can safely ignore the return value.</p>
    */
-  public static void registerStandardMXBeans(Registry registry) {
+  public static AutoCloseable registerStandardMXBeans(Registry registry) {
+    List<AutoCloseable> closeables = new ArrayList<>();
     if (JavaFlightRecorder.isSupported()) {
-      Executor executor = Executors.newSingleThreadExecutor(r -> {
+      ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "spectator-jfr");
         t.setDaemon(true);
         return t;
       });
-      JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+      AutoCloseable jfr = JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+      closeables.add(() -> {
+        jfr.close();
+        executor.shutdownNow();
+      });
     } else {
-      monitorClassLoadingMXBean(registry);
-      monitorThreadMXBean(registry);
-      monitorCompilationMXBean(registry);
+      closeables.add(monitorClassLoadingMXBean(registry));
+      closeables.add(monitorThreadMXBean(registry));
+      closeables.add(monitorCompilationMXBean(registry));
     }
-    monitorGcOverhead(registry);
+    closeables.add(monitorGcOverhead(registry));
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       monitorMemoryPoolMXBean(registry, mbean);
     }
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       monitorBufferPoolMXBean(registry, mbean);
     }
+    return () -> {
+      for (AutoCloseable c : closeables) {
+        c.close();
+      }
+    };
   }
 
   private static void monitorMemoryPoolMXBean(Registry registry, MemoryPoolMXBean mbean) {
@@ -101,10 +118,12 @@ public final class Jmx {
       .monitorValue(mbean, BufferPoolMXBean::getMemoryUsed);
   }
 
-  private static void monitorGcOverhead(Registry registry) {
+  private static AutoCloseable monitorGcOverhead(Registry registry) {
+    Id id = registry.createId("jvm.gc.overhead");
     PolledMeter.using(registry)
-            .withName("jvm.gc.overhead")
+            .withId(id)
             .monitorStaticMethodValue(Jmx::getGcOverhead);
+    return () -> PolledMeter.remove(registry, id);
   }
 
   private static Method getGcCpuTimeMethod() {
@@ -139,40 +158,54 @@ public final class Jmx {
     }
   }
 
-  private static void monitorClassLoadingMXBean(Registry registry) {
+  private static AutoCloseable monitorClassLoadingMXBean(Registry registry) {
+    Id loadedId = registry.createId("jvm.classloading.classesLoaded");
+    Id unloadedId = registry.createId("jvm.classloading.classesUnloaded");
     ClassLoadingMXBean classLoadingMXBean = ManagementFactory.getClassLoadingMXBean();
     PolledMeter.using(registry)
-      .withName("jvm.classloading.classesLoaded")
+      .withId(loadedId)
       .monitorMonotonicCounter(classLoadingMXBean, ClassLoadingMXBean::getTotalLoadedClassCount);
     PolledMeter.using(registry)
-      .withName("jvm.classloading.classesUnloaded")
+      .withId(unloadedId)
       .monitorMonotonicCounter(classLoadingMXBean, ClassLoadingMXBean::getUnloadedClassCount);
+    return () -> {
+      PolledMeter.remove(registry, loadedId);
+      PolledMeter.remove(registry, unloadedId);
+    };
   }
 
-  private static void monitorThreadMXBean(Registry registry) {
+  private static AutoCloseable monitorThreadMXBean(Registry registry) {
+    Id startedId = registry.createId("jvm.thread.threadsStarted");
     ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
     PolledMeter.using(registry)
-      .withName("jvm.thread.threadsStarted")
+      .withId(startedId)
       .monitorMonotonicCounter(threadMXBean, ThreadMXBean::getTotalStartedThreadCount);
 
     Gauge nonDaemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "non-daemon");
     Gauge daemonThreadCount = registry.gauge("jvm.thread.threadCount", "id", "daemon");
-    PolledMeter.poll(registry, () -> {
+    ScheduledFuture<?> future = PolledMeter.poll(registry, () -> {
       int threads = threadMXBean.getThreadCount();
       int daemonThreads = threadMXBean.getDaemonThreadCount();
       nonDaemonThreadCount.set(Math.max(0, threads - daemonThreads));
       daemonThreadCount.set(daemonThreads);
     });
+    return () -> {
+      future.cancel(false);
+      PolledMeter.remove(registry, startedId);
+    };
   }
 
-  private static void monitorCompilationMXBean(Registry registry) {
+  private static AutoCloseable monitorCompilationMXBean(Registry registry) {
     CompilationMXBean compilationMXBean = ManagementFactory.getCompilationMXBean();
-    if (compilationMXBean.isCompilationTimeMonitoringSupported()) {
-      PolledMeter.using(registry)
-        .withName("jvm.compilation.compilationTime")
-        .withTag("compiler", compilationMXBean.getName())
-        .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
+    if (!compilationMXBean.isCompilationTimeMonitoringSupported()) {
+      return () -> {};
     }
+    Id id = registry.createId("jvm.compilation.compilationTime")
+        .withTag("compiler", compilationMXBean.getName());
+    PolledMeter.using(registry)
+      .withId(id)
+      .monitorMonotonicCounterDouble(compilationMXBean, c -> c.getTotalCompilationTime() / 1000.0);
+    return () -> PolledMeter.remove(registry, id);
   }
 
   /**
