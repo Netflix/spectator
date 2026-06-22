@@ -24,8 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
@@ -35,6 +36,12 @@ import java.util.stream.Collectors;
  * LFU implementation of {@link Cache}.
  */
 class LfuCache<K, V> implements Cache<K, V> {
+
+  // Frequency counts are sampled to reduce the per-read atomic update cost, which otherwise
+  // dominates CPU for hot caches under high-concurrency access. Must be a power of two so the
+  // mask can select ~1-in-SAMPLE reads.
+  private static final int SAMPLE = 16;
+  private static final int SAMPLE_MASK = SAMPLE - 1;
 
   private final Counter hits;
   private final Counter misses;
@@ -164,15 +171,23 @@ class LfuCache<K, V> implements Cache<K, V> {
 
   private static class Pair<V> {
     private final V value;
-    private final LongAdder count;
+    private final AtomicLong count;
 
     Pair(V value) {
       this.value = value;
-      this.count = new LongAdder();
+      this.count = new AtomicLong();
     }
 
     V get() {
-      count.increment();
+      // Sample the frequency update rather than incrementing on every read. Updating ~1-in-SAMPLE
+      // reads and adding SAMPLE keeps the accumulated value an unbiased estimate of the access
+      // count, cutting the per-read atomic traffic that dominates CPU on hot caches by roughly a
+      // factor of SAMPLE. Eviction ordering is preserved for hot entries, where the estimate is
+      // precise; lightly accessed entries may still read as zero, which is acceptable since a
+      // wrong eviction only forces a recompute, never an incorrect result.
+      if ((ThreadLocalRandom.current().nextInt() & SAMPLE_MASK) == 0) {
+        count.addAndGet(SAMPLE);
+      }
       return value;
     }
 
@@ -181,7 +196,7 @@ class LfuCache<K, V> implements Cache<K, V> {
     }
 
     long snapshot() {
-      return count.sum();
+      return count.get();
     }
   }
 
