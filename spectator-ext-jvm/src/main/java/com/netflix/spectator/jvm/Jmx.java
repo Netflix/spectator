@@ -26,8 +26,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -60,7 +58,8 @@ public final class Jmx {
   }
 
   public static AutoCloseable startMonitoringStandardMXBeans(Registry registry) {
-    List<AutoCloseable> closeables = new ArrayList<>();
+    CompositeAutoCloseable compositeAutoCloseable = new CompositeAutoCloseable();
+
     if (JavaFlightRecorder.isSupported()) {
       ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "spectator-jfr");
@@ -68,17 +67,15 @@ public final class Jmx {
         return t;
       });
       AutoCloseable jfr = JavaFlightRecorder.monitorDefaultEvents(registry, executor);
-      closeables.add(() -> {
-        jfr.close();
-        executor.shutdownNow();
-      });
+      compositeAutoCloseable.add(jfr);
+      compositeAutoCloseable.add(executor::shutdownNow);
     } else {
-      closeables.add(monitorClassLoadingMXBean(registry));
-      closeables.add(monitorThreadMXBean(registry));
-      closeables.add(monitorCompilationMXBean(registry));
+      compositeAutoCloseable.add(monitorClassLoadingMXBean(registry));
+      compositeAutoCloseable.add(monitorThreadMXBean(registry));
+      compositeAutoCloseable.add(monitorCompilationMXBean(registry));
     }
 
-    closeables.add(monitorGcOverhead(registry));
+    compositeAutoCloseable.add(monitorGcOverhead(registry));
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       monitorMemoryPoolMXBean(registry, mbean);
     }
@@ -86,11 +83,7 @@ public final class Jmx {
       monitorBufferPoolMXBean(registry, mbean);
     }
 
-    return () -> {
-      for (AutoCloseable c : closeables) {
-        c.close();
-      }
-    };
+    return compositeAutoCloseable;
   }
 
   private static void monitorMemoryPoolMXBean(Registry registry, MemoryPoolMXBean mbean) {
