@@ -90,9 +90,9 @@ public class JmxGcOverheadTest {
   }
 
   @Test
-  public void registerStandardMXBeansReturnsCloseable() throws Exception {
+  public void startMonitoringStandardMXBeansReturnsCloseable() throws Exception {
     Registry registry = new DefaultRegistry();
-    AutoCloseable closeable = Jmx.registerStandardMXBeans(registry);
+    AutoCloseable closeable = Jmx.startMonitoringStandardMXBeans(registry);
     assertNotNull(closeable);
     closeable.close();
   }

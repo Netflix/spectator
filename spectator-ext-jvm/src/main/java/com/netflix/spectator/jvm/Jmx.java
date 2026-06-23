@@ -55,7 +55,11 @@ public final class Jmx {
    * <p>The returned {@link AutoCloseable} can be used to stop polling and release resources.
    * Existing callers that do not need lifecycle management can safely ignore the return value.</p>
    */
-  public static AutoCloseable registerStandardMXBeans(Registry registry) {
+  public static void registerStandardMXBeans(Registry registry) {
+    startMonitoringStandardMXBeans(registry);
+  }
+
+  public static AutoCloseable startMonitoringStandardMXBeans(Registry registry) {
     List<AutoCloseable> closeables = new ArrayList<>();
     if (JavaFlightRecorder.isSupported()) {
       ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -73,6 +77,7 @@ public final class Jmx {
       closeables.add(monitorThreadMXBean(registry));
       closeables.add(monitorCompilationMXBean(registry));
     }
+
     closeables.add(monitorGcOverhead(registry));
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
       monitorMemoryPoolMXBean(registry, mbean);
@@ -80,6 +85,7 @@ public final class Jmx {
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
       monitorBufferPoolMXBean(registry, mbean);
     }
+
     return () -> {
       for (AutoCloseable c : closeables) {
         c.close();
