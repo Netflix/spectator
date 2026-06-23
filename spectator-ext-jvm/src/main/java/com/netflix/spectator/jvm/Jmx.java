@@ -60,27 +60,36 @@ public final class Jmx {
   public static AutoCloseable startMonitoringStandardMXBeans(Registry registry) {
     CompositeAutoCloseable compositeAutoCloseable = new CompositeAutoCloseable();
 
-    if (JavaFlightRecorder.isSupported()) {
-      ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "spectator-jfr");
-        t.setDaemon(true);
-        return t;
-      });
-      AutoCloseable jfr = JavaFlightRecorder.monitorDefaultEvents(registry, executor);
-      compositeAutoCloseable.add(jfr);
-      compositeAutoCloseable.add(executor::shutdownNow);
-    } else {
-      compositeAutoCloseable.add(monitorClassLoadingMXBean(registry));
-      compositeAutoCloseable.add(monitorThreadMXBean(registry));
-      compositeAutoCloseable.add(monitorCompilationMXBean(registry));
-    }
+    try {
+      if (JavaFlightRecorder.isSupported()) {
+        ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+          Thread t = new Thread(r, "spectator-jfr");
+          t.setDaemon(true);
+          return t;
+        });
+        AutoCloseable jfr = JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+        compositeAutoCloseable.add(jfr);
+        compositeAutoCloseable.add(executor::shutdownNow);
+      } else {
+        compositeAutoCloseable.add(monitorClassLoadingMXBean(registry));
+        compositeAutoCloseable.add(monitorThreadMXBean(registry));
+        compositeAutoCloseable.add(monitorCompilationMXBean(registry));
+      }
 
-    compositeAutoCloseable.add(monitorGcOverhead(registry));
-    for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
-      monitorMemoryPoolMXBean(registry, mbean);
-    }
-    for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
-      monitorBufferPoolMXBean(registry, mbean);
+      compositeAutoCloseable.add(monitorGcOverhead(registry));
+      for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
+        monitorMemoryPoolMXBean(registry, mbean);
+      }
+      for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
+        monitorBufferPoolMXBean(registry, mbean);
+      }
+    } catch (Exception e) {
+      try {
+        compositeAutoCloseable.close();
+      } catch (Exception closingException) {
+        e.addSuppressed(closingException);
+      }
+      throw e;
     }
 
     return compositeAutoCloseable;
