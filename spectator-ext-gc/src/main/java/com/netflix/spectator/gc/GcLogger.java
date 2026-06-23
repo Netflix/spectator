@@ -32,7 +32,6 @@ import javax.management.NotificationListener;
 import javax.management.openmbean.CompositeData;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -93,11 +92,7 @@ public final class GcLogger {
 
   private long youngGenSizeAfter = 0L;
 
-  private String youngGenPoolName = null;
-
-  private String survivorPoolName = null;
-
-  private String oldGenPoolName = null;
+  private final HelperFunctions.PoolNames poolNames;
 
   private GcNotificationListener notifListener = null;
 
@@ -112,21 +107,7 @@ public final class GcLogger {
       gcLogs.put(mbean.getName(), buffer);
     }
     this.gcLogs = Collections.unmodifiableMap(gcLogs);
-
-    for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
-      String poolName = mbean.getName();
-      // For non-generational collectors the young and old gen pool names will be the
-      // same
-      if (HelperFunctions.isYoungGenPool(poolName)) {
-        youngGenPoolName = poolName;
-      }
-      if (HelperFunctions.isSurvivorPool(poolName)) {
-        survivorPoolName = poolName;
-      }
-      if (HelperFunctions.isOldGenPool(poolName)) {
-        oldGenPoolName = poolName;
-      }
-    }
+    this.poolNames = HelperFunctions.detectPoolNames();
   }
 
   /**
@@ -194,9 +175,9 @@ public final class GcLogger {
     final Map<String, MemoryUsage> before = info.getMemoryUsageBeforeGc();
     final Map<String, MemoryUsage> after = info.getMemoryUsageAfterGc();
 
-    if (oldGenPoolName != null) {
-      final long oldBefore = before.get(oldGenPoolName).getUsed();
-      final long oldAfter = after.get(oldGenPoolName).getUsed();
+    if (poolNames.oldGen != null) {
+      final long oldBefore = before.get(poolNames.oldGen).getUsed();
+      final long oldAfter = after.get(poolNames.oldGen).getUsed();
       final long delta = oldAfter - oldBefore;
       if (delta > 0L) {
         PROMOTION_RATE.increment(delta);
@@ -210,23 +191,23 @@ public final class GcLogger {
       // after a major GC.
       if (oldAfter > 0L && (oldAfter < oldBefore || HelperFunctions.isOldGcType(name))) {
         LIVE_DATA_SIZE.set(oldAfter);
-        final long oldMaxAfter = after.get(oldGenPoolName).getMax();
+        final long oldMaxAfter = after.get(poolNames.oldGen).getMax();
         MAX_DATA_SIZE.set(oldMaxAfter);
       }
     }
 
-    if (survivorPoolName != null) {
-      final long survivorBefore = before.get(survivorPoolName).getUsed();
-      final long survivorAfter = after.get(survivorPoolName).getUsed();
+    if (poolNames.survivor != null) {
+      final long survivorBefore = before.get(poolNames.survivor).getUsed();
+      final long survivorAfter = after.get(poolNames.survivor).getUsed();
       final long delta = survivorAfter - survivorBefore;
       if (delta > 0L) {
         SURVIVOR_RATE.increment(delta);
       }
     }
 
-    if (youngGenPoolName != null) {
-      final long youngBefore = before.get(youngGenPoolName).getUsed();
-      final long youngAfter = after.get(youngGenPoolName).getUsed();
+    if (poolNames.youngGen != null) {
+      final long youngBefore = before.get(poolNames.youngGen).getUsed();
+      final long youngAfter = after.get(poolNames.youngGen).getUsed();
       // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
       // those updates.
       if (youngBefore > 0L) {
@@ -247,7 +228,7 @@ public final class GcLogger {
     }
 
     // Update pause timer for the action and cause...
-    Id eventId = (isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)
+    Id eventId = (HelperFunctions.isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)
       .withTag("action", info.getGcAction())
       .withTag("cause", info.getGcCause());
     Timer timer = Spectator.globalRegistry().timer(eventId);
@@ -265,24 +246,6 @@ public final class GcLogger {
         LOGGER.warn("exception thrown by event listener", e);
       }
     }
-  }
-
-  private boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
-    // So far the only indicator known is that the cause will be reported as "No GC"
-    // when using CMS.
-    //
-    // For ZGC, behavior was changed in JDK17:
-    // https://bugs.openjdk.java.net/browse/JDK-8265136
-    //
-    // For ZGC in older versions, there is no way to accurately get the amount of time
-    // in STW pauses.
-    //
-    // For G1, a new bean was added in JDK20 to indicate time spent in concurrent
-    // phases:
-    // https://bugs.openjdk.org/browse/JDK-8297247
-    return "No GC".equals(info.getGcCause())           // CMS
-        || "G1 Concurrent GC".equals(info.getGcName()) // G1 in JDK20+
-        || info.getGcName().endsWith(" Cycles");       // Shenandoah, ZGC
   }
 
   private final class GcNotificationListener implements NotificationListener {

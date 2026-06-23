@@ -15,8 +15,11 @@
  */
 package com.netflix.spectator.gc;
 
+import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.Collections;
 import java.util.HashMap;
@@ -109,6 +112,77 @@ final class HelperFunctions {
     long totalBefore = getTotalUsage(info.getMemoryUsageBeforeGc());
     long totalAfter = getTotalUsage(info.getMemoryUsageAfterGc());
     return totalAfter - totalBefore;
+  }
+
+  /** Detect the young gen, survivor, and old gen pool names from the JVM memory pools. */
+  static PoolNames detectPoolNames() {
+    String youngGenPoolName = null;
+    String survivorPoolName = null;
+    String oldGenPoolName = null;
+    for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
+      String name = mbean.getName();
+      // For non-generational collectors the young and old gen pool names will be the same
+      if (isYoungGenPool(name)) {
+        youngGenPoolName = name;
+      }
+      if (isSurvivorPool(name)) {
+        survivorPoolName = name;
+      }
+      if (isOldGenPool(name)) {
+        oldGenPoolName = name;
+      }
+    }
+    return new PoolNames(youngGenPoolName, survivorPoolName, oldGenPoolName);
+  }
+
+  /**
+   * Returns true if the GC event represents a concurrent phase rather than a stop-the-world
+   * pause.
+   */
+  static boolean isConcurrentPhase(GarbageCollectionNotificationInfo info) {
+    // So far the only indicator known is that the cause will be reported as "No GC"
+    // when using CMS.
+    //
+    // For ZGC, behavior was changed in JDK17:
+    // https://bugs.openjdk.java.net/browse/JDK-8265136
+    //
+    // For ZGC in older versions, there is no way to accurately get the amount of time
+    // in STW pauses.
+    //
+    // For G1, a new bean was added in JDK20 to indicate time spent in concurrent
+    // phases:
+    // https://bugs.openjdk.org/browse/JDK-8297247
+    return "No GC".equals(info.getGcCause())           // CMS
+        || "G1 Concurrent GC".equals(info.getGcName()) // G1 in JDK20+
+        || info.getGcName().endsWith(" Cycles");        // Shenandoah, ZGC
+  }
+
+  /** Holds the detected pool names for young gen, survivor, and old gen. */
+  static final class PoolNames {
+    private final String youngGen;
+    private final String survivor;
+    private final String oldGen;
+
+    PoolNames(String youngGen, String survivor, String oldGen) {
+      this.youngGen = youngGen;
+      this.survivor = survivor;
+      this.oldGen = oldGen;
+    }
+
+    /** Returns the young generation pool name, or null if not detected. */
+    String youngGen() {
+      return youngGen;
+    }
+
+    /** Returns the survivor pool name, or null if not detected. */
+    String survivor() {
+      return survivor;
+    }
+
+    /** Returns the old generation pool name, or null if not detected. */
+    String oldGen() {
+      return oldGen;
+    }
   }
 
 }
