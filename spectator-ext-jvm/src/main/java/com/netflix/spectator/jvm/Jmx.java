@@ -49,14 +49,18 @@ public final class Jmx {
    * Add meters for the standard MXBeans provided by the jvm. This method will use
    * {@link java.lang.management.ManagementFactory#getPlatformMXBeans(Class)} to get the set of
    * mbeans from the local jvm.
-   *
-   * <p>The returned {@link AutoCloseable} can be used to stop polling and release resources.
-   * Existing callers that do not need lifecycle management can safely ignore the return value.</p>
    */
   public static void registerStandardMXBeans(Registry registry) {
     startMonitoringStandardMXBeans(registry);
   }
 
+  /**
+   * Start monitoring the standard MXBeans provided by the jvm and return an {@link AutoCloseable}
+   * that can be used to stop polling and release resources when monitoring is no longer needed.
+   * This method will use
+   * {@link java.lang.management.ManagementFactory#getPlatformMXBeans(Class)} to get the set of
+   * mbeans from the local jvm.
+   */
   public static AutoCloseable startMonitoringStandardMXBeans(Registry registry) {
     CompositeAutoCloseable compositeAutoCloseable = new CompositeAutoCloseable();
 
