@@ -54,7 +54,7 @@ import java.util.stream.StreamSupport;
 /**
  * Registry for reporting metrics to Atlas.
  */
-public final class AtlasRegistry extends AbstractRegistry implements AutoCloseable {
+public final class AtlasRegistry extends AbstractRegistry {
 
   private static final String PUBLISH_TASK_TIMER = "spectator.atlas.publishTaskTime";
 
