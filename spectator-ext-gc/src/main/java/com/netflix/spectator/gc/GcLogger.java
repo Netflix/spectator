@@ -17,6 +17,7 @@ package com.netflix.spectator.gc;
 
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.impl.Preconditions;
@@ -46,6 +47,14 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Logger to collect GC notifcation events.
+ *
+ * <p>At most one instance should report to a given registry. The metrics are registered on
+ * the supplied registry when the instance is constructed, so constructing multiple instances
+ * that share a registry will double-count the rate counters and register duplicate gauges for
+ * the same ids. Because the no-arg constructor uses the {@link Spectator#globalRegistry()},
+ * in the common case this means a single instance per JVM. Each started instance also adds its
+ * own listener to the GC MXBeans, so every GC event is processed once per started instance.
+ * {@link #start(GcEventListener)} is a no-op if the instance has already been started.</p>
  */
 public final class GcLogger {
 
@@ -55,35 +64,32 @@ public final class GcLogger {
   // One minor GC per minute would require 180 for three hours
   private static final int BUFFER_SIZE = 256;
 
+  // Registry used to report the GC metrics
+  private final Registry registry;
+
   // Max size of old generation memory pool
-  private static final AtomicLong MAX_DATA_SIZE =
-    Spectator.globalRegistry().gauge("jvm.gc.maxDataSize", new AtomicLong(0L));
+  private final AtomicLong maxDataSize;
 
   // Size of old generation memory pool after a full GC
-  private static final AtomicLong LIVE_DATA_SIZE =
-    Spectator.globalRegistry().gauge("jvm.gc.liveDataSize", new AtomicLong(0L));
+  private final AtomicLong liveDataSize;
 
   // Incremented for any positive increases in the size of the old generation memory pool
   // before GC to after GC
-  private static final Counter PROMOTION_RATE =
-    Spectator.globalRegistry().counter("jvm.gc.promotionRate");
+  private final Counter promotionRate;
 
   // Incremented for the increase in the size of the young generation memory pool after one GC
   // to before the next
-  private static final Counter ALLOCATION_RATE =
-    Spectator.globalRegistry().counter("jvm.gc.allocationRate");
+  private final Counter allocationRate;
 
   // Incremented for any positive increases in the size of the survivor memory pool
   // before GC to after GC
-  private static final Counter SURVIVOR_RATE =
-          Spectator.globalRegistry().counter("jvm.gc.survivorRate");
+  private final Counter survivorRate;
 
   // Pause time due to GC event
-  private static final Id PAUSE_TIME = Spectator.globalRegistry().createId("jvm.gc.pause");
+  private final Id pauseTime;
 
   // Time spent in concurrent phases of GC
-  private static final Id CONCURRENT_PHASE_TIME =
-      Spectator.globalRegistry().createId("jvm.gc.concurrentPhaseTime");
+  private final Id concurrentPhaseTime;
 
   private final Lock lock = new ReentrantLock();
 
@@ -103,8 +109,28 @@ public final class GcLogger {
 
   private GcEventListener eventListener = null;
 
-  /** Create a new instance. */
+  /** Create a new instance that reports metrics to the {@link Spectator#globalRegistry()}. */
   public GcLogger() {
+    this(Spectator.globalRegistry());
+  }
+
+  /**
+   * Create a new instance that reports metrics to the provided registry.
+   *
+   * @param registry
+   *     Registry used to report the GC metrics. A single instance per JVM is expected; see
+   *     the class documentation for details.
+   */
+  public GcLogger(Registry registry) {
+    this.registry = registry;
+    this.maxDataSize = registry.gauge("jvm.gc.maxDataSize", new AtomicLong(0L));
+    this.liveDataSize = registry.gauge("jvm.gc.liveDataSize", new AtomicLong(0L));
+    this.promotionRate = registry.counter("jvm.gc.promotionRate");
+    this.allocationRate = registry.counter("jvm.gc.allocationRate");
+    this.survivorRate = registry.counter("jvm.gc.survivorRate");
+    this.pauseTime = registry.createId("jvm.gc.pause");
+    this.concurrentPhaseTime = registry.createId("jvm.gc.concurrentPhaseTime");
+
     jvmStartTime = ManagementFactory.getRuntimeMXBean().getStartTime();
     Map<String, CircularBuffer<GcEvent>> gcLogs = new HashMap<>();
     for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
@@ -139,9 +165,9 @@ public final class GcLogger {
   public void start(GcEventListener listener) {
     lock.lock();
     try {
-      // TODO: this class has a bad mix of static fields used from an instance of the class. For now
-      // this has been changed not to throw to make the dependency injection use-cases work. A
-      // more general refactor of the GcLogger class is needed.
+      // Guard against double-start on this instance. Starting more than once (or starting
+      // multiple instances) would register duplicate notification listeners and double-count
+      // events, so this is a no-op if already started.
       if (notifListener != null) {
         LOGGER.warn("logger already started");
         return;
@@ -199,7 +225,7 @@ public final class GcLogger {
       final long oldAfter = after.get(oldGenPoolName).getUsed();
       final long delta = oldAfter - oldBefore;
       if (delta > 0L) {
-        PROMOTION_RATE.increment(delta);
+        promotionRate.increment(delta);
       }
 
       // Shenandoah doesn't report accurate pool sizes for pauses, all numbers are 0. Ignore
@@ -209,9 +235,9 @@ public final class GcLogger {
       // live data size we record the value if we see a reduction in the old gen heap size or
       // after a major GC.
       if (oldAfter > 0L && (oldAfter < oldBefore || HelperFunctions.isOldGcType(name))) {
-        LIVE_DATA_SIZE.set(oldAfter);
+        liveDataSize.set(oldAfter);
         final long oldMaxAfter = after.get(oldGenPoolName).getMax();
-        MAX_DATA_SIZE.set(oldMaxAfter);
+        maxDataSize.set(oldMaxAfter);
       }
     }
 
@@ -220,7 +246,7 @@ public final class GcLogger {
       final long survivorAfter = after.get(survivorPoolName).getUsed();
       final long delta = survivorAfter - survivorBefore;
       if (delta > 0L) {
-        SURVIVOR_RATE.increment(delta);
+        survivorRate.increment(delta);
       }
     }
 
@@ -233,13 +259,15 @@ public final class GcLogger {
         final long delta = youngBefore - youngGenSizeAfter;
         youngGenSizeAfter = youngAfter;
         if (delta > 0L) {
-          ALLOCATION_RATE.increment(delta);
+          allocationRate.increment(delta);
         }
       }
     }
   }
 
-  private void processGcEvent(GarbageCollectionNotificationInfo info) {
+  // Package-private rather than private so tests can drive the event-processing path with a
+  // synthetic notification.
+  void processGcEvent(GarbageCollectionNotificationInfo info) {
     GcEvent event = new GcEvent(info, jvmStartTime + info.getGcInfo().getStartTime());
     gcLogs.get(info.getGcName()).add(event);
     if (LOGGER.isDebugEnabled()) {
@@ -247,10 +275,10 @@ public final class GcLogger {
     }
 
     // Update pause timer for the action and cause...
-    Id eventId = (isConcurrentPhase(info) ? CONCURRENT_PHASE_TIME : PAUSE_TIME)
+    Id eventId = (isConcurrentPhase(info) ? concurrentPhaseTime : pauseTime)
       .withTag("action", info.getGcAction())
       .withTag("cause", info.getGcCause());
-    Timer timer = Spectator.globalRegistry().timer(eventId);
+    Timer timer = registry.timer(eventId);
     long duration = Math.max(1, info.getGcInfo().getDuration());
     timer.record(duration, TimeUnit.MILLISECONDS);
 
