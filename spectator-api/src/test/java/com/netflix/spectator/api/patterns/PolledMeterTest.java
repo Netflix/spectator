@@ -270,4 +270,216 @@ public class PolledMeterTest {
     PolledMeter.update(r);
     Assertions.assertEquals(0.0, r.gauge(id).value());
   }
+
+  @Test
+  public void removeAllClearsPolledState() {
+    Registry r = new DefaultRegistry();
+
+    PolledMeter.using(r).withName("gauge").monitorValue(new AtomicLong(1));
+    PolledMeter.using(r).withName("counter").monitorMonotonicCounter(new AtomicLong(1));
+    Assertions.assertFalse(r.state().isEmpty());
+
+    PolledMeter.removeAll(r);
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void removeAllLeavesNonPolledStateUntouched() {
+    Registry r = new DefaultRegistry();
+
+    // State entries that are not polled meters must be left alone.
+    Id marker = r.createId("marker");
+    r.state().put(marker, new Object());
+
+    Id gauge = r.createId("gauge");
+    PolledMeter.using(r).withId(gauge).monitorValue(new AtomicLong(1));
+
+    PolledMeter.removeAll(r);
+    Assertions.assertFalse(r.state().containsKey(gauge));
+    Assertions.assertTrue(r.state().containsKey(marker));
+  }
+
+  @Test
+  public void cleanupActionRunsOnRemove() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withId(id)
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+
+    Assertions.assertEquals(0, closed.get());
+    PolledMeter.remove(r, id);
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void cleanupActionRunsOnRemoveAll() {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    // Exercise the monotonic-counter path so the action is threaded through CounterState too.
+    PolledMeter.using(r).withName("test")
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorMonotonicCounter(new AtomicLong(1));
+
+    PolledMeter.removeAll(r);
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void cleanupActionExceptionDoesNotPropagate() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+
+    PolledMeter.using(r).withId(id)
+        .withCleanupAction(() -> {
+          throw new IllegalStateException("boom");
+        })
+        .monitorValue(new AtomicLong(1));
+
+    // Must not throw, and the meter state should still be cleared.
+    PolledMeter.remove(r, id);
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void multipleCleanupActionsForSameId() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withId(id)
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+    PolledMeter.using(r).withId(id)
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(2));
+
+    PolledMeter.remove(r, id);
+    Assertions.assertEquals(2, closed.get());
+  }
+
+  @Test
+  public void registryCloseCancelsPolledMetersAndPollTasks() {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withName("gauge")
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+    ScheduledFuture<?> poll = PolledMeter.poll(r, () -> { });
+    Assertions.assertFalse(r.state().isEmpty());
+
+    r.close();
+
+    Assertions.assertTrue(r.state().isEmpty());
+    Assertions.assertTrue(poll.isCancelled());
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void registryCloseViaTryWithResources() {
+    AtomicLong closed = new AtomicLong();
+    try (Registry r = new DefaultRegistry()) {
+      PolledMeter.using(r).withName("gauge")
+          .withCleanupAction(closed::incrementAndGet)
+          .monitorValue(new AtomicLong(1));
+    }
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void registryCloseIsIdempotent() {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withName("gauge")
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+
+    r.close();
+    r.close();
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void registryCloseClearsMeters() {
+    Registry r = new DefaultRegistry();
+    PolledMeter.using(r).withName("gauge").monitorValue(new AtomicLong(1));
+    Assertions.assertTrue(r.iterator().hasNext());
+
+    r.close();
+    Assertions.assertFalse(r.iterator().hasNext());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void cleanupActionExceptionDoesNotPropagateOnClose() {
+    Registry r = new DefaultRegistry();
+    PolledMeter.using(r).withName("gauge")
+        .withCleanupAction(() -> {
+          throw new IllegalStateException("boom");
+        })
+        .monitorValue(new AtomicLong(1));
+
+    // close() must not propagate the exception and must still clear state.
+    r.close();
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void resetCancelsPolledMeters() {
+    DefaultRegistry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withName("gauge")
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+
+    r.reset();
+    Assertions.assertEquals(1, closed.get());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void removeAllCancelsPollTask() {
+    Registry r = new DefaultRegistry();
+
+    ScheduledFuture<?> future = PolledMeter.poll(r, () -> { });
+    Assertions.assertFalse(future.isCancelled());
+    Assertions.assertFalse(r.state().isEmpty());
+
+    PolledMeter.removeAll(r);
+    Assertions.assertTrue(future.isCancelled());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void pollFutureCancelRemovesState() {
+    Registry r = new DefaultRegistry();
+
+    ScheduledFuture<?> future = PolledMeter.poll(r, () -> { });
+    Assertions.assertFalse(r.state().isEmpty());
+
+    future.cancel(true);
+    Assertions.assertTrue(future.isCancelled());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void cleanupActionRunsAtMostOnce() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.using(r).withId(id)
+        .withCleanupAction(closed::incrementAndGet)
+        .monitorValue(new AtomicLong(1));
+
+    PolledMeter.remove(r, id);
+    PolledMeter.removeAll(r);
+    Assertions.assertEquals(1, closed.get());
+  }
 }

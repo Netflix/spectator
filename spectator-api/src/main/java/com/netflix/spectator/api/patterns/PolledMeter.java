@@ -34,9 +34,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.DoubleSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.ToDoubleFunction;
@@ -84,6 +89,10 @@ import java.util.function.ToLongFunction;
 public final class PolledMeter {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(PolledMeter.class);
+
+  // Used to generate unique ids for tracking raw poll tasks in the registry state so that they
+  // can be cancelled by removeAll(Registry).
+  private static final AtomicLong POLL_TASK_SEQ = new AtomicLong();
 
   private PolledMeter() {
   }
@@ -134,6 +143,38 @@ public final class PolledMeter {
   }
 
   /**
+   * Stop polling and remove all polled meters that have been registered with the registry,
+   * running any cleanup actions configured via {@link Builder#withCleanupAction(AutoCloseable)}.
+   * This also cancels any tasks scheduled via {@link #poll(Registry, Runnable)}.
+   *
+   * <p>This is intended for tearing down a registry that is used temporarily. The background
+   * polling tasks would otherwise keep running, and because each scheduled task holds a
+   * reference to the registry, they can also prevent the registry from being garbage collected.
+   * A typical usage is:</p>
+   *
+   * <pre>
+   *   Registry registry = new DefaultRegistry();
+   *   try {
+   *     // ... register polled meters and do work ...
+   *   } finally {
+   *     PolledMeter.removeAll(registry);
+   *   }
+   * </pre>
+   *
+   * <p>Only polled meters are affected. Other entries stored in the registry state are left
+   * in place.</p>
+   */
+  public static void removeAll(Registry registry) {
+    Iterator<Map.Entry<Id, Object>> iter = registry.state().entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<Id, Object> entry = iter.next();
+      if (entry.getValue() instanceof AbstractMeterState) {
+        ((AbstractMeterState) entry.getValue()).cleanup(registry);
+      }
+    }
+  }
+
+  /**
    * Poll by executing {@code f.accept(registry)} using the default thread pool for polling
    * gauges at the default frequency configured for the registry. If more customization is
    * needed, then it can be done by using a {@code ScheduledExecutorService} directly and
@@ -143,6 +184,10 @@ public final class PolledMeter {
    * <p>The provided function must be thread safe and cheap to execute. Expensive operations,
    * including any IO or network calls, should not be performed inline. Assume that the function
    * will be called frequently and may be called concurrently.
+   *
+   * <p>The task is tracked with the registry so that it can be cancelled along with the polled
+   * meters by {@link #removeAll(Registry)}. It can also be stopped individually by cancelling
+   * the returned future; doing so removes the associated bookkeeping from the registry.</p>
    *
    * @param registry
    *     Registry that will maintain the state and receive the sampled values for the
@@ -157,7 +202,17 @@ public final class PolledMeter {
     // with the function
     f.run();
     long delay = registry.config().gaugePollingFrequency().toMillis();
-    return GaugePoller.schedule(delay, f);
+    ScheduledFuture<?> future = GaugePoller.schedule(delay, f);
+
+    // Track the task in the registry state so removeAll(registry) can cancel it. A unique
+    // synthetic id is used for each call; these entries are internal bookkeeping and are never
+    // reported as meters.
+    Id id = registry.createId("spectator.gauge.pollTask")
+        .withTag("seq", Long.toString(POLL_TASK_SEQ.getAndIncrement()));
+    PollState state = new PollState(id);
+    state.setFuture(future);
+    registry.state().put(id, state);
+    return new PollFuture(registry, id, future);
   }
 
   /**
@@ -169,6 +224,7 @@ public final class PolledMeter {
     private final Id baseId;
     private ScheduledExecutorService executor;
     private long delay;
+    private AutoCloseable cleanupAction;
 
     /** Create a new instance. */
     Builder(Registry registry, Id baseId) {
@@ -176,6 +232,28 @@ public final class PolledMeter {
       this.registry = registry;
       this.baseId = baseId;
       this.delay = registry.config().gaugePollingFrequency().toMillis();
+    }
+
+    /**
+     * Register an action to run when the meter is removed or otherwise cleaned up. This is
+     * intended for releasing resources whose lifecycle should match the meter, for example a
+     * custom executor created for use with {@link #scheduleOn(ScheduledExecutorService)} or
+     * some other {@link AutoCloseable} associated with the polled value.
+     *
+     * <p>The action runs whenever the meter is cleaned up: explicitly via
+     * {@link PolledMeter#remove(Registry, Id)} or {@link PolledMeter#removeAll(Registry)}, or
+     * automatically when the monitored object has been garbage collected and polling stops.
+     * Exceptions thrown by the action are caught and logged. If multiple values are monitored
+     * with the same id, then each registered action will be run.</p>
+     *
+     * @param action
+     *     Resource to close when the meter is cleaned up.
+     * @return
+     *     This builder instance to allow chaining of operations.
+     */
+    public Builder withCleanupAction(AutoCloseable action) {
+      this.cleanupAction = action;
+      return this;
     }
 
     /**
@@ -271,6 +349,9 @@ public final class PolledMeter {
       } else {
         ValueState<T> t = (ValueState<T>) c;
         t.add(obj, f);
+        if (cleanupAction != null) {
+          t.addCleanupAction(cleanupAction);
+        }
         t.schedule(registry, executor, delay);
       }
 
@@ -415,6 +496,9 @@ public final class PolledMeter {
       } else {
         CounterState<T> t = (CounterState<T>) c;
         t.add(obj, f);
+        if (cleanupAction != null) {
+          t.addCleanupAction(cleanupAction);
+        }
         t.schedule(registry, executor, delay);
       }
 
@@ -506,8 +590,12 @@ public final class PolledMeter {
   }
 
   /** Base class for meter state used for bookkeeping. */
-  abstract static class AbstractMeterState {
-    private Future<?> future = null;
+  abstract static class AbstractMeterState implements AutoCloseable {
+    // Volatile: written by schedule()/setFuture() after the state is published into the
+    // registry map, and read by close()/cleanup() which may run on a different thread.
+    private volatile Future<?> future = null;
+    private final ConcurrentLinkedQueue<AutoCloseable> cleanupActions =
+        new ConcurrentLinkedQueue<>();
 
     /** Return the id for the meter. */
     protected abstract Id id();
@@ -518,12 +606,39 @@ public final class PolledMeter {
     /** Sample the meter and send updates to the registry. */
     protected abstract void update(Registry registry);
 
-    /** Cleanup any state associated with this meter and stop polling. */
-    void cleanup(Registry registry) {
+    /** Register an action to run when this meter is cleaned up. */
+    void addCleanupAction(AutoCloseable action) {
+      cleanupActions.add(action);
+    }
+
+    /** Set the future for a task that was scheduled outside of {@link #schedule}. */
+    void setFuture(Future<?> f) {
+      this.future = f;
+    }
+
+    /**
+     * Stop polling and run any registered cleanup actions. This is the registry-independent
+     * part of teardown so it can be invoked generically when the registry is closed. Safe to
+     * call multiple times; the cleanup actions are drained so each runs at most once.
+     */
+    @Override public void close() {
       if (future != null) {
         future.cancel(true);
       }
+      AutoCloseable action;
+      while ((action = cleanupActions.poll()) != null) {
+        try {
+          action.close();
+        } catch (Exception e) {
+          LOGGER.warn("exception thrown by cleanup action for [{}]", id(), e);
+        }
+      }
+    }
+
+    /** Cleanup any state associated with this meter and stop polling. */
+    void cleanup(Registry registry) {
       registry.state().remove(id());
+      close();
     }
 
     /**
@@ -553,6 +668,33 @@ public final class PolledMeter {
           future = GaugePoller.schedule(executor, tupleRef, delay, t -> t.doUpdate(registry));
         }
       }
+    }
+  }
+
+  /**
+   * Bookkeeping for a raw task scheduled via {@link #poll(Registry, Runnable)}. The task runs
+   * the user function directly on the executor, so there is nothing to update here; this state
+   * exists only so the future can be cancelled by {@link #removeAll(Registry)}.
+   */
+  static final class PollState extends AbstractMeterState {
+    private final Id id;
+
+    /** Create a new instance. */
+    PollState(Id id) {
+      super();
+      this.id = id;
+    }
+
+    @Override protected Id id() {
+      return id;
+    }
+
+    @Override protected boolean hasExpired() {
+      return false;
+    }
+
+    @Override protected void update(Registry registry) {
+      // The scheduled task runs the user function directly; nothing to do here.
     }
   }
 
@@ -749,6 +891,68 @@ public final class PolledMeter {
         }
         previous = current;
       }
+    }
+  }
+
+  /**
+   * Wraps the future returned by {@link #poll(Registry, Runnable)} so that cancelling it also
+   * removes the bookkeeping entry from the registry state, keeping the two cleanup paths
+   * (explicit cancel and {@link #removeAll(Registry)}) consistent.
+   */
+  private static final class PollFuture implements ScheduledFuture<Object> {
+    private final Registry registry;
+    private final Id id;
+    private final ScheduledFuture<?> delegate;
+
+    PollFuture(Registry registry, Id id, ScheduledFuture<?> delegate) {
+      this.registry = registry;
+      this.id = id;
+      this.delegate = delegate;
+    }
+
+    @Override public boolean cancel(boolean mayInterruptIfRunning) {
+      boolean result = delegate.cancel(mayInterruptIfRunning);
+      registry.state().remove(id);
+      return result;
+    }
+
+    @Override public boolean isCancelled() {
+      return delegate.isCancelled();
+    }
+
+    @Override public boolean isDone() {
+      return delegate.isDone();
+    }
+
+    @Override public Object get() throws InterruptedException, ExecutionException {
+      return delegate.get();
+    }
+
+    @Override public Object get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
+      return delegate.get(timeout, unit);
+    }
+
+    @Override public long getDelay(TimeUnit unit) {
+      return delegate.getDelay(unit);
+    }
+
+    @Override public int compareTo(Delayed o) {
+      return delegate.compareTo(o);
+    }
+
+    @Override public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof PollFuture)) {
+        return false;
+      }
+      return delegate.equals(((PollFuture) o).delegate);
+    }
+
+    @Override public int hashCode() {
+      return delegate.hashCode();
     }
   }
 }

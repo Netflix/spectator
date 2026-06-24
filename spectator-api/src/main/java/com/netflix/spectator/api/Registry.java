@@ -31,12 +31,24 @@ import java.util.stream.StreamSupport;
 /**
  * Registry to manage a set of meters.
  */
-public interface Registry extends Iterable<Meter> {
+public interface Registry extends Iterable<Meter>, AutoCloseable {
 
   /**
    * The clock used by the registry for timing events.
    */
   Clock clock();
+
+  /**
+   * Release any resources associated with the registry. This allows a registry to be used with
+   * try-with-resources and is most useful for registries that are created for temporary use.
+   *
+   * <p>The default implementation does nothing, so existing registries are unaffected.
+   * Implementations that maintain background work, such as the polling tasks created by
+   * {@link com.netflix.spectator.api.patterns.PolledMeter}, should override this to stop that
+   * work.</p>
+   */
+  @Override default void close() {
+  }
 
   /**
    * Configuration settings used for this registry.

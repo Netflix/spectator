@@ -343,12 +343,46 @@ public abstract class AbstractRegistry implements Registry {
   }
 
   /**
+   * Release resources associated with the registry, stopping any background work and clearing
+   * the meters. This closes any {@link AutoCloseable} values stored in the {@link #state()} map,
+   * for example the background polling tasks created by
+   * {@link com.netflix.spectator.api.patterns.PolledMeter}. The registry does not need to know
+   * about the helpers that registered the state; anything that needs cleanup just implements
+   * {@link AutoCloseable}.
+   *
+   * <p>Safe to call more than once.</p>
+   */
+  @Override public void close() {
+    closeState();
+  }
+
+  /**
    * This can be called be sub-classes to reset all state for the registry. Typically this
    * should only be exposed for test registries as most users should not be able to reset the
    * state and interrupt metrics collection for the overall system.
    */
   protected void reset() {
-    meters.clear();
+    closeState();
+  }
+
+  /**
+   * Close any {@link AutoCloseable} state values, then clear the state and meter maps. Exceptions
+   * thrown while closing an individual entry are caught and logged so the remaining entries are
+   * still processed. Called by both {@link #close()} and {@link #reset()}; kept private so a
+   * {@code reset()} cannot trigger a sub-class override of {@code close()}.
+   */
+  private void closeState() {
+    for (Map.Entry<Id, Object> entry : state.entrySet()) {
+      Object obj = entry.getValue();
+      if (obj instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable) obj).close();
+        } catch (Exception e) {
+          logger.warn("exception thrown while closing registry state for [{}]", entry.getKey(), e);
+        }
+      }
+    }
     state.clear();
+    meters.clear();
   }
 }

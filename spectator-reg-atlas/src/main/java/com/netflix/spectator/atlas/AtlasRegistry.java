@@ -226,12 +226,17 @@ public final class AtlasRegistry extends AbstractRegistry implements AutoCloseab
   }
 
   /**
-   * Stop the scheduler reporting Atlas data. This is the same as calling {@link #stop()} and
-   * is included to allow the registry to be stopped correctly when used with DI frameworks that
-   * support lifecycle management.
+   * Stop the scheduler reporting Atlas data and release the registry resources. This calls
+   * {@link #stop()} to flush and shut down the publishing scheduler and is included to allow
+   * the registry to be stopped correctly when used with DI frameworks that support lifecycle
+   * management. In addition to {@link #stop()}, it releases any remaining registry state such
+   * as {@code PolledMeter} background tasks.
    */
   @Override public void close() {
+    // Flush and shutdown the publishing scheduler first, then let the base registry release
+    // any remaining state such as PolledMeter background tasks.
     stop();
+    super.close();
   }
 
   /** Returns the timestamp of the last completed interval for the specified step size. */
