@@ -19,6 +19,8 @@ import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.patterns.PolledMeter;
 import com.typesafe.config.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.management.*;
 import java.lang.reflect.InvocationTargetException;
@@ -31,6 +33,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * Helpers for working with JMX mbeans.
  */
 public final class Jmx {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(Jmx.class);
 
   private static final AtomicLong PREV_GC_CPU_TIME = new AtomicLong(-1L);
   private static final AtomicLong PREV_PROCESS_CPU_TIME = new AtomicLong(-1L);
@@ -59,11 +63,42 @@ public final class Jmx {
     }
     monitorGcOverhead(registry);
     for (MemoryPoolMXBean mbean : ManagementFactory.getMemoryPoolMXBeans()) {
-      registry.register(new MemoryPoolMeter(registry, mbean));
+      monitorMemoryPoolMXBean(registry, mbean);
     }
     for (BufferPoolMXBean mbean : ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class)) {
-      registry.register(new BufferPoolMeter(registry, mbean));
+      monitorBufferPoolMXBean(registry, mbean);
     }
+  }
+
+  private static void monitorMemoryPoolMXBean(Registry registry, MemoryPoolMXBean mbean) {
+    String name = mbean.getName();
+    String type = mbean.getType().name();
+    Gauge used = registry.gauge("jvm.memory.used", "id", name, "memtype", type);
+    Gauge committed = registry.gauge("jvm.memory.committed", "id", name, "memtype", type);
+    Gauge max = registry.gauge("jvm.memory.max", "id", name, "memtype", type);
+    // Sample usage once per poll so used/committed/max come from a single consistent snapshot
+    // (as the previous MemoryPoolMeter did) and getUsage() is called once rather than per gauge.
+    // getUsage() can return null for an invalid pool, so guard against it.
+    PolledMeter.poll(registry, () -> {
+      MemoryUsage usage = mbean.getUsage();
+      if (usage != null) {
+        used.set(usage.getUsed());
+        committed.set(usage.getCommitted());
+        max.set(usage.getMax());
+      }
+    });
+  }
+
+  private static void monitorBufferPoolMXBean(Registry registry, BufferPoolMXBean mbean) {
+    String name = mbean.getName();
+    PolledMeter.using(registry)
+      .withName("jvm.buffer.count")
+      .withTag("id", name)
+      .monitorValue(mbean, BufferPoolMXBean::getCount);
+    PolledMeter.using(registry)
+      .withName("jvm.buffer.memoryUsed")
+      .withTag("id", name)
+      .monitorValue(mbean, BufferPoolMXBean::getMemoryUsed);
   }
 
   private static void monitorGcOverhead(Registry registry) {
@@ -150,6 +185,17 @@ public final class Jmx {
    *     Config object with the mappings.
    */
   public static void registerMappingsFromConfig(Registry registry, Config cfg) {
-    registry.register(new JmxMeter(registry, JmxConfig.from(cfg)));
+    JmxConfig config = JmxConfig.from(cfg);
+    PolledMeter.poll(registry, () -> {
+      try {
+        for (JmxData data : JmxData.query(config.getQuery())) {
+          for (JmxMeasurementConfig measurementConfig : config.getMeasurements()) {
+            measurementConfig.measure(registry, data);
+          }
+        }
+      } catch (Exception e) {
+        LOGGER.warn("failed to query jmx data: {}", config.getQuery().getCanonicalName(), e);
+      }
+    });
   }
 }
