@@ -69,4 +69,76 @@ public class ParserTest {
     String str = "foo\\uzyff";
     Assertions.assertEquals(str, Parser.unescape(str));
   }
+
+  private void assertRoundTrip(String value) {
+    Assertions.assertEquals(value, Parser.unescape(Parser.escape(value)));
+  }
+
+  @Test
+  public void escapeBackslashBeginningUnicodeEscape() {
+    // A value literally containing "\\u002c" must have its backslash escaped so unescape does
+    // not decode it back into a comma. Cover the escape both mid-string and at the end.
+    Assertions.assertEquals("a\\u005cu002cb", Parser.escape("a\\u002cb"));
+    Assertions.assertEquals("x\\u005cu002c", Parser.escape("x\\u002c"));
+    assertRoundTrip("a\\u002cb");
+    assertRoundTrip("\\u002c");
+  }
+
+  @Test
+  public void escapeBackslashNotBeginningUnicodeEscape() {
+    // Backslashes that do not begin a unicode escape are left readable (e.g. regex-style "\\d").
+    Assertions.assertEquals("\\d", Parser.escape("\\d"));
+    assertRoundTrip("\\d");
+    assertRoundTrip("C:\\users\\foo");
+  }
+
+  @Test
+  public void escapeBackslashAdjacentToSpecialChar() {
+    // A literal backslash immediately before a character that escape() renders as a \\uXXXX
+    // sequence (here the comma -> \\u002c) must stay a literal backslash and round-trip; it
+    // must not be merged with the following escape when unescaping.
+    Assertions.assertEquals("\\\\u002c", Parser.escape("\\,"));
+    assertRoundTrip("\\,");
+  }
+
+  @Test
+  public void escapeIncompleteUnicodeEscape() {
+    // Trailing or non-hex sequences are not unicode escapes: escape() leaves them unchanged
+    // (so this also pins the length boundary, e.g. "\\u002" has too few chars) and they
+    // round-trip.
+    for (String v : new String[] {"foo\\u", "foo\\u00", "foo\\u002", "foo\\uzzzz"}) {
+      Assertions.assertEquals(v, Parser.escape(v));
+      assertRoundTrip(v);
+    }
+  }
+
+  @Test
+  public void escapeRoundTripSpecialChars() {
+    assertRoundTrip("a,b");
+    assertRoundTrip("a:b");
+    assertRoundTrip("a b");
+    assertRoundTrip("(");
+    assertRoundTrip(")");
+  }
+
+  @Test
+  public void escapeSupplementaryCodePoint() {
+    // Characters above the BMP are not special, so escape() passes them through unchanged
+    // (they are never routed through escapeCodePoint) and they round-trip via unescape. This
+    // is why the surrogate-pair handling needed in the Atlas Strings escaper is not required
+    // here.
+    String emoji = "a😀b"; // U+1F600
+    Assertions.assertEquals(emoji, Parser.escape(emoji));
+    assertRoundTrip(emoji);
+    // Adjacent to a special character that does get escaped.
+    assertRoundTrip("a😀,b");
+  }
+
+  @Test
+  public void unescapeSupplementaryCodePoint() {
+    // An above-BMP character encoded as a surrogate pair of \\uXXXX escapes (the form produced
+    // by the Atlas Strings escaper) must unescape back to the original code point.
+    Assertions.assertEquals("😀", Parser.unescape("\\ud83d\\ude00")); // U+1F600
+    Assertions.assertEquals("a😀b", Parser.unescape("a\\ud83d\\ude00b"));
+  }
 }
