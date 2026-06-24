@@ -267,6 +267,24 @@ public final class Parser {
     zeroPad(Integer.toHexString(codePoint), builder);
   }
 
+  private static boolean isHexDigit(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+  }
+
+  /**
+   * Returns true if the backslash at position {@code i} begins a {@code \\uXXXX} escape
+   * sequence, i.e. it is followed by a {@code u} and four hex digits. Used so that a value
+   * literally containing such a sequence can be escaped and round-trip through {@link #unescape}.
+   */
+  private static boolean beginsUnicodeEscape(String str, int i) {
+    return str.length() - i > 5
+        && str.charAt(i + 1) == 'u'
+        && isHexDigit(str.charAt(i + 2))
+        && isHexDigit(str.charAt(i + 3))
+        && isHexDigit(str.charAt(i + 4))
+        && isHexDigit(str.charAt(i + 5));
+  }
+
   /**
    * Escape special characters in the input string to unicode escape sequences (uXXXX).
    */
@@ -286,7 +304,10 @@ public final class Parser {
     for (int i = 0; i < length;) {
       final int cp = str.codePointAt(i);
       final int len = Character.charCount(cp);
-      if (isSpecial(cp))
+      // Escape special characters, and also a backslash that begins a unicode escape sequence
+      // so that a value literally containing "\\uXXXX" is not decoded back into a different
+      // character by unescape().
+      if (isSpecial(cp) || (cp == '\\' && beginsUnicodeEscape(str, i)))
         escapeCodePoint(cp, builder);
       else
         builder.appendCodePoint(cp);
@@ -311,25 +332,14 @@ public final class Parser {
     StringBuilder builder = new StringBuilder(length);
     for (int i = 0; i < length; ++i) {
       final char c = str.charAt(i);
-      if (c == '\\') {
-        // Ensure there is enough space for an encoded character, there must be at
-        // least 5 characters left in the string (uXXXX).
-        if (length - i <= 5) {
-          builder.append(str.substring(i));
-          i = length;
-        } else if (str.charAt(i + 1) == 'u') {
-          try {
-            int cp = Integer.parseInt(str.substring(i + 2, i + 6), 16);
-            builder.appendCodePoint(cp);
-            i += 5;
-          } catch (NumberFormatException e) {
-            builder.append(c);
-          }
-        } else {
-          // Some other escape, copy into buffer and move on
-          builder.append(c);
-        }
+      if (c == '\\' && beginsUnicodeEscape(str, i)) {
+        // beginsUnicodeEscape has verified there are four hex digits, so the parse cannot fail.
+        int cp = Integer.parseInt(str.substring(i + 2, i + 6), 16);
+        builder.appendCodePoint(cp);
+        i += 5;
       } else {
+        // Not a complete unicode escape (incomplete, non-hex, or some other escape such as
+        // "\\d"); copy the character through unchanged.
         builder.append(c);
       }
     }
