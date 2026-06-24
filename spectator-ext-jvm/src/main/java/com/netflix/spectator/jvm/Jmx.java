@@ -210,7 +210,7 @@ public final class Jmx {
   private static AutoCloseable monitorCompilationMXBean(Registry registry) {
     CompilationMXBean compilationMXBean = ManagementFactory.getCompilationMXBean();
     if (!compilationMXBean.isCompilationTimeMonitoringSupported()) {
-      return () -> {};
+      return () -> { };
     }
     Id id = registry.createId("jvm.compilation.compilationTime")
         .withTag("compiler", compilationMXBean.getName());
