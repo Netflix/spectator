@@ -52,7 +52,10 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   private void testUnsupported(String regex, String message) {
-    intercept(UnsupportedOperationException.class, message, () -> PatternMatcher.compile(regex));
+    // Unsupported regex features are reported as IllegalArgumentException (the pattern is the
+    // problem) with the message prefixed by "unsupported:".
+    intercept(IllegalArgumentException.class, "unsupported: " + message,
+        () -> PatternMatcher.compile(regex));
   }
 
   @Test
@@ -348,13 +351,13 @@ public abstract class AbstractPatternMatcherTest {
 
   @Test
   public void controlEscape() {
-    Assertions.assertThrows(UnsupportedOperationException.class,
+    Assertions.assertThrows(IllegalArgumentException.class,
         () -> PatternMatcher.compile("\\cM"));
   }
 
   @Test
   public void inlineFlags() {
-    Assertions.assertThrows(UnsupportedOperationException.class,
+    Assertions.assertThrows(IllegalArgumentException.class,
         () -> PatternMatcher.compile("(?u)abc"));
   }
 

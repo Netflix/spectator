@@ -40,7 +40,7 @@ class Parser {
     return PatternUtils.error(message, tokens, current);
   }
 
-  private UnsupportedOperationException unsupported(String message) {
+  private IllegalArgumentException unsupported(String message) {
     return PatternUtils.unsupported(message, tokens, current);
   }
 

@@ -75,11 +75,14 @@ public final class PatternUtils {
   }
 
   /**
-   * Create an UnsupportedOperationException with a message including context based
-   * on the position.
+   * Create an IllegalArgumentException for a regex feature that is not supported by this
+   * matcher, with a message including context based on the position. This is an illegal
+   * argument rather than an unsupported operation: the pattern is the problem, not the
+   * compile operation. The message is prefixed with {@code unsupported:} to distinguish it
+   * from a malformed pattern.
    */
-  static UnsupportedOperationException unsupported(String message, String str, int pos) {
-    return new UnsupportedOperationException(message + "\n" + context(str, pos));
+  static IllegalArgumentException unsupported(String message, String str, int pos) {
+    return new IllegalArgumentException("unsupported: " + message + "\n" + context(str, pos));
   }
 
   @SuppressWarnings("PMD.PreserveStackTrace")
