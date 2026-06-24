@@ -1,0 +1,62 @@
+# Distinct count sketch cross-language test vectors.
+#
+# Generated from the spectator-java reference implementation
+# (DistinctCountSketch). Copy this file to other implementations (e.g.
+# spectatord) and verify they produce the same registers, so that sketches
+# from different clients merge correctly.
+#
+# Hash: xxHash64, seed 0. A long is hashed as its 8-byte little-endian
+# representation; a string as its UTF-8 bytes. Register index = low 6 bits of
+# the hash; rho = 1 + the number of leading zeros in the remaining 58 bits.
+#
+# [encoding]: <type>\t<input>\t<hash>\t<index>\t<rho>
+#   type  = long | str | bytes
+#   input = long: signed decimal; str: UTF-8 literal with \\, \t, \n, \r
+#           escaped; bytes: lowercase hex
+#   hash  = unsigned 64-bit hash as 16 hex digits
+#   index = register index 0..63
+#   rho   = register value 1..59
+#
+# [sketch]: <spec>\t<r0>,<r1>,...,<r63>
+#   spec = encoding-inputs (all inputs above) | longs:<start>:<end>
+#   followed by the 64 register rho values (0 = unused) after recording the
+#   spec's inputs into a single sketch.
+[encoding]
+long	0	34c96acdcadb1bbb	59	3
+long	1	9f29cb17a2a49995	21	1
+long	-1	85d136adb773c6c9	9	1
+long	2	eac73e4044e82db0	48	1
+long	7	0876cd406afde455	21	5
+long	42	b556806fb6d14353	19	1
+long	100	a1df9c5cd454307a	58	1
+long	1000	e53f2d22876c9a49	9	1
+long	1000000	f126194744ecba1e	30	1
+long	123456789	cb7c2941b198004d	13	1
+long	-123456789	6652a701f322f9c0	0	2
+long	3405691582	6b4aca62b5efd3db	27	2
+long	9223372036854775807	ff70cc60366e770c	12	1
+long	-9223372036854775808	3f425eacf01544e0	32	3
+str		ef46db3751d8e999	25	1
+str	a	d24ec4f1a98c6e5b	27	1
+str	ab	65f708ca92d04a61	33	2
+str	abc	44bc2cf5ad770999	25	2
+str	user-12345	64797fca50bfc10c	12	2
+str	192.168.0.1	87f49df2f9f76384	4	1
+str	2001:db8::1	26c33ef1c67e1031	49	3
+str	key=value,other:thing	d799484be9292024	36	1
+str	héllo	3bd06310388ebbe4	36	3
+str	naïve	c07351dc8a26afe6	38	1
+str	世界	6af6be193ab0db0f	15	2
+str	日本語	7179a19f3719f5e1	33	2
+str	😀	9025b8abaae87b80	0	1
+str	👍🏽	637d0995477b428c	12	2
+str	/api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234//api/v1/users/abcd1234/	92c0d26c7c73d1a6	38	1
+bytes		ef46db3751d8e999	25	1
+bytes	00	e934a84adb052768	40	1
+bytes	ff	95634172a60b7544	4	1
+bytes	0001020304050607	884a173614b81b8d	13	1
+bytes	deadbeef	2ff5cfb6af9aaf68	40	3
+bytes	fffefd	622529177845a110	16	2
+[sketch]
+encoding-inputs	2,0,0,0,1,0,0,0,0,1,0,0,2,1,0,2,2,0,0,1,0,5,0,0,0,2,0,2,0,0,1,0,3,2,0,0,3,0,1,0,3,0,0,0,0,0,0,0,1,3,0,0,0,0,0,0,0,0,1,3,0,0,0,0
+longs:0:100000	15,12,13,11,10,10,13,11,11,11,12,10,9,10,13,12,12,10,9,12,11,10,12,9,12,12,11,14,9,16,17,14,11,12,9,12,11,12,13,15,12,20,12,13,10,11,11,11,11,12,11,9,15,14,10,12,14,11,13,10,13,10,9,14

@@ -44,7 +44,10 @@ public enum Statistic implements Tag {
   duration,
 
   /** Value used to compute a distributed percentile estimate. */
-  percentile;
+  percentile,
+
+  /** Register value used to compute a distributed distinct count estimate. */
+  distinct;
 
   @Override public String key() {
     return "statistic";
