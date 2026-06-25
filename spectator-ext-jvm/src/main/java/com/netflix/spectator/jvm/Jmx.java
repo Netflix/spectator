@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -50,12 +50,21 @@ public final class Jmx {
    */
   public static void registerStandardMXBeans(Registry registry) {
     if (JavaFlightRecorder.isSupported()) {
-      Executor executor = Executors.newSingleThreadExecutor(r -> {
+      ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "spectator-jfr");
         t.setDaemon(true);
         return t;
       });
-      JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+      AutoCloseable recordingStream = JavaFlightRecorder.monitorDefaultEvents(registry, executor);
+      // Tie the recording stream and its executor to the registry lifecycle so they are
+      // released when the registry is closed.
+      PolledMeter.monitorResource(registry, () -> {
+        try {
+          recordingStream.close();
+        } finally {
+          executor.shutdownNow();
+        }
+      });
     } else {
       monitorClassLoadingMXBean(registry);
       monitorThreadMXBean(registry);

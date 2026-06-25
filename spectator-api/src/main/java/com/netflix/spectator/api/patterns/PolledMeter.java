@@ -209,10 +209,38 @@ public final class PolledMeter {
     // reported as meters.
     Id id = registry.createId("spectator.gauge.pollTask")
         .withTag("seq", Long.toString(POLL_TASK_SEQ.getAndIncrement()));
-    PollState state = new PollState(id);
+    BackgroundState state = new BackgroundState(id);
     state.setFuture(future);
     registry.state().put(id, state);
     return new PollFuture(registry, id, future);
+  }
+
+  /**
+   * Register an {@link AutoCloseable} resource that performs background work for the registry
+   * and updates meters on its own, for example a Java Flight Recorder event stream that runs on
+   * its own thread. This is for background activity that manages its own scheduling rather than
+   * relying on {@link #poll(Registry, Runnable)}.
+   *
+   * <p>The resource is tied to the registry lifecycle: it will be closed when
+   * {@link #removeAll(Registry)} is called or the registry is closed, alongside the polled
+   * meters. Exceptions thrown by {@code close()} are caught and logged.</p>
+   *
+   * @param registry
+   *     Registry that the resource is associated with.
+   * @param resource
+   *     Resource to close when the registry is torn down.
+   * @return
+   *     Handle that can be used to stop earlier: closing it runs the cleanup and removes the
+   *     registry bookkeeping. Closing the handle is idempotent and is also harmless if the
+   *     registry has already been closed.
+   */
+  public static AutoCloseable monitorResource(Registry registry, AutoCloseable resource) {
+    Id id = registry.createId("spectator.gauge.resource")
+        .withTag("seq", Long.toString(POLL_TASK_SEQ.getAndIncrement()));
+    BackgroundState state = new BackgroundState(id);
+    state.addCleanupAction(resource);
+    registry.state().put(id, state);
+    return () -> state.cleanup(registry);
   }
 
   /**
@@ -672,15 +700,17 @@ public final class PolledMeter {
   }
 
   /**
-   * Bookkeeping for a raw task scheduled via {@link #poll(Registry, Runnable)}. The task runs
-   * the user function directly on the executor, so there is nothing to update here; this state
-   * exists only so the future can be cancelled by {@link #removeAll(Registry)}.
+   * Bookkeeping for background work that is associated with a registry but manages its own
+   * execution, such as a task scheduled via {@link #poll(Registry, Runnable)} or a resource
+   * registered via {@link #monitorResource(Registry, AutoCloseable)}. There is no value to
+   * sample here; the entry exists only so the work can be stopped (future cancelled and/or
+   * cleanup actions run) by {@link #removeAll(Registry)} or when the registry is closed.
    */
-  static final class PollState extends AbstractMeterState {
+  static final class BackgroundState extends AbstractMeterState {
     private final Id id;
 
     /** Create a new instance. */
-    PollState(Id id) {
+    BackgroundState(Id id) {
       super();
       this.id = id;
     }
@@ -694,7 +724,7 @@ public final class PolledMeter {
     }
 
     @Override protected void update(Registry registry) {
-      // The scheduled task runs the user function directly; nothing to do here.
+      // The background work runs on its own; nothing to sample here.
     }
   }
 

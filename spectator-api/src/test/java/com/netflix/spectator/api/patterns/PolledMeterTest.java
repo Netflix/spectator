@@ -444,6 +444,51 @@ public class PolledMeterTest {
   }
 
   @Test
+  public void monitorResourceClosedByRemoveAll() {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.monitorResource(r, closed::incrementAndGet);
+    Assertions.assertFalse(r.state().isEmpty());
+
+    PolledMeter.removeAll(r);
+    Assertions.assertEquals(1, closed.get());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void monitorResourceClosedByRegistryClose() {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    PolledMeter.monitorResource(r, closed::incrementAndGet);
+    r.close();
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
+  public void monitorResourceHandleClosesResource() throws Exception {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    AutoCloseable handle = PolledMeter.monitorResource(r, closed::incrementAndGet);
+    handle.close();
+    Assertions.assertEquals(1, closed.get());
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void monitorResourceHandleCloseIsIdempotent() throws Exception {
+    Registry r = new DefaultRegistry();
+    AtomicLong closed = new AtomicLong();
+
+    AutoCloseable handle = PolledMeter.monitorResource(r, closed::incrementAndGet);
+    handle.close();
+    handle.close();
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
   public void removeAllCancelsPollTask() {
     Registry r = new DefaultRegistry();
 

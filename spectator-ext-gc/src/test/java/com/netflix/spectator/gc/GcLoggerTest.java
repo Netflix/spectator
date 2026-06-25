@@ -138,4 +138,33 @@ public class GcLoggerTest {
       logger.stop();
     }
   }
+
+  @Test
+  public void monitorTiesLifecycleToRegistry() {
+    Registry r = new DefaultRegistry();
+    AutoCloseable handle = GcLogger.monitor(r);
+    Assertions.assertNotNull(handle);
+    // monitor() starts the logger and registers a cleanup resource with the registry.
+    Assertions.assertFalse(r.state().isEmpty());
+
+    // Closing the registry stops the logger and clears the registry state.
+    r.close();
+    Assertions.assertTrue(r.state().isEmpty());
+  }
+
+  @Test
+  public void monitorHandleStopsLogger() throws Exception {
+    Registry r = new DefaultRegistry();
+    AutoCloseable handle = GcLogger.monitor(r);
+    int before = r.state().size();
+
+    // Closing the handle stops collection and removes the logger's cleanup resource. The gauge
+    // bookkeeping for the metrics remains until the registry itself is closed.
+    handle.close();
+    Assertions.assertEquals(before - 1, r.state().size());
+
+    // Closing again is a no-op and must not throw.
+    handle.close();
+    Assertions.assertEquals(before - 1, r.state().size());
+  }
 }

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -77,6 +78,36 @@ public class JavaFlightRecorderTest {
     assertEquals(7, daemonThreadCount.value());
     assertNotEquals(null, threadsStarted);
     assertEquals(12, threadsStarted.value());
+  }
+
+  @Test
+  public void registryCloseStopsJfrRecording() throws Exception {
+    Registry registry = new DefaultRegistry();
+    Jmx.registerStandardMXBeans(registry);
+
+    // The flight recorder stream runs on a dedicated "spectator-jfr" executor thread.
+    assertTrue(waitFor(JavaFlightRecorderTest::jfrThreadRunning),
+        "spectator-jfr thread should be running after registration");
+
+    // Closing the registry should close the recording stream and shut down the executor,
+    // releasing the resources that were previously leaked.
+    registry.close();
+
+    assertTrue(waitFor(() -> !jfrThreadRunning()),
+        "spectator-jfr thread should stop after registry.close()");
+    assertTrue(registry.state().isEmpty(), "registry state should be cleared after close");
+  }
+
+  private static boolean jfrThreadRunning() {
+    return Thread.getAllStackTraces().keySet().stream()
+        .anyMatch(t -> "spectator-jfr".equals(t.getName()) && t.isAlive());
+  }
+
+  private static boolean waitFor(BooleanSupplier condition) throws InterruptedException {
+    for (int i = 0; i < 50 && !condition.getAsBoolean(); ++i) {
+      Thread.sleep(100);
+    }
+    return condition.getAsBoolean();
   }
 
 }

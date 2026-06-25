@@ -20,6 +20,7 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.api.Timer;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Preconditions;
 import com.sun.management.GarbageCollectionNotificationInfo;
 import com.sun.management.GcInfo;
@@ -153,6 +154,24 @@ public final class GcLogger {
         oldGenPoolName = poolName;
       }
     }
+  }
+
+  /**
+   * Start collecting GC events for the provided registry and tie the collection to the registry
+   * lifecycle: closing the registry (or calling {@link PolledMeter#removeAll(Registry)}) will
+   * stop the logger. This is a convenience for the common case of monitoring GC for a registry
+   * without managing the {@link #start(GcEventListener)} / {@link #stop()} lifecycle by hand.
+   *
+   * @param registry
+   *     Registry used to report the GC metrics and whose lifecycle controls the logger.
+   * @return
+   *     Handle that can be used to stop the logger earlier; closing it stops collection. Closing
+   *     the handle is idempotent and is harmless if the registry has already been closed.
+   */
+  public static AutoCloseable monitor(Registry registry) {
+    GcLogger logger = new GcLogger(registry);
+    logger.start(null);
+    return PolledMeter.monitorResource(registry, logger::stop);
   }
 
   /**
