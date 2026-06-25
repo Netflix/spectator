@@ -17,6 +17,7 @@ package com.netflix.spectator.agent;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.atlas.AtlasConfig;
 import com.netflix.spectator.atlas.AtlasRegistry;
 import com.netflix.spectator.gc.GcLogger;
@@ -120,13 +121,13 @@ public final class Agent {
     // Setup Registry
     AtlasRegistry registry = new AtlasRegistry(Clock.SYSTEM, new AgentAtlasConfig(config));
 
-    // Add to global registry for http stats and GC logger
+    // Add to global registry for http stats
     Spectator.globalRegistry().add(registry);
 
-    // Enable GC logger
-    GcLogger gcLogger = new GcLogger();
+    // Enable GC logger, tied to the registry lifecycle so it is stopped when the registry
+    // is closed.
     if (config.getBoolean("collection.gc")) {
-      gcLogger.start(null);
+      GcLogger.monitor(registry);
     }
 
     // Enable JVM data collection
@@ -166,13 +167,19 @@ public final class Agent {
         }
         poller.poll();
       }, delay, delay, TimeUnit.MILLISECONDS);
+
+      // Tie the JMX polling executor to the registry lifecycle so it is shut down when the
+      // registry is closed.
+      PolledMeter.monitorResource(registry, exec::shutdownNow);
     }
 
     // Start collection for the registry
     registry.start();
 
-    // Shutdown registry
-    Runtime.getRuntime().addShutdownHook(new Thread(registry::stop, "spectator-agent-shutdown"));
+    // Shutdown registry. close() flushes and stops the publishing scheduler (like stop()) and
+    // also releases the resources tied to the registry above: the GC logger, the JFR recording
+    // stream, and the JMX polling executor.
+    Runtime.getRuntime().addShutdownHook(new Thread(registry::close, "spectator-agent-shutdown"));
   }
 
   private static class AgentAtlasConfig implements AtlasConfig {
