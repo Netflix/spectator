@@ -118,6 +118,18 @@ public final class StatelessRegistry extends AbstractRegistry {
     }
   }
 
+  /**
+   * Stops the registry, releasing the resources it owns. Shuts down the publishing scheduler
+   * started by {@link #start()} (flushing a final batch) and then lets the base registry release
+   * any remaining state, such as {@code PolledMeter} background tasks. Without this override the
+   * inherited {@link AbstractRegistry#close()} would clear the meters but leave the scheduler
+   * thread running.
+   */
+  @Override public void close() {
+    stop();
+    super.close();
+  }
+
   private void collectData() {
     try {
       for (List<Measurement> batch : getBatches()) {

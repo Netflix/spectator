@@ -120,4 +120,38 @@ public class StatelessRegistryTest {
     clock.setWallTime(Duration.ofMinutes(15).toMillis() + 1);
     Assertions.assertEquals(0, registry.getBatches().size());
   }
+
+  private static boolean schedulerThreadActive() {
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if (t.isAlive() && t.getName().contains("spectator-reg-stateless")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Test
+  public void closeStopsScheduler() throws Exception {
+    StatelessRegistry r = new StatelessRegistry(clock, newConfig());
+    r.start();
+    // close() must shut the scheduler down, not just clear the meters like the inherited
+    // AbstractRegistry.close() would. Run it in a finally so a failed precondition assertion
+    // does not leak the daemon scheduler thread into later tests.
+    try {
+      Assertions.assertTrue(schedulerThreadActive(), "scheduler thread should be running after start");
+    } finally {
+      r.close();
+    }
+    // shutdown() blocks until the threads stop; poll briefly as belt-and-suspenders.
+    for (int i = 0; i < 50 && schedulerThreadActive(); ++i) {
+      Thread.sleep(10);
+    }
+    Assertions.assertFalse(schedulerThreadActive(), "scheduler thread should be stopped after close");
+  }
+
+  @Test
+  public void closeWithoutStart() {
+    // Closing a registry that was never started must not throw.
+    new StatelessRegistry(clock, newConfig()).close();
+  }
 }
