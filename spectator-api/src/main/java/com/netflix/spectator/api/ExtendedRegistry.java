@@ -63,6 +63,10 @@ public final class ExtendedRegistry implements Registry {
     return impl.state();
   }
 
+  @Override public void close() {
+    impl.close();
+  }
+
   @Override public Counter counter(Id id) {
     return impl.counter(id);
   }

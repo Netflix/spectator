@@ -26,11 +26,14 @@ import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.TagList;
 import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.patterns.PolledMeter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,6 +42,8 @@ import java.util.concurrent.ConcurrentMap;
  * SpectatorD</a>.
  */
 public final class SidecarRegistry implements Registry, Closeable {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SidecarRegistry.class);
 
   private final Clock clock;
   private final TagList commonTags;
@@ -60,11 +65,27 @@ public final class SidecarRegistry implements Registry, Closeable {
   }
 
   /**
-   * Stop the scheduler reporting data.
+   * Stop the scheduler reporting data and release associated resources. Closes any
+   * {@link AutoCloseable} state values, such as {@link PolledMeter} background tasks, before
+   * clearing the state and closing the writer.
    */
-  @Override public void close() throws IOException {
-    writer.close();
+  @Override public void close() {
+    for (Map.Entry<Id, Object> entry : state.entrySet()) {
+      Object obj = entry.getValue();
+      if (obj instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable) obj).close();
+        } catch (Exception e) {
+          LOGGER.warn("exception thrown while closing registry state for [{}]", entry.getKey(), e);
+        }
+      }
+    }
     state.clear();
+    try {
+      writer.close();
+    } catch (IOException e) {
+      LOGGER.warn("failed to close sidecar writer", e);
+    }
   }
 
   @Override

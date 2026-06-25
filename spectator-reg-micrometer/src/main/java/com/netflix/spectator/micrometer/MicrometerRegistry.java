@@ -29,10 +29,13 @@ import com.netflix.spectator.impl.AtomicDouble;
 import com.netflix.spectator.impl.StepDouble;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.search.MeterNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -42,6 +45,8 @@ import java.util.stream.Collectors;
  * Wraps a Micrometer MeterRegistry to make it conform to the Spectator API.
  */
 public final class MicrometerRegistry implements Registry {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(MicrometerRegistry.class);
 
   private final MeterRegistry impl;
   private final Clock clock;
@@ -107,6 +112,23 @@ public final class MicrometerRegistry implements Registry {
 
   @Override public ConcurrentMap<Id, Object> state() {
     return state;
+  }
+
+  @Override public void close() {
+    // Release any AutoCloseable state (e.g. PolledMeter background tasks), then close the
+    // wrapped Micrometer registry.
+    for (Map.Entry<Id, Object> entry : state.entrySet()) {
+      Object obj = entry.getValue();
+      if (obj instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable) obj).close();
+        } catch (Exception e) {
+          LOGGER.warn("exception thrown while closing registry state for [{}]", entry.getKey(), e);
+        }
+      }
+    }
+    state.clear();
+    impl.close();
   }
 
   @Override public Counter counter(Id id) {
