@@ -272,7 +272,8 @@ public final class PolledMeter {
      * {@link PolledMeter#remove(Registry, Id)} or {@link PolledMeter#removeAll(Registry)}, or
      * automatically when the monitored object has been garbage collected and polling stops.
      * Exceptions thrown by the action are caught and logged. If multiple values are monitored
-     * with the same id, then each registered action will be run.</p>
+     * with the same id, then each registered action will be run. Registering the same action
+     * instance more than once for an id has no additional effect; it runs once.</p>
      *
      * @param action
      *     Resource to close when the meter is cleaned up.
@@ -636,6 +637,16 @@ public final class PolledMeter {
 
     /** Register an action to run when this meter is cleaned up. */
     void addCleanupAction(AutoCloseable action) {
+      // Avoid accumulating duplicates when the same action is registered repeatedly for an id
+      // (for example a reused builder or repeated idempotent registration). Dedup is by identity
+      // so distinct actions for an aggregated id are all retained even if they happen to compare
+      // equal. The queue holds at most a handful of entries, so the linear scan is cheap, and on
+      // close() each action is drained (run once).
+      for (AutoCloseable existing : cleanupActions) {
+        if (existing == action) {
+          return;
+        }
+      }
       cleanupActions.add(action);
     }
 
