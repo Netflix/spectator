@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,11 @@ final class StartsWithMatcher implements Matcher, Serializable {
   /** Pattern to check for at the start of the string. */
   String pattern() {
     return pattern;
+  }
+
+  /** Returns true if the prefix check should ignore case. */
+  boolean isIgnoreCase() {
+    return ignoreCase;
   }
 
   @Override

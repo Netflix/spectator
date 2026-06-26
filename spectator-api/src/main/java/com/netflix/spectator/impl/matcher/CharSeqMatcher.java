@@ -48,6 +48,11 @@ final class CharSeqMatcher implements Matcher, Serializable {
     return pattern;
   }
 
+  /** Returns true if the comparison should ignore case. */
+  boolean isIgnoreCase() {
+    return ignoreCase;
+  }
+
   @Override
   public String containedString() {
     return pattern;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,18 @@ public abstract class AbstractPatternMatcherTest {
     // SeqMatcher
     Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("abc[d-f]"));
     Assertions.assertTrue(PatternMatcher.compile("^abc").matchesAfterPrefix("bar[d-f]"));
+
+    // Start-anchored IndexOfSeqMatcher: the prefix (abc) is trusted as already verified, so the
+    // remainder is matched without re-checking it.
+    Assertions.assertTrue(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("abcxxdef"));
+    Assertions.assertTrue(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("barxxdef"));
+    Assertions.assertFalse(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("barxxxyz"));
+
+    // Start-anchored alternation (OrStartsWithMatcher) has no literal prefix(), so
+    // matchesAfterPrefix is a full match against the prefixes.
+    Assertions.assertTrue(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("abcxx"));
+    Assertions.assertTrue(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("defxx"));
+    Assertions.assertFalse(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("xyz"));
   }
 
   @Test
@@ -149,6 +161,89 @@ public abstract class AbstractPatternMatcherTest {
   public void glob() {
     testRE("^*.abc", "12345 abc 67890");
     testRE("^*abc", "12345 abc 67890");
+  }
+
+  @Test
+  public void indexOfSeqContains() {
+    testRE(".*abc.*def", "abcdef");
+    testRE(".*abc.*def", "xxabcyydefzz");
+    testRE(".*abc.*def", "abc");
+    testRE(".*abc.*def", "defabc");
+    testRE(".*abc.*def.*", "xabcxdefx");
+    testRE(".*abc.*def.*", "xdefxabcx");
+    // Overlap and repeated-segment cases that stress greedy vs backtracking
+    testRE(".*ab.*ab", "abab");
+    testRE(".*ab.*ab", "ab");
+    testRE(".*ab.*ab", "abxab");
+    testRE(".*a.*a.*a", "aa");
+    testRE(".*a.*a.*a", "aaa");
+    // Low-selectivity leading segment (the production pathology)
+    testRE(".*-.*-md-preview-", "a-b-md-preview-c");
+    testRE(".*-.*-md-preview-", "a-b-c-d-e-f");
+  }
+
+  @Test
+  public void indexOfSeqEndAnchored() {
+    testRE(".*abc.*def$", "abcdef");
+    testRE(".*abc.*def$", "abcdefx");
+    testRE(".*abc.*def$", "xabcyydef");
+    testRE(".*ab.*cd$", "abcd");
+    testRE(".*ab.*cd$", "abcdx");
+    testRE(".*ab.*ab$", "abab");
+    testRE(".*ab.*ab$", "abab__");
+  }
+
+  @Test
+  public void indexOfSeqStartAnchored() {
+    testRE("^abc.*def", "abcdef");
+    testRE("^abc.*def", "xabcdef");
+    testRE("^abc.*def", "abcxxdef");
+    testRE("^abc.*def.*ghi", "abcXdefYghi");
+    testRE("^abc.*def.*ghi", "abcXghiYdef");
+    testRE("^abc.*def$", "abcXdef");
+    testRE("^abc.*def$", "abcXdefY");
+    testRE("^a.*a.*a", "aaa");
+    testRE("^a.*a.*a", "baaa");
+  }
+
+  @Test
+  public void indexOfSeqIgnoreCase() {
+    testRE("(?i).*abc.*def", "XYabcZZdef");
+    testRE("(?i).*abc.*def", "XYABCzzDEF");
+    testRE("(?i).*abc.*def", "XYABCzz");
+    testRE("(?i)^abc.*def$", "ABCxxDEF");
+    testRE("(?i)^abc.*def$", "xABCxxDEF");
+  }
+
+  @Test
+  public void orStartsWith() {
+    testRE("^(abc|def|ghi)", "abcxxx");
+    testRE("^(abc|def|ghi)", "defxxx");
+    testRE("^(abc|def|ghi)", "ghi");
+    testRE("^(abc|def|ghi)", "xabc");
+    testRE("^(abc|def|ghi)", "ab");
+    testRE("^(a|bb|ccc)", "ccczz");
+    testRE("^(a|bb|ccc)", "b");
+    testRE("^(a|bb|ccc)", "a");
+    // ignore case
+    testRE("(?i)^(abc|def)", "ABCxx");
+    testRE("(?i)^(abc|def)", "xABC");
+    // start anchor in a non-leading position: the alternation fold is reached at offset>0 and must
+    // still bind to absolute position 0.
+    testRE("^z(^(a|bb)|cd)", "zab");
+    testRE("^z(^(a|bb)|cd)", "zcd");
+    testRE("^z(^(a|bb)|cd)", "zbb");
+  }
+
+  @Test
+  public void indexOfSeqEmbeddedStartAnchor() {
+    // A start anchor in a non-leading position can place a start-anchored fold as a sub-matcher
+    // invoked at a non-zero offset. The anchor must still bind to absolute position 0.
+    testRE("^a(^b.*c|d.*e)", "abc");
+    testRE("^a(^b.*c|d.*e)", "ade");
+    testRE("^a(^b.*c|d.*e)", "abxc");
+    testRE("x(^b.*c|q)", "xbzc");
+    testRE("x(^b.*c|q)", "xq");
   }
 
   @Test
