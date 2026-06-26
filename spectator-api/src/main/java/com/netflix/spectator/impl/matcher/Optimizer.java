@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.netflix.spectator.impl.matcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +43,75 @@ final class Optimizer {
       m = opt;
       opt = optimizeSinglePass(m);
     }
-    return opt;
+    // Flatten contains/anchored IndexOf chains into a single IndexOfSeqMatcher. Done as a
+    // terminal pass after the fixpoint so the new matcher type does not need to participate
+    // in the iterative rewrite rules above.
+    return opt.rewrite(Optimizer::foldIndexOfSeq);
+  }
+
+  /**
+   * Collect the segments of a contains chain into {@code segs}. The chain is a sequence of
+   * {@link IndexOfMatcher} nodes, optionally terminated by an already-folded contains
+   * {@link IndexOfSeqMatcher} (so the fold composes under the bottom-up rewrite). Returns 0 for a
+   * plain contains terminal ({@code .*}), 1 for an end-anchored terminal ({@code $}), or -1 if the
+   * tail is not a foldable contains chain or the {@code ignoreCase} flag is inconsistent.
+   */
+  private static int collectContainsChain(Matcher matcher, boolean ignoreCase, List<String> segs) {
+    Matcher cur = matcher;
+    while (cur instanceof IndexOfMatcher) {
+      IndexOfMatcher io = cur.as();
+      if (io.isIgnoreCase() != ignoreCase) {
+        return -1;
+      }
+      segs.add(io.pattern());
+      cur = io.next();
+    }
+    if (cur == TrueMatcher.INSTANCE) {
+      return 0;
+    } else if (cur == EndMatcher.INSTANCE) {
+      return 1;
+    } else if (cur instanceof IndexOfSeqMatcher) {
+      IndexOfSeqMatcher seq = cur.as();
+      if (seq.startAnchored() || seq.isIgnoreCase() != ignoreCase) {
+        return -1;
+      }
+      segs.addAll(Arrays.asList(seq.segments()));
+      return seq.endAnchored() ? 1 : 0;
+    }
+    return -1;
+  }
+
+  /**
+   * Fold a contains chain ({@code .*A.*B.*}), an end-anchored chain ({@code .*A.*B$}), or a
+   * start-anchored chain ({@code ^A.*B.*C$}) into a single {@link IndexOfSeqMatcher} that matches
+   * greedily without backtracking. The original matcher is retained as the delegate so all
+   * non-matching operations behave identically.
+   */
+  static Matcher foldIndexOfSeq(Matcher matcher) {
+    if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher head = matcher.as();
+      boolean ignoreCase = head.isIgnoreCase();
+      List<String> segs = new ArrayList<>();
+      int anchor = collectContainsChain(head, ignoreCase, segs);
+      if (anchor >= 0 && segs.size() >= 2) {
+        return new IndexOfSeqMatcher(
+            segs.toArray(new String[0]), false, anchor == 1, ignoreCase, matcher);
+      }
+    } else if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      if (ms.size() == 2 && ms.get(0) instanceof StartsWithMatcher) {
+        StartsWithMatcher prefix = ms.get(0).as();
+        boolean ignoreCase = prefix.isIgnoreCase();
+        List<String> segs = new ArrayList<>();
+        segs.add(prefix.pattern());
+        int anchor = collectContainsChain(ms.get(1), ignoreCase, segs);
+        if (anchor >= 0 && segs.size() >= 2) {
+          return new IndexOfSeqMatcher(
+              segs.toArray(new String[0]), true, anchor == 1, ignoreCase, matcher);
+        }
+      }
+    }
+    return matcher;
   }
 
   private static Matcher optimizeSinglePass(Matcher matcher) {

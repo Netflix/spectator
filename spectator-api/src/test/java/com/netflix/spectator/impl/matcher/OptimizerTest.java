@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2022 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -399,9 +399,9 @@ public class OptimizerTest {
   @Test
   public void optimizeIndexOfSeq() {
     PatternMatcher actual = PatternMatcher.compile("^.*abc.*def");
-    PatternMatcher expected = new IndexOfMatcher(
-        "abc",
-        new IndexOfMatcher("def", TrueMatcher.INSTANCE)
+    PatternMatcher expected = new IndexOfSeqMatcher(
+        new String[] {"abc", "def"}, false, false, false,
+        new IndexOfMatcher("abc", new IndexOfMatcher("def", TrueMatcher.INSTANCE))
     );
     Assertions.assertEquals(expected, actual);
   }
@@ -409,9 +409,9 @@ public class OptimizerTest {
   @Test
   public void optimizeIndexOfSeqAny() {
     PatternMatcher actual = PatternMatcher.compile("^.*abc.*def.*");
-    PatternMatcher expected = new IndexOfMatcher(
-        "abc",
-        new IndexOfMatcher("def", TrueMatcher.INSTANCE)
+    PatternMatcher expected = new IndexOfSeqMatcher(
+        new String[] {"abc", "def"}, false, false, false,
+        new IndexOfMatcher("abc", new IndexOfMatcher("def", TrueMatcher.INSTANCE))
     );
     Assertions.assertEquals(expected, actual);
   }

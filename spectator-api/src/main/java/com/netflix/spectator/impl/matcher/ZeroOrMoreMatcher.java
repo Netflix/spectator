@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,15 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
 
   private final Matcher repeated;
   private final Matcher next;
+  private final int minLength;
 
   /** Create a new instance. */
   ZeroOrMoreMatcher(Matcher repeated, Matcher next) {
     this.repeated = repeated;
     this.next = Preconditions.checkNotNull(next, "next");
+    // minLength is fixed for an immutable matcher; precompute it to avoid walking the
+    // next chain on every matches() call.
+    this.minLength = next.minLength();
   }
 
   /** Return the matcher for the repeated portion. */
@@ -100,7 +104,7 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public int minLength() {
-    return next.minLength();
+    return minLength;
   }
 
   @Override
@@ -147,7 +151,9 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
       return false;
     }
     ZeroOrMoreMatcher that = (ZeroOrMoreMatcher) o;
-    return Objects.equals(repeated, that.repeated) && Objects.equals(next, that.next);
+    return minLength == that.minLength
+        && Objects.equals(repeated, that.repeated)
+        && Objects.equals(next, that.next);
   }
 
   @Override
@@ -155,6 +161,7 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
     int result = 1;
     result = 31 * result + repeated.hashCode();
     result = 31 * result + next.hashCode();
+    result = 31 * result + minLength;
     return result;
   }
 }

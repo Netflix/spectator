@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   private final String pattern;
   private final Matcher next;
   private final boolean ignoreCase;
+  private final int minLength;
 
   /** Create a new instance. */
   IndexOfMatcher(String pattern, Matcher next) {
@@ -42,6 +43,9 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     this.pattern = pattern;
     this.next = next;
     this.ignoreCase = ignoreCase;
+    // minLength is fixed for an immutable matcher; precompute it to avoid walking the
+    // next chain on every matches() call (the hot path uses next.minLength()).
+    this.minLength = pattern.length() + next.minLength();
   }
 
   /** Sub-string to look for within the string being checked. */
@@ -52,6 +56,11 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   /** Return the matcher for the portion that follows the sub-string. */
   Matcher next() {
     return next;
+  }
+
+  /** Returns true if the substring search should ignore case. */
+  boolean isIgnoreCase() {
+    return ignoreCase;
   }
 
   @Override
@@ -130,7 +139,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public int minLength() {
-    return pattern.length() + next.minLength();
+    return minLength;
   }
 
   @Override
@@ -172,6 +181,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     }
     IndexOfMatcher that = (IndexOfMatcher) o;
     return ignoreCase == that.ignoreCase
+        && minLength == that.minLength
         && Objects.equals(pattern, that.pattern)
         && Objects.equals(next, that.next);
   }
@@ -182,6 +192,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     result = 31 * result + pattern.hashCode();
     result = 31 * result + next.hashCode();
     result = 31 * result + Boolean.hashCode(ignoreCase);
+    result = 31 * result + minLength;
     return result;
   }
 }

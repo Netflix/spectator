@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,16 @@ final class RepeatMatcher implements Matcher, Serializable {
   private final Matcher repeated;
   private final int min;
   private final int max;
+  private final int minLength;
 
   /** Create a new instance. */
   RepeatMatcher(Matcher repeated, int min, int max) {
     this.repeated = repeated;
     this.min = min;
     this.max = max;
+    // minLength is fixed for an immutable matcher; precompute it to avoid walking the
+    // repeated sub-matcher on every matches() call.
+    this.minLength = min * repeated.minLength();
   }
 
   Matcher repeated() {
@@ -78,7 +82,7 @@ final class RepeatMatcher implements Matcher, Serializable {
 
   @Override
   public int minLength() {
-    return min * repeated.minLength();
+    return minLength;
   }
 
   @Override
@@ -109,6 +113,7 @@ final class RepeatMatcher implements Matcher, Serializable {
     RepeatMatcher that = (RepeatMatcher) o;
     return min == that.min
         && max == that.max
+        && minLength == that.minLength
         && Objects.equals(repeated, that.repeated);
   }
 
@@ -118,6 +123,7 @@ final class RepeatMatcher implements Matcher, Serializable {
     result = 31 * result + repeated.hashCode();
     result = 31 * result + min;
     result = 31 * result + max;
+    result = 31 * result + minLength;
     return result;
   }
 }
