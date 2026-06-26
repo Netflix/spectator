@@ -45,8 +45,6 @@ public final class SparkSink implements Sink {
   private final long pollPeriod;
   private final TimeUnit pollUnit;
 
-  private GcLogger gcLogger;
-
   /**
    * Create a new instance. Spark looks for a constructor with all three parameters, so the
    * {@code SecurityManager} needs to be in the signature even though it isn't used.
@@ -92,8 +90,7 @@ public final class SparkSink implements Sink {
   private void startJvmCollection() {
     try {
       Jmx.registerStandardMXBeans(sidecarRegistry);
-      gcLogger = new GcLogger();
-      gcLogger.start(null);
+      GcLogger.monitor(sidecarRegistry);
     } catch (Exception e) {
       LOGGER.error("failed to start collection of jvm stats", e);
       throw e;
@@ -124,7 +121,11 @@ public final class SparkSink implements Sink {
   @Override public void stop() {
     LOGGER.info("stopping poller");
     reporter.stop();
-    gcLogger.stop();
+    // Detach from the global registry (if it was added) and close the sidecar registry to
+    // release the resources started in start(): the JFR recording stream and its executor, the
+    // GC logger (both tied to the registry lifecycle), and the sidecar writer.
+    Spectator.globalRegistry().remove(sidecarRegistry);
+    sidecarRegistry.close();
   }
 
   @Override public void report() {
