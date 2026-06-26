@@ -362,6 +362,22 @@ public class PolledMeterTest {
   }
 
   @Test
+  public void duplicateCleanupActionRegisteredOnce() {
+    Registry r = new DefaultRegistry();
+    Id id = r.createId("test");
+    AtomicLong closed = new AtomicLong();
+    AutoCloseable action = closed::incrementAndGet;
+
+    // Re-registering the same action instance for the same id must not accumulate duplicates,
+    // so it runs exactly once on cleanup (unlike two distinct actions, which both run).
+    PolledMeter.using(r).withId(id).withCleanupAction(action).monitorValue(new AtomicLong(1));
+    PolledMeter.using(r).withId(id).withCleanupAction(action).monitorValue(new AtomicLong(2));
+
+    PolledMeter.remove(r, id);
+    Assertions.assertEquals(1, closed.get());
+  }
+
+  @Test
   public void registryCloseCancelsPolledMetersAndPollTasks() {
     Registry r = new DefaultRegistry();
     AtomicLong closed = new AtomicLong();
