@@ -84,6 +84,12 @@ public abstract class AbstractPatternMatcherTest {
     Assertions.assertTrue(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("abcxxdef"));
     Assertions.assertTrue(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("barxxdef"));
     Assertions.assertFalse(PatternMatcher.compile("^abc.*def").matchesAfterPrefix("barxxxyz"));
+
+    // Start-anchored alternation (OrStartsWithMatcher) has no literal prefix(), so
+    // matchesAfterPrefix is a full match against the prefixes.
+    Assertions.assertTrue(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("abcxx"));
+    Assertions.assertTrue(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("defxx"));
+    Assertions.assertFalse(PatternMatcher.compile("^(abc|def)").matchesAfterPrefix("xyz"));
   }
 
   @Test
@@ -207,6 +213,26 @@ public abstract class AbstractPatternMatcherTest {
     testRE("(?i).*abc.*def", "XYABCzz");
     testRE("(?i)^abc.*def$", "ABCxxDEF");
     testRE("(?i)^abc.*def$", "xABCxxDEF");
+  }
+
+  @Test
+  public void orStartsWith() {
+    testRE("^(abc|def|ghi)", "abcxxx");
+    testRE("^(abc|def|ghi)", "defxxx");
+    testRE("^(abc|def|ghi)", "ghi");
+    testRE("^(abc|def|ghi)", "xabc");
+    testRE("^(abc|def|ghi)", "ab");
+    testRE("^(a|bb|ccc)", "ccczz");
+    testRE("^(a|bb|ccc)", "b");
+    testRE("^(a|bb|ccc)", "a");
+    // ignore case
+    testRE("(?i)^(abc|def)", "ABCxx");
+    testRE("(?i)^(abc|def)", "xABC");
+    // start anchor in a non-leading position: the alternation fold is reached at offset>0 and must
+    // still bind to absolute position 0.
+    testRE("^z(^(a|bb)|cd)", "zab");
+    testRE("^z(^(a|bb)|cd)", "zcd");
+    testRE("^z(^(a|bb)|cd)", "zbb");
   }
 
   @Test

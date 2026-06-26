@@ -43,10 +43,51 @@ final class Optimizer {
       m = opt;
       opt = optimizeSinglePass(m);
     }
-    // Flatten contains/anchored IndexOf chains into a single IndexOfSeqMatcher. Done as a
-    // terminal pass after the fixpoint so the new matcher type does not need to participate
-    // in the iterative rewrite rules above.
-    return opt.rewrite(Optimizer::foldIndexOfSeq);
+    // Flatten contains/anchored IndexOf chains and start-anchored literal alternations into single
+    // matchers. Done as one terminal pass after the fixpoint so the new matcher types do not need
+    // to participate in the iterative rewrite rules above. A single pass (rather than chained
+    // rewrites) is required: the folded matchers delegate rewrite() to their original nested form,
+    // so a second rewrite pass traversing into them would undo the fold.
+    return opt.rewrite(Optimizer::fold);
+  }
+
+  /** Apply the available flattening folds; the recognized shapes are disjoint. */
+  private static Matcher fold(Matcher matcher) {
+    Matcher folded = foldIndexOfSeq(matcher);
+    return (folded != matcher) ? folded : foldOrStartsWith(matcher);
+  }
+
+  /**
+   * Fold a start-anchored alternation of literal prefixes ({@code ^(abc|def|ghi)}) into a single
+   * {@link OrStartsWithMatcher} that checks each prefix in one monomorphic loop instead of
+   * dispatching an interface call per branch. The original matcher is retained as the delegate.
+   */
+  static Matcher foldOrStartsWith(Matcher matcher) {
+    if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      if (ms.size() == 2 && ms.get(0) instanceof StartMatcher && ms.get(1) instanceof OrMatcher) {
+        List<Matcher> branches = ms.get(1).<OrMatcher>as().matchers();
+        if (branches.size() < 2) {
+          return matcher;
+        }
+        String[] prefixes = new String[branches.size()];
+        boolean ignoreCase = false;
+        for (int i = 0; i < branches.size(); ++i) {
+          if (!(branches.get(i) instanceof CharSeqMatcher)) {
+            return matcher;
+          }
+          CharSeqMatcher cs = branches.get(i).as();
+          if (i == 0) {
+            ignoreCase = cs.isIgnoreCase();
+          } else if (cs.isIgnoreCase() != ignoreCase) {
+            return matcher;
+          }
+          prefixes[i] = cs.pattern();
+        }
+        return new OrStartsWithMatcher(prefixes, ignoreCase, matcher);
+      }
+    }
+    return matcher;
   }
 
   /**
