@@ -572,7 +572,10 @@ public class QueryIndexTest {
       }
       for (int j = 0; j < n; ++j) {
         Query query = queries.get(j);
-        Assertions.assertEquals(query != Query.FALSE, idx.remove(query, j));
+        // A query that simplifies to false (e.g. contradictory same-key clauses) is never indexed,
+        // so remove may report it as absent. Removing any query twice is always false, and removing
+        // every query must leave the index empty (verified below) -- that is the leak-freedom check.
+        idx.remove(query, j);
         Assertions.assertFalse(idx.remove(query, j));
       }
       Assertions.assertTrue(idx.isEmpty());
@@ -704,5 +707,112 @@ public class QueryIndexTest {
         Collections.singletonList(2),
         idx.findMatches(id("foo", "path", "abcghijkl")));
     Assertions.assertTrue(idx.findMatches(id("foo", "path", "xyz")).isEmpty());
+  }
+
+  @Test
+  public void mergeNegatedRegexClauses() {
+    // !contains(chap) && !contains(dev), same key, should merge but keep the same semantics.
+    Query q = Parser.parseQuery(
+        "nf.cluster,.*chap.*,:re,:not,nf.cluster,.*dev.*,:re,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("m", "nf.cluster", "prod-1"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "x-chap-y"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "dev-box"));
+    // remove must use the same merge so the merged clause is found and removed.
+    Assertions.assertTrue(idx.remove(q, q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
+  public void mergeNegatedRegexTopLevelAlternation() {
+    // A value with a top-level '|' must keep its own anchoring after merging (joined via "|^").
+    Query q = Parser.parseQuery("nf.cluster,a|b,:re,:not,nf.cluster,foo,:re,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    // re(a|b) = ^a OR contains-b ; re(foo) = starts-with foo. Negated AND of both.
+    assertEquals(list(q), idx, id("m", "nf.cluster", "zzz"));     // none match -> :not&:not true
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "axx"));    // ^a
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "xbx"));    // contains b
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "foobar")); // starts foo
+  }
+
+  @Test
+  public void mergeNegatedEqualClauses() {
+    // !eq(a) && !eq(b) == !in(a, b)
+    Query q = Parser.parseQuery(
+        "ipc.status,timeout,:eq,:not,ipc.status,cancelled,:eq,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("m", "ipc.status", "success"));
+    assertEquals(Collections.emptyList(), idx, id("m", "ipc.status", "timeout"));
+    assertEquals(Collections.emptyList(), idx, id("m", "ipc.status", "cancelled"));
+    Assertions.assertTrue(idx.remove(q, q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
+  public void simplifyEqualSubsumesNegated() {
+    // foo!=a && foo==b (a!=b) reduces to foo==b.
+    Query q = Parser.parseQuery("nf.cluster,a,:eq,:not,nf.cluster,b,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("m", "nf.cluster", "b"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "a"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "c"));
+    Assertions.assertTrue(idx.remove(q, q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
+  public void simplifyEqualSubsumesRegex() {
+    // foo==abc && foo~.*b.* : abc satisfies the regex, so reduces to foo==abc.
+    Query keep = Parser.parseQuery("nf.cluster,abc,:eq,nf.cluster,.*b.*,:re,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(keep, keep);
+    assertEquals(list(keep), idx, id("m", "nf.cluster", "abc"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "abd"));
+  }
+
+  @Test
+  public void simplifyContradictionIsDropped() {
+    // foo==a && foo==b (a!=b) can never match; the clause is dropped from the index.
+    Query q = Parser.parseQuery("nf.cluster,a,:eq,nf.cluster,b,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "a"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "b"));
+    // foo==a && foo!=a is also contradictory.
+    Query q2 = Parser.parseQuery("nf.cluster,a,:eq,nf.cluster,a,:eq,:not,:and");
+    QueryIndex<Query> idx2 = QueryIndex.newInstance(cacheSupplier).add(q2, q2);
+    assertEquals(Collections.emptyList(), idx2, id("m", "nf.cluster", "a"));
+    assertEquals(Collections.emptyList(), idx2, id("m", "nf.cluster", "x"));
+  }
+
+  @Test
+  public void simplifyContradictionDoesNotDropOtherOrBranches() {
+    // (foo==a && foo==b) || name==ok : the dead conjunction is dropped, the live one is kept.
+    Query q = Parser.parseQuery(
+        "nf.cluster,a,:eq,nf.cluster,b,:eq,:and,name,ok,:eq,:or");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("ok"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "a"));
+  }
+
+  @Test
+  public void mergeDoesNotMixCaseSensitivity() {
+    // :re and :reic on the same key must not merge into one alternation.
+    Query q = Parser.parseQuery("nf.cluster,abc,:re,:not,nf.cluster,xyz,:reic,:not,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("m", "nf.cluster", "other"));
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "abcd"));   // ^abc (case sensitive)
+    assertEquals(Collections.emptyList(), idx, id("m", "nf.cluster", "XYZ123")); // ^xyz ignore case
+  }
+
+  @Test
+  public void falseTermInOrDoesNotDropLaterTerms() {
+    // A DNF of [FALSE, name==a]: the false disjunct must be skipped, not stop the loop, so the
+    // later term is still indexed and matches. (The public or()/and()/simplify all fold FALSE, so
+    // this shape is only reachable by building the tree directly -- it pins the intended behavior
+    // of the add/remove DNF loop: skip a FALSE term, do not break out of it.)
+    Query q = new Query.Or(Query.FALSE, Parser.parseQuery("name,a,:eq"));
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("a"));
+    Assertions.assertTrue(idx.remove(q, q));
+    Assertions.assertTrue(idx.isEmpty());
   }
 }
