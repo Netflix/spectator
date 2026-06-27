@@ -817,6 +817,16 @@ public interface Query {
       return pattern;
     }
 
+    /** Raw regex value (the {@code v} as written in the expression). */
+    String value() {
+      return v;
+    }
+
+    /** Operator name, e.g. {@code :re} or {@code :reic}; distinguishes case sensitivity. */
+    String name() {
+      return name;
+    }
+
     @Override public boolean matches(String value) {
       return value != null && pattern.matches(value);
     }

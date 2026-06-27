@@ -24,7 +24,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -219,7 +222,169 @@ public final class QueryIndex<T> {
       result.add((Query.KeyQuery) q);
     }
     result.sort((q1, q2) -> compare(q1.key(), q2.key()));
+    return mergeSameKey(result);
+  }
+
+  /**
+   * Merge clauses that apply to the same key within a conjunction. The list must already be sorted
+   * by key so that same-key clauses are adjacent. Equivalence-preserving simplifications are applied
+   * to reduce the number of entries that end up in a {@link Query.CompositeKeyQuery} (and the
+   * per-value dispatch and index size that come with it):
+   *
+   * <ul>
+   *   <li>a positive {@code eq} pins the value, so the run reduces to that {@code eq} when the other
+   *       same-key clauses all accept the value;</li>
+   *   <li>{@code !a && !b == !(a || b)} for negated regexes on the same key (and case sensitivity)
+   *       collapses to a single negated alternation;</li>
+   *   <li>{@code !eq(a) && !eq(b) == !in(a, b)} for negated equals/ins collapses to a single
+   *       negated {@code in}.</li>
+   * </ul>
+   *
+   * <p>Clauses that are not part of a mergeable group (other positive checks, other negated types,
+   * or a lone member of a group) are passed through unchanged. Returns {@code null} if the
+   * conjunction is statically contradictory (e.g. two different {@code eq} values for one key) and
+   * can be skipped entirely; the same merge runs for {@code add} and {@code remove}, so a dropped
+   * conjunction is consistently absent from the index.</p>
+   */
+  // null is the signal for "conjunction is false"; an empty list would instead mean "no
+  // constraints" (matches everything), so the two cannot be conflated.
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
+  private static List<Query.KeyQuery> mergeSameKey(List<Query.KeyQuery> sorted) {
+    final int n = sorted.size();
+    if (n < 2) {
+      return sorted;
+    }
+    List<Query.KeyQuery> result = new ArrayList<>(n);
+    int i = 0;
+    while (i < n) {
+      final String key = sorted.get(i).key();
+      int j = i + 1;
+      while (j < n && sorted.get(j).key().equals(key)) {
+        ++j;
+      }
+      if (j - i == 1) {
+        result.add(sorted.get(i));
+      } else if (mergeRun(key, sorted.subList(i, j), result)) {
+        // Run is contradictory, so the whole conjunction is FALSE; drop it from the index.
+        return null;
+      }
+      i = j;
+    }
     return result;
+  }
+
+  /**
+   * Merge a run of two or more clauses that share the same key, appending the result to {@code out}.
+   * Returns true if the run is contradictory, meaning the enclosing conjunction can never match.
+   */
+  private static boolean mergeRun(String key, List<Query.KeyQuery> run, List<Query.KeyQuery> out) {
+    // A positive equality pins the value, so every other same-key clause becomes statically
+    // decidable. When a single equality value satisfies all the other clauses the run reduces to
+    // that eq (e.g. foo,a,:eq,foo,!=b reduces to foo,a,:eq). When the run is contradictory -- two
+    // different eq values, or an eq value rejected by another clause -- the conjunction can never
+    // match and is reported as such so the caller can drop it.
+    Set<String> eqValues = positiveEqualValues(run);
+    if (eqValues.size() == 1 && allAccept(eqValues.iterator().next(), run)) {
+      out.add(new Query.Equal(key, eqValues.iterator().next()));
+      return false;
+    } else if (!eqValues.isEmpty()) {
+      return true;
+    }
+
+    // No positive equality: merge negated clauses on the same key.
+    // !a && !b == !(a || b); !eq(a) && !eq(b) == !in(a, b).
+    // Negated regexes are grouped by operator name (so :re and :reic never mix) and, within a name,
+    // by value (so duplicate clauses collapse); each value keeps its original clause so a singleton
+    // group can be emitted as-is without recompiling its pattern.
+    Map<String, Map<String, Query.KeyQuery>> negRegex = new LinkedHashMap<>();
+    List<Query.KeyQuery> negEqIn = new ArrayList<>();
+    List<Query.KeyQuery> others = new ArrayList<>();
+    for (Query.KeyQuery kq : run) {
+      classifyForMerge(kq, negRegex, negEqIn, others);
+    }
+    emitMergedRegex(key, negRegex, out);
+    emitMergedEqIn(key, negEqIn, out);
+    out.addAll(others);
+    return false;
+  }
+
+  /** Distinct values of positive (non-inverted) {@link Query.Equal} clauses in the run. */
+  private static Set<String> positiveEqualValues(List<Query.KeyQuery> run) {
+    Set<String> values = new LinkedHashSet<>();
+    for (Query.KeyQuery kq : run) {
+      if (kq instanceof Query.Equal) {
+        values.add(((Query.Equal) kq).value());
+      }
+    }
+    return values;
+  }
+
+  /** True if every clause in the run accepts {@code value} (so they are all implied by {@code eq}). */
+  private static boolean allAccept(String value, List<Query.KeyQuery> run) {
+    for (Query.KeyQuery kq : run) {
+      if (!kq.matches(value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Bucket a clause into the negated-regex, negated-eq/in, or pass-through group. */
+  private static void classifyForMerge(
+      Query.KeyQuery kq,
+      Map<String, Map<String, Query.KeyQuery>> negRegex,
+      List<Query.KeyQuery> negEqIn,
+      List<Query.KeyQuery> others) {
+    Query inner = (kq instanceof Query.InvertedKeyQuery) ? kq.not() : null;
+    if (inner instanceof Query.Regex) {
+      Query.Regex re = (Query.Regex) inner;
+      negRegex.computeIfAbsent(re.name(), k -> new LinkedHashMap<>()).putIfAbsent(re.value(), kq);
+    } else if (inner instanceof Query.Equal || inner instanceof Query.In) {
+      negEqIn.add(kq);
+    } else {
+      others.add(kq);
+    }
+  }
+
+  /**
+   * {@code !a && !b == !(a || b)}. Each alternative carries its own leading anchor: {@link Query.Regex}
+   * compiles the value with a prepended {@code "^"}, so joining with {@code "|^"} makes every branch
+   * independently start-anchored, preserving each original clause's semantics regardless of internal
+   * alternation. A group of one is emitted unchanged (the original clause, so its pattern is not
+   * recompiled). The case-sensitivity of a rebuilt alternation is taken from the operator name:
+   * {@code :reic} is the only ignore-case regex operator, so a new ignore-case operator with a
+   * different name would need updating here.
+   */
+  private static void emitMergedRegex(
+      String key, Map<String, Map<String, Query.KeyQuery>> negRegex, List<Query.KeyQuery> out) {
+    for (Map.Entry<String, Map<String, Query.KeyQuery>> e : negRegex.entrySet()) {
+      Map<String, Query.KeyQuery> byValue = e.getValue();
+      if (byValue.size() == 1) {
+        out.add(byValue.values().iterator().next());
+      } else {
+        String name = e.getKey();
+        String value = String.join("|^", byValue.keySet());
+        out.add(new Query.InvertedKeyQuery(new Query.Regex(key, value, ":reic".equals(name), name)));
+      }
+    }
+  }
+
+  /** {@code !eq(a) && !eq(b) == !in(a, b)}; a lone negated equal/in is emitted unchanged. */
+  private static void emitMergedEqIn(String key, List<Query.KeyQuery> negEqIn, List<Query.KeyQuery> out) {
+    if (negEqIn.size() == 1) {
+      out.add(negEqIn.get(0));
+    } else if (negEqIn.size() >= 2) {
+      Set<String> union = new LinkedHashSet<>();
+      for (Query.KeyQuery kq : negEqIn) {
+        Query inner = kq.not();
+        if (inner instanceof Query.Equal) {
+          union.add(((Query.Equal) inner).value());
+        } else {
+          union.addAll(((Query.In) inner).values());
+        }
+      }
+      out.add(new Query.InvertedKeyQuery(new Query.In(key, union)));
+    }
   }
 
   /**
@@ -237,9 +402,12 @@ public final class QueryIndex<T> {
       if (q == Query.TRUE) {
         matches.add(value);
       } else if (q == Query.FALSE) {
-        break;
+        continue;
       } else {
-        add(sort(q), 0, value);
+        List<Query.KeyQuery> queries = sort(q);
+        if (queries != null) {
+          add(queries, 0, value);
+        }
       }
     }
     return this;
@@ -319,9 +487,12 @@ public final class QueryIndex<T> {
       if (q == Query.TRUE) {
         result |= matches.remove(value);
       } else if (q == Query.FALSE) {
-        break;
+        continue;
       } else {
-        result |= remove(sort(q), 0, value);
+        List<Query.KeyQuery> queries = sort(q);
+        if (queries != null) {
+          result |= remove(queries, 0, value);
+        }
       }
     }
     return result;
