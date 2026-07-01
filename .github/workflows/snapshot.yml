@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: Publish
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Gradle wrapper validation
