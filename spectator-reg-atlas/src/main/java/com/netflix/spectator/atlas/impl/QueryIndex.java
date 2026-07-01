@@ -73,7 +73,7 @@ public final class QueryIndex<T> {
   public interface CacheSupplier<V> extends Supplier<Cache<String, CacheValue<V>>> {
   }
 
-  /** Default supplier based on a simple LFU cache. */
+  /** Default supplier based on a lazy, growable direct-mapped cache. */
   public static class DefaultCacheSupplier<V> implements CacheSupplier<V> {
 
     private final Registry registry;
@@ -84,7 +84,9 @@ public final class QueryIndex<T> {
 
     @Override
     public Cache<String, CacheValue<V>> get() {
-      return Cache.lfu(registry, "QueryIndex", 100, 1000);
+      // Allocated lazily and grows from 64 to 16384 per node, so eq-only nodes (which never write
+      // their cache) cost nothing and only the few hot nodes approach the max.
+      return Cache.directMapped(registry, "QueryIndex", 64, 16384);
     }
   }
 

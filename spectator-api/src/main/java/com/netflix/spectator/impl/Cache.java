@@ -47,6 +47,32 @@ public interface Cache<K, V> {
   }
 
   /**
+   * Create a new direct-mapped cache: an open-addressed table that evicts on hash collision, so
+   * eviction is O(1) with no compaction sweep and reads and writes are lock-free. The table is
+   * allocated lazily on the first write and grows from {@code initialSize} to {@code maxSize} as its
+   * working set fills it, so memory tracks live entries rather than the configured maximum. Writes
+   * are best-effort (a collision or a race may drop an entry, causing a later miss but never an
+   * incorrect result), which makes this a good fit for memoizing a pure function.
+   *
+   * @param registry
+   *     Registry to use for tracking stats about the cache.
+   * @param id
+   *     Used with metrics to identify a particular instance of the cache.
+   * @param initialSize
+   *     Initial number of slots allocated on the first write. Use a small value so lightly used
+   *     instances stay cheap.
+   * @param maxSize
+   *     Maximum number of slots the table can grow to. Use {@code initialSize == maxSize} for a
+   *     fixed-capacity, non-growing cache.
+   * @return
+   *     Instance of a direct-mapped cache.
+   */
+  static <K1, V1> Cache<K1, V1> directMapped(
+      Registry registry, String id, int initialSize, int maxSize) {
+    return new DirectMappedCache<>(registry, id, initialSize, maxSize);
+  }
+
+  /**
    * Returns the cached value associated with the key or null if none is found.
    */
   V get(K key);
