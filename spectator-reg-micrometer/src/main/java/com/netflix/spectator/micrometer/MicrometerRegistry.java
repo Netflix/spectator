@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 /**
  * Wraps a Micrometer MeterRegistry to make it conform to the Spectator API.
  */
-public final class MicrometerRegistry implements Registry {
+public final class MicrometerRegistry implements Registry, AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MicrometerRegistry.class);
 
