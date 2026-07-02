@@ -55,4 +55,27 @@ public class SpectatorTest {
     }
     Assertions.assertTrue(found, "id for sub-registry could not be found in global iterator");
   }
+
+  // The static type of a reference determines whether IDEs and static analysis tools flag it as
+  // an unclosed AutoCloseable resource. Normal usage holds a Registry (e.g. injected) or the type
+  // returned by Spectator.globalRegistry(), neither of which manages a lifecycle, so neither
+  // should be AutoCloseable. These tests guard against re-introducing AutoCloseable on those types
+  // and reviving the spurious resource-leak warnings.
+
+  @Test
+  public void registryInterfaceIsNotAutoCloseable() {
+    Assertions.assertFalse(AutoCloseable.class.isAssignableFrom(Registry.class));
+  }
+
+  @Test
+  public void globalRegistryReturnTypeIsNotAutoCloseable() throws Exception {
+    Class<?> returnType = Spectator.class.getMethod("globalRegistry").getReturnType();
+    Assertions.assertFalse(AutoCloseable.class.isAssignableFrom(returnType));
+  }
+
+  @Test
+  public void concreteRegistryIsAutoCloseable() {
+    // Registries that own background work still support try-with-resources via the concrete type.
+    Assertions.assertTrue(AutoCloseable.class.isAssignableFrom(DefaultRegistry.class));
+  }
 }

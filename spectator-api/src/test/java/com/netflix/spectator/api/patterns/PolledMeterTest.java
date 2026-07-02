@@ -398,7 +398,7 @@ public class PolledMeterTest {
   @Test
   public void registryCloseViaTryWithResources() {
     AtomicLong closed = new AtomicLong();
-    try (Registry r = new DefaultRegistry()) {
+    try (DefaultRegistry r = new DefaultRegistry()) {
       PolledMeter.using(r).withName("gauge")
           .withCleanupAction(closed::incrementAndGet)
           .monitorValue(new AtomicLong(1));

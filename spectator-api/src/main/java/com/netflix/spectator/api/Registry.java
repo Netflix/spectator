@@ -31,7 +31,7 @@ import java.util.stream.StreamSupport;
 /**
  * Registry to manage a set of meters.
  */
-public interface Registry extends Iterable<Meter>, AutoCloseable {
+public interface Registry extends Iterable<Meter> {
 
   /**
    * The clock used by the registry for timing events.
@@ -39,15 +39,22 @@ public interface Registry extends Iterable<Meter>, AutoCloseable {
   Clock clock();
 
   /**
-   * Release any resources associated with the registry. This allows a registry to be used with
-   * try-with-resources and is most useful for registries that are created for temporary use.
+   * Release any resources associated with the registry. Most code that uses a registry does not
+   * manage its lifecycle: the registry is typically a long-lived, often injected, dependency and
+   * is only closed by whatever is responsible for creating it, if at all.
    *
    * <p>The default implementation does nothing, so existing registries are unaffected.
    * Implementations that maintain background work, such as the polling tasks created by
    * {@link com.netflix.spectator.api.patterns.PolledMeter}, should override this to stop that
    * work.</p>
+   *
+   * <p>Concrete registry implementations also implement {@link AutoCloseable} so they can be used
+   * with try-with-resources. The {@code Registry} interface itself intentionally does not extend
+   * {@link AutoCloseable}, because the vast majority of call sites that hold a {@code Registry}
+   * reference never manage its lifecycle, and having the interface be {@code AutoCloseable} leads
+   * to spurious "resource leak" warnings from IDEs and static analysis tools at those sites.</p>
    */
-  @Override default void close() {
+  default void close() {
   }
 
   /**

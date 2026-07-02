@@ -34,7 +34,7 @@ import java.util.function.LongSupplier;
  * Base class to make it easier to implement a simple registry that only needs to customise the
  * types returned for Counter, DistributionSummary, and Timer calls.
  */
-public abstract class AbstractRegistry implements Registry {
+public abstract class AbstractRegistry implements Registry, AutoCloseable {
 
   /** Not used for this registry, always return 0. */
   private static final LongSupplier VERSION = () -> 0L;
