@@ -40,7 +40,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 public final class DefaultPublisher implements Publisher {
 
@@ -88,10 +87,8 @@ public final class DefaultPublisher implements Publisher {
 
     this.client = client != null ? client : HttpClient.create(debugRegistry);
 
-    Function<String, String> replacementFunc =
-        JsonUtils.createReplacementFunction(config.validTagCharacters());
-    this.jsonMapper = JsonUtils.createMapper(new JsonFactory(), replacementFunc);
-    this.smileMapper = JsonUtils.createMapper(new SmileFactory(), replacementFunc);
+    this.jsonMapper = JsonUtils.createMapper(new JsonFactory());
+    this.smileMapper = JsonUtils.createMapper(new SmileFactory());
 
     this.validationHelper = new ValidationHelper(LOGGER, jsonMapper, debugRegistry);
   }

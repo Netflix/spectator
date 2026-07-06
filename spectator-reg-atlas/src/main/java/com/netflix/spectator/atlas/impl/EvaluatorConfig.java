@@ -22,7 +22,6 @@ import com.netflix.spectator.atlas.AtlasConfig;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * Additional interface that can be implemented by the AtlasConfig instance providing knobs
@@ -46,10 +45,6 @@ public interface EvaluatorConfig {
         @Override public Map<String, String> commonTags() {
           return config.commonTags();
         }
-
-        @Override public BiFunction<Id, Set<String>, Map<String, String>> idMapper() {
-          return new IdMapper(JsonUtils.createReplacementFunction(config.validTagCharacters()));
-        }
       };
     }
   }
@@ -62,7 +57,7 @@ public interface EvaluatorConfig {
 
   /** Function to convert an id to a map of key/value pairs. */
   default BiFunction<Id, Set<String>, Map<String, String>> idMapper() {
-    return new IdMapper(Function.identity());
+    return new IdMapper();
   }
 
   /** Supplier for cache to use within the evaluator query index. */

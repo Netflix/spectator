@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * Default mapping function from an Id to a Map.
@@ -31,13 +30,6 @@ import java.util.function.Function;
  */
 public final class IdMapper implements BiFunction<Id, Set<String>, Map<String, String>> {
 
-  private final Function<String, String> fixTagString;
-
-  /** Create a new instance using the provided function to fix invalid characters in the tags. */
-  public IdMapper(Function<String, String> fixTagString) {
-    this.fixTagString = fixTagString;
-  }
-
   @Override
   public Map<String, String> apply(Id id, Set<String> keys) {
     int size = id.size();
@@ -45,18 +37,16 @@ public final class IdMapper implements BiFunction<Id, Set<String>, Map<String, S
 
     // Start at 1 as name will be added last
     for (int i = 1; i < size; ++i) {
-      String k = fixTagString.apply(id.getKey(i));
+      String k = id.getKey(i);
       if (keys.contains(k)) {
-        String v = fixTagString.apply(id.getValue(i));
-        tags.put(k, v);
+        tags.put(k, id.getValue(i));
       }
     }
 
     // Add the name, it is added last so it will have precedence if the user tried to
     // use a tag key of "name".
     if (keys.contains("name")) {
-      String name = fixTagString.apply(id.name());
-      tags.put("name", name);
+      tags.put("name", id.name());
     }
 
     return tags;

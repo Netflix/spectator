@@ -136,6 +136,48 @@ public class AtlasRegistryTest {
     Assertions.assertEquals(0, getMeasurements().size());
   }
 
+  private String tagValue(Id id, String key) {
+    for (int i = 1; i < id.size(); ++i) {
+      if (id.getKey(i).equals(key)) {
+        return id.getValue(i);
+      }
+    }
+    return null;
+  }
+
+  @Test
+  public void invalidCharactersFixedAtCreation() {
+    // A path-like tag value with characters that are not permitted by the storage layer
+    // ('/') should be fixed when the meter is created so that reported measurements use the
+    // sanitized form. This keeps the publish and streaming paths consistent.
+    registry.counter(registry.createId("test", "path", "/api/v1")).increment();
+    List<Measurement> ms = getMeasurements();
+    Assertions.assertEquals(1, ms.size());
+    Assertions.assertEquals("_api_v1", tagValue(ms.get(0).id(), "path"));
+  }
+
+  @Test
+  public void invalidCharactersFixedInNameAndKey() {
+    // Fixing applies to the name and tag keys as well as values, not just values.
+    registry.counter(registry.createId("f@%", "b$$", "baz")).increment();
+    List<Measurement> ms = getMeasurements();
+    Assertions.assertEquals(1, ms.size());
+    Id id = ms.get(0).id();
+    Assertions.assertEquals("f__", id.name());
+    Assertions.assertEquals("baz", tagValue(id, "b__"));
+  }
+
+  @Test
+  public void invalidCharactersShareMeter() {
+    // Two ids that only differ by invalid characters map to the same meter once fixed, so they
+    // produce a single series rather than colliding as two separate series downstream.
+    registry.counter(registry.createId("test", "path", "/api/v1")).increment();
+    registry.counter(registry.createId("test", "path", "_api_v1")).increment();
+    List<Measurement> ms = getMeasurements();
+    Assertions.assertEquals(1, ms.size());
+    Assertions.assertEquals("_api_v1", tagValue(ms.get(0).id(), "path"));
+  }
+
   @Test
   public void measurementsWithMaxGauge() {
     registry.maxGauge(registry.createId("test")).set(4.0);

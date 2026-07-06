@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.impl.AsciiSet;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -29,11 +28,9 @@ import java.util.Collections;
 
 public class MeasurementSerializerTest {
 
-  private final AsciiSet set = AsciiSet.fromPattern("-._A-Za-z0-9");
-
   private final DefaultRegistry registry = new DefaultRegistry();
   private final SimpleModule module = new SimpleModule()
-      .addSerializer(Measurement.class, new MeasurementSerializer(s -> set.replaceNonMembers(s, '_')));
+      .addSerializer(Measurement.class, new MeasurementSerializer());
   private final ObjectMapper mapper = new ObjectMapper().registerModule(module);
 
   @Test
@@ -57,11 +54,13 @@ public class MeasurementSerializerTest {
   }
 
   @Test
-  public void invalidName() throws Exception {
+  public void nameWrittenVerbatim() throws Exception {
+    // The serializer no longer fixes invalid characters; that is handled when the meter is
+    // created. Whatever id reaches the serializer is written out as is.
     Id id = registry.createId("f@%", "bar", "baz");
     Measurement m = new Measurement(id, 42L, 3.0);
     String json = mapper.writeValueAsString(m);
-    String tags = "{\"name\":\"f__\",\"bar\":\"baz\",\"atlas.dstype\":\"gauge\"}";
+    String tags = "{\"name\":\"f@%\",\"bar\":\"baz\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     Assertions.assertEquals(expected, json);
   }
@@ -77,21 +76,21 @@ public class MeasurementSerializerTest {
   }
 
   @Test
-  public void invalidKey() throws Exception {
+  public void keyWrittenVerbatim() throws Exception {
     Id id = registry.createId("foo", "b$$", "baz");
     Measurement m = new Measurement(id, 42L, 3.0);
     String json = mapper.writeValueAsString(m);
-    String tags = "{\"name\":\"foo\",\"b__\":\"baz\",\"atlas.dstype\":\"gauge\"}";
+    String tags = "{\"name\":\"foo\",\"b$$\":\"baz\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     Assertions.assertEquals(expected, json);
   }
 
   @Test
-  public void invalidValue() throws Exception {
+  public void valueWrittenVerbatim() throws Exception {
     Id id = registry.createId("foo", "bar", "b&*");
     Measurement m = new Measurement(id, 42L, 3.0);
     String json = mapper.writeValueAsString(m);
-    String tags = "{\"name\":\"foo\",\"bar\":\"b__\",\"atlas.dstype\":\"gauge\"}";
+    String tags = "{\"name\":\"foo\",\"bar\":\"b&*\",\"atlas.dstype\":\"gauge\"}";
     String expected = "{\"tags\":" + tags + ",\"timestamp\":42,\"value\":3.0}";
     Assertions.assertEquals(expected, json);
   }
