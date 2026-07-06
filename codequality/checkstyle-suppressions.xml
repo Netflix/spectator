@@ -5,6 +5,5 @@
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 
 <suppressions>
-  <suppress checks="IllegalImport" files="UnsafeUtils.java"/>
   <suppress checks="VisibilityModifier" files="PrefixTree.java"/>
 </suppressions>
