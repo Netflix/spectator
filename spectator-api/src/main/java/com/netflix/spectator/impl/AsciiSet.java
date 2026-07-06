@@ -16,9 +16,6 @@
 package com.netflix.spectator.impl;
 
 import java.io.Serializable;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -31,50 +28,9 @@ import java.util.Optional;
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
  * It is subject to change without notice.</b></p>
  */
-@SuppressWarnings("PMD.AvoidAccessibilityAlteration")
 public final class AsciiSet implements Serializable {
 
   private static final long serialVersionUID = 1L;
-
-  private static boolean isJava8() {
-    String version = System.getProperty("java.version", "1.8");
-    return version.startsWith("1.8");
-  }
-
-  private static final MethodHandle STRING_CONSTRUCTOR;
-  static {
-    if (isJava8()) {
-      MethodHandle handle;
-      try {
-        Constructor<String> ctor = String.class.getDeclaredConstructor(char[].class, boolean.class);
-        ctor.setAccessible(true);
-        handle = MethodHandles.lookup().unreflectConstructor(ctor);
-      } catch (Exception e) {
-        handle = null;
-      }
-      STRING_CONSTRUCTOR = handle;
-    } else {
-      STRING_CONSTRUCTOR = null;
-    }
-  }
-
-  /**
-   * Creates a new string without copying the buffer if possible. The String class has a
-   * package private constructor that allows the buffer to be shared.
-   */
-  private static String newString(char[] buf) {
-    if (STRING_CONSTRUCTOR != null) {
-      try {
-        return (String) STRING_CONSTRUCTOR.invokeExact(buf, true);
-      } catch (Throwable t) {
-        // Note: `invokeExact` explicitly throws Throwable to propagate any exception of the
-        // method unchanged. For our purposes we just fallback to the string constructor.
-        return new String(buf);
-      }
-    } else {
-      return new String(buf);
-    }
-  }
 
   /**
    * Create a set containing ascii characters using a simple pattern. The pattern is similar
@@ -268,7 +224,7 @@ public final class AsciiSet implements Serializable {
       if (!contains(c))
         buf[i] = replacement;
     }
-    return newString(buf);
+    return new String(buf);
   }
 
   /**
