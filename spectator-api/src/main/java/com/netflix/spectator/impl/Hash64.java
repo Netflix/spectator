@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ public final class Hash64 {
    * Threshold above which {@link #updateString(CharSequence)} hands a {@code String} off
    * to {@code getBytes(UTF_8) + updateBytes}. Below this length the inline char-loop is
    * faster (no per-call setup amortization) and structurally non-allocating; above it,
-   * the intrinsified UTF-8 encoder plus Unsafe long-stride writes pull ahead. 128 chars
+   * the intrinsified UTF-8 encoder plus 8-byte-stride writes pull ahead. 128 chars
    * is the empirical crossover on JDK 25 — see IdHash JMH numbers.
    */
   static final int LONG_STRING_THRESHOLD = 128;
@@ -140,7 +140,7 @@ public final class Hash64 {
    * <p>For short strings (length ≤ {@value #LONG_STRING_THRESHOLD}) and any non-String
    * {@code CharSequence}, encodes in-place via a char loop with no transient byte
    * array. For longer {@code String} inputs, falls back to {@code getBytes(UTF_8)}
-   * followed by the Unsafe long-stride {@code updateBytes} path — that one allocates a
+   * followed by the 8-byte-stride {@code updateBytes} path — that one allocates a
    * transient byte[] (typically JIT-scalar-replaced) but throughput is 2–3× higher on
    * long strings.</p>
    */
@@ -213,7 +213,7 @@ public final class Hash64 {
 
   /** Update the hash with the specified byte values. */
   public Hash64 updateBytes(byte[] values, int offset, int length) {
-    if (UnsafeUtils.supported() && length >= 8) {
+    if (length >= 8) {
       final int bytesInStripe = (Long.SIZE - bitPos) / Byte.SIZE;
       final int s = offset + bytesInStripe;
       final int e = s + (length - bytesInStripe) / Long.BYTES * Long.BYTES;
@@ -229,7 +229,7 @@ public final class Hash64 {
 
       // Write long values
       for (int i = s; i < e; i += Long.BYTES) {
-        stripe[stripePos] = UnsafeUtils.getLong(values, i);
+        stripe[stripePos] = ByteArrays.getLong(values, i);
         if (++stripePos == stripe.length) {
           processStripe();
         }
@@ -549,10 +549,10 @@ public final class Hash64 {
       long acc4 = seed - PRIME64_1;
       final int stripeEnd = offset + (length & ~31);
       while (i < stripeEnd) {
-        acc1 = round(acc1, readLongLE(bytes, i));
-        acc2 = round(acc2, readLongLE(bytes, i + 8));
-        acc3 = round(acc3, readLongLE(bytes, i + 16));
-        acc4 = round(acc4, readLongLE(bytes, i + 24));
+        acc1 = round(acc1, ByteArrays.getLong(bytes, i));
+        acc2 = round(acc2, ByteArrays.getLong(bytes, i + 8));
+        acc3 = round(acc3, ByteArrays.getLong(bytes, i + 16));
+        acc4 = round(acc4, ByteArrays.getLong(bytes, i + 24));
         i += 32;
       }
       acc = Long.rotateLeft(acc1, 1) + Long.rotateLeft(acc2, 7)
@@ -573,7 +573,7 @@ public final class Hash64 {
   // 4-byte chunk if possible, then byte-by-byte.
   private static long consumeBytesTail(long acc, byte[] bytes, int i, int end) {
     while (end - i >= 8) {
-      acc ^= round(0L, readLongLE(bytes, i));
+      acc ^= round(0L, ByteArrays.getLong(bytes, i));
       acc = Long.rotateLeft(acc, 27) * PRIME64_1 + PRIME64_4;
       i += 8;
     }
@@ -588,20 +588,6 @@ public final class Hash64 {
       ++i;
     }
     return acc;
-  }
-
-  private static long readLongLE(byte[] bytes, int offset) {
-    if (UnsafeUtils.supported()) {
-      return UnsafeUtils.getLong(bytes, offset);
-    }
-    return ((long) bytes[offset]     & 0xFFL)
-        | (((long) bytes[offset + 1] & 0xFFL) << 8)
-        | (((long) bytes[offset + 2] & 0xFFL) << 16)
-        | (((long) bytes[offset + 3] & 0xFFL) << 24)
-        | (((long) bytes[offset + 4] & 0xFFL) << 32)
-        | (((long) bytes[offset + 5] & 0xFFL) << 40)
-        | (((long) bytes[offset + 6] & 0xFFL) << 48)
-        | (((long) bytes[offset + 7] & 0xFFL) << 56);
   }
 
   private static long readIntLE(byte[] bytes, int offset) {
