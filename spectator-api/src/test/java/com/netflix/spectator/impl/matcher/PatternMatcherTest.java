@@ -17,7 +17,10 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class PatternMatcherTest extends AbstractPatternMatcherTest {
@@ -38,5 +41,22 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
 
     // Check we can serialize and deserialize the matchers
     MatcherSerializationTest.checkSerde(matcher);
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  public void repeatLargeBoundTerminates() {
+    // A repetition with a huge count whose body can match the empty string must not loop up
+    // to that count with no forward progress (previously a CPU-exhaustion vector). It must
+    // still return the correct result quickly, hence the timeout to fail fast on a regression.
+    PatternMatcher empty = PatternMatcher.compile("foo-(bar|){2000000000}-baz");
+    Assertions.assertTrue(empty.matches("foo-barbar-baz"));
+    Assertions.assertTrue(empty.matches("foo--baz"));
+    Assertions.assertFalse(empty.matches("foo-bar-qux"));
+
+    // A huge count on a non-empty body would overflow min * minLength; the saturating
+    // computation keeps minLength non-negative and matching bounded by the input length.
+    PatternMatcher nonEmpty = PatternMatcher.compile("(ab){2000000000}");
+    Assertions.assertFalse(nonEmpty.matches("abab"));
   }
 }

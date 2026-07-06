@@ -540,6 +540,19 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatEmptyClause() {
+    // Repetition whose body can match the empty string, via the {n,m} RepeatMatcher path
+    // (the +/* paths go through ZeroOrMoreMatcher which is covered separately). Compared
+    // against the reference engine to confirm the empty-match handling is correct.
+    testRE("foo-h2(prod|){2,5}-bar-*", "foo-h2prod-abc-v123");
+    testRE("foo-h2(prod|){2,5}-bar-*", "foo-h2prod-bar-v123");
+    testRE("(a|){3}", "aa");
+    testRE("(a|){3}", "");
+    testRE("(abc|){0,3}def", "def");
+    testRE("(abc|){2,4}def", "abcdef");
+  }
+
+  @Test
   public void repeatWithOr() {
     testRE("(a|b|c){1,3}d", "aaad");
     testRE("(a|b|c){1,3}d", "aaa");
