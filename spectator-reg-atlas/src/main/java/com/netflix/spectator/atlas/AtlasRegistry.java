@@ -33,6 +33,7 @@ import com.netflix.spectator.atlas.impl.EvalPayload;
 import com.netflix.spectator.atlas.impl.Evaluator;
 import com.netflix.spectator.atlas.impl.EvaluatorConfig;
 import com.netflix.spectator.atlas.impl.PublishPayload;
+import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.Scheduler;
 import com.netflix.spectator.ipc.http.HttpClient;
 
@@ -75,6 +76,10 @@ public final class AtlasRegistry extends AbstractRegistry {
   private final int batchSize;
   private final int numThreads;
   private final Map<String, String> commonTags;
+
+  // Set of characters permitted by the storage layer, used to fix tag keys and values when a
+  // meter is created. Null if no restriction is configured, in which case no fixing is done.
+  private final AsciiSet validTagCharacters;
 
   private final Registry debugRegistry;
 
@@ -127,6 +132,8 @@ public final class AtlasRegistry extends AbstractRegistry {
     this.batchSize = config.batchSize();
     this.numThreads = config.numThreads();
     this.commonTags = new TreeMap<>(config.commonTags());
+    String validChars = config.validTagCharacters();
+    this.validTagCharacters = (validChars == null) ? null : AsciiSet.fromPattern(validChars);
 
     this.debugRegistry = Optional.ofNullable(config.debugRegistry()).orElse(this);
 
@@ -454,5 +461,52 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   @Override protected Gauge newMaxGauge(Id id) {
     return new AtlasMaxGauge(id, clock(), meterTTL, lwcStepMillis);
+  }
+
+  /**
+   * Replace characters in the tag keys and values that are not permitted by the storage layer
+   * so that meters use a valid id. Applying the fix on the meter creation and lookup path keeps
+   * the publish and streaming paths consistent and means the id does not need to be fixed again
+   * each time it is reported.
+   *
+   * <p>This runs on every meter lookup, so it is on a hot path. When there is no restriction
+   * configured it returns immediately without inspecting the id. Otherwise it only allocates a
+   * new id when a character actually needs to be replaced; an id that is already valid is
+   * returned as is.
+   */
+  @Override protected Id normalizeTags(Id id) {
+    final AsciiSet allowed = validTagCharacters;
+    if (allowed == null) {
+      return id;
+    }
+
+    final int size = id.size();
+
+    // Detect whether any characters need to be fixed without allocating. containsAll scans and
+    // short circuits on the first invalid character, so the common case where everything is
+    // already valid returns the original id as is.
+    boolean changed = !allowed.containsAll(id.name());
+    if (!changed) {
+      for (int i = 1; i < size; ++i) {
+        if (!allowed.containsAll(id.getKey(i)) || !allowed.containsAll(id.getValue(i))) {
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (!changed) {
+      return id;
+    }
+
+    // Fixing a tag key can change the ordering or introduce duplicate keys, so unsafeCreate is
+    // used as it will re-sort and de-dup the resulting array.
+    final String[] tags = new String[2 * (size - 1)];
+    int pos = 0;
+    for (int i = 1; i < size; ++i) {
+      tags[pos++] = allowed.replaceNonMembers(id.getKey(i), '_');
+      tags[pos++] = allowed.replaceNonMembers(id.getValue(i), '_');
+    }
+    return Id.unsafeCreate(allowed.replaceNonMembers(id.name(), '_'), tags, tags.length);
   }
 }

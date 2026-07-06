@@ -187,9 +187,31 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
    * then it will not create a new instance.
    */
   private Id normalizeId(Id id) {
+    // For a foreign Id implementation the normalization (sort/dedup plus the subclass tag
+    // constraints) is cached so that ids created in a tight loop do not repeat the work. The
+    // tag fixing is done inside the cache computation so the cached value is the fully
+    // normalized id and does not need to be re-checked on every lookup.
+    //
+    // A DefaultId is already sorted and de-duped, so it short circuits on the type and only the
+    // tag fixing is applied. That check is a cheap scan that returns the same instance when
+    // everything is already valid, which avoids a second concurrent map lookup on the hot path
+    // for the common case.
     return (id instanceof DefaultId)
-        ? id
-        : idNormalizationCache.computeIfAbsent(id, i -> createId(i.name(), i.tags()));
+        ? normalizeTags(id)
+        : idNormalizationCache.computeIfAbsent(id, i -> normalizeTags(createId(i.name(), i.tags())));
+  }
+
+  /**
+   * Hook that allows subclasses to enforce backend specific constraints on the tags of an id,
+   * for example replacing characters that are not permitted by the storage layer. It is called
+   * for every id used to create or look up a meter so that the meter, and the measurements it
+   * produces, use the constrained form consistently. Since this is on the meter lookup path,
+   * implementations must be cheap and should return the same id instance when no changes are
+   * needed to avoid unnecessary allocations. The default implementation returns the id
+   * unchanged.
+   */
+  protected Id normalizeTags(Id id) {
+    return id;
   }
 
   private void logTypeError(Id id, Class<?> desired, Class<?> found) {

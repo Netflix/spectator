@@ -22,29 +22,21 @@ import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 
 import java.io.IOException;
-import java.util.function.Function;
 
 /**
- * Jackson serializer for measurements. Values will be converted to a
- * valid set as they are written out by replacing invalid characters with
- * an '_'.
+ * Jackson serializer for measurements. Tag keys and values are written out as is; ensuring they
+ * only use characters permitted by the storage layer is the responsibility of the registry when
+ * the meter is created (see {@code AtlasRegistry.normalizeTags}). Keeping the replacement in a
+ * single place avoids inconsistent behavior between the publish and streaming paths.
  *
  * <b>Classes in this package are only intended for use internally within spectator. They may
  * change at any time and without notice.</b>
  */
 public class MeasurementSerializer extends JsonSerializer<Measurement> {
 
-  private final Function<String, String> fixTagString;
-
-  /**
-   * Create a new instance of the serializer.
-   *
-   * @param fixTagString
-   *     Function that fixes characters used for tag keys and values.
-   */
-  public MeasurementSerializer(Function<String, String> fixTagString) {
+  /** Create a new instance of the serializer. */
+  public MeasurementSerializer() {
     super();
-    this.fixTagString = fixTagString;
   }
 
   @Override
@@ -55,12 +47,12 @@ public class MeasurementSerializer extends JsonSerializer<Measurement> {
     Id id = value.id();
     gen.writeStartObject();
     gen.writeObjectFieldStart("tags");
-    gen.writeStringField("name", fixTagString.apply(id.name()));
+    gen.writeStringField("name", id.name());
     boolean explicitDsType = false;
     int n = id.size();
     for (int i = 1; i < n; ++i) {
-      final String k = fixTagString.apply(id.getKey(i));
-      final String v = fixTagString.apply(id.getValue(i));
+      final String k = id.getKey(i);
+      final String v = id.getValue(i);
       if (!"name".equals(k)) {
         if ("atlas.dstype".equals(k)) {
           explicitDsType = true;

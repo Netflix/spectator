@@ -188,7 +188,13 @@ public final class AsciiSet implements Serializable {
    * Returns true if all characters in the string are contained within the set.
    */
   public boolean containsAll(CharSequence str) {
-    return indexOfNonMember(str) == str.length();
+    final int n = str.length();
+    for (int i = 0; i < n; ++i) {
+      if (!contains(str.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private int indexOfNonMember(CharSequence str) {

@@ -19,9 +19,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.impl.AsciiSet;
-
-import java.util.function.Function;
 
 /**
  * Helper functions for creating the mappers used to encode Atlas payloads.
@@ -31,23 +28,10 @@ public final class JsonUtils {
   private JsonUtils() {
   }
 
-  /**
-   * Return a mapping function that will replace characters that are not matched by the
-   * pattern with an underscore.
-   */
-  public static Function<String, String> createReplacementFunction(String pattern) {
-    if (pattern == null) {
-      return Function.identity();
-    } else {
-      AsciiSet set = AsciiSet.fromPattern(pattern);
-      return s -> set.replaceNonMembers(s, '_');
-    }
-  }
-
   /** Create an object mapper with a custom serializer for measurements. */
-  public static ObjectMapper createMapper(JsonFactory factory, Function<String, String> fixTag) {
+  public static ObjectMapper createMapper(JsonFactory factory) {
     SimpleModule module = new SimpleModule()
-        .addSerializer(Measurement.class, new MeasurementSerializer(fixTag));
+        .addSerializer(Measurement.class, new MeasurementSerializer());
     return new ObjectMapper(factory).registerModule(module);
   }
 }

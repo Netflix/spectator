@@ -23,7 +23,6 @@ import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.atlas.impl.MeasurementSerializer;
 import com.netflix.spectator.atlas.impl.Subscription;
 import com.netflix.spectator.atlas.impl.Subscriptions;
-import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.ipc.http.HttpClient;
 import com.netflix.spectator.ipc.http.HttpRequestBuilder;
 import com.netflix.spectator.ipc.http.HttpResponse;
@@ -47,9 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SubscriptionManagerTest {
 
   private final SimpleModule module = new SimpleModule()
-      .addSerializer(
-          Measurement.class,
-          new MeasurementSerializer(s -> AsciiSet.fromPattern("a-z").replaceNonMembers(s, '_')));
+      .addSerializer(Measurement.class, new MeasurementSerializer());
 
   private final ObjectMapper mapper = new ObjectMapper(new JsonFactory()).registerModule(module);
 
