@@ -37,8 +37,10 @@ final class RepeatMatcher implements Matcher, Serializable {
     this.min = min;
     this.max = max;
     // minLength is fixed for an immutable matcher; precompute it to avoid walking the
-    // repeated sub-matcher on every matches() call.
-    this.minLength = min * repeated.minLength();
+    // repeated sub-matcher on every matches() call. Use a long product and saturate so a
+    // large repetition count cannot overflow to a negative value that would corrupt the
+    // fast-reject/bounds arithmetic in the greedy matchers.
+    this.minLength = (int) Math.min((long) min * repeated.minLength(), Integer.MAX_VALUE);
   }
 
   Matcher repeated() {
@@ -70,9 +72,16 @@ final class RepeatMatcher implements Matcher, Serializable {
     int numMatches = 0;
     while (pos >= 0 && numMatches < max) {
       int p = repeated.matches(str, pos, end - pos);
-      if (p >= 0) {
+      if (p > pos) {
+        // Made forward progress, try to match additional repetitions.
         ++numMatches;
         pos = p;
+      } else if (p == pos) {
+        // The repeated portion matched the empty string. Any remaining repetitions would
+        // also match empty without advancing, so the minimum count is satisfiable and there
+        // is nothing more to consume. Return here rather than looping up to max, which may be
+        // a very large count, with no forward progress. Mirrors the guard in ZeroOrMoreMatcher.
+        return pos;
       } else {
         return (numMatches >= min) ? pos : Constants.NO_MATCH;
       }
