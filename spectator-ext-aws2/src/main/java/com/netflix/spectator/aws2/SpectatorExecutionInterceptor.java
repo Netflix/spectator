@@ -196,12 +196,18 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
     if (t instanceof AwsServiceException) {
       AwsServiceException exception = ((AwsServiceException) t);
       if (exception.isThrottlingException()) {
-        logEntry.withStatus(IpcStatus.throttled);
+        if (logEntry != null) {
+          logEntry.withStatus(IpcStatus.throttled);
+        }
         result = "throttled";
       }
-      logEntry.withStatusDetail(exception.awsErrorDetails().errorCode());
+      if (logEntry != null) {
+        logEntry.withStatusDetail(exception.awsErrorDetails().errorCode());
+      }
     }
-    logEntry.withException(context.exception()).log();
+    if (logEntry != null) {
+      logEntry.withException(context.exception()).log();
+    }
     registry.counter(createRequestCountId(attrs, result)).increment();
   }
 }
