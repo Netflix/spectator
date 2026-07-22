@@ -155,13 +155,15 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
 
   @Override
   public void afterTransmission(Context.AfterTransmission context, ExecutionAttributes attrs) {
-    SdkHttpResponse response = context.httpResponse();
-    IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY)
-        .markEnd()
-        .withHttpStatus(response.statusCode());
-    attrs.putAttribute(STATUS_IS_SET, true);
-
-    response.headers().forEach((k, vs) -> vs.forEach(v -> logEntry.addResponseHeader(k, v)));
+    // The log entry is populated by beforeTransmission. Guard against it being absent in case
+    // the SDK invokes this callback without a preceding transmission attempt.
+    IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY);
+    if (logEntry != null) {
+      SdkHttpResponse response = context.httpResponse();
+      logEntry.markEnd().withHttpStatus(response.statusCode());
+      attrs.putAttribute(STATUS_IS_SET, true);
+      response.headers().forEach((k, vs) -> vs.forEach(v -> logEntry.addResponseHeader(k, v)));
+    }
   }
 
   private Id createRequestCountId(ExecutionAttributes attrs, String result) {
@@ -184,24 +186,39 @@ public class SpectatorExecutionInterceptor implements ExecutionInterceptor {
 
   @Override
   public void afterExecution(Context.AfterExecution context, ExecutionAttributes attrs) {
-    attrs.getAttribute(LOG_ENTRY).log();
+    // The log entry is populated by beforeTransmission. Guard against it being absent in case
+    // the SDK invokes this callback without a preceding transmission attempt.
+    IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY);
+    if (logEntry != null) {
+      logEntry.log();
+    }
     registry.counter(createRequestCountId(attrs, "success")).increment();
   }
 
   @Override
   public void onExecutionFailure(Context.FailedExecution context, ExecutionAttributes attrs) {
-    IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY);
     Throwable t = context.exception();
-    String result = "failure";
-    if (t instanceof AwsServiceException) {
-      AwsServiceException exception = ((AwsServiceException) t);
-      if (exception.isThrottlingException()) {
+    AwsServiceException serviceException = (t instanceof AwsServiceException)
+        ? (AwsServiceException) t
+        : null;
+    boolean throttled = serviceException != null && serviceException.isThrottlingException();
+    String result = throttled ? "throttled" : "failure";
+
+    // The log entry is only populated by beforeTransmission once an attempt is made. Failures
+    // earlier in the request pipeline (marshalling, endpoint or credentials resolution, signing)
+    // never reach that stage, so the attribute may be absent. In that case there was no IPC
+    // attempt to log and we just record the failure in the request counter below.
+    IpcLogEntry logEntry = attrs.getAttribute(LOG_ENTRY);
+    if (logEntry != null) {
+      if (throttled) {
         logEntry.withStatus(IpcStatus.throttled);
-        result = "throttled";
       }
-      logEntry.withStatusDetail(exception.awsErrorDetails().errorCode());
+      if (serviceException != null && serviceException.awsErrorDetails() != null) {
+        logEntry.withStatusDetail(serviceException.awsErrorDetails().errorCode());
+      }
+      logEntry.withException(t).log();
     }
-    logEntry.withException(context.exception()).log();
+
     registry.counter(createRequestCountId(attrs, result)).increment();
   }
 }
