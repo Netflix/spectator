@@ -393,6 +393,113 @@ public class SpectatorExecutionInterceptorTest {
     Assertions.assertEquals("failure", get(c.id(), "result"));
   }
 
+  @Test
+  public void preTransmissionFailure() {
+    // Failure occurs before beforeTransmission runs (e.g. marshalling, endpoint/credentials
+    // resolution, or signing), so the log entry attribute was never populated. This must not
+    // throw an NPE and mask the underlying exception.
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    Throwable error = new IllegalStateException("unable to resolve endpoint");
+    TestContext context = new TestContext(request, null, error);
+    ExecutionAttributes attrs = createAttributes("EC2", "DescribeInstances");
+    interceptor.onExecutionFailure(context.failureContext(), attrs);
+
+    // No IPC log entry / timer since no attempt was made, but the failure is still counted.
+    Assertions.assertEquals(0, registry.timers().count());
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("failure", get(c.id(), "result"));
+  }
+
+  @Test
+  public void preTransmissionServiceException() {
+    // A service exception (here throttling) surfacing before transmission must also avoid the
+    // NPE while still classifying the result correctly.
+    Throwable error = AwsServiceException.builder()
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("Throttling")
+            .errorMessage("too many requests")
+            .build())
+        .build();
+    TestContext context = new TestContext(null, null, error);
+    ExecutionAttributes attrs = createAttributes("EC2", "DescribeInstances");
+    interceptor.onExecutionFailure(context.failureContext(), attrs);
+
+    Assertions.assertEquals(0, registry.timers().count());
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("throttled", get(c.id(), "result"));
+  }
+
+  @Test
+  public void awsFailureWithoutErrorDetails() {
+    // A throttling error can be classified via status code alone, leaving awsErrorDetails null.
+    // The log entry is present (transmission occurred), so withStatusDetail must not NPE on the
+    // missing details.
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(429)
+        .build();
+    Throwable error = AwsServiceException.builder()
+        .statusCode(429)
+        .build();
+    TestContext context = new TestContext(request, response, error);
+    execute(context, createAttributes("EC2", "DescribeInstances"), millis(30));
+    Assertions.assertEquals(1, registry.timers().count());
+
+    Timer t = registry.timers().findFirst().orElse(null);
+    Assertions.assertNotNull(t);
+    Assertions.assertEquals(1, t.count());
+    Assertions.assertEquals("throttled", get(t.id(), "ipc.status"));
+  }
+
+  @Test
+  public void afterTransmissionWithoutLogEntry() {
+    // afterTransmission invoked without a preceding beforeTransmission must not throw.
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(200)
+        .build();
+    TestContext context = new TestContext(request, response);
+    ExecutionAttributes attrs = createAttributes("EC2", "DescribeInstances");
+    interceptor.afterTransmission(context, attrs);
+
+    Assertions.assertEquals(0, registry.timers().count());
+  }
+
+  @Test
+  public void afterExecutionWithoutLogEntry() {
+    // afterExecution invoked without a preceding beforeTransmission must not throw, but should
+    // still count the successful request.
+    SdkHttpRequest request = SdkHttpRequest.builder()
+        .method(SdkHttpMethod.POST)
+        .uri(URI.create("https://ec2.us-east-1.amazonaws.com"))
+        .build();
+    SdkHttpResponse response = SdkHttpResponse.builder()
+        .statusCode(200)
+        .build();
+    TestContext context = new TestContext(request, response);
+    ExecutionAttributes attrs = createAttributes("EC2", "DescribeInstances");
+    interceptor.afterExecution(context, attrs);
+
+    Assertions.assertEquals(0, registry.timers().count());
+    Counter c = findCounter("aws.requests");
+    Assertions.assertNotNull(c);
+    Assertions.assertEquals(1, c.count());
+    Assertions.assertEquals("success", get(c.id(), "result"));
+  }
+
   private static class TestContext implements Context.AfterExecution {
 
     private SdkHttpRequest request;
