@@ -100,6 +100,7 @@ public final class IpcLogEntry {
   private boolean disableMetrics;
 
   private final Map<String, String> additionalTags = new HashMap<>();
+  private final Map<String, String> additionalLogTags = new HashMap<>();
 
   private final StringBuilder builder = new StringBuilder();
 
@@ -642,6 +643,30 @@ public final class IpcLogEntry {
   }
 
   /**
+   * Add a custom tag that is only included on the log entry, both the structured output and
+   * the SLF4J {@link MDC}, and not on the request metrics. This is useful for adding higher
+   * cardinality context that is helpful for the access log, but would be problematic if added
+   * as a dimension on the metrics. As these tags do not impact the metrics, the cardinality
+   * limiter is not applied to the values.
+   */
+  public IpcLogEntry addLogTag(Tag tag) {
+    this.additionalLogTags.put(tag.key(), tag.value());
+    return this;
+  }
+
+  /**
+   * Add a custom tag that is only included on the log entry, both the structured output and
+   * the SLF4J {@link MDC}, and not on the request metrics. This is useful for adding higher
+   * cardinality context that is helpful for the access log, but would be problematic if added
+   * as a dimension on the metrics. As these tags do not impact the metrics, the cardinality
+   * limiter is not applied to the values.
+   */
+  public IpcLogEntry addLogTag(String k, String v) {
+    this.additionalLogTags.put(k, v);
+    return this;
+  }
+
+  /**
    * Disable the metrics. The log will still get written, but none of the metrics will get
    * updated.
    */
@@ -931,6 +956,12 @@ public final class IpcLogEntry {
     putInMDC(IpcTagKey.statusDetail.key(), statusDetail);
 
     putInMDC(IpcTagKey.httpStatus.key(), Integer.toString(httpStatus));
+
+    // User specified log tags are added last so that an explicit value takes precedence
+    // over the standard fields if the same key is used.
+    for (Map.Entry<String, String> entry : additionalLogTags.entrySet()) {
+      putInMDC(entry.getKey(), entry.getValue());
+    }
   }
 
   @Override
@@ -975,6 +1006,7 @@ public final class IpcLogEntry {
         .addField("requestHeaders", requestHeaders)
         .addField("responseHeaders", responseHeaders)
         .addField("additionalTags", additionalTags)
+        .addField("additionalLogTags", additionalLogTags)
         .endObject()
         .toString();
   }
@@ -1024,6 +1056,7 @@ public final class IpcLogEntry {
     remotePort = -1;
     disableMetrics = false;
     additionalTags.clear();
+    additionalLogTags.clear();
     builder.delete(0, builder.length());
     inflightId = null;
   }
