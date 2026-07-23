@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.net.URI;
@@ -645,6 +646,77 @@ public class IpcLogEntryTest {
     Assertions.assertEquals(2, actual.size());
     Assertions.assertEquals("v1", actual.get("k1"));
     Assertions.assertEquals("v2", actual.get("k2"));
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void addLogTags() {
+    Map<String, Object> map = entry
+        .addLogTag(new BasicTag("k1", "v1"))
+        .addLogTag("k2", "v2")
+        .convert(this::toMap);
+    Map<String, String> actual = (Map<String, String>) map.get("additionalLogTags");
+    Assertions.assertEquals(2, actual.size());
+    Assertions.assertEquals("v1", actual.get("k1"));
+    Assertions.assertEquals("v2", actual.get("k2"));
+    // Log tags must not leak into the metric tags map (empty maps are omitted from the JSON)
+    Assertions.assertNull(map.get("additionalTags"));
+  }
+
+  @Test
+  public void logTagsNotOnMetrics() {
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
+    logger.createClientEntry()
+        .markStart()
+        .addTag("metricTag", "a")
+        .addLogTag("logTag", "b")
+        .markEnd()
+        .log();
+    AtomicInteger count = new AtomicInteger();
+    registry
+        .counters()
+        .filter(c -> "ipc.client.call".equals(c.id().name()))
+        .forEach(c -> {
+          count.incrementAndGet();
+          Assertions.assertEquals("a", Utils.getTagValue(c.id(), "metricTag"));
+          Assertions.assertNull(Utils.getTagValue(c.id(), "logTag"));
+        });
+    Assertions.assertTrue(count.get() > 0, "no ipc.client.call counters were checked");
+  }
+
+  @Test
+  public void logTagsInMDC() {
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
+    IpcLogEntry logEntry = logger.createClientEntry()
+        .addTag("metricTag", "a")
+        .addLogTag("logTag", "b");
+    try {
+      logEntry.populateMDC();
+      // Log tag is exposed via the MDC
+      Assertions.assertEquals("b", MDC.get("logTag"));
+      // Metric-only tags are not automatically placed in the MDC
+      Assertions.assertNull(MDC.get("metricTag"));
+    } finally {
+      MDC.clear();
+    }
+  }
+
+  @Test
+  public void logTagOverridesStandardMDCKey() {
+    Registry registry = new DefaultRegistry(clock);
+    IpcLogger logger = new IpcLogger(registry, LoggerFactory.getLogger(getClass()));
+    IpcLogEntry logEntry = logger.createClientEntry()
+        .withEndpoint("standard")
+        .addLogTag(IpcTagKey.endpoint.key(), "override");
+    try {
+      logEntry.populateMDC();
+      // Explicit log tags are applied last so they take precedence over standard fields
+      Assertions.assertEquals("override", MDC.get(IpcTagKey.endpoint.key()));
+    } finally {
+      MDC.clear();
+    }
   }
 
   @Test

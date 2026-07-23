@@ -4,6 +4,10 @@ dependencies {
   testImplementation 'com.fasterxml.jackson.core:jackson-core'
   testImplementation 'com.fasterxml.jackson.core:jackson-databind'
   testImplementation 'com.netflix.frigga:frigga'
+  // The MDC assertions in IpcLogEntryTest require a logging implementation that supports the
+  // MDC functionality, which the slf4j-nop (default) and slf4j-simple implementations do not.
+  testImplementation 'org.apache.logging.log4j:log4j-core'
+  testImplementation 'org.apache.logging.log4j:log4j-slf4j-impl'
 }
 
 jar {
