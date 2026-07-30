@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -358,6 +359,146 @@ public class CardinalityLimitersTest {
     Assertions.assertEquals("vip-127.0.0.1", limiter.apply("vip-127.0.0.1"));
     Assertions.assertEquals("[::1]-vip", limiter.apply("[::1]-vip"));
     Assertions.assertEquals("vip-[::1]", limiter.apply("vip-[::1]"));
+  }
+
+  @Test
+  public void registeredNameOrIpRemovesPort() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //Port is removed before classifying, so IPs with a port are still limited
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("127.0.0.1:80"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[::1]:8080"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("ip-10-1-2-3.ec2.internal:80"));
+
+    //Port is also removed from registered names so it does not multiply the values
+    Assertions.assertEquals("example.com", limiter.apply("example.com:443"));
+    Assertions.assertEquals("example.com", limiter.apply("example.com"));
+  }
+
+  @Test
+  public void registeredNameOrIpPortEdgeCases() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //Unbracketed IPv6 is not truncated at the final colon
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("2001:db8::1"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("::1"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("::ffff:127.0.0.1"));
+
+    //A non-numeric or empty suffix is not a port and is left alone
+    Assertions.assertEquals("example.com:", limiter.apply("example.com:"));
+    Assertions.assertEquals("example.com:http", limiter.apply("example.com:http"));
+
+    //Malformed bracketed literals are left alone
+    Assertions.assertEquals("[::1", limiter.apply("[::1"));
+
+    //Empty input does not blow up
+    Assertions.assertEquals("", limiter.apply(""));
+  }
+
+  @Test
+  public void registeredNameOrIpEc2HostNames() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //IP-based names, private and public
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("ip-10-165-89-100.ec2.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS,
+        limiter.apply("ip-100-114-41-206.us-west-2.compute.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS,
+        limiter.apply("ec2-54-1-2-3.compute-1.amazonaws.com"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS,
+        limiter.apply("ec2-54-1-2-3.us-west-2.compute.amazonaws.com"));
+
+    //Resource-based names, the IPv6 equivalent
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("i-0123456789abcdef0.ec2.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS,
+        limiter.apply("i-0123456789abcdef0.us-east-2.compute.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("i-01234567.ec2.internal"));
+
+    //Names that merely start with a similar prefix are still registered names
+    Assertions.assertEquals("ios.prod.example.com", limiter.apply("ios.prod.example.com"));
+    Assertions.assertEquals("ip-service.example.com", limiter.apply("ip-service.example.com"));
+    Assertions.assertEquals("eks-cluster.example.com", limiter.apply("eks-cluster.example.com"));
+    Assertions.assertEquals("i-am-a-service.example.com", limiter.apply("i-am-a-service.example.com"));
+
+    //Too few hex characters to be an instance id
+    Assertions.assertEquals("i-abcdef.ec2.internal", limiter.apply("i-abcdef.ec2.internal"));
+
+    //Only the prefix is matched, so a wider trailing group still classifies as an IP. These
+    //are not real addresses, but they have the same per-instance cardinality.
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("ip-0-0-131-1503.example.com"));
+  }
+
+  @Test
+  public void registeredNameOrIpEc2HostNamesIgnoreCase() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //Host names are case insensitive, so an upper or mixed case EC2 name must not escape to
+    //the registered name limiter where there would be one value per instance
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("IP-10-1-2-3.EC2.INTERNAL"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("Ip-10-1-2-3.ec2.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS,
+        limiter.apply("EC2-54-1-2-3.compute-1.amazonaws.com"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("I-0123456789ABCDEF0.ec2.internal"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("i-0123456789ABCDEF0.ec2.internal"));
+
+    //Case does not turn a registered name into an IP
+    Assertions.assertEquals("IP-SERVICE.example.com", limiter.apply("IP-SERVICE.example.com"));
+    Assertions.assertEquals("EKS-CLUSTER.example.com", limiter.apply("EKS-CLUSTER.example.com"));
+  }
+
+  @Test
+  public void registeredNameOrIpMalformedPortStillClassifiesAsIp() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //An empty or non-numeric port is not removed, but it must not stop the value from being
+    //recognised as an address, otherwise every distinct IP reaches the registered name limiter
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("127.0.0.1:"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("127.0.0.1:http"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[::1]:"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("[::1]:http"));
+    Assertions.assertEquals(CardinalityLimiters.OTHERS, limiter.apply("ip-10-1-2-3.ec2.internal:http"));
+
+    //Registered names with the same shape are still registered names
+    Assertions.assertEquals("example.com:", limiter.apply("example.com:"));
+    Assertions.assertEquals("example.com:http", limiter.apply("example.com:http"));
+  }
+
+  @Test
+  public void registeredNameOrIpPassesHostToIpLimiter() {
+    //Both limiters echo their input so that the value handed to each one is observable, not
+    //just which of the two was selected
+    Function<String, String> limiter = CardinalityLimiters.registeredNameOrIp(
+        s -> "name:" + s, s -> "ip:" + s);
+
+    Assertions.assertEquals("ip:127.0.0.1", limiter.apply("127.0.0.1:80"));
+    Assertions.assertEquals("ip:[::1]", limiter.apply("[::1]:8080"));
+    Assertions.assertEquals("ip:ip-10-1-2-3.ec2.internal", limiter.apply("ip-10-1-2-3.ec2.internal:80"));
+    Assertions.assertEquals("name:example.com", limiter.apply("example.com:443"));
+
+    //Values without a port are passed through unchanged
+    Assertions.assertEquals("ip:2001:db8::1", limiter.apply("2001:db8::1"));
+    Assertions.assertEquals("name:example.com", limiter.apply("example.com"));
+  }
+
+  @Test
+  public void registeredNameOrIpLongColonRunIsNotQuadratic() {
+    Function<String, String> limiter =
+        CardinalityLimiters.registeredNameOrIp(Function.identity(), s -> CardinalityLimiters.OTHERS);
+
+    //A run of colons that cannot match the unbracketed IPv6 form must not backtrack. Matching
+    //this with overlapping [0-9A-Fa-f.:]* classes takes minutes for this input.
+    StringBuilder buf = new StringBuilder();
+    for (int i = 0; i < 4000; ++i) {
+      buf.append(':');
+    }
+    String value = buf.append('z').toString();
+    Assertions.assertTimeoutPreemptively(Duration.ofSeconds(5), () ->
+        Assertions.assertEquals(value, limiter.apply(value)));
   }
 
   @SuppressWarnings("unchecked")

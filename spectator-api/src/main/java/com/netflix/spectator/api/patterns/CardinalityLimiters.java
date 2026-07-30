@@ -163,6 +163,19 @@ public final class CardinalityLimiters {
    * VIPs or DNS names), which are low-to-mid cardinality and high value. Values should
    * be RFC3986 3.2.2 hosts, behavior with non-host strings is not guaranteed.
    *
+   * <p>A trailing {@code :port} is removed before the value is classified, and is not
+   * included in the value passed to either limiter. Ports are typically fixed per caller
+   * and only serve to multiply the number of distinct values.</p>
+   *
+   * <p>In addition to IPv4 and bracketed IP literals, the following are treated as IPs
+   * since there is one per instance and so they carry the same cardinality as an address:</p>
+   *
+   * <ul>
+   *   <li>Unbracketed IPv6, eg: {@code 2001:db8::1}</li>
+   *   <li>EC2 IP-based names, eg: {@code ip-10-1-2-3.ec2.internal}</li>
+   *   <li>EC2 resource-based names, eg: {@code i-0123456789abcdef0.ec2.internal}</li>
+   * </ul>
+   *
    * @param registeredNameLimiter
    *     The limiter applied to values which appear to be registered names.
    * @param ipLimiter
@@ -171,8 +184,9 @@ public final class CardinalityLimiters {
    * @return
    *     The result according to the the matched limiter.
    */
-  public static Function<String, String> registeredNameOrIp(Function<String, String> registeredNameLimiter,
-                                                            Function<String, String> ipLimiter) {
+  public static Function<String, String> registeredNameOrIp(
+      Function<String, String> registeredNameLimiter,
+      Function<String, String> ipLimiter) {
     return new RegisteredNameOrIpLimiter(registeredNameLimiter, ipLimiter);
   }
 
@@ -387,21 +401,170 @@ public final class CardinalityLimiters {
 
     //Approximating the logic from RFC 3986 3.2.2 without strictly enforcing the octect range
     private static final Predicate<String> IS_IPV4_ADDRESS = PatternMatcher.compile(
-            "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")::matches;
+        "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")::matches;
+
+    //EC2 IP-based host names embed the IPv4 address of the instance in the leading label, e.g.
+    //ip-10-1-2-3.us-east-2.compute.internal or ec2-54-1-2-3.compute-1.amazonaws.com. There is
+    //one per instance, so they carry the same cardinality as the address itself. Only the
+    //leading label is matched, the domain suffix is not verified. The two prefixes are kept as
+    //separate patterns rather than an alternation, the caller selects by the first character.
+    //Host names are case insensitive, so the prefixes accept either case.
+    private static final Predicate<String> IS_EC2_PRIVATE_IP_NAME = PatternMatcher.compile(
+        "^[iI][pP]-\\d{1,3}-\\d{1,3}-\\d{1,3}-\\d{1,3}")::matches;
+
+    private static final Predicate<String> IS_EC2_PUBLIC_IP_NAME = PatternMatcher.compile(
+        "^[eE][cC]2-\\d{1,3}-\\d{1,3}-\\d{1,3}-\\d{1,3}")::matches;
+
+    //EC2 resource-based host names embed the instance id rather than the address, e.g.
+    //i-0123456789abcdef0.ec2.internal. This is the form used for IPv6-only subnets, so it is
+    //the IPv6 equivalent of the IP-based name above. Instance ids are 8 or 17 hex characters,
+    //anything leading with that shape is treated as an instance rather than a stable name.
+    private static final Predicate<String> IS_EC2_RESOURCE_NAME = PatternMatcher.compile(
+        "^[iI]-[0-9a-fA-F]{8}")::matches;
+
     private final Function<String, String> registeredNameLimiter;
 
     private final Function<String, String> ipLimiter;
 
-    RegisteredNameOrIpLimiter(Function<String, String> registeredNameLimiter, Function<String, String> ipLimiter) {
+    RegisteredNameOrIpLimiter(
+        Function<String, String> registeredNameLimiter,
+        Function<String, String> ipLimiter) {
       this.registeredNameLimiter = registeredNameLimiter;
       this.ipLimiter = ipLimiter;
     }
-    @Override public String apply(String input) {
-      if (IS_IP_LITERAL.test(input) || IS_IPV4_ADDRESS.test(input)) {
-        return ipLimiter.apply(input);
+
+    /**
+     * Remove a trailing {@code :port} if one is present. Follows RFC 3986 3.2.2, where IPv6
+     * literals are bracketed, so a colon outside of the brackets is the port delimiter. Values
+     * that are not of the form {@code host:port} are returned unchanged, in particular an
+     * unbracketed IPv6 address is left alone rather than truncated at the final colon.
+     */
+    private static String removePort(String input) {
+      int colon;
+      if (!input.isEmpty() && input.charAt(0) == '[') {
+        int end = input.indexOf(']');
+        if (end < 0) {
+          return input;
+        }
+        colon = end + 1;
+        if (colon == input.length() || input.charAt(colon) != ':') {
+          return input;
+        }
       } else {
-        return registeredNameLimiter.apply(input);
+        colon = input.indexOf(':');
+        if (colon < 0 || input.indexOf(':', colon + 1) >= 0) {
+          return input;
+        }
       }
+      //Only treat it as a port if the remainder is a non-empty run of digits.
+      if (colon + 1 == input.length()) {
+        return input;
+      }
+      for (int i = colon + 1; i < input.length(); ++i) {
+        char c = input.charAt(i);
+        if (c < '0' || c > '9') {
+          return input;
+        }
+      }
+      return input.substring(0, colon);
+    }
+
+    /**
+     * Unbracketed IPv6 is not legal in an RFC 3986 authority, but is seen in practice. Two or
+     * more colons distinguish it from a host:port pair, which is handled by removePort. Matching
+     * is a single scan rather than a pattern, an expression over overlapping classes such as
+     * {@code [0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*} backtracks cubically on a long run of
+     * colons that ultimately fails to match.
+     */
+    private static boolean isBareIpv6(String host) {
+      int length = host.length();
+      int colons = 0;
+      int i = 0;
+      for (; i < length; ++i) {
+        char c = host.charAt(i);
+        if (c == ':') {
+          ++colons;
+        } else if (c == '%') {
+          break;
+        } else if (!isHexDigitOrDot(c)) {
+          return false;
+        }
+      }
+      //A zone id, eg fe80::1%eth0, may follow the address and must not be empty.
+      if (i < length) {
+        if (++i == length) {
+          return false;
+        }
+        for (; i < length; ++i) {
+          if (!isZoneIdChar(host.charAt(i))) {
+            return false;
+          }
+        }
+      }
+      return colons >= 2;
+    }
+
+    private static boolean isHexDigitOrDot(char c) {
+      return (c >= '0' && c <= '9')
+          || (c >= 'a' && c <= 'f')
+          || (c >= 'A' && c <= 'F')
+          || c == '.';
+    }
+
+    private static boolean isZoneIdChar(char c) {
+      return (c >= '0' && c <= '9')
+          || (c >= 'a' && c <= 'z')
+          || (c >= 'A' && c <= 'Z')
+          || c == '.'
+          || c == '_'
+          || c == '-';
+    }
+
+    /**
+     * A bracketed literal may be followed by a separator that removePort left in place because
+     * the port was empty or was not numeric, eg {@code [::1]:} or {@code [::1]:http}. The value
+     * is still an address, so it should be classified as one.
+     */
+    private static boolean isIpLiteralWithPortSeparator(String host) {
+      int end = host.indexOf(']');
+      return end > 0 && end + 1 < host.length() && host.charAt(end + 1) == ':';
+    }
+
+    /**
+     * Classify the host, which may be called on a request path, so the common case of an
+     * ordinary registered name should be rejected as cheaply as possible. The first character
+     * and the presence of a colon are enough to rule out every pattern below for most names,
+     * leaving the regular expressions to run only for values that could plausibly match.
+     */
+    private static boolean isIp(String host) {
+      if (host.isEmpty()) {
+        return false;
+      }
+      char c = host.charAt(0);
+      if (c == '[') {
+        return IS_IP_LITERAL.test(host) || isIpLiteralWithPortSeparator(host);
+      }
+      int colon = host.indexOf(':');
+      if (colon >= 0) {
+        //A colon remaining after removePort is either an unbracketed IPv6 address or a suffix
+        //that was not a numeric port. Classify the part before the colon on its own in the
+        //latter case, so that eg 127.0.0.1:http is still limited as an address rather than
+        //reaching the registered name limiter as a unique value.
+        return isBareIpv6(host) || isIp(host.substring(0, colon));
+      }
+      if (c >= '0' && c <= '9') {
+        return IS_IPV4_ADDRESS.test(host);
+      }
+      //ip-10-1-2-3..., i-0123456789abcdef0... and ec2-54-1-2-3...
+      if (c == 'i' || c == 'I') {
+        return IS_EC2_PRIVATE_IP_NAME.test(host) || IS_EC2_RESOURCE_NAME.test(host);
+      }
+      return (c == 'e' || c == 'E') && IS_EC2_PUBLIC_IP_NAME.test(host);
+    }
+
+    @Override public String apply(String input) {
+      String host = removePort(input);
+      return isIp(host) ? ipLimiter.apply(host) : registeredNameLimiter.apply(host);
     }
 
     @Override public String toString() {
