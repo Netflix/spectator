@@ -29,6 +29,16 @@ final class SwapCounter extends SwapMeter<Counter> implements Counter {
     super(registry, versionSupplier, id, underlying);
   }
 
+  SwapCounter(
+      Registry registry,
+      LongSupplier versionSupplier,
+      LongSupplier resolveSupplier,
+      long resolveVersion,
+      Id id,
+      Counter underlying) {
+    super(registry, versionSupplier, resolveSupplier, resolveVersion, id, underlying);
+  }
+
   @Override public Counter lookup() {
     return registry.counter(id);
   }
