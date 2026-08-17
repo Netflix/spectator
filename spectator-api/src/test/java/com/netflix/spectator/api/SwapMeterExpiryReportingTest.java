@@ -121,4 +121,37 @@ public class SwapMeterExpiryReportingTest {
     Assertions.assertTrue(visible > 0,
         "cleanup must not filter every meter out of the composite's published stream");
   }
+
+  /**
+   * A composite hands out wrappers keyed on its own version, which only changes when a registry is
+   * added or removed, so a sweep inside a sub registry does not invalidate them. Recovery has to
+   * come from the sub registry's own wrapper nested inside the composite meter, which is why
+   * {@code SwapMeter.unwrap} only flattens wrappers belonging to the same registry.
+   */
+  @Test
+  public void updatesThroughACompositeSurviveASubRegistrySweep() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry underlying = new ExpiringRegistry(clock);
+    CompositeRegistry composite = new CompositeRegistry(clock);
+    composite.add(underlying);
+
+    Counter held = composite.counter("test");
+    held.increment();
+    Assertions.assertEquals(1, underlying.counters().count());
+
+    // Make the meter eligible for removal and sweep it. The composite's version is untouched.
+    clock.setWallTime(1);
+    underlying.removeExpiredMeters();
+    Assertions.assertEquals(0, underlying.counters().count(), "the sweep should have removed it");
+
+    // The update has to land on a re-registered meter rather than on the orphaned instance.
+    held.increment();
+    Assertions.assertEquals(1, underlying.counters().count(),
+        "an update through the composite reference must re-register the swept meter");
+    Assertions.assertEquals(
+        1.0,
+        underlying.counters().findFirst().orElseThrow(AssertionError::new).actualCount(),
+        1e-12,
+        "the update must be recorded on the live meter, not lost on the swept one");
+  }
 }

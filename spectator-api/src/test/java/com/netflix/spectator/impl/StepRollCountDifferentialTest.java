@@ -19,6 +19,8 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.ManualClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,11 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
  * <p>The sequences deliberately include the cases that distinguish the two: timestamps landing
  * exactly on a boundary, gaps that skip whole intervals so the previous interval had no activity,
  * and time moving backwards the way NTP can move it.</p>
+ *
+ * <p>The comparison is run over several step sizes rather than one. The cached boundary is derived
+ * from {@code step}, so a step that does not divide the starting timestamp, and a step small
+ * enough that nearly every update rolls, exercise different alignment than the 5s step used in
+ * practice.</p>
  */
 public class StepRollCountDifferentialTest {
 
@@ -172,7 +179,7 @@ public class StepRollCountDifferentialTest {
    * Timestamps covering the interesting rollover shapes: repeats within an interval, exact
    * boundaries, boundary minus and plus one, multi interval gaps, and backwards movement.
    */
-  private List<Long> timestamps(long start) {
+  private List<Long> timestamps(long start, long step) {
     List<Long> ts = new ArrayList<>();
     Random r = new Random(42);
     long now = start;
@@ -181,23 +188,23 @@ public class StepRollCountDifferentialTest {
       switch (r.nextInt(10)) {
         case 0:
           // Land exactly on the next boundary.
-          now = (now / STEP + 1) * STEP;
+          now = (now / step + 1) * step;
           break;
         case 1:
           // One millisecond short of the next boundary.
-          now = (now / STEP + 1) * STEP - 1;
+          now = (now / step + 1) * step - 1;
           break;
         case 2:
           // One millisecond past the next boundary.
-          now = (now / STEP + 1) * STEP + 1;
+          now = (now / step + 1) * step + 1;
           break;
         case 3:
           // Skip several whole intervals, so the previous interval saw no activity.
-          now += STEP * (2 + r.nextInt(5));
+          now += step * (2 + r.nextInt(5));
           break;
         case 4:
           // Time moves backwards, as it can when NTP adjusts the clock.
-          now -= r.nextInt((int) STEP * 3);
+          now -= r.nextInt((int) Math.min(Integer.MAX_VALUE, step * 3));
           break;
         default:
           // Stay inside the current interval most of the time.
@@ -207,22 +214,28 @@ public class StepRollCountDifferentialTest {
       // Wall time is not expected to be negative, but a backwards jump near zero can get there
       // with a ManualClock, and integer division truncates toward zero rather than flooring, so
       // the two implementations are compared over that range too rather than assumed equal.
-      if (now < -3 * STEP) {
+      if (now < -3 * step) {
         now = 0;
       }
     }
     return ts;
   }
 
-  @Test
-  public void stepDoubleMatchesLegacyBitForBit() {
-    for (long start : new long[] {0L, 1L, STEP, STEP - 1, 1_700_000_000_000L}) {
+  /** Starting timestamps covering aligned, off-by-one and realistic epoch alignment. */
+  private long[] starts(long step) {
+    return new long[] {0L, 1L, step, step - 1, 1_700_000_000_000L};
+  }
+
+  @ParameterizedTest
+  @ValueSource(longs = {1L, 7L, 13L, 1000L, 5000L, 60_000L})
+  public void stepDoubleMatchesLegacyBitForBit(long step) {
+    for (long start : starts(step)) {
       ManualClock clock = new ManualClock(start, start);
-      StepDouble actual = new StepDouble(0.0, clock, STEP);
-      LegacyStepDouble expected = new LegacyStepDouble(0.0, clock, STEP);
+      StepDouble actual = new StepDouble(0.0, clock, step);
+      LegacyStepDouble expected = new LegacyStepDouble(0.0, clock, step);
 
       int op = 0;
-      for (long now : timestamps(start)) {
+      for (long now : timestamps(start, step)) {
         // Exercise every read and write path, since they all funnel through rollCount.
         switch (op++ % 4) {
           case 0:
@@ -256,15 +269,16 @@ public class StepRollCountDifferentialTest {
     }
   }
 
-  @Test
-  public void stepLongMatchesLegacyBitForBit() {
-    for (long start : new long[] {0L, 1L, STEP, STEP - 1, 1_700_000_000_000L}) {
+  @ParameterizedTest
+  @ValueSource(longs = {1L, 7L, 13L, 1000L, 5000L, 60_000L})
+  public void stepLongMatchesLegacyBitForBit(long step) {
+    for (long start : starts(step)) {
       ManualClock clock = new ManualClock(start, start);
-      StepLong actual = new StepLong(0L, clock, STEP);
-      LegacyStepLong expected = new LegacyStepLong(0L, clock, STEP);
+      StepLong actual = new StepLong(0L, clock, step);
+      LegacyStepLong expected = new LegacyStepLong(0L, clock, step);
 
       int op = 0;
-      for (long now : timestamps(start)) {
+      for (long now : timestamps(start, step)) {
         switch (op++ % 4) {
           case 0:
             Assertions.assertEquals(
