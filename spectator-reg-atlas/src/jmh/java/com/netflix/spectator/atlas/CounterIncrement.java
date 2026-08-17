@@ -56,11 +56,7 @@ public class CounterIncrement {
     /** The step value underneath the meter. */
     StepDouble stepDouble;
 
-    /**
-     * A timer drives four step values per record (count, total, totalOfSquares, max), so it pays
-     * the rollCount cost four times where a counter pays it once. Measured separately because the
-     * counter path alone understates the change for timers.
-     */
+    /** A timer drives four step values per record, so it pays the rollCount cost four times. */
     Timer timer;
 
     /** Id used to measure the cost of resolving a meter from the registry. */
@@ -70,10 +66,8 @@ public class CounterIncrement {
     long now;
 
     /**
-     * Step of 1ms driven by a timestamp that advances every call, so essentially every update
-     * crosses a boundary. This is the adversarial case for caching the boundary: the fast path
-     * never hits, and the slow path pays for the cached read on top of the division it still has
-     * to do. Included to bound the downside rather than only measuring the favourable case.
+     * Step of 1ms with a timestamp that advances every call, so every update rolls over: the
+     * adversarial case where the cached boundary read is pure overhead on top of the division.
      */
     StepDouble rolling;
     long rollingNow;
@@ -126,29 +120,19 @@ public class CounterIncrement {
     return shared.stepDouble.addAndGet(shared.now, 1.0);
   }
 
-  /**
-   * Worst case for the boundary cache: a rollover on essentially every update, so the division
-   * is still paid and the cached read is pure overhead. Single threaded only; this is about the
-   * instruction cost of the slow path, not contention.
-   */
+  /** Worst case for the boundary cache; see {@link Shared#rolling}. */
   @Benchmark
   public double rollingStepDouble(Shared shared) {
     return shared.rolling.addAndGet(shared.rollingNow++, 1.0);
   }
 
-  /**
-   * Timer record through a held reference. Four step values per call, so four rollCounts.
-   */
+  /** Timer record through a held reference. */
   @Benchmark
   public void timerRecord(Shared shared) {
     shared.timer.record(42L, TimeUnit.NANOSECONDS);
   }
 
-  /**
-   * Cost of resolving a meter from the registry. This is what a held reference pays once per
-   * cleanup pass when the removal counter moves, so it sizes the re-resolution cost that the
-   * version based approach trades the per update clock read for.
-   */
+  /** Cost of resolving a meter from the registry, i.e. what a held reference pays on re-resolve. */
   @Benchmark
   public Counter lookupCost(Shared shared) {
     return shared.registry.counter(shared.lookupId);
@@ -166,11 +150,7 @@ public class CounterIncrement {
     state.counter.increment();
   }
 
-  /**
-   * Per-thread batch updater feeding the shared counter. This is the mitigation the library
-   * already provides for a single very hot counter: it amortises the CAS over the batch instead
-   * of striping every meter in the registry.
-   */
+  /** Per-thread batch updater feeding the shared counter, amortising the CAS over the batch. */
   @State(Scope.Thread)
   public static class Batched {
     Counter.BatchUpdater updater;

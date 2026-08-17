@@ -70,10 +70,10 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
    * Create a new instance with a dedicated signal for meter removal, and the value of that signal
    * as observed <i>before</i> {@code underlying} was resolved.
    *
-   * <p>Ordering matters here. The signal has to be sampled first so that a removal racing with
-   * the resolution is noticed: sampled afterwards it would already account for that removal and
-   * this wrapper would stay bound to a meter that is no longer registered, silently dropping
-   * every later update. Sampling early can only cause one redundant re-resolution.
+   * <p>{@code resolveVersion} must be sampled before resolving {@code underlying}: sampled
+   * afterwards it would already account for a removal racing with the resolution, and this
+   * wrapper would stay bound to a meter that is no longer registered, silently dropping every
+   * later update. Sampling early can only cause one redundant re-resolution.
    *
    * @param registry
    *     Registry used to lookup the meter after expiration.
@@ -140,16 +140,12 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
    * removed the current instance.
    *
    * <p>This runs on the update path of every meter operation, so it checks a counter rather than
-   * {@code underlying.hasExpired()}. The counter is a plain volatile read, whereas the expiry
-   * check costs a wall clock read: for {@code AtlasMeter} that is a {@code clock_gettime} to
-   * evaluate a TTL measured in minutes, paid on every single update.
-   *
-   * <p>Not consulting the expiry check does not change which meter updates land on. A meter that
-   * is past its TTL but still registered is returned by {@code lookup()} anyway, since the lookup
-   * resolves through the same registry map that still holds it, so the old code did a map lookup
-   * only to arrive back at the same instance. Once cleanup actually removes the meter the counter
-   * moves and the next call here resolves a fresh instance, which is if anything more timely than
-   * waiting for the TTL to be observed.
+   * {@code underlying.hasExpired()}: the counter is a plain volatile read, whereas the expiry
+   * check costs a wall clock read on every update (for {@code AtlasMeter}, a {@code clock_gettime}
+   * to evaluate a TTL measured in minutes). This does not change which meter updates land on — a
+   * meter that is past its TTL but still registered resolves back to the same instance either
+   * way — and once cleanup actually removes the meter the counter moves, so the next call here
+   * resolves a fresh one.
    */
   public T get() {
     // Sampled once: re-reading for the assignment could store a value newer than what lookup()

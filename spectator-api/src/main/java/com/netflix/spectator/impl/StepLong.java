@@ -41,12 +41,9 @@ public class StepLong implements StepValue {
       AtomicLongFieldUpdater.newUpdater(StepLong.class, "current");
 
   /**
-   * Wall time at which the current step interval ends, i.e. {@code (lastInitPos + 1) * step} in
-   * terms of the step index this used to track. Holding the boundary rather than the index means
-   * an update landing inside the current interval is a comparison instead of a division, and
-   * since the two are related by a fixed factor there is no second piece of state that has to be
-   * kept in agreement. The index is recovered where it is needed as {@code boundary / step - 1},
-   * or equivalently the start of the current interval is {@code boundary - step}.
+   * Wall time at which the current step interval ends. Holding this boundary rather than the step
+   * index means an update landing inside the current interval is a comparison instead of a
+   * division.
    */
   private volatile long nextStepBoundary;
 

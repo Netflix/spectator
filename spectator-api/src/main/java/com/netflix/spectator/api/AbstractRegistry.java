@@ -49,11 +49,10 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
    * handed out by this registry use it to notice that their underlying meter is gone and needs to
    * be resolved again, which keeps a wall clock read off the update path.
    *
-   * <p>Deliberately not the same signal as {@code VERSION}. That one feeds {@code hasExpired()},
-   * which callers act on destructively, and removal happens on every cleanup pass. Bumping one
-   * counter does invalidate every outstanding wrapper rather than only the affected ones, but
-   * removal only happens during the periodic cleanup, so the cost is one map lookup per held
-   * reference per pass.
+   * <p>Deliberately not the same signal as {@code VERSION}: that one feeds {@code hasExpired()},
+   * which callers act on destructively, and removal happens on every cleanup pass rather than
+   * rarely. Bumping one counter invalidates every outstanding wrapper, not just the affected one,
+   * but that only costs an extra map lookup per held reference per cleanup pass.
    */
   private final AtomicLong removals = new AtomicLong();
 
@@ -346,11 +345,10 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   /**
-   * Wraps the iterator over the meter map so that a removal bumps {@link #version} no matter who
-   * performs it. Sub-classes such as {@code AtlasRegistry} implement their own cleanup pass on
-   * top of {@link #iterator()}, and third parties are able to call it as well, so the bump is
-   * done here rather than relying on every caller to remember it. Without it a
-   * {@link SwapMeter} would never notice that its underlying meter had been removed.
+   * Wraps the iterator over the meter map so that a removal bumps {@link #removals} no matter who
+   * performs it. Sub-classes such as {@code AtlasRegistry} implement their own cleanup pass on top
+   * of {@link #iterator()}, so the bump happens here rather than relying on every caller to
+   * remember it.
    */
   private final class VersionedIterator implements Iterator<Meter> {
 

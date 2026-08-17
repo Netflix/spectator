@@ -20,14 +20,11 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The registry bumps a version when it removes a meter so that held references know to resolve
- * again. That signal must not leak into {@code hasExpired()}.
- *
- * <p>Callers treat a true result as licence to discard the meter: {@code PolledMeter} drops it
- * from the set it aggregates, {@code Registry.measurements()} filters its data out, and
- * {@code cleanupCachedState()} evicts it. A {@link CompositeMeter} reports expired only when all
- * of its delegates do, and its delegates are the per registry swap wrappers, so a version based
- * answer there would blank out every meter in a composite after the first cleanup pass. That
- * matters because {@code Spectator.globalRegistry()} is a composite.</p>
+ * again. That signal must not leak into {@code hasExpired()}: callers treat a true result as
+ * licence to discard the meter ({@code PolledMeter} drops it, {@code measurements()} filters it
+ * out, {@code cleanupCachedState()} evicts it), and a {@link CompositeMeter} — which is what
+ * {@code Spectator.globalRegistry()} is — reports expired only when all of its delegates do, so a
+ * version based answer would blank out every meter in it after the first cleanup pass.
  */
 public class SwapMeterExpiryReportingTest {
 
@@ -52,12 +49,9 @@ public class SwapMeterExpiryReportingTest {
   }
 
   /**
-   * The registry version has to be sampled before the meter is looked up, not after.
-   *
-   * <p>If it were sampled afterwards, a cleanup pass landing between the lookup and the sampling
-   * would already be accounted for, so the returned wrapper would never notice that the meter it
-   * captured is no longer registered. Every later update through it would be silently dropped.
-   * The registry is subclassed here to run a removal in exactly that window.</p>
+   * The registry version has to be sampled before the meter is looked up, not after; see
+   * {@link com.netflix.spectator.impl.SwapMeter} for why. The registry is subclassed here to run
+   * a removal in exactly that window.
    */
   @Test
   public void versionIsSampledBeforeTheMeterIsResolved() {
