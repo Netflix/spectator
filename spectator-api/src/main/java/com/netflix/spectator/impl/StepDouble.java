@@ -40,10 +40,8 @@ public class StepDouble implements StepValue {
   private static final AtomicLongFieldUpdater<StepDouble> CURRENT_UPDATER =
       AtomicLongFieldUpdater.newUpdater(StepDouble.class, "current");
 
-  /**
-   * Wall time at which the current step interval ends. Holding the boundary rather than the step
-   * index is what lets an in-interval update be a comparison instead of a division.
-   */
+  // Wall time at which the current step interval ends. Holding the boundary rather than the step
+  // index is what lets an in-interval update be a comparison instead of a division.
   private volatile long nextStepBoundary;
 
   private static final AtomicLongFieldUpdater<StepDouble> NEXT_STEP_BOUNDARY_UPDATER =
@@ -60,11 +58,9 @@ public class StepDouble implements StepValue {
   }
 
   /**
-   * Roll over to a new step interval if {@code now} has moved past the end of the current one.
-   * Split from the rollover itself so the common case, an update inside the current interval,
-   * stays small enough to inline into the callers. {@code step} is an instance field rather than
-   * a constant, so the JIT cannot fold the division away; this pays for it only on an actual
-   * rollover.
+   * Roll over if {@code now} has moved past the end of the current interval. {@code step} is an
+   * instance field rather than a constant, so the JIT cannot fold the division away; keeping the
+   * boundary pays for it only on an actual rollover.
    */
   private void rollCount(long now) {
     if (now >= nextStepBoundary) {
@@ -73,13 +69,12 @@ public class StepDouble implements StepValue {
   }
 
   private void rollCountSlow(long now) {
-    // Boundaries are exact multiples of step, so comparing them orders the intervals the same
-    // way comparing the step indices did.
+    // Boundaries are exact multiples of step, so comparing them orders intervals the same way
+    // comparing the step indices did.
     final long boundary = (now / step + 1) * step;
     final long lastBoundary = nextStepBoundary;
-    // The boundary compare is not redundant with the CAS. Without it two threads that both see
-    // the same boundary would both roll: the second would reset `current` again and overwrite
-    // `previous` with init, publishing zero for an interval that had data.
+    // Not redundant with the CAS: without it, two threads seeing the same boundary would both
+    // roll, and the second would reset `current` and publish zero for an interval that had data.
     if (lastBoundary < boundary
         && NEXT_STEP_BOUNDARY_UPDATER.compareAndSet(this, lastBoundary, boundary)) {
       final double v = Double.longBitsToDouble(

@@ -31,16 +31,13 @@ import org.openjdk.jmh.annotations.State;
  * measurement is the step bookkeeping plus the atomic update and not a {@code currentTimeMillis}
  * call, which is more expensive than either and would hide them.</p>
  *
- * <p>Read the {@code WithClock} variants as the headline numbers. The others deliberately leave
- * the clock read out to isolate the bookkeeping, and that makes them easy to misread: the division
- * being removed here is long-latency work on a separate execution port, so on {@code main} it
- * masks whatever else the loop is doing. Remove it and that other work stops hiding, which can
- * make a synthetic loop measure slower even though strictly less work is being done. Measured on
- * {@code main} this benchmark is flat at roughly 490-510M ops/s whether the timestamp is a
- * constant, a counter increment or an array load; with the division gone the same three land at
- * 495M, 471M and 453M, tracking the cost of the timestamp source itself. A real caller reads a
- * clock, which is far more expensive than anything the division could mask, so the effect does
- * not survive contact with the production path.</p>
+ * <p>Read the {@code WithClock} variants as the headline numbers. The others leave the clock read
+ * out to isolate the bookkeeping, which makes them easy to misread: a division is long-latency
+ * work on a separate execution port, so on {@code main} it masks whatever else the loop does.
+ * Remove it and that other work stops hiding, which can make a synthetic loop measure slower
+ * while doing strictly less. On {@code main} these are flat near 490-510M ops/s whichever way the
+ * timestamp is produced; without the division they track the cost of the timestamp source itself.
+ * A real caller reads a clock, which dwarfs anything the division could mask.</p>
  *
  * <p>{@code poll} isolates the bookkeeping on its own: it is the step handling followed by a
  * volatile read, with no atomic update. {@code addAndGet} adds the atomic update that a real
