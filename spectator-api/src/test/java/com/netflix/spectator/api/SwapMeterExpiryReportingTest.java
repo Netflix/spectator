@@ -87,12 +87,12 @@ public class SwapMeterExpiryReportingTest {
   }
 
   /**
-   * The registry version has to be sampled before the meter is looked up, not after; see
+   * The removal counter has to be sampled before the meter is looked up, not after; see
    * {@link com.netflix.spectator.impl.SwapMeter} for why. The registry is subclassed here to run
    * a removal in exactly that window.
    */
   @Test
-  public void versionIsSampledBeforeTheMeterIsResolved() {
+  public void removalCounterIsSampledBeforeTheMeterIsResolved() {
     ManualClock clock = new ManualClock();
 
     class RacingRegistry extends ExpiringRegistry {
@@ -149,6 +149,8 @@ public class SwapMeterExpiryReportingTest {
     active.increment();
 
     underlying.removeExpiredMeters();
+    Assertions.assertEquals(1, underlying.counters().count(),
+        "precondition: the sweep must have removed the idle meter and kept the active one");
 
     Assertions.assertFalse(active.hasExpired(),
         "a composite meter must not report expired because the sub registry ran cleanup");

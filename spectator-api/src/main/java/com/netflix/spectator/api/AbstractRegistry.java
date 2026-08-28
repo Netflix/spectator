@@ -37,22 +37,15 @@ import java.util.function.LongSupplier;
  */
 public abstract class AbstractRegistry implements Registry, AutoCloseable {
 
-  /**
-   * This registry has no notion of a registry level version, so the signal used by
-   * {@link SwapMeter#hasExpired()} is constant, as it has always been. Meter removal is tracked
-   * separately by {@link #removals}.
-   */
+  /** Not used for this registry, always return 0. Removal is tracked by {@link #removals}. */
   private static final LongSupplier VERSION = () -> 0L;
 
   /**
-   * Incremented whenever a meter is removed from {@link #meters}. The {@link SwapMeter} types
-   * handed out by this registry use it to notice that their underlying meter is gone and needs to
-   * be resolved again, which keeps a wall clock read off the update path.
-   *
-   * <p>Deliberately not the same signal as {@code VERSION}: that one feeds {@code hasExpired()},
-   * which callers act on destructively, and removal happens on every cleanup pass rather than
-   * rarely. Bumping one counter invalidates every outstanding wrapper, not just the affected one,
-   * but that only costs an extra map lookup per held reference per cleanup pass.
+   * Incremented whenever a meter is removed from {@link #meters}, so the {@link SwapMeter} types
+   * handed out here notice their underlying meter is gone without reading the wall clock. Kept
+   * out of {@code VERSION} because that feeds {@code hasExpired()}, which callers act on
+   * destructively. One counter invalidates every outstanding wrapper rather than just the
+   * affected one, costing an extra lookup per held reference per cleanup pass.
    */
   private final AtomicLong removals = new AtomicLong();
 
@@ -255,7 +248,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   @Override public final Counter counter(Id id) {
-    // Sample the removal counter before resolving so a removal racing with the lookup is seen.
+    // Sampled before resolving so a removal racing the lookup is seen; see SwapMeter.
     final long v = removals.get();
     Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, counterFactory);
     return new SwapCounter(this, VERSION, removalSupplier, v, c.id(), c);
@@ -345,10 +338,9 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   /**
-   * Wraps the iterator over the meter map so that a removal bumps {@link #removals} no matter who
-   * performs it. Sub-classes such as {@code AtlasRegistry} implement their own cleanup pass on top
-   * of {@link #iterator()}, so the bump happens here rather than relying on every caller to
-   * remember it.
+   * Bumps {@link #removals} on removal no matter who performs it. Sub-classes such as
+   * {@code AtlasRegistry} run their own cleanup pass on top of {@link #iterator()}, so the bump
+   * belongs here rather than in every caller.
    */
   private final class VersionedIterator implements Iterator<Meter> {
 
@@ -368,8 +360,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
 
     @Override public void remove() {
       delegate.remove();
-      // Bump after the entry is actually gone. A reader that sees the new version is guaranteed
-      // to miss the removed entry and will resolve a fresh meter.
+      // Bump after the entry is gone, so a reader seeing the new value cannot still find it.
       removals.incrementAndGet();
     }
   }

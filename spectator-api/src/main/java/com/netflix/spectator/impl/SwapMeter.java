@@ -35,32 +35,19 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   /** Registry used to lookup values after expiration. */
   protected final Registry registry;
 
-  /**
-   * Signals that the shape of the registry changed, for example a registry being added to a
-   * composite. Participates in {@link #hasExpired()}: a change means callers should stop using
-   * this wrapper and obtain a fresh one.
-   */
+  // Changes when the shape of the registry changes, for example a registry being added to a
+  // composite. Feeds hasExpired().
   private final LongSupplier versionSupplier;
   private volatile long currentVersion;
 
-  /**
-   * Signals that a meter was removed from the registry, so this wrapper may be holding one that
-   * is no longer registered. Kept separate from {@code versionSupplier} on purpose. Meter removal
-   * happens on every cleanup pass, whereas a registry level change is rare, and
-   * {@link #hasExpired()} is acted on destructively by callers such as {@code PolledMeter}, which
-   * drops the meter from the set it aggregates. Folding routine removals into that signal would
-   * report healthy meters as expired once per cleanup pass. This one therefore feeds
-   * {@link #get()} only.
-   */
+  // Changes when a meter is removed, so this wrapper may be holding one that is no longer
+  // registered. Feeds get() only, never hasExpired(): callers such as PolledMeter treat expiry as
+  // licence to discard the meter, and removal happens on every cleanup pass.
   private final LongSupplier resolveSupplier;
   private volatile long currentResolveVersion;
 
-  /**
-   * Whether {@link #get()} should also re-resolve when the underlying meter reports that it has
-   * expired. Only set for the constructor that has no dedicated removal signal, so that callers
-   * such as {@code CompositeRegistry}, which has no notion of meter removal, keep exactly the
-   * behavior they had before that signal existed.
-   */
+  // Set only by the constructor with no removal signal, so registries without one, such as
+  // CompositeRegistry, keep the original trigger.
   private final boolean resolveOnUnderlyingExpiry;
 
   /** Id to use when performing a lookup after expiration. */
@@ -76,26 +63,11 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   }
 
   /**
-   * Create a new instance with a dedicated signal for meter removal, and the value of that signal
-   * as observed <i>before</i> {@code underlying} was resolved.
-   *
-   * <p>{@code resolveVersion} must be sampled before resolving {@code underlying}: sampled
-   * afterwards it would already account for a removal racing with the resolution, and this
-   * wrapper would stay bound to a meter that is no longer registered, silently dropping every
-   * later update. Sampling early can only cause one redundant re-resolution.
-   *
-   * @param registry
-   *     Registry used to lookup the meter after expiration.
-   * @param versionSupplier
-   *     Supplies the registry level version, used by {@link #hasExpired()}.
-   * @param resolveSupplier
-   *     Supplies a counter that changes whenever a meter is removed, used by {@link #get()}.
-   * @param resolveVersion
-   *     Value of {@code resolveSupplier} sampled before {@code underlying} was looked up.
-   * @param id
-   *     Id to use when performing a lookup after expiration.
-   * @param underlying
-   *     Meter to delegate operations to.
+   * Create a new instance with a dedicated signal for meter removal. {@code resolveVersion} must
+   * be sampled from {@code resolveSupplier} <i>before</i> {@code underlying} is resolved: sampled
+   * afterwards it would already account for a removal racing the resolution, leaving this wrapper
+   * bound to a meter that is no longer registered and silently dropping every later update.
+   * Sampling early can only cost one redundant re-resolution.
    */
   public SwapMeter(
       Registry registry,
@@ -138,12 +110,7 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
     return get().measure();
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * <p>Routine meter removal is deliberately not part of this signal; see {@link #resolveSupplier}
-   * for why.
-   */
+  /** {@inheritDoc} Routine meter removal is deliberately not part of this signal. */
   @Override public boolean hasExpired() {
     return currentVersion < versionSupplier.getAsLong() || underlying.hasExpired();
   }
@@ -157,30 +124,24 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   }
 
   /**
-   * Return the underlying instance of the meter, resolving a new one if the registry may have
-   * removed the current instance.
+   * Return the underlying meter, resolving a new one if the registry may have removed it.
    *
-   * <p>This runs on the update path of every meter operation, so it checks a counter rather than
-   * {@code underlying.hasExpired()}: the counter is a plain volatile read, whereas the expiry
-   * check costs a wall clock read on every update (for {@code AtlasMeter}, a {@code clock_gettime}
-   * to evaluate a TTL measured in minutes). This does not change which meter updates land on — a
-   * meter that is past its TTL but still registered resolves back to the same instance either
-   * way — and once cleanup actually removes the meter the counter moves, so the next call here
-   * resolves a fresh one.
+   * <p>This runs on every meter update, so it checks a counter rather than
+   * {@code underlying.hasExpired()}, which for {@code AtlasMeter} costs a wall clock read. Which
+   * meter an update lands on is unchanged: one past its TTL but still registered resolves back to
+   * the same instance either way, and once cleanup removes it the counter moves.</p>
    */
   public T get() {
     // Sampled once: re-reading for the assignment could store a value newer than what lookup()
-    // actually observed, which would then swallow a subsequent removal.
+    // observed, which would swallow a subsequent removal.
     final long resolveVersion = resolveSupplier.getAsLong();
     if (currentResolveVersion < resolveVersion) {
       currentResolveVersion = resolveVersion;
-      // Resolving also clears the registry level staleness reported by hasExpired(), since the
-      // meter being delegated to has just been looked up afresh.
+      // Resolving also clears the staleness hasExpired() reports, since the meter just came from
+      // a fresh lookup.
       currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
     } else if (resolveOnUnderlyingExpiry && underlying.hasExpired()) {
-      // Registries without a removal signal keep the original trigger, so this change is a no-op
-      // for them.
       currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
     }

@@ -30,9 +30,9 @@ import java.util.concurrent.TimeUnit;
  * meter behind it goes idle long enough to be removed by the cleanup pass, later updates through
  * that stale reference still have to reach the registry.
  *
- * <p>{@code SwapMeter.get()} detects this from the registry version rather than from the TTL of
- * the underlying meter, so that the update path does not have to read the wall clock. These tests
- * pin that recovery down through the real Atlas registry.</p>
+ * <p>{@code SwapMeter.get()} detects this from a counter the registry bumps on removal rather than
+ * from the TTL of the underlying meter, so the update path does not have to read the wall clock.
+ * These tests pin that recovery down through the real Atlas registry.</p>
  */
 public class AtlasHeldReferenceExpiryTest {
 
@@ -128,6 +128,7 @@ public class AtlasHeldReferenceExpiryTest {
 
     clock.setWallTime(TTL * 2);
     registry.removeExpiredMeters();
+    Assertions.assertNull(registry.get(id), "precondition: the meter must actually be gone");
 
     // Several updates through the stale reference, all inside one step interval so they
     // accumulate into the same bucket.
@@ -202,6 +203,8 @@ public class AtlasHeldReferenceExpiryTest {
 
     // Past the TTL, but no cleanup pass has run.
     clock.setWallTime(TTL * 2);
+    Assertions.assertTrue(original.hasExpired(),
+        "precondition: the meter must be past its TTL, otherwise this asserts nothing");
     held.increment();
 
     Assertions.assertSame(original, registry.get(id));
