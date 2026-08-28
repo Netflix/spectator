@@ -19,7 +19,6 @@ import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Timer;
-import com.netflix.spectator.impl.StepDouble;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -31,13 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Measures the {@code Counter.increment()} hot path for the Atlas registry. The layers are
- * benchmarked separately so that the cost of the clock reads, the {@code rollCount} division
- * and the CAS can be attributed rather than inferred from a single aggregate number.
+ * benchmarked separately so that the cost of the {@code SwapMeter} indirection, the registry
+ * lookup and the CAS can be attributed rather than inferred from a single aggregate number.
  *
  * <p>Run the shared-counter benchmarks at {@code -t 1} and again at {@code -t N} to see whether
- * the single-field CAS in {@link StepDouble} is actually contended. {@code perThread} keeps the
- * code path identical but gives every thread its own counter, so it isolates path cost from
- * cache-line contention.</p>
+ * the single-field CAS underneath is actually contended. {@code perThread} keeps the code path
+ * identical but gives every thread its own counter, so it isolates path cost from cache-line
+ * contention.</p>
  */
 public class CounterIncrement {
 
@@ -53,24 +52,11 @@ public class CounterIncrement {
     /** The same meter with the SwapMeter layer stripped off. */
     Counter atlasCounter;
 
-    /** The step value underneath the meter. */
-    StepDouble stepDouble;
-
     /** A timer drives four step values per record, so it pays the rollCount cost four times. */
     Timer timer;
 
     /** Id used to measure the cost of resolving a meter from the registry. */
     Id lookupId;
-
-    /** Fixed timestamp so stepDouble benchmarks measure rollCount + CAS with no clock read. */
-    long now;
-
-    /**
-     * Step of 1ms with a timestamp that advances every call, so every update rolls over: the
-     * adversarial case where the cached boundary read is pure overhead on top of the division.
-     */
-    StepDouble rolling;
-    long rollingNow;
 
     @Setup
     public void setup() {
@@ -80,10 +66,6 @@ public class CounterIncrement {
       clock = registry.clock();
       swapCounter = registry.counter("test.counter");
       atlasCounter = (Counter) registry.get(registry.createId("test.counter"));
-      stepDouble = new StepDouble(0.0, Clock.SYSTEM, 5000L);
-      now = Clock.SYSTEM.wallTime();
-      rolling = new StepDouble(0.0, Clock.SYSTEM, 1L);
-      rollingNow = Clock.SYSTEM.wallTime();
       timer = registry.timer("test.timer");
       lookupId = registry.createId("test.counter");
     }
@@ -112,18 +94,6 @@ public class CounterIncrement {
   @Benchmark
   public void atlasCounter(Shared shared) {
     shared.atlasCounter.increment();
-  }
-
-  /** rollCount + CAS only, with the clock read hoisted out. */
-  @Benchmark
-  public double stepDouble(Shared shared) {
-    return shared.stepDouble.addAndGet(shared.now, 1.0);
-  }
-
-  /** Worst case for the boundary cache; see {@link Shared#rolling}. */
-  @Benchmark
-  public double rollingStepDouble(Shared shared) {
-    return shared.rolling.addAndGet(shared.rollingNow++, 1.0);
   }
 
   /** Timer record through a held reference. */
