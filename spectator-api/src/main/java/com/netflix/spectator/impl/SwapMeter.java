@@ -55,6 +55,14 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   private final LongSupplier resolveSupplier;
   private volatile long currentResolveVersion;
 
+  /**
+   * Whether {@link #get()} should also re-resolve when the underlying meter reports that it has
+   * expired. Only set for the constructor that has no dedicated removal signal, so that callers
+   * such as {@code CompositeRegistry}, which has no notion of meter removal, keep exactly the
+   * behavior they had before that signal existed.
+   */
+  private final boolean resolveOnUnderlyingExpiry;
+
   /** Id to use when performing a lookup after expiration. */
   protected final Id id;
 
@@ -63,7 +71,8 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
 
   /** Create a new instance. */
   public SwapMeter(Registry registry, LongSupplier versionSupplier, Id id, T underlying) {
-    this(registry, versionSupplier, versionSupplier, versionSupplier.getAsLong(), id, underlying);
+    this(registry, versionSupplier, versionSupplier, versionSupplier.getAsLong(), id, underlying,
+        true);
   }
 
   /**
@@ -95,11 +104,23 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
       long resolveVersion,
       Id id,
       T underlying) {
+    this(registry, versionSupplier, resolveSupplier, resolveVersion, id, underlying, false);
+  }
+
+  private SwapMeter(
+      Registry registry,
+      LongSupplier versionSupplier,
+      LongSupplier resolveSupplier,
+      long resolveVersion,
+      Id id,
+      T underlying,
+      boolean resolveOnUnderlyingExpiry) {
     this.registry = registry;
     this.versionSupplier = versionSupplier;
     this.currentVersion = versionSupplier.getAsLong();
     this.resolveSupplier = resolveSupplier;
     this.currentResolveVersion = resolveVersion;
+    this.resolveOnUnderlyingExpiry = resolveOnUnderlyingExpiry;
     this.id = id;
     this.underlying = unwrap(underlying);
   }
@@ -155,6 +176,11 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
       currentResolveVersion = resolveVersion;
       // Resolving also clears the registry level staleness reported by hasExpired(), since the
       // meter being delegated to has just been looked up afresh.
+      currentVersion = versionSupplier.getAsLong();
+      underlying = unwrap(lookup());
+    } else if (resolveOnUnderlyingExpiry && underlying.hasExpired()) {
+      // Registries without a removal signal keep the original trigger, so this change is a no-op
+      // for them.
       currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
     }

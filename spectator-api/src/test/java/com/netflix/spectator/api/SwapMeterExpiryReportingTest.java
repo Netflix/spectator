@@ -28,6 +28,44 @@ import org.junit.jupiter.api.Test;
  */
 public class SwapMeterExpiryReportingTest {
 
+  /**
+   * The constructor without a dedicated removal signal keeps the original trigger: it re-resolves
+   * when the underlying meter reports expired. {@code CompositeRegistry} still uses it and has no
+   * notion of meter removal, so dropping that trigger would leave its wrappers pinned to a stale
+   * delegate. Pinned here so the behavior cannot be removed silently.
+   */
+  @Test
+  public void legacyConstructorStillResolvesOnUnderlyingExpiry() {
+    ManualClock clock = new ManualClock();
+    ExpiringRegistry registry = new ExpiringRegistry(clock);
+
+    Counter first = registry.counter("test");
+    first.increment();
+
+    // Build a wrapper the way CompositeRegistry does: a constant version and no removal signal.
+    java.util.concurrent.atomic.AtomicInteger lookups =
+        new java.util.concurrent.atomic.AtomicInteger();
+    Id id = registry.createId("test");
+    com.netflix.spectator.impl.SwapMeter<Counter> swap =
+        new com.netflix.spectator.impl.SwapMeter<Counter>(registry, () -> 0L, id, first) {
+          @Override public Counter lookup() {
+            lookups.incrementAndGet();
+            return registry.counter(id);
+          }
+        };
+
+    swap.get();
+    Assertions.assertEquals(0, lookups.get(), "healthy meter must not be re-resolved");
+
+    // Move past the TTL so the underlying meter reports expired without any removal happening.
+    clock.setWallTime(1);
+    Assertions.assertTrue(first.hasExpired(), "precondition: underlying meter is expired");
+
+    swap.get();
+    Assertions.assertEquals(1, lookups.get(),
+        "the version-only constructor must still re-resolve on underlying expiry");
+  }
+
   @Test
   public void cleanupDoesNotExpireHealthyMeters() {
     ManualClock clock = new ManualClock();
