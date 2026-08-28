@@ -108,4 +108,64 @@ public class StepValueUpdate {
   public double rollingStepDouble(Rolling state) {
     return state.stepDouble.addAndGet(state.now++, 1.0);
   }
+
+  /**
+   * The shape a real update has: a wall clock read feeding the timestamp, as
+   * {@code AtlasCounter.add} does. The clock read is the dominant cost here, so this is the
+   * benchmark that says what fraction of a real update the step bookkeeping actually is.
+   */
+  @Benchmark
+  public long stepLongAddAndGetWithClock(InInterval state) {
+    return state.stepLong.addAndGet(Clock.SYSTEM.wallTime(), 1L);
+  }
+
+  /** See {@link #stepLongAddAndGetWithClock}. */
+  @Benchmark
+  public double stepDoubleAddAndGetWithClock(InInterval state) {
+    return state.stepDouble.addAndGet(Clock.SYSTEM.wallTime(), 1.0);
+  }
+
+  /** A wall clock read on its own, for scale against the two benchmarks above. */
+  @Benchmark
+  public long wallTime() {
+    return Clock.SYSTEM.wallTime();
+  }
+
+  /**
+   * A timestamp that changes on every call but stays inside the current interval, so the step
+   * bookkeeping cannot be hoisted out of the measurement loop and no rollover is triggered.
+   * Separates "the division is gone" from "the JIT hoisted the division" without paying for a
+   * clock read.
+   */
+  @State(Scope.Thread)
+  public static class Varying {
+    StepLong stepLong;
+    StepDouble stepDouble;
+    long base;
+    int i;
+
+    @Setup
+    public void setup() {
+      // Align to the start of the current interval so base + 0..255 stays inside it.
+      base = Clock.SYSTEM.wallTime() / 5000L * 5000L;
+      stepLong = new StepLong(0L, Clock.SYSTEM, 5000L);
+      stepDouble = new StepDouble(0.0, Clock.SYSTEM, 5000L);
+    }
+
+    long next() {
+      return base + (i++ & 0xFF);
+    }
+  }
+
+  /** See {@link Varying}. */
+  @Benchmark
+  public long varyingStepLongPoll(Varying state) {
+    return state.stepLong.poll(state.next());
+  }
+
+  /** See {@link Varying}. */
+  @Benchmark
+  public long varyingStepLongAddAndGet(Varying state) {
+    return state.stepLong.addAndGet(state.next(), 1L);
+  }
 }

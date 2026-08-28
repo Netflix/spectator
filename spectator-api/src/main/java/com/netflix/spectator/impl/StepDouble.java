@@ -214,8 +214,7 @@ public class StepDouble implements StepValue {
 
   /** Get the timestamp for the end of the last completed interval. */
   @Override public long timestamp() {
-    // Start of the current interval, which is the end of the last completed one. Equivalent to
-    // the lastInitPos * step this used to compute.
+    // Start of the current interval, which is the end of the last completed one.
     return nextStepBoundary - step;
   }
 
@@ -223,6 +222,6 @@ public class StepDouble implements StepValue {
     return "StepDouble{init="  + init
         + ", previous=" + previous
         + ", current=" + Double.longBitsToDouble(current)
-        + ", lastInitPos=" + (nextStepBoundary / step - 1) + '}';
+        + ", nextStepBoundary=" + nextStepBoundary + '}';
   }
 }
