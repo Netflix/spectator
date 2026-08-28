@@ -136,6 +136,16 @@ public class StepRollCountConcurrencyTest {
     StepLong value = new StepLong(0L, clock, STEP);
     final int perThread = 100_000;
     final long now = 5L * STEP;
+
+    // Perform this interval's rollover up front. ManualClock starts at 0, so nextStepBoundary is
+    // STEP and the first update at 5 * STEP would otherwise roll over while all the threads are
+    // already incrementing: a thread that loses the boundary CAS still completes its addAndGet,
+    // and if that lands before the winner's getAndSet the increment is wiped. Rolling over here
+    // makes the body of the test genuinely in-interval, which is what it means to measure.
+    value.getCurrent(now);
+    Assertions.assertEquals(now, value.timestamp(),
+        "precondition: the rollover must already have happened before the threads start");
+
     ExecutorService pool = Executors.newFixedThreadPool(THREADS);
     try {
       CyclicBarrier start = new CyclicBarrier(THREADS);

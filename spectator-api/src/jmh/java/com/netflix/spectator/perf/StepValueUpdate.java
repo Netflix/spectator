@@ -151,7 +151,6 @@ public class StepValueUpdate {
   @State(Scope.Thread)
   public static class Varying {
     StepLong stepLong;
-    StepDouble stepDouble;
     long base;
     int i;
 
@@ -160,7 +159,6 @@ public class StepValueUpdate {
       // Align to the start of the current interval so base + 0..255 stays inside it.
       base = Clock.SYSTEM.wallTime() / 5000L * 5000L;
       stepLong = new StepLong(0L, Clock.SYSTEM, 5000L);
-      stepDouble = new StepDouble(0.0, Clock.SYSTEM, 5000L);
     }
 
     long next() {
