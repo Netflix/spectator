@@ -40,10 +40,15 @@ public class StepDouble implements StepValue {
   private static final AtomicLongFieldUpdater<StepDouble> CURRENT_UPDATER =
       AtomicLongFieldUpdater.newUpdater(StepDouble.class, "current");
 
-  private volatile long lastInitPos;
+  /**
+   * Wall time at which the current step interval ends. Holding this boundary rather than the step
+   * index means an update landing inside the current interval is a comparison instead of a
+   * division.
+   */
+  private volatile long nextStepBoundary;
 
-  private static final AtomicLongFieldUpdater<StepDouble> LAST_INIT_POS_UPDATER =
-      AtomicLongFieldUpdater.newUpdater(StepDouble.class, "lastInitPos");
+  private static final AtomicLongFieldUpdater<StepDouble> NEXT_STEP_BOUNDARY_UPDATER =
+      AtomicLongFieldUpdater.newUpdater(StepDouble.class, "nextStepBoundary");
 
   /** Create a new instance. */
   public StepDouble(double init, Clock clock, long step) {
@@ -52,19 +57,40 @@ public class StepDouble implements StepValue {
     this.step = step;
     previous = init;
     current = Double.doubleToLongBits(init);
-    lastInitPos = clock.wallTime() / step;
+    nextStepBoundary = (clock.wallTime() / step + 1) * step;
   }
 
+  /**
+   * Roll over to a new step interval if {@code now} has moved past the end of the current one.
+   *
+   * <p>Kept small so it inlines into the update methods. {@code step} is a non-trusted final
+   * instance field, so C2 cannot constant fold it and {@code now / step} compiles to a real
+   * {@code idivq} plus the divide-by-zero and {@code MIN_VALUE / -1} guards. Comparing against
+   * the boundary keeps all of that off the update path and pays for the division only on an
+   * actual rollover.</p>
+   */
   private void rollCount(long now) {
-    final long stepTime = now / step;
-    final long lastInit = lastInitPos;
-    if (lastInit < stepTime && LAST_INIT_POS_UPDATER.compareAndSet(this, lastInit, stepTime)) {
+    if (now >= nextStepBoundary) {
+      rollCountSlow(now);
+    }
+  }
+
+  private void rollCountSlow(long now) {
+    // Boundaries are exact multiples of step, so comparing them orders the intervals the same
+    // way comparing the step indices did.
+    final long boundary = (now / step + 1) * step;
+    final long lastBoundary = nextStepBoundary;
+    // The boundary compare is not redundant with the CAS. Without it two threads that both see
+    // the same boundary would both roll: the second would reset `current` again and overwrite
+    // `previous` with init, publishing zero for an interval that had data.
+    if (lastBoundary < boundary
+        && NEXT_STEP_BOUNDARY_UPDATER.compareAndSet(this, lastBoundary, boundary)) {
       final double v = Double.longBitsToDouble(
           CURRENT_UPDATER.getAndSet(this, Double.doubleToLongBits(init)));
       // Need to check if there was any activity during the previous step interval. If there was
       // then the init position will move forward by 1, otherwise it will be older. No activity
       // means the previous interval should be set to the `init` value.
-      previous = (lastInit == stepTime - 1) ? v : init;
+      previous = (lastBoundary == boundary - step) ? v : init;
     }
   }
 
@@ -191,13 +217,15 @@ public class StepDouble implements StepValue {
 
   /** Get the timestamp for the end of the last completed interval. */
   @Override public long timestamp() {
-    return lastInitPos * step;
+    // Start of the current interval, which is the end of the last completed one. Equivalent to
+    // the lastInitPos * step this used to compute.
+    return nextStepBoundary - step;
   }
 
   @Override public String toString() {
     return "StepDouble{init="  + init
         + ", previous=" + previous
         + ", current=" + Double.longBitsToDouble(current)
-        + ", lastInitPos=" + lastInitPos + '}';
+        + ", lastInitPos=" + (nextStepBoundary / step - 1) + '}';
   }
 }
