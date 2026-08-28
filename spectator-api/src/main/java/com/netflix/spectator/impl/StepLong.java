@@ -41,9 +41,8 @@ public class StepLong implements StepValue {
       AtomicLongFieldUpdater.newUpdater(StepLong.class, "current");
 
   /**
-   * Wall time at which the current step interval ends. Holding this boundary rather than the step
-   * index means an update landing inside the current interval is a comparison instead of a
-   * division.
+   * Wall time at which the current step interval ends. Holding the boundary rather than the step
+   * index is what lets an in-interval update be a comparison instead of a division.
    */
   private volatile long nextStepBoundary;
 
@@ -62,12 +61,10 @@ public class StepLong implements StepValue {
 
   /**
    * Roll over to a new step interval if {@code now} has moved past the end of the current one.
-   *
-   * <p>Kept small so it inlines into the update methods. {@code step} is a non-trusted final
-   * instance field, so C2 cannot constant fold it and {@code now / step} compiles to a real
-   * {@code idivq} plus the divide-by-zero and {@code MIN_VALUE / -1} guards. Comparing against
-   * the boundary keeps all of that off the update path and pays for the division only on an
-   * actual rollover.</p>
+   * Split from the rollover itself so the common case, an update inside the current interval,
+   * stays small enough to inline into the callers. {@code step} is an instance field rather than
+   * a constant, so the JIT cannot fold the division away; this pays for it only on an actual
+   * rollover.
    */
   private void rollCount(long now) {
     if (now >= nextStepBoundary) {
@@ -87,8 +84,8 @@ public class StepLong implements StepValue {
         && NEXT_STEP_BOUNDARY_UPDATER.compareAndSet(this, lastBoundary, boundary)) {
       final long v = CURRENT_UPDATER.getAndSet(this, init);
       // Need to check if there was any activity during the previous step interval. If there was
-      // then the init position will move forward by 1, otherwise it will be older. No activity
-      // means the previous interval should be set to the `init` value.
+      // then the boundary moves forward by exactly one step, otherwise it jumps further. No
+      // activity means the previous interval should be set to the `init` value.
       previous = (lastBoundary == boundary - step) ? v : init;
     }
   }
