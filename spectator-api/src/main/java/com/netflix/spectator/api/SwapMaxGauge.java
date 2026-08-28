@@ -27,6 +27,16 @@ final class SwapMaxGauge extends SwapMeter<Gauge> implements Gauge {
     super(registry, versionSupplier, id, underlying);
   }
 
+  SwapMaxGauge(
+      Registry registry,
+      LongSupplier versionSupplier,
+      LongSupplier resolveSupplier,
+      long resolveVersion,
+      Id id,
+      Gauge underlying) {
+    super(registry, versionSupplier, resolveSupplier, resolveVersion, id, underlying);
+  }
+
   @Override public Gauge lookup() {
     return registry.maxGauge(id);
   }
