@@ -1,0 +1,474 @@
+/*
+ * Copyright 2014-2025 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl;
+
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.ManualClock;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+
+/**
+ * {@link StepDouble} and {@link StepLong} cache the end of the current step interval so that the
+ * division in {@code rollCount} is only paid on an actual rollover. The published values have to
+ * be unchanged by that, so this drives the current implementation and a copy of the previous one
+ * over identical timestamp sequences and requires the results to be bit-for-bit equal.
+ *
+ * <p>The sequences deliberately include the cases that distinguish the two: timestamps landing
+ * exactly on a boundary, gaps that skip whole intervals so the previous interval had no activity,
+ * and time moving backwards the way NTP can move it.</p>
+ *
+ * <p>The comparison is run over several step sizes rather than one. The cached boundary is derived
+ * from {@code step}, so a step that does not divide the starting timestamp, and a step small
+ * enough that nearly every update rolls, exercise different alignment than the 5s step used in
+ * practice.</p>
+ *
+ * <p>Every mutating and reading entry point is driven, not just {@code addAndGet}: they all funnel
+ * through {@code rollCount}, but they leave the current bucket in different states, and the value
+ * published on a rollover depends on that state. After each operation both the value for the
+ * current bucket and {@code timestamp()} are compared, so a divergence is caught at the operation
+ * that caused it rather than whenever it happens to surface.</p>
+ */
+public class StepRollCountDifferentialTest {
+
+  private static final long STEP = 5000L;
+
+  /** The implementation of rollCount that shipped before the boundary was cached. */
+  private static class LegacyStepDouble {
+
+    private final double init;
+    private final long step;
+
+    private volatile double previous;
+    private volatile long current;
+    private volatile long lastInitPos;
+
+    private static final AtomicLongFieldUpdater<LegacyStepDouble> CURRENT_UPDATER =
+        AtomicLongFieldUpdater.newUpdater(LegacyStepDouble.class, "current");
+
+    private static final AtomicLongFieldUpdater<LegacyStepDouble> LAST_INIT_POS_UPDATER =
+        AtomicLongFieldUpdater.newUpdater(LegacyStepDouble.class, "lastInitPos");
+
+    LegacyStepDouble(double init, Clock clock, long step) {
+      this.init = init;
+      this.step = step;
+      previous = init;
+      current = Double.doubleToLongBits(init);
+      lastInitPos = clock.wallTime() / step;
+    }
+
+    private void rollCount(long now) {
+      final long stepTime = now / step;
+      final long lastInit = lastInitPos;
+      if (lastInit < stepTime && LAST_INIT_POS_UPDATER.compareAndSet(this, lastInit, stepTime)) {
+        final double v = Double.longBitsToDouble(
+            CURRENT_UPDATER.getAndSet(this, Double.doubleToLongBits(init)));
+        previous = (lastInit == stepTime - 1) ? v : init;
+      }
+    }
+
+    double addAndGet(long now, double amount) {
+      rollCount(now);
+      long v;
+      double d;
+      double n;
+      long next;
+      do {
+        v = current;
+        d = Double.longBitsToDouble(v);
+        n = d + amount;
+        next = Double.doubleToLongBits(n);
+      } while (!CURRENT_UPDATER.compareAndSet(this, v, next));
+      return n;
+    }
+
+    double getCurrent(long now) {
+      rollCount(now);
+      return Double.longBitsToDouble(current);
+    }
+
+    void setCurrent(long now, double value) {
+      rollCount(now);
+      current = Double.doubleToLongBits(value);
+    }
+
+    double getAndSet(long now, double value) {
+      rollCount(now);
+      long v = CURRENT_UPDATER.getAndSet(this, Double.doubleToLongBits(value));
+      return Double.longBitsToDouble(v);
+    }
+
+    private boolean compareAndSet(double expect, double update) {
+      long e = Double.doubleToLongBits(expect);
+      long u = Double.doubleToLongBits(update);
+      return CURRENT_UPDATER.compareAndSet(this, e, u);
+    }
+
+    void min(long now, double value) {
+      if (Double.isFinite(value)) {
+        rollCount(now);
+        double min = Double.longBitsToDouble(current);
+        while ((value < min || Double.isNaN(min)) && !compareAndSet(min, value)) {
+          min = Double.longBitsToDouble(current);
+        }
+      }
+    }
+
+    void max(long now, double value) {
+      if (Double.isFinite(value)) {
+        rollCount(now);
+        double max = Double.longBitsToDouble(current);
+        while ((value > max || Double.isNaN(max)) && !compareAndSet(max, value)) {
+          max = Double.longBitsToDouble(current);
+        }
+      }
+    }
+
+    double poll(long now) {
+      rollCount(now);
+      return previous;
+    }
+
+    double pollAsRate(long now) {
+      final double amount = poll(now);
+      final double period = step / 1000.0;
+      return amount / period;
+    }
+
+    long timestamp() {
+      return lastInitPos * step;
+    }
+  }
+
+  /** The implementation of rollCount that shipped before the boundary was cached. */
+  private static class LegacyStepLong {
+
+    private final long init;
+    private final long step;
+
+    private volatile long previous;
+    private volatile long current;
+    private volatile long lastInitPos;
+
+    private static final AtomicLongFieldUpdater<LegacyStepLong> CURRENT_UPDATER =
+        AtomicLongFieldUpdater.newUpdater(LegacyStepLong.class, "current");
+
+    private static final AtomicLongFieldUpdater<LegacyStepLong> LAST_INIT_POS_UPDATER =
+        AtomicLongFieldUpdater.newUpdater(LegacyStepLong.class, "lastInitPos");
+
+    LegacyStepLong(long init, Clock clock, long step) {
+      this.init = init;
+      this.step = step;
+      previous = init;
+      current = init;
+      lastInitPos = clock.wallTime() / step;
+    }
+
+    private void rollCount(long now) {
+      final long stepTime = now / step;
+      final long lastInit = lastInitPos;
+      if (lastInit < stepTime && LAST_INIT_POS_UPDATER.compareAndSet(this, lastInit, stepTime)) {
+        final long v = CURRENT_UPDATER.getAndSet(this, init);
+        previous = (lastInit == stepTime - 1) ? v : init;
+      }
+    }
+
+    long addAndGet(long now, long amount) {
+      rollCount(now);
+      return CURRENT_UPDATER.addAndGet(this, amount);
+    }
+
+    long getCurrent(long now) {
+      rollCount(now);
+      return current;
+    }
+
+    void setCurrent(long now, long value) {
+      rollCount(now);
+      current = value;
+    }
+
+    long getAndSet(long now, long value) {
+      rollCount(now);
+      return CURRENT_UPDATER.getAndSet(this, value);
+    }
+
+    void min(long now, long value) {
+      rollCount(now);
+      long min = current;
+      while (value < min && !CURRENT_UPDATER.compareAndSet(this, min, value)) {
+        min = current;
+      }
+    }
+
+    void max(long now, long value) {
+      rollCount(now);
+      long max = current;
+      while (value > max && !CURRENT_UPDATER.compareAndSet(this, max, value)) {
+        max = current;
+      }
+    }
+
+    long poll(long now) {
+      rollCount(now);
+      return previous;
+    }
+
+    double pollAsRate(long now) {
+      final long amount = poll(now);
+      final double period = step / 1000.0;
+      return amount / period;
+    }
+
+    long timestamp() {
+      return lastInitPos * step;
+    }
+  }
+
+  /**
+   * Timestamps covering the interesting rollover shapes: repeats within an interval, exact
+   * boundaries, boundary minus and plus one, multi interval gaps, and backwards movement.
+   */
+  private List<Long> timestamps(long start, long step) {
+    List<Long> ts = new ArrayList<>();
+    Random r = new Random(42);
+    long now = start;
+    for (int i = 0; i < 20_000; ++i) {
+      ts.add(now);
+      switch (r.nextInt(10)) {
+        case 0:
+          // Land exactly on the next boundary.
+          now = (now / step + 1) * step;
+          break;
+        case 1:
+          // One millisecond short of the next boundary.
+          now = (now / step + 1) * step - 1;
+          break;
+        case 2:
+          // One millisecond past the next boundary.
+          now = (now / step + 1) * step + 1;
+          break;
+        case 3:
+          // Skip several whole intervals, so the previous interval saw no activity.
+          now += step * (2 + r.nextInt(5));
+          break;
+        case 4:
+          // Time moves backwards, as it can when NTP adjusts the clock.
+          now -= r.nextInt((int) Math.min(Integer.MAX_VALUE, step * 3));
+          break;
+        default:
+          // Stay inside the current interval most of the time.
+          now += r.nextInt(500);
+          break;
+      }
+      // A backwards jump near zero can push the time negative with a ManualClock. Both
+      // implementations only move their bookkeeping forward from a non-negative start, so
+      // neither rolls at a negative time and those timestamps are a no-op on both sides. Wall
+      // time is not expected to be negative and every start below is non-negative, so a clock
+      // that begins below zero is out of scope here.
+      if (now < -3 * step) {
+        now = 0;
+      }
+    }
+    return ts;
+  }
+
+  /** Starting timestamps covering aligned, off-by-one and realistic epoch alignment. */
+  private long[] starts(long step) {
+    return new long[] {0L, 1L, step, step - 1, 1_700_000_000_000L};
+  }
+
+  @ParameterizedTest
+  @ValueSource(longs = {1L, 7L, 13L, 1000L, 5000L, 60_000L})
+  public void stepDoubleMatchesLegacyBitForBit(long step) {
+    for (long start : starts(step)) {
+      ManualClock clock = new ManualClock(start, start);
+      StepDouble actual = new StepDouble(0.0, clock, step);
+      LegacyStepDouble expected = new LegacyStepDouble(0.0, clock, step);
+
+      int op = 0;
+      for (long now : timestamps(start, step)) {
+        // Exercise every read and write path, since they all funnel through rollCount.
+        switch (op++ % 8) {
+          case 0:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.addAndGet(now, 1.0)),
+                Double.doubleToRawLongBits(actual.addAndGet(now, 1.0)),
+                "addAndGet at " + now + " from start " + start);
+            break;
+          case 1:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.getCurrent(now)),
+                Double.doubleToRawLongBits(actual.getCurrent(now)),
+                "getCurrent at " + now + " from start " + start);
+            break;
+          case 2:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.poll(now)),
+                Double.doubleToRawLongBits(actual.poll(now)),
+                "poll at " + now + " from start " + start);
+            break;
+          case 3:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.pollAsRate(now)),
+                Double.doubleToRawLongBits(actual.pollAsRate(now)),
+                "pollAsRate at " + now + " from start " + start);
+            break;
+          case 4:
+            expected.setCurrent(now, op);
+            actual.setCurrent(now, op);
+            break;
+          case 5:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.getAndSet(now, op)),
+                Double.doubleToRawLongBits(actual.getAndSet(now, op)),
+                "getAndSet at " + now + " from start " + start);
+            break;
+          case 6:
+            expected.max(now, op % 17);
+            actual.max(now, op % 17);
+            break;
+          default:
+            expected.min(now, op % 17);
+            actual.min(now, op % 17);
+            break;
+        }
+        Assertions.assertEquals(
+            Double.doubleToRawLongBits(expected.getCurrent(now)),
+            Double.doubleToRawLongBits(actual.getCurrent(now)),
+            "current after op at " + now + " from start " + start);
+        Assertions.assertEquals(expected.timestamp(), actual.timestamp(),
+            "timestamp at " + now + " from start " + start);
+      }
+    }
+  }
+
+  @ParameterizedTest
+  @ValueSource(longs = {1L, 7L, 13L, 1000L, 5000L, 60_000L})
+  public void stepLongMatchesLegacyBitForBit(long step) {
+    for (long start : starts(step)) {
+      ManualClock clock = new ManualClock(start, start);
+      StepLong actual = new StepLong(0L, clock, step);
+      LegacyStepLong expected = new LegacyStepLong(0L, clock, step);
+
+      int op = 0;
+      for (long now : timestamps(start, step)) {
+        switch (op++ % 8) {
+          case 0:
+            Assertions.assertEquals(
+                expected.addAndGet(now, 1L),
+                actual.addAndGet(now, 1L),
+                "addAndGet at " + now + " from start " + start);
+            break;
+          case 1:
+            Assertions.assertEquals(
+                expected.getCurrent(now),
+                actual.getCurrent(now),
+                "getCurrent at " + now + " from start " + start);
+            break;
+          case 2:
+            Assertions.assertEquals(
+                expected.poll(now),
+                actual.poll(now),
+                "poll at " + now + " from start " + start);
+            break;
+          case 3:
+            Assertions.assertEquals(
+                Double.doubleToRawLongBits(expected.pollAsRate(now)),
+                Double.doubleToRawLongBits(actual.pollAsRate(now)),
+                "pollAsRate at " + now + " from start " + start);
+            break;
+          case 4:
+            expected.setCurrent(now, op);
+            actual.setCurrent(now, op);
+            break;
+          case 5:
+            Assertions.assertEquals(
+                expected.getAndSet(now, op),
+                actual.getAndSet(now, op),
+                "getAndSet at " + now + " from start " + start);
+            break;
+          case 6:
+            expected.max(now, op % 17);
+            actual.max(now, op % 17);
+            break;
+          default:
+            expected.min(now, op % 17);
+            actual.min(now, op % 17);
+            break;
+        }
+        Assertions.assertEquals(expected.getCurrent(now), actual.getCurrent(now),
+            "current after op at " + now + " from start " + start);
+        Assertions.assertEquals(expected.timestamp(), actual.timestamp(),
+            "timestamp at " + now + " from start " + start);
+      }
+    }
+  }
+
+  /**
+   * An interval with no activity has to publish the init value rather than carrying the previous
+   * interval forward. This is the case the cached boundary could plausibly break, so it is
+   * asserted directly as well as through the differential comparison.
+   */
+  @Test
+  public void noActivityInPreviousIntervalPublishesInit() {
+    ManualClock clock = new ManualClock();
+    StepDouble v = new StepDouble(0.0, clock, STEP);
+
+    v.addAndGet(0L, 42.0);
+
+    // Next interval: the 42.0 recorded above becomes the value for the completed interval.
+    Assertions.assertEquals(42.0, v.poll(STEP), 1e-12);
+
+    // Skip an entire interval with no updates at all. The completed interval had no activity,
+    // so it must report init and not the stale 42.0.
+    Assertions.assertEquals(0.0, v.poll(STEP * 4), 1e-12);
+    Assertions.assertEquals(0.0, v.getCurrent(STEP * 4), 1e-12);
+  }
+
+  /**
+   * The cached boundary must not let a rollover be skipped when the clock jumps backwards and
+   * then forwards again, and a backwards jump inside the current interval must not roll.
+   */
+  @Test
+  public void clockMovingBackwardsDoesNotRollOrSkip() {
+    ManualClock clock = new ManualClock();
+    StepDouble v = new StepDouble(0.0, clock, STEP);
+
+    long base = STEP * 100;
+    v.addAndGet(base, 7.0);
+    Assertions.assertEquals(7.0, v.getCurrent(base), 1e-12);
+
+    // Backwards within the same interval: no rollover, the value is still accumulating.
+    v.addAndGet(base + 10, 1.0);
+    v.addAndGet(base + 5, 1.0);
+    Assertions.assertEquals(9.0, v.getCurrent(base + 5), 1e-12);
+
+    // Backwards into an earlier interval: now is below nextStepBoundary, so there is no
+    // rollover, and the current value is retained.
+    Assertions.assertEquals(9.0, v.getCurrent(base - STEP * 3), 1e-12);
+
+    // Forwards again past the boundary: the rollover still happens.
+    Assertions.assertEquals(9.0, v.poll(base + STEP), 1e-12);
+    Assertions.assertEquals(0.0, v.getCurrent(base + STEP), 1e-12);
+  }
+}
