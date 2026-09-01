@@ -280,9 +280,11 @@ public class StepRollCountDifferentialTest {
           now += r.nextInt(500);
           break;
       }
-      // Wall time is not expected to be negative, but a backwards jump near zero can get there
-      // with a ManualClock, and integer division truncates toward zero rather than flooring, so
-      // the two implementations are compared over that range too rather than assumed equal.
+      // A backwards jump near zero can push the time negative with a ManualClock. Both
+      // implementations only move their bookkeeping forward from a non-negative start, so
+      // neither rolls at a negative time and those timestamps are a no-op on both sides. Wall
+      // time is not expected to be negative and every start below is non-negative, so a clock
+      // that begins below zero is out of scope here.
       if (now < -3 * step) {
         now = 0;
       }
@@ -461,8 +463,8 @@ public class StepRollCountDifferentialTest {
     v.addAndGet(base + 5, 1.0);
     Assertions.assertEquals(9.0, v.getCurrent(base + 5), 1e-12);
 
-    // Backwards into an earlier interval: the existing lastInit < stepTime guard means this
-    // does not roll backwards, and the current value is retained.
+    // Backwards into an earlier interval: now is below nextStepBoundary, so there is no
+    // rollover, and the current value is retained.
     Assertions.assertEquals(9.0, v.getCurrent(base - STEP * 3), 1e-12);
 
     // Forwards again past the boundary: the rollover still happens.

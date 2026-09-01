@@ -79,8 +79,10 @@ public class StepRollCountConcurrencyTest {
       }
     } finally {
       pool.shutdownNow();
-      Assertions.assertTrue(pool.awaitTermination(30, TimeUnit.SECONDS));
     }
+    // Checked outside the finally so that a failure here cannot replace a round assertion.
+    Assertions.assertTrue(pool.awaitTermination(30, TimeUnit.SECONDS),
+        "worker threads did not terminate");
   }
 
   @Test
@@ -119,8 +121,10 @@ public class StepRollCountConcurrencyTest {
       }
     } finally {
       pool.shutdownNow();
-      Assertions.assertTrue(pool.awaitTermination(30, TimeUnit.SECONDS));
     }
+    // Checked outside the finally so that a failure here cannot replace a round assertion.
+    Assertions.assertTrue(pool.awaitTermination(30, TimeUnit.SECONDS),
+        "worker threads did not terminate");
   }
 
   /**
