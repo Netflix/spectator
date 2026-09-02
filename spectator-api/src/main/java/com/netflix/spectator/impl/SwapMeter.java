@@ -136,11 +136,14 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
     // observed, which would swallow a subsequent removal.
     final long resolveVersion = resolveSupplier.getAsLong();
     if (currentResolveVersion < resolveVersion) {
-      currentResolveVersion = resolveVersion;
       // Resolving also clears the staleness hasExpired() reports, since the meter just came from
       // a fresh lookup.
       currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
+      // Published last, so a concurrent caller that sees the new version also sees the meter it
+      // describes. Publishing it first lets that caller skip the resolve and keep updating the
+      // instance this lookup just replaced, silently dropping the update.
+      currentResolveVersion = resolveVersion;
     } else if (resolveOnUnderlyingExpiry && underlying.hasExpired()) {
       currentVersion = versionSupplier.getAsLong();
       underlying = unwrap(lookup());
