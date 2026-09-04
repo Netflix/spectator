@@ -118,6 +118,37 @@ public class AtlasCounterTest {
     Assertions.assertFalse(counter.hasExpired());
   }
 
+  /**
+   * Amounts that are ignored must not refresh the last modified time. That is what allows a
+   * counter that is only ever handed junk to expire and be dropped from the registry rather
+   * than being kept alive forever by calls that record nothing.
+   */
+  @Test
+  public void ignoredAmountsDoNotRefreshExpiry() {
+    long start = clock.wallTime();
+    clock.setWallTime(start + step * 2);
+    Assertions.assertTrue(counter.hasExpired());
+
+    counter.add(0.0);
+    Assertions.assertTrue(counter.hasExpired(), "add(0.0) must not refresh lastUpdated");
+
+    counter.add(-42.0);
+    Assertions.assertTrue(counter.hasExpired(), "add(negative) must not refresh lastUpdated");
+
+    counter.add(Double.NaN);
+    Assertions.assertTrue(counter.hasExpired(), "add(NaN) must not refresh lastUpdated");
+
+    counter.add(Double.POSITIVE_INFINITY);
+    Assertions.assertTrue(counter.hasExpired(), "add(+Inf) must not refresh lastUpdated");
+
+    counter.add(Double.NEGATIVE_INFINITY);
+    Assertions.assertTrue(counter.hasExpired(), "add(-Inf) must not refresh lastUpdated");
+
+    // A real amount does refresh it.
+    counter.add(1.0);
+    Assertions.assertFalse(counter.hasExpired());
+  }
+
   @Test
   public void preferStatisticFromTags() {
     Id id = Id.create("test").withTag(Statistic.percentile);

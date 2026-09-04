@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
@@ -36,8 +37,19 @@ import java.util.function.LongSupplier;
  */
 public abstract class AbstractRegistry implements Registry, AutoCloseable {
 
-  /** Not used for this registry, always return 0. */
+  /** Not used for this registry, always return 0. Removal is tracked by {@link #removals}. */
   private static final LongSupplier VERSION = () -> 0L;
+
+  /**
+   * Incremented whenever a meter is removed from {@link #meters}, so the {@link SwapMeter} types
+   * handed out here notice their underlying meter is gone without reading the wall clock. Kept
+   * out of {@code VERSION} because that feeds {@code hasExpired()}, which callers act on
+   * destructively. One counter invalidates every outstanding wrapper rather than just the
+   * affected one, costing an extra lookup per held reference per cleanup pass.
+   */
+  private final AtomicLong removals = new AtomicLong();
+
+  private final LongSupplier removalSupplier = removals::get;
 
   /** Logger instance for the class. */
   protected final Logger logger;
@@ -249,32 +261,38 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   @Override public final Counter counter(Id id) {
+    // Sampled before resolving so a removal racing the lookup is seen; see SwapMeter.
+    final long v = removals.get();
     Counter c = getOrCreate(id, Counter.class, NoopCounter.INSTANCE, counterFactory);
-    return new SwapCounter(this, VERSION, c.id(), c);
+    return new SwapCounter(this, VERSION, removalSupplier, v, c.id(), c);
   }
 
   @Override public final DistributionSummary distributionSummary(Id id) {
+    final long v = removals.get();
     DistributionSummary ds = getOrCreate(
         id,
         DistributionSummary.class,
         NoopDistributionSummary.INSTANCE,
         distSummaryFactory);
-    return new SwapDistributionSummary(this, VERSION, ds.id(), ds);
+    return new SwapDistributionSummary(this, VERSION, removalSupplier, v, ds.id(), ds);
   }
 
   @Override public final Timer timer(Id id) {
+    final long v = removals.get();
     Timer t = getOrCreate(id, Timer.class, NoopTimer.INSTANCE, timerFactory);
-    return new SwapTimer(this, VERSION, t.id(), t);
+    return new SwapTimer(this, VERSION, removalSupplier, v, t.id(), t);
   }
 
   @Override public final Gauge gauge(Id id) {
+    final long v = removals.get();
     Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, gaugeFactory);
-    return new SwapGauge(this, VERSION, g.id(), g);
+    return new SwapGauge(this, VERSION, removalSupplier, v, g.id(), g);
   }
 
   @Override public final Gauge maxGauge(Id id) {
+    final long v = removals.get();
     Gauge g = getOrCreate(id, Gauge.class, NoopGauge.INSTANCE, maxGaugeFactory);
-    return new SwapMaxGauge(this, VERSION, g.id(), g);
+    return new SwapMaxGauge(this, VERSION, removalSupplier, v, g.id(), g);
   }
 
   /**
@@ -346,7 +364,35 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   @Override public final Iterator<Meter> iterator() {
-    return meters.values().iterator();
+    return new VersionedIterator(meters.values().iterator());
+  }
+
+  /**
+   * Bumps {@link #removals} on removal no matter who performs it. Sub-classes such as
+   * {@code AtlasRegistry} run their own cleanup pass on top of {@link #iterator()}, so the bump
+   * belongs here rather than in every caller.
+   */
+  private final class VersionedIterator implements Iterator<Meter> {
+
+    private final Iterator<Meter> delegate;
+
+    VersionedIterator(Iterator<Meter> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override public boolean hasNext() {
+      return delegate.hasNext();
+    }
+
+    @Override public Meter next() {
+      return delegate.next();
+    }
+
+    @Override public void remove() {
+      delegate.remove();
+      // Bump after the entry is gone, so a reader seeing the new value cannot still find it.
+      removals.incrementAndGet();
+    }
   }
 
   @Override
@@ -361,7 +407,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   protected void removeExpiredMeters() {
     int total = 0;
     int expired = 0;
-    Iterator<Meter> it = meters.values().iterator();
+    Iterator<Meter> it = iterator();
     while (it.hasNext()) {
       ++total;
       Meter m = it.next();
@@ -436,5 +482,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     }
     state.clear();
     meters.clear();
+    // Clearing the map removes every meter, so any outstanding SwapMeter has to resolve again.
+    removals.incrementAndGet();
   }
 }

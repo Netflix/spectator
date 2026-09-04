@@ -33,6 +33,16 @@ final class SwapDistributionSummary extends SwapMeter<DistributionSummary> imple
     super(registry, versionSupplier, id, underlying);
   }
 
+  SwapDistributionSummary(
+      Registry registry,
+      LongSupplier versionSupplier,
+      LongSupplier resolveSupplier,
+      long resolveVersion,
+      Id id,
+      DistributionSummary underlying) {
+    super(registry, versionSupplier, resolveSupplier, resolveVersion, id, underlying);
+  }
+
   @Override public DistributionSummary lookup() {
     return registry.distributionSummary(id);
   }

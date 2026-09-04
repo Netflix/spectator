@@ -30,6 +30,16 @@ final class SwapTimer extends SwapMeter<Timer> implements Timer {
     super(registry, versionSupplier, id, underlying);
   }
 
+  SwapTimer(
+      Registry registry,
+      LongSupplier versionSupplier,
+      LongSupplier resolveSupplier,
+      long resolveVersion,
+      Id id,
+      Timer underlying) {
+    super(registry, versionSupplier, resolveSupplier, resolveVersion, id, underlying);
+  }
+
   @Override public Timer lookup() {
     return registry.timer(id);
   }
