@@ -274,7 +274,10 @@ public final class CompositeRegistry implements Registry {
   }
 
   @Override public Gauge maxGauge(Id id) {
-    return new SwapGauge(this, versionSupplier, id, newMaxGauge(id));
+    // SwapMaxGauge rather than SwapGauge: the wrapper resolves through its own lookup(), so a
+    // SwapGauge here would resolve as a plain gauge and start reporting the last value written
+    // rather than the max.
+    return new SwapMaxGauge(this, versionSupplier, id, newMaxGauge(id));
   }
 
   @Override public Meter get(Id id) {
