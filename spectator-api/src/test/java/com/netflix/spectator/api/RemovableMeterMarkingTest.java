@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The registry tells a meter when it has removed it. Nothing reads the mark yet; these pin the
@@ -29,13 +28,16 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RemovableMeterMarkingTest {
 
-  private static final class TestCounter implements Counter, RemovableMeter {
+  private static class TestCounter implements Counter, RemovableMeter {
     private final Id id;
-    private final AtomicLong count = new AtomicLong();
+    private final Registry registry;
     volatile boolean expired;
     private volatile boolean removed;
+    /** Whether the registry could still find this meter at the moment it was marked. */
+    volatile boolean foundWhenMarked;
 
-    TestCounter(Id id) {
+    TestCounter(Registry registry, Id id) {
+      this.registry = registry;
       this.id = id;
     }
 
@@ -52,6 +54,9 @@ public class RemovableMeterMarkingTest {
     }
 
     @Override public void markRemoved() {
+      // The mark must only be set once the entry is gone. A reader that sees the mark and can
+      // still resolve the id lands straight back on this instance and never makes progress.
+      foundWhenMarked = registry.get(id) == this;
       removed = true;
     }
 
@@ -60,11 +65,10 @@ public class RemovableMeterMarkingTest {
     }
 
     @Override public void add(double amount) {
-      count.addAndGet((long) amount);
     }
 
     @Override public double actualCount() {
-      return count.get();
+      return 0.0;
     }
   }
 
@@ -98,15 +102,13 @@ public class RemovableMeterMarkingTest {
   }
 
   private static class TestRegistry extends AbstractRegistry {
-    /** When set, the next counter created is a PlainCounter rather than a TestCounter. */
-    volatile boolean plain;
-
     TestRegistry() {
       super(Clock.SYSTEM);
     }
 
     @Override protected Counter newCounter(Id id) {
-      return plain ? new PlainCounter(id) : new TestCounter(id);
+      // Chosen from the id so the factory does not depend on call order.
+      return id.name().startsWith("plain") ? new PlainCounter(id) : new TestCounter(this, id);
     }
 
     @Override protected DistributionSummary newDistributionSummary(Id id) {
@@ -123,10 +125,6 @@ public class RemovableMeterMarkingTest {
 
     @Override protected Gauge newMaxGauge(Id id) {
       throw new UnsupportedOperationException();
-    }
-
-    void sweep() {
-      removeExpiredMeters();
     }
   }
 
@@ -147,6 +145,7 @@ public class RemovableMeterMarkingTest {
 
     Assertions.assertTrue(c.isRemoved());
     Assertions.assertNull(r.get(c.id()));
+    Assertions.assertFalse(c.foundWhenMarked, "marked while still registered");
   }
 
   @Test
@@ -156,9 +155,10 @@ public class RemovableMeterMarkingTest {
     TestCounter dropped = registered(r, "dropped");
     dropped.expired = true;
 
-    r.sweep();
+    r.removeExpiredMeters();
 
     Assertions.assertTrue(dropped.isRemoved());
+    Assertions.assertFalse(dropped.foundWhenMarked, "marked while still registered");
     Assertions.assertFalse(kept.isRemoved(), "a meter that survived the pass must not be marked");
     Assertions.assertNull(r.get(dropped.id()));
     Assertions.assertNotNull(r.get(kept.id()));
@@ -173,6 +173,7 @@ public class RemovableMeterMarkingTest {
 
     Assertions.assertTrue(c.isRemoved());
     Assertions.assertNull(r.get(c.id()));
+    Assertions.assertFalse(c.foundWhenMarked, "marked while still registered");
   }
 
   @Test
@@ -184,24 +185,41 @@ public class RemovableMeterMarkingTest {
 
     Assertions.assertTrue(c.isRemoved());
     Assertions.assertNull(r.get(c.id()));
+    Assertions.assertFalse(c.foundWhenMarked, "marked while still registered");
   }
 
   @Test
   public void meterThatCannotBeMarkedIsLeftAlone() {
     TestRegistry r = new TestRegistry();
-    r.plain = true;
     r.counter("plain").increment();
-    PlainCounter plain = (PlainCounter) r.get(r.createId("plain"));
-    r.plain = false;
+    Meter plainMeter = r.get(r.createId("plain"));
+    Assertions.assertFalse(plainMeter instanceof RemovableMeter, "expected an unmarkable meter");
+    PlainCounter plain = (PlainCounter) plainMeter;
     TestCounter markable = registered(r, "markable");
     plain.expired = true;
     markable.expired = true;
 
-    r.sweep();
+    r.removeExpiredMeters();
 
     Assertions.assertNull(r.get(plain.id()), "removal must still happen for a meter it cannot mark");
     // The unmarkable meter must not stop the rest of the pass from being marked.
     Assertions.assertTrue(markable.isRemoved());
     Assertions.assertNull(r.get(markable.id()));
+  }
+
+  @Test
+  public void iteratorRemoveKeepsIllegalStateBehaviour() {
+    TestRegistry r = new TestRegistry();
+    registered(r, "test");
+
+    Iterator<Meter> before = r.iterator();
+    Assertions.assertThrows(IllegalStateException.class, before::remove,
+        "remove() before next()");
+
+    Iterator<Meter> twice = r.iterator();
+    twice.next();
+    twice.remove();
+    Assertions.assertThrows(IllegalStateException.class, twice::remove,
+        "repeated remove()");
   }
 }

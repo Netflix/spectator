@@ -353,8 +353,9 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   /**
    * Iterator that tells a meter it has been removed, for the meter types that support it.
    * Removal goes through here no matter who performs it: sub-classes such as
-   * {@code AtlasRegistry} run their own cleanup pass on top of {@link #iterator()}, so doing it
-   * here rather than in each caller keeps the mark and the removal together.
+   * {@code AtlasRegistry} run their own cleanup pass on top of {@link #iterator()}, and
+   * {@code close()} and {@code reset()} drain the map through it, so doing it here rather than
+   * in each caller keeps the mark and the removal together.
    *
    * <p>Iterates the values, so there is nothing to allocate per meter, and delegates the removal
    * itself unchanged. The mark is the only thing added.</p>
@@ -382,7 +383,12 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
       // and still find the meter registered. The delegate also keeps the IllegalStateException
       // behaviour for remove() before next() or a repeated remove().
       delegate.remove();
-      markRemoved(current);
+      Meter removed = current;
+      // Dropped before the mark so the iterator does not pin the meter it just removed. The
+      // delegate, not this field, is what enforces the IllegalStateException on a repeated
+      // remove(), so clearing it here does not weaken that check.
+      current = null;
+      markRemoved(removed);
     }
   }
 
@@ -479,12 +485,18 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
       }
     }
     state.clear();
-    // Tell the meters they are gone before dropping them. A meter registered after this loop has
-    // passed its bin is cleared without being marked; the map's iterator is weakly consistent, so
-    // closing concurrently with registration cannot be made exact here.
-    for (Meter m : meters.values()) {
-      markRemoved(m);
+    // Drained through the marking iterator rather than marked in a pass of its own, so each
+    // meter is told only after its own entry is gone. Marking first and clearing afterwards
+    // would leave a window where a meter reports the mark while a lookup still finds it
+    // registered, which is the one thing markRemoved promises cannot happen.
+    Iterator<Meter> it = iterator();
+    while (it.hasNext()) {
+      it.next();
+      it.remove();
     }
+    // Backstop for anything the drain missed. A meter registered after the weakly consistent
+    // iterator has passed its bin is cleared without being marked; closing concurrently with
+    // registration cannot be made exact here.
     meters.clear();
   }
 }
