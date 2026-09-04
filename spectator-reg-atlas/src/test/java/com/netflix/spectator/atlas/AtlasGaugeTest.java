@@ -27,7 +27,7 @@ public class AtlasGaugeTest {
 
   private final ManualClock clock = new ManualClock();
   private final long step = 10000L;
-  private final AtlasGauge gauge = new AtlasGauge(Id.create("test"), clock, step);
+  private final AtlasGauge gauge = new AtlasGauge(Id.create("test"), clock, step, step);
 
   private void checkValue(long expected) {
     int count = 0;
