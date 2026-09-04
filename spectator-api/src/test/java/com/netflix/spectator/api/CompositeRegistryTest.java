@@ -351,6 +351,7 @@ public class CompositeRegistryTest {
     Assertions.assertEquals(2, r1.counter("test").count());
     Assertions.assertEquals(2, r2.counter("test").count());
   }
+
   @Test
   public void heldMaxGaugeStaysAMaxGaugeAcrossRegistryChange() {
     CompositeRegistry r = new CompositeRegistry(clock);
@@ -374,4 +375,31 @@ public class CompositeRegistryTest {
     Assertions.assertEquals(5.0, r2.maxGauge("test").value(), 1e-12);
   }
 
+  @Test
+  public void heldMeterNoticesRemoveAll() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    Registry r1 = new DefaultRegistry(clock);
+    r.add(r1);
+
+    Counter c = r.counter("test");
+    c.increment();
+    Assertions.assertEquals(1, r1.counter("test").count());
+
+    // removeAll changes the shape, so the held reference must stop reaching r1.
+    r.removeAll();
+    c.increment();
+    Assertions.assertEquals(1, r1.counter("test").count());
+  }
+
+  @Test
+  public void removeAllOnEmptyCompositeDoesNotExpireHeldMeters() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    Counter c = r.counter("test");
+    Assertions.assertFalse(c.hasExpired());
+
+    // Nothing to remove, so nothing changed: reporting the meter as expired would have callers
+    // such as PolledMeter discard it for no reason.
+    r.removeAll();
+    Assertions.assertFalse(c.hasExpired());
+  }
 }

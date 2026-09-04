@@ -123,7 +123,13 @@ public final class CompositeRegistry implements Registry {
   public void removeAll() {
     lock.lock();
     try {
-      registries.set(new Registry[0]);
+      // Only a real change bumps the version, matching add() and remove(): a no-op call would
+      // otherwise report every outstanding meter as expired, which callers such as PolledMeter
+      // act on by discarding it.
+      if (registries.get().length > 0) {
+        registries.set(new Registry[0]);
+        version.incrementAndGet();
+      }
       state.clear();
     } finally {
       lock.unlock();
