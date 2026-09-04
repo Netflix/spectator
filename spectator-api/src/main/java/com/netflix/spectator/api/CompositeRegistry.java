@@ -16,6 +16,8 @@
 package com.netflix.spectator.api;
 
 import com.netflix.spectator.api.patterns.PolledMeter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,6 +40,8 @@ import java.util.function.LongSupplier;
  * registry. Otherwise activity will be sent to all registries that are part of the composite.
  */
 public final class CompositeRegistry implements Registry {
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(CompositeRegistry.class);
 
   private final Lock lock = new ReentrantLock();
 
@@ -119,7 +123,10 @@ public final class CompositeRegistry implements Registry {
     }
   }
 
-  /** Remove all registries from the composite. */
+  /**
+   * Remove all registries from the composite. Meter references handed out earlier will notice
+   * the change and resolve again, and the {@link #state()} map is closed and cleared.
+   */
   public void removeAll() {
     lock.lock();
     try {
@@ -130,10 +137,36 @@ public final class CompositeRegistry implements Registry {
         registries.set(new Registry[0]);
         version.incrementAndGet();
       }
-      state.clear();
     } finally {
       lock.unlock();
     }
+    // Outside the lock: closing an entry cancels its polling task and runs user supplied cleanup
+    // actions, neither of which should be able to block add() or remove() on another thread. The
+    // state map is a ConcurrentHashMap handed out directly by state(), so the lock never guarded
+    // it in the first place.
+    closeState();
+  }
+
+  /**
+   * Close any {@link AutoCloseable} values in the state map, then clear it. Dropping the entries
+   * without closing them would leave the work they track, for example the background polling
+   * tasks created by {@link PolledMeter}, running with no bookkeeping left to stop it and would
+   * skip any cleanup actions registered for it. Exceptions thrown while closing an individual
+   * entry are caught and logged so the remaining entries are still processed. This mirrors what
+   * {@link AbstractRegistry} does when it is closed.
+   */
+  private void closeState() {
+    for (Map.Entry<Id, Object> entry : state.entrySet()) {
+      Object obj = entry.getValue();
+      if (obj instanceof AutoCloseable) {
+        try {
+          ((AutoCloseable) obj).close();
+        } catch (Exception e) {
+          LOGGER.warn("exception thrown while closing registry state for [{}]", entry.getKey(), e);
+        }
+      }
+    }
+    state.clear();
   }
 
   @Override public Clock clock() {

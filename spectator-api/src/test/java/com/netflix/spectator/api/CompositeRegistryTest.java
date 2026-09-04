@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CompositeRegistryTest {
 
@@ -397,9 +398,25 @@ public class CompositeRegistryTest {
     Counter c = r.counter("test");
     Assertions.assertFalse(c.hasExpired());
 
-    // Nothing to remove, so nothing changed: reporting the meter as expired would have callers
-    // such as PolledMeter discard it for no reason.
+    // No shape change, so the version does not move and the meter is not reported as expired,
+    // which callers such as PolledMeter act on by discarding it. The state map is still closed
+    // and cleared either way.
     r.removeAll();
     Assertions.assertFalse(c.hasExpired());
+  }
+
+  @Test
+  public void removeAllClosesState() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    r.add(new DefaultRegistry(clock));
+
+    AtomicBoolean closed = new AtomicBoolean();
+    PolledMeter.monitorResource(r, () -> closed.set(true));
+
+    // Clearing the state map without closing the entries first would leave the work they track
+    // running with no bookkeeping left to stop it.
+    r.removeAll();
+    Assertions.assertTrue(closed.get());
+    Assertions.assertTrue(r.state().isEmpty());
   }
 }
