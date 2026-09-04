@@ -19,6 +19,7 @@ import com.netflix.spectator.api.patterns.PolledMeter;
 import com.netflix.spectator.impl.Cache;
 import com.netflix.spectator.impl.Config;
 import com.netflix.spectator.impl.Preconditions;
+import com.netflix.spectator.impl.RemovableMeter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -346,7 +347,50 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   }
 
   @Override public final Iterator<Meter> iterator() {
-    return meters.values().iterator();
+    return new MarkingIterator(meters.values().iterator());
+  }
+
+  /**
+   * Iterator that tells a meter it has been removed, for the meter types that support it.
+   * Removal goes through here no matter who performs it: sub-classes such as
+   * {@code AtlasRegistry} run their own cleanup pass on top of {@link #iterator()}, so doing it
+   * here rather than in each caller keeps the mark and the removal together.
+   *
+   * <p>Iterates the values, so there is nothing to allocate per meter, and delegates the removal
+   * itself unchanged. The mark is the only thing added.</p>
+   */
+  private static final class MarkingIterator implements Iterator<Meter> {
+
+    private final Iterator<Meter> delegate;
+    private Meter current;
+
+    MarkingIterator(Iterator<Meter> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override public boolean hasNext() {
+      return delegate.hasNext();
+    }
+
+    @Override public Meter next() {
+      current = delegate.next();
+      return current;
+    }
+
+    @Override public void remove() {
+      // Delegated first, so the entry is gone before the meter is told: nothing can see the mark
+      // and still find the meter registered. The delegate also keeps the IllegalStateException
+      // behaviour for remove() before next() or a repeated remove().
+      delegate.remove();
+      markRemoved(current);
+    }
+  }
+
+  /** Tell a meter it has been removed, if its type supports being told. */
+  private static void markRemoved(Meter m) {
+    if (m instanceof RemovableMeter) {
+      ((RemovableMeter) m).markRemoved();
+    }
   }
 
   @Override
@@ -361,7 +405,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   protected void removeExpiredMeters() {
     int total = 0;
     int expired = 0;
-    Iterator<Meter> it = meters.values().iterator();
+    Iterator<Meter> it = iterator();
     while (it.hasNext()) {
       ++total;
       Meter m = it.next();
@@ -435,6 +479,12 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
       }
     }
     state.clear();
+    // Tell the meters they are gone before dropping them. A meter registered after this loop has
+    // passed its bin is cleared without being marked; the map's iterator is weakly consistent, so
+    // closing concurrently with registration cannot be made exact here.
+    for (Meter m : meters.values()) {
+      markRemoved(m);
+    }
     meters.clear();
   }
 }
