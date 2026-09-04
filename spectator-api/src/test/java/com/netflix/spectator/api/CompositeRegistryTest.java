@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CompositeRegistryTest {
 
@@ -350,5 +351,72 @@ public class CompositeRegistryTest {
     c.increment();
     Assertions.assertEquals(2, r1.counter("test").count());
     Assertions.assertEquals(2, r2.counter("test").count());
+  }
+
+  @Test
+  public void heldMaxGaugeStaysAMaxGaugeAcrossRegistryChange() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    Registry r1 = new DefaultRegistry(clock);
+    Registry r2 = new DefaultRegistry(clock);
+    r.add(r1);
+
+    Gauge g = r.maxGauge("test");
+    g.set(10.0);
+    Assertions.assertEquals(10.0, r1.maxGauge("test").value(), 1e-12);
+
+    // Adding a registry makes the held reference resolve again. It has to come back as a max
+    // gauge: resolving as a plain gauge would silently change what the id reports.
+    r.add(r2);
+    g.set(1.0);
+    Assertions.assertEquals(1.0, r2.maxGauge("test").value(), 1e-12);
+
+    g.set(5.0);
+    Assertions.assertEquals(5.0, r2.maxGauge("test").value(), 1e-12);
+    g.set(2.0);
+    Assertions.assertEquals(5.0, r2.maxGauge("test").value(), 1e-12);
+  }
+
+  @Test
+  public void heldMeterNoticesRemoveAll() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    Registry r1 = new DefaultRegistry(clock);
+    r.add(r1);
+
+    Counter c = r.counter("test");
+    c.increment();
+    Assertions.assertEquals(1, r1.counter("test").count());
+
+    // removeAll changes the shape, so the held reference must stop reaching r1.
+    r.removeAll();
+    c.increment();
+    Assertions.assertEquals(1, r1.counter("test").count());
+  }
+
+  @Test
+  public void removeAllOnEmptyCompositeDoesNotExpireHeldMeters() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    Counter c = r.counter("test");
+    Assertions.assertFalse(c.hasExpired());
+
+    // No shape change, so the version does not move and the meter is not reported as expired,
+    // which callers such as PolledMeter act on by discarding it. The state map is still closed
+    // and cleared either way.
+    r.removeAll();
+    Assertions.assertFalse(c.hasExpired());
+  }
+
+  @Test
+  public void removeAllClosesState() {
+    CompositeRegistry r = new CompositeRegistry(clock);
+    r.add(new DefaultRegistry(clock));
+
+    AtomicBoolean closed = new AtomicBoolean();
+    PolledMeter.monitorResource(r, () -> closed.set(true));
+
+    // Clearing the state map without closing the entries first would leave the work they track
+    // running with no bookkeeping left to stop it.
+    r.removeAll();
+    Assertions.assertTrue(closed.get());
+    Assertions.assertTrue(r.state().isEmpty());
   }
 }
