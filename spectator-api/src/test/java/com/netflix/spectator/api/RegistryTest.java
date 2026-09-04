@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.DoubleSummaryStatistics;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.LongSummaryStatistics;
@@ -577,6 +578,49 @@ public class RegistryTest {
     PolledMeter.update(r);
     Assertions.assertEquals(0, r.stream().count());
     Assertions.assertEquals(0, r.state().size());
+  }
+
+  @Test
+  public void placeholdersAreNotStoredOnceFull() {
+    DefaultRegistry r = newRegistry(false, 10);
+    for (int i = 0; i < 10; ++i) {
+      r.counter("test." + i).increment();
+    }
+    Assertions.assertEquals(10, r.stream().count());
+
+    // Ids past the limit get a placeholder, which must not take up a slot: the placeholder
+    // types never expire, so a stored one could never be reclaimed by a cleanup pass.
+    for (int i = 10; i < 100; ++i) {
+      r.counter("test." + i).increment();
+    }
+    Assertions.assertEquals(10, r.stream().count());
+  }
+
+  @Test
+  public void newLookupGetsRealMeterAfterSpaceFrees() {
+    DefaultRegistry r = newRegistry(false, 10);
+    for (int i = 0; i < 10; ++i) {
+      r.counter("test." + i).increment();
+    }
+
+    // Full, so this id gets a placeholder and the update is dropped.
+    r.counter("late").increment();
+    Assertions.assertNull(r.get(r.createId("late")));
+
+    // Free a slot; the id must now be able to get a real meter. Removing through the iterator
+    // is the only way to drop a live meter from the outside: the DefaultRegistry types never
+    // report hasExpired(), so removeExpiredMeters() would not reclaim anything here.
+    Iterator<Meter> it = r.iterator();
+    it.next();
+    it.remove();
+    Assertions.assertEquals(9, r.stream().count());
+
+    // This is a fresh lookup. A reference obtained while the registry was full is a separate
+    // case that is still pinned: counter(Id) wraps the placeholder using the placeholder's own
+    // id (NoopId), and the placeholder never reports hasExpired(), so the SwapMeter has nothing
+    // to re-resolve against and stays a noop for its lifetime.
+    r.counter("late").increment();
+    Assertions.assertEquals(1, r.counter("late").count());
   }
 
   @Test

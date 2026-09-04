@@ -45,6 +45,13 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   private final Clock clock;
   private final RegistryConfig config;
 
+  // Snapshot taken once at construction. It is checked on every lookup that misses the meter
+  // map, and once the registry is full that is every update for an unregistered id, so it must
+  // not go back to the config each time: the default RegistryConfig is backed by
+  // System.getProperty, which builds a key string and hits the global Properties table on every
+  // call. Reading settings once in the constructor is what the other registries already do.
+  private final int maxNumberOfMeters;
+
   private final ConcurrentHashMap<Id, Meter> meters;
   private final ConcurrentHashMap<Id, Object> state;
 
@@ -80,6 +87,7 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     this.logger = LoggerFactory.getLogger(getClass());
     this.clock = clock;
     this.config = config;
+    this.maxNumberOfMeters = config.maxNumberOfMeters();
     this.meters = new ConcurrentHashMap<>();
     this.state = new ConcurrentHashMap<>();
     this.idNormalizationCache = Cache.lfu(new NoopRegistry(), "spectator-id", 1000, 10000);
@@ -222,8 +230,13 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     propagate(new IllegalStateException(msg));
   }
 
-  private Meter compute(Meter m, Meter fallback) {
-    return (meters.size() >= config.maxNumberOfMeters()) ? fallback : m;
+  /**
+   * Whether the map is full and no further meters should be registered. The size is only a
+   * bound, not a lock: concurrent callers can each see room and register, so the map can end up
+   * slightly over the limit. That is the same tolerance the check has always had.
+   */
+  private boolean isFull() {
+    return meters.size() >= maxNumberOfMeters;
   }
 
   @Deprecated
@@ -274,8 +287,11 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
    * @param cls
    *     Type of the meter.
    * @param dflt
-   *     Default value used if there is a failure during the lookup and it is not configured
-   *     to propagate.
+   *     Placeholder returned if there is a failure during the lookup and it is not configured
+   *     to propagate, or if the registry is already at
+   *     {@link RegistryConfig#maxNumberOfMeters()} and the id has no meter yet. It is returned
+   *     as-is and is never stored in the registry, so the id can still get a real meter on a
+   *     later call once there is room.
    * @param factory
    *     Function for creating a new instance of the meter type if one is not already available
    *     in the registry.
@@ -294,7 +310,21 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     try {
       Preconditions.checkNotNull(id, "id");
       Id normId = normalizeId(id);
-      Meter m = Utils.computeIfAbsent(meters, normId, i -> compute(factory.apply(i), dflt));
+      Meter m = meters.get(normId);
+      if (m == null) {
+        // Return the placeholder without storing it. Storing one would occupy a slot for an id
+        // that has no meter, and the placeholder types never expire, so cleanup could not
+        // reclaim it: the map would keep growing past the limit and the id would be pinned to
+        // the placeholder even once there was room again.
+        if (isFull()) {
+          return dflt;
+        }
+        final Meter tmp = factory.apply(normId);
+        m = meters.putIfAbsent(normId, tmp);
+        if (m == null) {
+          m = tmp;
+        }
+      }
       if (!cls.isAssignableFrom(m.getClass())) {
         logTypeError(normId, cls, m.getClass());
         m = dflt;
