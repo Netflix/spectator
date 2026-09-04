@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@ package com.netflix.spectator.atlas;
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
-import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.Tag;
+import com.netflix.spectator.impl.RemovableMeter;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /** Base class for core meter types used by AtlasRegistry. */
-abstract class AtlasMeter implements Meter {
+abstract class AtlasMeter implements RemovableMeter {
 
   /**
    * Add the new tags to the id if they are not already present. Tries to minimize the number
@@ -67,6 +67,9 @@ abstract class AtlasMeter implements Meter {
   /** Last time this meter was updated. */
   private volatile long lastUpdated;
 
+  /** Set when the registry removes this meter. */
+  private volatile boolean removed;
+
   /** Create a new instance. */
   AtlasMeter(Id id, Clock clock, long ttl) {
     this.id = id;
@@ -93,6 +96,14 @@ abstract class AtlasMeter implements Meter {
 
   boolean hasExpired(long now) {
     return now - lastUpdated > ttl;
+  }
+
+  @Override public boolean isRemoved() {
+    return removed;
+  }
+
+  @Override public void markRemoved() {
+    removed = true;
   }
 
   @Override public Iterable<Measurement> measure() {
