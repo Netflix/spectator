@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,8 +59,6 @@ public final class AtlasRegistry extends AbstractRegistry {
 
   private static final String PUBLISH_TASK_TIMER = "spectator.atlas.publishTaskTime";
 
-  private final Clock stepClock;
-
   private final AtlasConfig config;
 
   private final Duration step;
@@ -108,7 +106,6 @@ public final class AtlasRegistry extends AbstractRegistry {
   AtlasRegistry(Clock clock, AtlasConfig config, HttpClient client) {
     super(new OverridableClock(clock), config);
     this.config = config;
-    this.stepClock = new StepClock(clock, config.lwcStep().toMillis());
 
     this.step = config.step();
     this.stepMillis = step.toMillis();
@@ -454,9 +451,10 @@ public final class AtlasRegistry extends AbstractRegistry {
   }
 
   @Override protected Gauge newGauge(Id id) {
-    // Be sure to get StepClock so the measurements will have step aligned
-    // timestamps.
-    return new AtlasGauge(id, stepClock, meterTTL);
+    // Same shape as the other meter types: the registry clock tracks activity, so expiry uses
+    // the clock removeExpiredMeters() sweeps with, and the step size is applied to the poll
+    // timestamp so the measurements stay step aligned.
+    return new AtlasGauge(id, clock(), meterTTL, lwcStepMillis);
   }
 
   @Override protected Gauge newMaxGauge(Id id) {
