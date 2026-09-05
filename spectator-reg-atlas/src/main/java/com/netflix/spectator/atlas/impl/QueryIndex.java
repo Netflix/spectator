@@ -94,7 +94,7 @@ public final class QueryIndex<T> {
    * Dedup values as they are consumed. This is used to avoid processing the same result
    * multiple times in the case of OR clauses where multiple match the same data point.
    */
-  private static class DedupConsumer<T> implements Consumer<T> {
+  private static final class DedupConsumer<T> implements Consumer<T> {
 
     private final Consumer<T> consumer;
     private final Set<T> alreadySeen;
@@ -108,6 +108,10 @@ public final class QueryIndex<T> {
       if (alreadySeen.add(t)) {
         consumer.accept(t);
       }
+    }
+
+    static <T> DedupConsumer<T> from(Consumer<T> consumer) {
+      return (consumer instanceof DedupConsumer<?>) ? (DedupConsumer<T>) consumer : new DedupConsumer<>(consumer);
     }
   }
 
@@ -639,10 +643,10 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Id id, Consumer<T> consumer) {
-    forEachMatch(id, 0, new DedupConsumer<>(consumer));
+    forEachMatch(id, 0, DedupConsumer.from(consumer));
   }
 
-  private void forEachMatch(Id tags, int i, Consumer<T> consumer) {
+  private void forEachMatch(Id tags, int i, DedupConsumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
@@ -734,10 +738,10 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Function<String, String> tags, Consumer<T> consumer) {
-    forEachMatchImpl(tags, new DedupConsumer<>(consumer));
+    forEachMatchImpl(tags, DedupConsumer.from(consumer));
   }
 
-  private void forEachMatchImpl(Function<String, String> tags, Consumer<T> consumer) {
+  private void forEachMatchImpl(Function<String, String> tags, DedupConsumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
@@ -751,7 +755,7 @@ public final class QueryIndex<T> {
         // Find exact matches
         QueryIndex<T> eqIdx = equalChecks.get(v);
         if (eqIdx != null) {
-          eqIdx.forEachMatch(tags, consumer);
+          eqIdx.forEachMatchImpl(tags, consumer);
         }
 
         // Scan for matches with other conditions
@@ -761,13 +765,13 @@ public final class QueryIndex<T> {
         // size/get avoids the allocation and has better throughput.
         final int n = otherMatches.size();
         for (int p = 0; p < n; ++p) {
-          otherMatches.get(p).forEachMatch(tags, consumer);
+          otherMatches.get(p).forEachMatchImpl(tags, consumer);
         }
 
         // Check matches for has key
         final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
         if (hasKeyIdxRef != null) {
-          hasKeyIdxRef.forEachMatch(tags, consumer);
+          hasKeyIdxRef.forEachMatchImpl(tags, consumer);
         }
       }
     }
@@ -775,13 +779,13 @@ public final class QueryIndex<T> {
     // Check matches with other keys
     final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
     if (otherKeysIdxRef != null) {
-      otherKeysIdxRef.forEachMatch(tags, consumer);
+      otherKeysIdxRef.forEachMatchImpl(tags, consumer);
     }
 
     // Check matches with missing keys
     final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
     if (missingKeysIdxRef != null && !keyPresent) {
-      missingKeysIdxRef.forEachMatch(tags, consumer);
+      missingKeysIdxRef.forEachMatchImpl(tags, consumer);
     }
   }
 
