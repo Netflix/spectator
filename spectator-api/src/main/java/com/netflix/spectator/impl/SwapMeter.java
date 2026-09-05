@@ -30,7 +30,7 @@ import java.util.function.LongSupplier;
  * <p><b>This class is an internal implementation detail only intended for use within
  * spectator. It is subject to change without notice.</b></p>
  */
-public abstract class SwapMeter<T extends Meter> implements Meter {
+public abstract class SwapMeter<T extends Meter> implements RemovableMeter {
 
   /** Registry used to lookup values after expiration. */
   protected final Registry registry;
@@ -71,6 +71,25 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
   }
 
   /**
+   * {@inheritDoc}
+   *
+   * <p>Answers for the meter this is wrapping, so a wrapper nested inside another one, as
+   * {@code CompositeRegistry} hands out, passes the cheap flag through rather than forcing the
+   * outer wrapper onto a wall clock read. This wrapper's own version is part of the answer: a
+   * shape change means the outer wrapper has to resolve again too.</p>
+   */
+  @Override public boolean isRemoved() {
+    return isStale(underlying) || currentVersion < versionSupplier.getAsLong();
+  }
+
+  /**
+   * {@inheritDoc} A registry stores the meters it creates, never the wrappers it hands out, so
+   * nothing ever marks one of these: the answer comes from what it wraps.
+   */
+  @Override public void markRemoved() {
+  }
+
+  /**
    * Set the underlying instance of the meter to use. This can be set to {@code null}
    * to indicate that the meter has expired and is no longer in the registry.
    */
@@ -78,13 +97,38 @@ public abstract class SwapMeter<T extends Meter> implements Meter {
     underlying = unwrap(meter);
   }
 
-  /** Return the underlying instance of the meter. */
+  /**
+   * Return the underlying instance of the meter, resolving a new one if the registry no longer
+   * holds the one this is wrapping.
+   *
+   * <p>This runs on every update through a reference the caller holds, so it asks the meter
+   * whether it is still registered rather than whether it has expired. For a meter with a TTL
+   * the second question costs a wall clock read; the first is a flag the registry sets on the
+   * cleanup pass. A meter type that cannot answer it falls back to expiry, which is a safe
+   * over-approximation: one past its TTL but still registered resolves back to itself.</p>
+   */
   public T get() {
-    if (hasExpired()) {
-      currentVersion = versionSupplier.getAsLong();
-      underlying = unwrap(lookup());
+    T meter = underlying;
+    // Read once and reuse: the value stored has to be the one that was compared, otherwise a
+    // bump landing between the two reads is recorded as already seen.
+    final long version = versionSupplier.getAsLong();
+    if (isStale(meter) || currentVersion < version) {
+      currentVersion = version;
+      meter = unwrap(lookup());
+      underlying = meter;
     }
-    return underlying;
+    return meter;
+  }
+
+  /** Whether the meter has to be looked up again before it is used. */
+  private static boolean isStale(Meter meter) {
+    if (meter instanceof RemovableMeter) {
+      return ((RemovableMeter) meter).isRemoved();
+    }
+    // The null check is on this branch rather than in front of the type test so it costs
+    // nothing for a meter that can answer. A null underlying is what set() documents as the
+    // meter being gone from the registry, so it has to resolve rather than be dereferenced.
+    return meter == null || meter.hasExpired();
   }
 
   /**
