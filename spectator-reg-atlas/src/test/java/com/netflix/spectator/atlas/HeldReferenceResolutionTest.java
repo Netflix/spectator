@@ -16,12 +16,15 @@
 package com.netflix.spectator.atlas;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.CompositeRegistry;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.NoopRegistry;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.impl.SwapMeter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -143,8 +146,7 @@ public class HeldReferenceResolutionTest {
     // What Spectator.globalRegistry() hands out: a wrapper around the sub-registry's own
     // wrapper. The outer one has to get the flag passed through, or the nesting costs a clock
     // read per update and the cheap path never reaches the common entry point.
-    com.netflix.spectator.api.CompositeRegistry composite =
-        com.netflix.spectator.api.Spectator.globalRegistry();
+    CompositeRegistry composite = Spectator.globalRegistry();
     composite.removeAll();
     composite.add(registry);
     try {
@@ -161,6 +163,44 @@ public class HeldReferenceResolutionTest {
           "expected one clock read per update through the composite, for recording the value");
     } finally {
       composite.removeAll();
+    }
+  }
+
+  @Test
+  public void updatesThroughAMultiRegistryCompositeDoNotReadTheClockEither() {
+    // With more than one sub-registry the composite stops handing back the sub-registry's own
+    // wrapper and installs a CompositeCounter between the wrapper and the meters. That layer has
+    // to pass the flag through as well, otherwise the shape most applications actually run is
+    // back to a wall clock read per update.
+    AtlasRegistry second = new AtlasRegistry(clock, newConfig());
+    CompositeRegistry composite = Spectator.globalRegistry();
+    composite.removeAll();
+    composite.add(registry);
+    composite.add(second);
+    try {
+      Counter held = composite.counter(composite.createId("test.composite.multi"));
+      held.increment();
+      Meter first = ((SwapMeter<?>) held).get();
+
+      long start = clock.reads.get();
+      for (int i = 0; i < 1000; ++i) {
+        held.increment();
+      }
+      long reads = clock.reads.get() - start;
+
+      // Two reads per update and no more: one for each sub-registry's counter recording the
+      // value, and nothing for working out whether the meters are still the registered ones.
+      Assertions.assertEquals(2000, reads,
+          "expected one clock read per sub-registry update and none for the staleness check");
+
+      // The read count alone does not pin this: re-resolving costs no clock reads, because the
+      // lookup finds the existing meters. So also check the composite was not rebuilt, which is
+      // what a staleness answer of "removed" would cause on every single update.
+      Assertions.assertSame(first, ((SwapMeter<?>) held).get(),
+          "the composite was rebuilt while all of its members were live");
+    } finally {
+      composite.removeAll();
+      second.close();
     }
   }
 

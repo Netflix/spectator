@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.api;
 
+import com.netflix.spectator.impl.RemovableMeter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -23,10 +25,13 @@ import java.util.List;
 /**
  * Base class for composite implementations of core meter types.
  */
-class CompositeMeter<T extends Meter> implements Meter {
+class CompositeMeter<T extends Meter> implements RemovableMeter {
 
   /** Identifier for the meter. */
   protected final Id id;
+
+  /** Set if the registry ever tells this composite it was removed. See {@link #markRemoved()}. */
+  private volatile boolean removed;
 
   /** Underlying meters that are keeping the data. */
   protected final Collection<T> meters;
@@ -53,6 +58,46 @@ class CompositeMeter<T extends Meter> implements Meter {
       if (m != null && !m.hasExpired()) return false;
     }
     return true;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>This is what {@link CompositeRegistry} installs underneath the wrapper it hands out once
+   * it holds more than one registry. Answering here rather than leaving {@code SwapMeter} to
+   * fall back on {@link #hasExpired()} keeps the wall clock off the update path for that shape,
+   * to the extent the members can answer without it. A member is only that cheap when its
+   * registry hands out wrappers over meters that carry the flag; one whose meter derives expiry
+   * from a clock still reads it. Since the loop stops at the first member that is not removed,
+   * which members are cheap depends on the order the registries were added.</p>
+   *
+   * <p>Mirrors {@link #hasExpired()} in only reporting when every member does. A member that was
+   * removed on its own resolves through its own wrapper, so there is nothing for the composite to
+   * rebuild until they all have.</p>
+   */
+  @Override public boolean isRemoved() {
+    if (removed) {
+      return true;
+    }
+    for (Meter m : meters) {
+      if (m instanceof RemovableMeter) {
+        if (!((RemovableMeter) m).isRemoved()) return false;
+      } else if (m != null && !m.hasExpired()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * {@inheritDoc} A composite is built for the wrapper that hands it out and is never stored in
+   * a registry, so nothing marks one today and the answer comes from the members. Recorded
+   * anyway rather than dropped: a mark that went nowhere would leave the wrapper holding this
+   * for good, because the flag is preferred over {@link #hasExpired()} and there would be no
+   * other way for the answer to change.
+   */
+  @Override public void markRemoved() {
+    removed = true;
   }
 
   @Override public Iterable<Measurement> measure() {

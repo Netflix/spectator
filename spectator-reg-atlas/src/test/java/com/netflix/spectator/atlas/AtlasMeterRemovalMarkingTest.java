@@ -33,7 +33,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The Atlas meters are told when the registry removes them, so a reference held elsewhere can
- * find out without reading the wall clock. Nothing reads the mark yet.
+ * find out without reading the wall clock. This covers the marking itself; what the update path
+ * does with the mark is covered by {@link HeldReferenceResolutionTest}.
  */
 public class AtlasMeterRemovalMarkingTest {
 
