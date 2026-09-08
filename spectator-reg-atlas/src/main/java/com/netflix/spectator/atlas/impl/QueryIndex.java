@@ -110,8 +110,10 @@ public final class QueryIndex<T> {
       }
     }
 
-    static <T> DedupConsumer<T> from(Consumer<T> consumer) {
-      return (consumer instanceof DedupConsumer<?>) ? (DedupConsumer<T>) consumer : new DedupConsumer<>(consumer);
+    static <V> DedupConsumer<V> from(Consumer<V> consumer) {
+      return (consumer instanceof DedupConsumer<?>)
+          ? (DedupConsumer<V>) consumer
+          : new DedupConsumer<>(consumer);
     }
   }
 
@@ -643,17 +645,16 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Id id, Consumer<T> consumer) {
-    forEachMatch(id, 0, DedupConsumer.from(consumer));
+    forEachMatchImpl(id, 0, DedupConsumer.from(consumer));
   }
 
-  private void forEachMatch(Id tags, int i, DedupConsumer<T> consumer) {
+  private void forEachMatchImpl(Id tags, int i, DedupConsumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
+    boolean keyPresent = false;
     final String keyRef = key;
     if (keyRef != null) {
-
-      boolean keyPresent = false;
 
       // keyRef is fixed for this node, so the "name" check only needs to be done once
       // here rather than on every comparison within the loop below.
@@ -671,7 +672,7 @@ public final class QueryIndex<T> {
           // Find exact matches
           QueryIndex<T> eqIdx = equalChecks.get(v);
           if (eqIdx != null) {
-            eqIdx.forEachMatch(tags, nextPos, consumer);
+            eqIdx.forEachMatchImpl(tags, nextPos, consumer);
           }
 
           // Scan for matches with other conditions
@@ -681,13 +682,15 @@ public final class QueryIndex<T> {
           // size/get avoids the allocation and has better throughput.
           final int n = otherMatches.size();
           for (int p = 0; p < n; ++p) {
-            otherMatches.get(p).forEachMatch(tags, nextPos, consumer);
+            otherMatches.get(p).forEachMatchImpl(tags, nextPos, consumer);
           }
 
-          // Check matches for has key
+          // Check matches for has key. The sub-tree is built from the queries after the ones
+          // for this key, so its own key sorts after keyRef and the tag at j can never match
+          // it. Start past it, as the other descents from this position do.
           final QueryIndex<T> hasKeyIdxRef = hasKeyIdx;
           if (hasKeyIdxRef != null) {
-            hasKeyIdxRef.forEachMatch(tags, j, consumer);
+            hasKeyIdxRef.forEachMatchImpl(tags, nextPos, consumer);
           }
         }
 
@@ -696,18 +699,18 @@ public final class QueryIndex<T> {
           break;
         }
       }
+    }
 
-      // Check matches with other keys
-      final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
-      if (otherKeysIdxRef != null) {
-        otherKeysIdxRef.forEachMatch(tags, i, consumer);
-      }
+    // Check matches with other keys
+    final QueryIndex<T> otherKeysIdxRef = otherKeysIdx;
+    if (otherKeysIdxRef != null) {
+      otherKeysIdxRef.forEachMatchImpl(tags, i, consumer);
+    }
 
-      // Check matches with missing keys
-      final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
-      if (missingKeysIdxRef != null && !keyPresent) {
-        missingKeysIdxRef.forEachMatch(tags, i, consumer);
-      }
+    // Check matches with missing keys
+    final QueryIndex<T> missingKeysIdxRef = missingKeysIdx;
+    if (missingKeysIdxRef != null && !keyPresent) {
+      missingKeysIdxRef.forEachMatchImpl(tags, i, consumer);
     }
   }
 
