@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.atlas;
 
+import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Meter;
 import com.netflix.spectator.api.NoopRegistry;
@@ -139,6 +140,7 @@ public class AtlasMeterRemovalMarkingTest {
   @Test
   public void meterSurvivingTheCleanupPassIsNotMarked() {
     populate();
+    snapshot();
     clock.setWallTime(TTL + 1);
     // Keep one meter active so the pass leaves it alone.
     registry.counter("counter").increment();
@@ -148,6 +150,30 @@ public class AtlasMeterRemovalMarkingTest {
     Meter kept = registry.get(registry.createId("counter"));
     Assertions.assertNotNull(kept);
     Assertions.assertFalse(((RemovableMeter) kept).isRemoved());
+    // The pass has to have removed the other four, otherwise the check above holds for a pass
+    // that did nothing at all.
+    Assertions.assertEquals(1L, registry.stream().count(),
+        "only the meter kept active should be left");
+  }
+
+  @Test
+  public void theReplacementForARemovedMeterIsNotMarked() {
+    populate();
+    Id counterId = registry.createId("counter");
+    Meter original = registry.get(counterId);
+
+    clock.setWallTime(TTL + 1);
+    registry.removeExpiredMeters();
+    Assertions.assertTrue(((RemovableMeter) original).isRemoved());
+
+    // A reader acting on the mark resolves the id again. The instance it lands on has to be a
+    // fresh unmarked one, otherwise it would resolve straight back onto a marked meter and never
+    // make progress.
+    registry.counter("counter").increment();
+    Meter replacement = registry.get(counterId);
+    Assertions.assertNotNull(replacement);
+    Assertions.assertNotSame(original, replacement);
+    Assertions.assertFalse(((RemovableMeter) replacement).isRemoved());
   }
 
   @Test
@@ -161,6 +187,11 @@ public class AtlasMeterRemovalMarkingTest {
     for (Meter m : before) {
       Assertions.assertTrue(((RemovableMeter) m).isRemoved(),
           m.id() + " was dropped by close() without being marked");
+      // Marked and gone, not marked and still findable. This only checks the end state: that
+      // the mark is set after the entry is removed rather than before is pinned in
+      // RemovableMeterMarkingTest, which records what the registry could find from inside
+      // markRemoved().
+      Assertions.assertNull(registry.get(m.id()), m.id() + " is still registered after close()");
     }
   }
 }
