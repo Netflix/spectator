@@ -184,6 +184,47 @@ public class QueryIndexTest {
     }
   }
 
+  private static final Query HASKEY_MULTI_QUERY = Parser.parseQuery(
+      "name,a,:eq,b,:has,:and,c,cv,:eq,:and,e,ev,:eq,:and");
+
+  private QueryIndex<Query> hasKeyMultiIdx() {
+    return QueryIndex.newInstance(cacheSupplier).add(HASKEY_MULTI_QUERY, HASKEY_MULTI_QUERY);
+  }
+
+  @Test
+  public void hasKeyWithSeveralKeysAfterIt() {
+    // The has key sub-tree is entered from the position of the tag that matched the has key, so
+    // it has to keep working when more keys follow that need matching inside it.
+    Id match = id("a", "b", "anything", "c", "cv", "e", "ev");
+    assertEquals(list(HASKEY_MULTI_QUERY), hasKeyMultiIdx(), match);
+
+    // Same, with unrelated tags interleaved between the keys the sub-tree looks for.
+    Id spaced = id("a", "aa", "1", "b", "anything", "bb", "2", "c", "cv", "d", "3", "e", "ev");
+    assertEquals(list(HASKEY_MULTI_QUERY), hasKeyMultiIdx(), spaced);
+  }
+
+  @Test
+  public void hasKeyWithSeveralKeysAfterItMissingOne() {
+    // The has key is present, so the sub-tree is entered, but one of the keys inside it is not.
+    Id missingC = id("a", "b", "anything", "e", "ev");
+    assertEquals(Collections.emptyList(), hasKeyMultiIdx(), missingC);
+
+    Id missingE = id("a", "b", "anything", "c", "cv");
+    assertEquals(Collections.emptyList(), hasKeyMultiIdx(), missingE);
+  }
+
+  @Test
+  public void hasKeyIsTheLastTag() {
+    // Boundary for entering the sub-tree: the tag matching the has key is the last one, so there
+    // is nothing left for the sub-tree to scan and it must not report a match.
+    Id id = id("a", "b", "anything");
+    assertEquals(Collections.emptyList(), hasKeyMultiIdx(), id);
+
+    // With the single level query the has key being last is a match, since nothing follows it.
+    Id lastForSimpleQuery = id("a", "c", "12345", "key", "b");
+    assertEquals(list(HASKEY_QUERY), hasKeyIdx(), lastForSimpleQuery);
+  }
+
   private static final Query IN_QUERY = Parser.parseQuery("name,a,:eq,key,(,b,c,),:in,:and");
 
   private QueryIndex<Query> inIdx() {
