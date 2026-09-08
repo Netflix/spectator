@@ -365,6 +365,76 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void orMultiMatchDeliversOnce() {
+    // Both branches match, and they land in different sub-trees, so the traversal reaches the
+    // value twice. The dedup has to collapse that to one delivery.
+    Query q = Parser.parseQuery("name,a,:eq,b,1,:eq,:and,name,a,:eq,c,2,:eq,:and,:or");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(q, q);
+
+    // assertEquals runs both traversals, so a second delivery shows up as a longer list.
+    assertEquals(list(q), idx, id("a", "b", "1", "c", "2"));
+
+    // One branch only, so nothing to collapse.
+    assertEquals(list(q), idx, id("a", "b", "1"));
+    assertEquals(list(q), idx, id("a", "c", "2"));
+  }
+
+  @Test
+  public void andOnlyQueriesStillMatch() {
+    // No value is registered under more than one term here. Results have to be the same whether
+    // the dedup runs or not; that it is skipped is a matter of allocation, which this cannot
+    // see and QueryIndexMatch measures.
+    Query q1 = Parser.parseQuery("name,a,:eq,b,1,:eq,:and");
+    Query q2 = Parser.parseQuery("name,a,:eq,c,2,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(q1, q1).add(q2, q2);
+
+    assertEquals(list(q1), idx, id("a", "b", "1"));
+    assertEquals(list(q2), idx, id("a", "c", "2"));
+    assertEquals(list(q1, q2), idx, id("a", "b", "1", "c", "2"));
+    assertEquals(Collections.emptyList(), idx, id("a"));
+  }
+
+  @Test
+  public void dedupHandlesASecondValueAfterTheFirst() {
+    // The dedup keeps the first value in a field and only builds a set once a second distinct
+    // value arrives, carrying the first one into it. That carry only matters when the first
+    // value is delivered again after the set exists. Sharing a leaf with the first :or branch
+    // gets that order: the shared node delivers the :or value then the other one, and the
+    // second :or branch delivers the :or value again afterwards.
+    Query or = Parser.parseQuery("name,a,:eq,b,1,:eq,:and,name,a,:eq,d,3,:eq,:and,:or");
+    Query other = Parser.parseQuery("name,a,:eq,b,1,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(or, or).add(other, other);
+
+    Id all = id("a", "b", "1", "c", "2", "d", "3");
+    assertEquals(list(or, other), idx, all);
+
+    // Same with the other value registered first.
+    QueryIndex<Query> reversed = QueryIndex.newInstance(cacheSupplier);
+    reversed.add(other, other).add(or, or);
+    assertEquals(list(or, other), reversed, all);
+  }
+
+  @Test
+  public void orAddedAfterAndQueriesStillDedups() {
+    // The index starts out not needing dedup, so a query added later has to be able to turn it
+    // on for the whole index.
+    Query and = Parser.parseQuery("name,a,:eq,b,1,:eq,:and");
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier);
+    idx.add(and, and);
+    assertEquals(list(and), idx, id("a", "b", "1"));
+
+    Query or = Parser.parseQuery("name,z,:eq,b,1,:eq,:and,name,z,:eq,c,2,:eq,:and,:or");
+    idx.add(or, or);
+
+    List<Query> delivered = new ArrayList<>();
+    idx.forEachMatch(id("z", "b", "1", "c", "2"), delivered::add);
+    Assertions.assertEquals(list(or), delivered, "value was delivered more than once");
+  }
+
+  @Test
   public void manyQueries() {
     // CpuUsage for all instances
     Query cpuUsage = Parser.parseQuery("name,cpuUsage,:eq");

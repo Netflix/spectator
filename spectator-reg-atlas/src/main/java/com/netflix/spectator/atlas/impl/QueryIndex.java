@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -97,24 +98,35 @@ public final class QueryIndex<T> {
   private static final class DedupConsumer<T> implements Consumer<T> {
 
     private final Consumer<T> consumer;
-    private final Set<T> alreadySeen;
+
+    // Most lookups deliver nothing or one value, so the set is deferred until a second distinct
+    // value shows up and there is actually something to compare against. A boolean rather than a
+    // null check on first, so that a null value cannot be mistaken for an empty state.
+    private boolean hasFirst;
+    private T first;
+    private Set<T> alreadySeen;
 
     DedupConsumer(Consumer<T> consumer) {
       this.consumer = consumer;
-      this.alreadySeen = new HashSet<>();
     }
 
     @Override public void accept(T t) {
-      if (alreadySeen.add(t)) {
+      if (alreadySeen != null) {
+        if (alreadySeen.add(t)) {
+          consumer.accept(t);
+        }
+      } else if (!hasFirst) {
+        hasFirst = true;
+        first = t;
+        consumer.accept(t);
+      } else if (!Objects.equals(first, t)) {
+        alreadySeen = new HashSet<>();
+        alreadySeen.add(first);
+        alreadySeen.add(t);
         consumer.accept(t);
       }
     }
 
-    static <V> DedupConsumer<V> from(Consumer<V> consumer) {
-      return (consumer instanceof DedupConsumer<?>)
-          ? (DedupConsumer<V>) consumer
-          : new DedupConsumer<>(consumer);
-    }
   }
 
   /**
@@ -183,6 +195,11 @@ public final class QueryIndex<T> {
   }
 
   private final CacheSupplier<T> cacheSupplier;
+
+  // Set when some value has been registered under more than one term, which is the only way a
+  // traversal can reach the same value twice. Checked once per lookup on the instance the
+  // queries were added to, so the dedup wrapper is only paid for when it can do something.
+  private volatile boolean dedupRequired;
 
   private volatile String key;
 
@@ -398,6 +415,11 @@ public final class QueryIndex<T> {
   /**
    * Add a value that should match for the specified query.
    *
+   * <p>Repeated deliveries of the same value from one lookup are suppressed when a single call
+   * registers it under more than one term, which is what an {@code :or} expands to. Adding the
+   * same value, or two values that are {@code equals}, under separate calls is outside that: a
+   * lookup matching both can then deliver it once for each.</p>
+   *
    * @param query
    *     Query that corresponds to the value.
    * @param value
@@ -406,12 +428,29 @@ public final class QueryIndex<T> {
    *     This index so it can be used in a fluent manner.
    */
   public QueryIndex<T> add(Query query, T value) {
-    for (Query q : query.dnfList()) {
+    final List<Query> dnf = query.dnfList();
+
+    // A value reachable from a single term can only be found once by a traversal, so nothing
+    // needs deduping. Registering it under more than one, which is what an :or expands to, is
+    // the only way a traversal can reach the same value twice.
+    //
+    // Set before the value is registered anywhere, not after: lookups run concurrently with
+    // updates, so a flag written afterwards leaves a window where a lookup can find the value
+    // under two terms and still see the old value of the flag, and deliver it twice. Counting
+    // the terms in the list rather than the ones that end up registered over-approximates -
+    // FALSE and unsatisfiable terms are skipped below - which only costs a dedup that would not
+    // have been needed.
+    //
+    // Sticky: a remove() can only ever make deduping unnecessary, never necessary, and
+    // recomputing it would mean walking the index.
+    if (dnf.size() > 1) {
+      dedupRequired = true;
+    }
+
+    for (Query q : dnf) {
       if (q == Query.TRUE) {
         matches.add(value);
-      } else if (q == Query.FALSE) {
-        continue;
-      } else {
+      } else if (q != Query.FALSE) {
         List<Query.KeyQuery> queries = sort(q);
         if (queries != null) {
           add(queries, 0, value);
@@ -645,10 +684,20 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Id id, Consumer<T> consumer) {
-    forEachMatchImpl(id, 0, DedupConsumer.from(consumer));
+    forEachMatchImpl(id, 0, dedup(consumer));
   }
 
-  private void forEachMatchImpl(Id tags, int i, DedupConsumer<T> consumer) {
+  /**
+   * Wrap the consumer so repeated deliveries of the same value are suppressed, if this index
+   * can produce them at all. Call on the instance the queries were added to: the flag is set by
+   * {@link #add(Query, Object)}, so a sub-index reached from a cache or from the traversal has
+   * not had it set and would skip the deduping.
+   */
+  private Consumer<T> dedup(Consumer<T> consumer) {
+    return dedupRequired ? new DedupConsumer<>(consumer) : consumer;
+  }
+
+  private void forEachMatchImpl(Id tags, int i, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
@@ -741,10 +790,10 @@ public final class QueryIndex<T> {
    *     Function to invoke for values associated with a query that matches the id.
    */
   public void forEachMatch(Function<String, String> tags, Consumer<T> consumer) {
-    forEachMatchImpl(tags, DedupConsumer.from(consumer));
+    forEachMatchImpl(tags, dedup(consumer));
   }
 
-  private void forEachMatchImpl(Function<String, String> tags, DedupConsumer<T> consumer) {
+  private void forEachMatchImpl(Function<String, String> tags, Consumer<T> consumer) {
     // Matches for this level
     matches.forEach(consumer);
 
