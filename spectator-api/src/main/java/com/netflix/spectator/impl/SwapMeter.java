@@ -67,7 +67,13 @@ public abstract class SwapMeter<T extends Meter> implements RemovableMeter {
   }
 
   @Override public boolean hasExpired() {
-    return currentVersion < versionSupplier.getAsLong() || underlying.hasExpired();
+    // Held in a local so the null check and the call are on the same value. set() documents
+    // null as the meter being gone from the registry, so it reports expired rather than being
+    // dereferenced, matching isStale().
+    final Meter meter = underlying;
+    return currentVersion < versionSupplier.getAsLong()
+        || meter == null
+        || meter.hasExpired();
   }
 
   /**
@@ -79,7 +85,10 @@ public abstract class SwapMeter<T extends Meter> implements RemovableMeter {
    * shape change means the outer wrapper has to resolve again too.</p>
    */
   @Override public boolean isRemoved() {
-    return isStale(underlying) || currentVersion < versionSupplier.getAsLong();
+    // Version first: it is a field compare, where the staleness check can walk a composite's
+    // members. If the shape moved, the wrapper is resolving anyway and the walk's answer would
+    // be discarded. Same order as hasExpired().
+    return currentVersion < versionSupplier.getAsLong() || isStale(underlying);
   }
 
   /**
