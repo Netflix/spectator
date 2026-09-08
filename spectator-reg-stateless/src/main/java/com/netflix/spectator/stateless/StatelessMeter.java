@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package com.netflix.spectator.stateless;
 
 import com.netflix.spectator.api.Clock;
 import com.netflix.spectator.api.Id;
-import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.impl.RemovableMeter;
 
 /** Base class for core meter types used by {@link StatelessRegistry}. */
-abstract class StatelessMeter implements Meter {
+abstract class StatelessMeter implements RemovableMeter {
 
   /** Base identifier for all measurements supplied by this meter. */
   protected final Id id;
@@ -33,6 +33,9 @@ abstract class StatelessMeter implements Meter {
 
   /** Last time this meter was updated. */
   private volatile long lastUpdated;
+
+  /** Set when the registry removes this meter. */
+  private volatile boolean removed;
 
   /** Create a new instance. */
   StatelessMeter(Id id, Clock clock, long ttl) {
@@ -56,5 +59,13 @@ abstract class StatelessMeter implements Meter {
 
   @Override public boolean hasExpired() {
     return clock.wallTime() - lastUpdated > ttl;
+  }
+
+  @Override public boolean isRemoved() {
+    return removed;
+  }
+
+  @Override public void markRemoved() {
+    removed = true;
   }
 }
