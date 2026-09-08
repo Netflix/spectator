@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +23,14 @@ import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.impl.RemovableMeter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Distribution summary implementation for the servo registry. */
-class ServoDistributionSummary implements DistributionSummary, ServoMeter {
+class ServoDistributionSummary implements DistributionSummary, ServoMeter, RemovableMeter {
 
   private final Clock clock;
   private final Id id;
@@ -45,6 +46,9 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   private final MaxGauge servoMax;
 
   private final AtomicLong lastUpdated;
+
+  /** Set when the registry removes this meter. */
+  private volatile boolean removed;
 
   /** Create a new instance. */
   ServoDistributionSummary(ServoRegistry r, Id id) {
@@ -76,6 +80,14 @@ class ServoDistributionSummary implements DistributionSummary, ServoMeter {
   @Override public boolean hasExpired() {
     long now = clock.wallTime();
     return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
+  }
+
+  @Override public boolean isRemoved() {
+    return removed;
+  }
+
+  @Override public void markRemoved() {
+    removed = true;
   }
 
   @Override public void record(long amount) {

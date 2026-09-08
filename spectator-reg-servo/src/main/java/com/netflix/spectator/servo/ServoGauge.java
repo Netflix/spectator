@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Id;
 import com.netflix.spectator.api.Measurement;
 import com.netflix.spectator.impl.AtomicDouble;
+import com.netflix.spectator.impl.RemovableMeter;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,12 +35,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * Reports a constant value passed into the constructor.
  */
 final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
-    implements Gauge, ServoMeter, NumericMonitor<Double> {
+    implements Gauge, ServoMeter, NumericMonitor<Double>, RemovableMeter {
 
   private final Id id;
   private final Clock clock;
   private final AtomicDouble value;
   private final AtomicLong lastUpdated;
+
+  /** Set when the registry removes this meter. */
+  private volatile boolean removed;
 
   /**
    * Create a new monitor that returns {@code value}.
@@ -59,6 +63,14 @@ final class ServoGauge<T extends Number> extends AbstractMonitor<Double>
   @Override public boolean hasExpired() {
     long now = clock.wallTime();
     return now - lastUpdated.get() > ServoRegistry.EXPIRATION_TIME_MILLIS;
+  }
+
+  @Override public boolean isRemoved() {
+    return removed;
+  }
+
+  @Override public void markRemoved() {
+    removed = true;
   }
 
   @Override public Iterable<Measurement> measure() {
