@@ -67,12 +67,10 @@ final class NoopId implements Id {
     return this;
   }
 
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @Override public Id withTags(String k1, String v1, String k2, String v2) {
     return this;
   }
 
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   @Override public Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
     return this;
   }

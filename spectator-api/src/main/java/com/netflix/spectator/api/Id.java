@@ -76,7 +76,6 @@ public interface Id extends TagList {
    * Return a new id with additional tag values. This overload is to avoid allocating a
    * parameters array for the more generic varargs method {@link #withTags(String...)}.
    */
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2) {
     // The original reason for this method was to avoid allocating a string array before
     // creating a Tag array. The internals have changed so it can work on the string array
@@ -92,7 +91,6 @@ public interface Id extends TagList {
    * Return a new id with additional tag values. This overload is to avoid allocating a
    * parameters array for the more generic varargs method {@link #withTags(String...)}.
    */
-  @SuppressWarnings("PMD.UseObjectForClearerAPI")
   default Id withTags(String k1, String v1, String k2, String v2, String k3, String v3) {
     // The original reason for this method was to avoid allocating a string array before
     // creating a Tag array. The internals have changed so it can work on the string array

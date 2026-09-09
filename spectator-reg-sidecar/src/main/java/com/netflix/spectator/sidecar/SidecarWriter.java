@@ -48,6 +48,9 @@ abstract class SidecarWriter implements Closeable {
         return new PrintStreamWriter(location, System.out);
       } else if (location.startsWith("file://")) {
         OutputStream out = Files.newOutputStream(Paths.get(URI.create(location)));
+        // The PrintStream overload taking a Charset is Java 9 or later, and this has to build
+        // for Java 8, so the encoding is named rather than passed as StandardCharsets.UTF_8.
+        @SuppressWarnings("PMD.UseStandardCharsets")
         PrintStream stream = new PrintStream(out, false, "UTF-8");
         return new PrintStreamWriter(location, stream);
       } else if ("udp".equals(location)) {
