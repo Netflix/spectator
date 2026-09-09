@@ -1,7 +1,7 @@
 
 plugins {
-  id 'com.github.ben-manes.versions' version '0.57.0'
-  id 'com.github.spotbugs' version '6.5.9' apply false
+  id 'com.github.ben-manes.versions' version '0.61.0'
+  id 'com.github.spotbugs' version '6.5.11' apply false
   id 'com.gradleup.shadow' version '9.6.1' apply false
   id 'me.champeau.jmh' version '0.7.3'
   id 'com.netflix.nebula.dependency-recommender' version '14.1.0'
@@ -124,7 +124,7 @@ subprojects {
   }
 
   spotbugs {
-    toolVersion = '4.10.3'
+    toolVersion = '4.10.4'
     useJavaToolchains = false
     excludeFilter = rootProject.file('codequality/findbugs-exclude.xml')
     ignoreFailures = false
@@ -140,7 +140,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '7.23.0'
+    toolVersion = '7.27.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []
