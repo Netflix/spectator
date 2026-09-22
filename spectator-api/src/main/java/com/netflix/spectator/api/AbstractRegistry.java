@@ -202,9 +202,8 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     // normalized id and does not need to be re-checked on every lookup.
     //
     // A DefaultId is already sorted and de-duped, so it short circuits on the type and only the
-    // tag fixing is applied. That check is a cheap scan that returns the same instance when
-    // everything is already valid, which avoids a second concurrent map lookup on the hot path
-    // for the common case.
+    // tag fixing is applied. getOrCreate probes the meter map first for a DefaultId, so this scan
+    // only runs when the original id does not already identify a registered meter.
     return (id instanceof DefaultId)
         ? normalizeTags(id)
         : idNormalizationCache.computeIfAbsent(id, i -> normalizeTags(createId(i.name(), i.tags())));
@@ -213,11 +212,11 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
   /**
    * Hook that allows subclasses to enforce backend specific constraints on the tags of an id,
    * for example replacing characters that are not permitted by the storage layer. It is called
-   * for every id used to create or look up a meter so that the meter, and the measurements it
-   * produces, use the constrained form consistently. Since this is on the meter lookup path,
-   * implementations must be cheap and should return the same id instance when no changes are
-   * needed to avoid unnecessary allocations. The default implementation returns the id
-   * unchanged.
+   * before registering an id, and on a lookup when the original id does not already identify a
+   * registered meter, so that the meter and its measurements use the constrained form
+   * consistently. Since this is on the meter lookup and creation path, implementations must be
+   * cheap and should return the same id instance when no changes are needed to avoid unnecessary
+   * allocations. The default implementation returns the id unchanged.
    */
   protected Id normalizeTags(Id id) {
     return id;
@@ -310,8 +309,21 @@ public abstract class AbstractRegistry implements Registry, AutoCloseable {
     // Handle the normal processing and ensure exceptions are not propagated
     try {
       Preconditions.checkNotNull(id, "id");
-      Id normId = normalizeId(id);
-      Meter m = meters.get(normId);
+
+      // A DefaultId is already sorted and de-duped. Try it as a map key before applying
+      // backend-specific normalization so repeated lookups of an existing valid id do not rescan
+      // its name and tags. An id that needs normalization will miss and take the existing path.
+      final boolean isDefaultId = id instanceof DefaultId;
+      Meter m = isDefaultId ? meters.get(id) : null;
+      Id normId = id;
+      if (m == null) {
+        normId = normalizeId(id);
+        // A valid DefaultId was already looked up above. Avoid repeating that lookup when the
+        // normalizer returns the same instance; putIfAbsent below handles a concurrent creator.
+        if (!isDefaultId || normId != id) {
+          m = meters.get(normId);
+        }
+      }
       if (m == null) {
         // Return the placeholder without storing it. Storing one would occupy a slot for an id
         // that has no meter, and the placeholder types never expire, so cleanup could not

@@ -62,6 +62,12 @@ public class CounterIncrement {
     /** Id used to measure the cost of resolving a meter from the registry. */
     Id lookupId;
 
+    /** Existing valid id with a representative set of tags. */
+    Id taggedLookupId;
+
+    /** Existing id whose name and one value require Atlas normalization. */
+    Id invalidLookupId;
+
     /** Fixed timestamp so stepDouble benchmarks measure rollCount + CAS with no clock read. */
     long now;
 
@@ -86,6 +92,18 @@ public class CounterIncrement {
       rollingNow = Clock.SYSTEM.wallTime();
       timer = registry.timer("test.timer");
       lookupId = registry.createId("test.counter");
+      taggedLookupId = registry.createId("ipc.server.call")
+          .withTag("nf.app", "www")
+          .withTag("nf.cluster", "www-main")
+          .withTag("nf.region", "us-east-1")
+          .withTag("nf.zone", "us-east-1c")
+          .withTag("ipc.endpoint", "query")
+          .withTag("ipc.status", "success");
+      invalidLookupId = registry.createId("ipc/server/call")
+          .withTag("ipc.endpoint", "/query")
+          .withTag("ipc.status", "success");
+      registry.counter(taggedLookupId);
+      registry.counter(invalidLookupId);
     }
   }
 
@@ -136,6 +154,18 @@ public class CounterIncrement {
   @Benchmark
   public Counter lookupCost(Shared shared) {
     return shared.registry.counter(shared.lookupId);
+  }
+
+  /** Lookup of an existing valid id with representative tags. */
+  @Benchmark
+  public Counter taggedLookupCost(Shared shared) {
+    return shared.registry.counter(shared.taggedLookupId);
+  }
+
+  /** Lookup of an existing id that requires normalization. */
+  @Benchmark
+  public Counter invalidLookupCost(Shared shared) {
+    return shared.registry.counter(shared.invalidLookupId);
   }
 
   /** Cost of a single wall clock read, for scale. */

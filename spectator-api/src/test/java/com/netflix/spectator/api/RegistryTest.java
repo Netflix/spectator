@@ -45,6 +45,48 @@ public class RegistryTest {
     return new DefaultRegistry(clock, new TestRegistryConfig(warnings, numberOfMeters));
   }
 
+  private static final class NormalizingRegistry extends ExpiringRegistry {
+
+    private int normalizationCount;
+
+    NormalizingRegistry(Clock clock) {
+      super(clock);
+    }
+
+    @Override protected Id normalizeTags(Id id) {
+      ++normalizationCount;
+      String name = id.name().replace('/', '_');
+      return name.equals(id.name()) ? id : createId(name, id.tags());
+    }
+  }
+
+  @Test
+  public void existingDefaultIdSkipsNormalization() {
+    NormalizingRegistry r = new NormalizingRegistry(clock);
+    Id id = r.createId("test", "k", "v");
+
+    Counter c1 = r.counter(id);
+    Assertions.assertEquals(1, r.normalizationCount);
+
+    Counter c2 = r.counter(id);
+    Assertions.assertEquals(1, r.normalizationCount);
+    Assertions.assertSame(unwrap(c1), unwrap(c2));
+  }
+
+  @Test
+  public void defaultIdThatNeedsNormalizationStillNormalizes() {
+    NormalizingRegistry r = new NormalizingRegistry(clock);
+    Id id = r.createId("test/counter", "k", "v");
+
+    Counter c1 = r.counter(id);
+    Assertions.assertEquals(1, r.normalizationCount);
+    Assertions.assertEquals("test_counter", c1.id().name());
+
+    Counter c2 = r.counter(id);
+    Assertions.assertEquals(2, r.normalizationCount);
+    Assertions.assertSame(unwrap(c1), unwrap(c2));
+  }
+
   @Test
   public void testCreateIdArray() {
     Registry r = newRegistry(true, 10000);
