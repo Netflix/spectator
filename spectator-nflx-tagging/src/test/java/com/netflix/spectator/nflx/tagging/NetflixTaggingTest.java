@@ -37,7 +37,7 @@ public class NetflixTaggingTest {
     vars.put("NETFLIX_STACK", "bar");
     vars.put("EC2_INSTANCE_TYPE", "m5.large");
     vars.put("EC2_AVAILABILITY_ZONE", "us-east-1e");
-    vars.put("TITUS_CONTAINER_NAME", "main");
+    vars.put("NETFLIX_CONTAINER_NAME", "main");
 
     vars.put("NETFLIX_ACCOUNT_TYPE", "example");
     vars.put("NETFLIX_BUILD_JOB", "http://build/foo/42");
@@ -222,6 +222,65 @@ public class NetflixTaggingTest {
     vars.remove("NETFLIX_INSTANCE_ID");
     Map<String, String> expected = sampleExpectedTags();
     expected.put("nf.node", "titus-12345");
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsFallbackToTitusContainerName() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.put("TITUS_CONTAINER_NAME", vars.get("NETFLIX_CONTAINER_NAME"));
+    vars.remove("NETFLIX_CONTAINER_NAME");
+    Map<String, String> expected = sampleExpectedTags();
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsNetflixContainerNameOverridesTitus() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.put("TITUS_CONTAINER_NAME", "titus-main");
+    Map<String, String> expected = sampleExpectedTags();
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsEmptyNetflixContainerNameFallsBackToTitus() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.put("NETFLIX_CONTAINER_NAME", "");
+    vars.put("TITUS_CONTAINER_NAME", "main");
+    Map<String, String> expected = sampleExpectedTags();
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsBlankNetflixContainerNameFallsBackToTitus() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.put("NETFLIX_CONTAINER_NAME", " \t");
+    vars.put("TITUS_CONTAINER_NAME", "main");
+    Map<String, String> expected = sampleExpectedTags();
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsNoContainerName() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.remove("NETFLIX_CONTAINER_NAME");
+    Map<String, String> expected = sampleExpectedTags();
+    expected.remove("nf.container");
+    Map<String, String> actual = NetflixTagging.commonTags(vars::get);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void commonTagsEmptyProcessNameIgnored() {
+    Map<String, String> vars = sampleEnvironmentVars();
+    vars.put("NETFLIX_PROCESS_NAME", "");
+    Map<String, String> expected = sampleExpectedTags();
+    expected.remove("nf.process");
     Map<String, String> actual = NetflixTagging.commonTags(vars::get);
     Assertions.assertEquals(expected, actual);
   }

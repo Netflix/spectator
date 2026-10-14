@@ -110,7 +110,9 @@ public final class NetflixTagging {
     putIfNotEmptyOrNull(getenv, tags, "nf.app", "NETFLIX_APP");
     putIfNotEmptyOrNull(getenv, tags, "nf.asg", "NETFLIX_AUTO_SCALE_GROUP");
     putIfNotEmptyOrNull(getenv, tags, "nf.cluster", "NETFLIX_CLUSTER");
-    putIfNotEmptyOrNull(getenv, tags, "nf.container", "TITUS_CONTAINER_NAME");
+    putIfNotEmptyOrNull(getenv, tags, "nf.container",
+        "NETFLIX_CONTAINER_NAME",
+        "TITUS_CONTAINER_NAME");
     putIfNotEmptyOrNull(getenv, tags, "nf.node",
         "NETFLIX_INSTANCE_ID",
         "TITUS_TASK_INSTANCE_ID",

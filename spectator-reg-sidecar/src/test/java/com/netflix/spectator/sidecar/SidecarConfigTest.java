@@ -16,9 +16,12 @@
 package com.netflix.spectator.sidecar;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Function;
 
 
@@ -38,8 +41,20 @@ public class SidecarConfigTest {
 
   @Test
   public void commonTagsEmpty() {
+    Assumptions.assumeTrue(
+        System.getenv("NETFLIX_CONTAINER_NAME") == null
+            && System.getenv("TITUS_CONTAINER_NAME") == null
+            && System.getenv("NETFLIX_PROCESS_NAME") == null,
+        "container/process env vars are set on this machine");
     SidecarConfig config = s -> null;
     Assertions.assertEquals(Collections.emptyMap(), config.commonTags());
+  }
+
+  @Test
+  public void commonTagsDefaultReadsEnvironment() {
+    // Checks the default wiring on any host, including ones where the variables are set.
+    SidecarConfig config = s -> null;
+    Assertions.assertEquals(CommonTags.commonTags(System::getenv), config.commonTags());
   }
 
   @Test
@@ -56,5 +71,65 @@ public class SidecarConfigTest {
     Assertions.assertEquals(
         Collections.singletonMap("nf.container", "test"),
         CommonTags.commonTags(getenv));
+  }
+
+  @Test
+  public void commonTagsContainerNetflix() {
+    Function<String, String> getenv = s -> "NETFLIX_CONTAINER_NAME".equals(s) ? " test " : null;
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.container", "test"),
+        CommonTags.commonTags(getenv));
+  }
+
+  @Test
+  public void commonTagsContainerNetflixWinsOverTitus() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("NETFLIX_CONTAINER_NAME", "app");
+    vars.put("TITUS_CONTAINER_NAME", "main");
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.container", "app"),
+        CommonTags.commonTags(vars::get));
+  }
+
+  @Test
+  public void commonTagsContainerEmptyNetflixFallsBackToTitus() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("NETFLIX_CONTAINER_NAME", "");
+    vars.put("TITUS_CONTAINER_NAME", "main");
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.container", "main"),
+        CommonTags.commonTags(vars::get));
+  }
+
+  @Test
+  public void commonTagsContainerBlankNetflixFallsBackToTitus() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("NETFLIX_CONTAINER_NAME", " \t");
+    vars.put("TITUS_CONTAINER_NAME", "main");
+    Assertions.assertEquals(
+        Collections.singletonMap("nf.container", "main"),
+        CommonTags.commonTags(vars::get));
+  }
+
+  @Test
+  public void commonTagsProcessEmptyIgnored() {
+    Function<String, String> getenv = s -> "NETFLIX_PROCESS_NAME".equals(s) ? "" : null;
+    Assertions.assertEquals(Collections.emptyMap(), CommonTags.commonTags(getenv));
+  }
+
+  @Test
+  public void commonTagsNoneSet() {
+    Assertions.assertEquals(Collections.emptyMap(), CommonTags.commonTags(s -> null));
+  }
+
+  @Test
+  public void commonTagsContainerAndProcess() {
+    Map<String, String> vars = new HashMap<>();
+    vars.put("NETFLIX_CONTAINER_NAME", "app");
+    vars.put("NETFLIX_PROCESS_NAME", "processA");
+    Map<String, String> expected = new HashMap<>();
+    expected.put("nf.container", "app");
+    expected.put("nf.process", "processA");
+    Assertions.assertEquals(expected, CommonTags.commonTags(vars::get));
   }
 }
