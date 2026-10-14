@@ -20,8 +20,19 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Helper for accessing common tags that are specific to a process and thus cannot be
- * managed by a shared spectatord instance.
+ * Helper for accessing common tags that are specific to a container or process and thus
+ * cannot be managed by a shared spectatord instance, which only adds pod- or host-level tags.
+ *
+ * <ul>
+ *   <li><code>nf.container</code>: from <code>NETFLIX_CONTAINER_NAME</code>, which the
+ *       platform sets to the Kubernetes container name, falling back to
+ *       <code>TITUS_CONTAINER_NAME</code>.</li>
+ *   <li><code>nf.process</code>: from <code>NETFLIX_PROCESS_NAME</code>, which the user sets
+ *       for each process in the container entrypoint.</li>
+ * </ul>
+ *
+ * <p>Empty or whitespace-only values are skipped. If none of the variables for a tag has a
+ * value, the tag is not added.
  */
 final class CommonTags {
 
@@ -38,7 +49,9 @@ final class CommonTags {
    */
   static Map<String, String> commonTags(Function<String, String> getenv) {
     Map<String, String> tags = new HashMap<>();
-    putIfNotEmptyOrNull(getenv, tags, "nf.container", "TITUS_CONTAINER_NAME");
+    putIfNotEmptyOrNull(getenv, tags, "nf.container",
+        "NETFLIX_CONTAINER_NAME",
+        "TITUS_CONTAINER_NAME");
     putIfNotEmptyOrNull(getenv, tags, "nf.process", "NETFLIX_PROCESS_NAME");
     return tags;
   }

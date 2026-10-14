@@ -25,7 +25,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
@@ -209,6 +211,26 @@ public class SidecarRegistryTest {
     Assertions.assertFalse(registry.iterator().hasNext());
   }
 
+  @Test
+  public void commonTagsOverrideMeterTags() {
+    MemoryWriter w = new MemoryWriter();
+    SidecarConfig cfg = new SidecarConfig() {
+      @Override public String get(String k) {
+        return null;
+      }
+
+      @Override public Map<String, String> commonTags() {
+        return Collections.singletonMap("nf.container", "main");
+      }
+    };
+    try (SidecarRegistry r = new SidecarRegistry(clock, cfg, w)) {
+      r.counter("test", "nf.container", "user").increment();
+      Assertions.assertEquals(
+          Collections.singletonList("c:test,nf.container=main:1"),
+          w.messages());
+    }
+  }
+
   private static class TestConfig implements SidecarConfig {
 
     private final MemoryWriter writer = new MemoryWriter();
@@ -219,6 +241,10 @@ public class SidecarRegistryTest {
 
     @Override public String outputLocation() {
       return "none";
+    }
+
+    @Override public Map<String, String> commonTags() {
+      return Collections.emptyMap();
     }
 
     MemoryWriter writer() {

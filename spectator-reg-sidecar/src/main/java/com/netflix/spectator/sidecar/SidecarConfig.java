@@ -43,7 +43,12 @@ public interface SidecarConfig extends RegistryConfig {
   }
 
   /**
-   * Returns the common tags to apply to all metrics.
+   * Returns the common tags to apply to all metrics. By default these are
+   * <code>nf.container</code> from <code>NETFLIX_CONTAINER_NAME</code> (falling back to
+   * <code>TITUS_CONTAINER_NAME</code>) and <code>nf.process</code> from
+   * <code>NETFLIX_PROCESS_NAME</code>; blank values are skipped. They are merged last onto every
+   * meter id, so they override meter tags with the same key. Implementations that override this
+   * method should start from <code>SidecarConfig.super.commonTags()</code> to keep them.
    */
   default Map<String, String> commonTags() {
     return CommonTags.commonTags(System::getenv);
