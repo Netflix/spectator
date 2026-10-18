@@ -254,7 +254,7 @@ public final class PercentileDistributionSummary implements DistributionSummary 
 
     final int limit = Math.min(n, amounts.length);
     for (int i = 0; i < limit; i++) {
-      if (amounts[i] > 0) {
+      if (amounts[i] >= 0) {
         counterFor(PercentileBuckets.indexOf(restrict(amounts[i]))).increment();
       }
     }

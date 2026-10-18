@@ -93,4 +93,28 @@ public class PercentileDistributionSummaryTest {
     t2.record(500);
     checkValue(t1, t2, 200.0);
   }
+
+  @Test
+  public void batchRecordMatchesSingleRecord() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t1 = PercentileDistributionSummary.builder(r)
+        .withName("single")
+        .withRange(10, 1000)
+        .build();
+    PercentileDistributionSummary t2 = PercentileDistributionSummary.builder(r)
+        .withName("batch")
+        .withRange(10, 1000)
+        .build();
+
+    long[] amounts = {0L, 0L, 0L, 500L};
+    for (long amount : amounts) {
+      t1.record(amount);
+    }
+    t2.record(amounts, amounts.length);
+
+    Assertions.assertEquals(t1.count(), t2.count());
+    for (int i = 0; i <= 100; ++i) {
+      Assertions.assertEquals(t1.percentile(i), t2.percentile(i), 1e-12);
+    }
+  }
 }
