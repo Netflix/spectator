@@ -16,7 +16,9 @@
 package com.netflix.spectator.api.histogram;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
+import com.netflix.spectator.api.DistributionSummary;
 import com.netflix.spectator.api.Registry;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -92,5 +94,84 @@ public class PercentileDistributionSummaryTest {
 
     t2.record(500);
     checkValue(t1, t2, 200.0);
+  }
+
+  private long bucketCount(Registry r, String name) {
+    return r.counters()
+        .filter(c -> c.id().name().equals(name))
+        .mapToLong(Counter::count)
+        .sum();
+  }
+
+  private void checkBatchMatchesSingle(
+      Registry r, PercentileDistributionSummary t1, PercentileDistributionSummary t2) {
+    Assertions.assertEquals(t1.count(), t2.count());
+    Assertions.assertEquals(t1.count(), bucketCount(r, t1.id().name()));
+    Assertions.assertEquals(t2.count(), bucketCount(r, t2.id().name()));
+    for (int i = 0; i <= 100; ++i) {
+      Assertions.assertEquals(t1.percentile(i), t2.percentile(i), 1e-12);
+    }
+  }
+
+  private void checkBatchRecord(long min, long max) {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t1 = PercentileDistributionSummary.builder(r)
+        .withName("single")
+        .withRange(min, max)
+        .build();
+    PercentileDistributionSummary t2 = PercentileDistributionSummary.builder(r)
+        .withName("batch")
+        .withRange(min, max)
+        .build();
+
+    long[] amounts = {0L, 0L, 0L, 500L};
+    for (long amount : amounts) {
+      t1.record(amount);
+    }
+    t2.record(amounts, amounts.length);
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecord() {
+    checkBatchRecord(10, 1000);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecordDefaultRange() {
+    checkBatchRecord(0, Long.MAX_VALUE);
+  }
+
+  @Test
+  public void batchRecordPartial() {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t1 = PercentileDistributionSummary.get(r, r.createId("single"));
+    PercentileDistributionSummary t2 = PercentileDistributionSummary.get(r, r.createId("batch"));
+
+    long[] amounts = {0L, 500L, 0L, 1000L, 2000L};
+    int n = 3;
+    for (int i = 0; i < n; ++i) {
+      t1.record(amounts[i]);
+    }
+    t2.record(amounts, n);
+    Assertions.assertEquals(n, t2.count());
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchUpdaterMatchesSingleRecord() throws Exception {
+    Registry r = newRegistry();
+    PercentileDistributionSummary t1 = PercentileDistributionSummary.get(r, r.createId("single"));
+    PercentileDistributionSummary t2 = PercentileDistributionSummary.get(r, r.createId("batch"));
+
+    long[] amounts = {0L, 0L, 0L, 500L, 0L, 42L, 0L};
+    try (DistributionSummary.BatchUpdater b = t2.batchUpdater(3)) {
+      for (long amount : amounts) {
+        t1.record(amount);
+        b.record(amount);
+      }
+    }
+    Assertions.assertEquals(amounts.length, t2.count());
+    checkBatchMatchesSingle(r, t1, t2);
   }
 }
