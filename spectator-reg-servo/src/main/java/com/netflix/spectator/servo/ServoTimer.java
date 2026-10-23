@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /** Timer implementation for the servo registry. */
+@SuppressWarnings("PMD.InternalApiUsage")
 class ServoTimer extends AbstractTimer implements ServoMeter, RemovableMeter {
 
   private static final double CNV_SECONDS = 1.0 / TimeUnit.SECONDS.toNanos(1L);

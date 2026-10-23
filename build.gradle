@@ -140,7 +140,7 @@ subprojects {
   }
 
   pmd {
-    toolVersion = '7.27.0'
+    toolVersion = '7.28.0'
     ignoreFailures = false
     sourceSets = [sourceSets.main]
     ruleSets = []

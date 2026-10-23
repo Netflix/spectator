@@ -16,8 +16,16 @@
 package com.netflix.spectator.servo;
 
 import com.netflix.servo.DefaultMonitorRegistry;
-import com.netflix.servo.monitor.*;
-import com.netflix.spectator.api.*;
+import com.netflix.servo.monitor.CompositeMonitor;
+import com.netflix.servo.monitor.Monitor;
+import com.netflix.servo.monitor.MonitorConfig;
+import com.netflix.spectator.api.AbstractRegistry;
+import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.DistributionSummary;
+import com.netflix.spectator.api.Id;
+import com.netflix.spectator.api.Meter;
+import com.netflix.spectator.api.Statistic;
+import com.netflix.spectator.api.Tag;
 import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.Gauge;
 import com.netflix.spectator.api.Timer;
