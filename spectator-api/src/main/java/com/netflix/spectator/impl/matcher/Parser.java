@@ -322,6 +322,11 @@ class Parser {
     if (min > max) {
       throw error("illegal repetition, min > max");
     }
+    // A trailing '?' (reluctant) or '+' (possessive) modifies this repetition. Consume it
+    // here so it is not treated as a separate quantifier applied to the repetition.
+    if (!isAtEnd() && (peek() == '?' || peek() == '+')) {
+      advance();
+    }
     return new RepeatMatcher(matcher, min, max);
   }
 
@@ -332,11 +337,6 @@ class Parser {
     String quantifier = tokens.subSequence(start, current).toString();
     switch (quantifier) {
       case "?":
-        // Makes repeat reluctant
-        if (matcher instanceof RepeatMatcher) {
-          return matcher;
-        }
-        // fall through
       case "??":
       case "?+":
         return new ZeroOrOneMatcher(matcher, term());

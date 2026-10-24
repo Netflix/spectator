@@ -553,6 +553,24 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatInOptionalGroup() {
+    // The '?' applies to the group, it is not a reluctant modifier for the inner repetition
+    testRE("^v(\\d{2})?$", "v");
+    testRE("^v(\\d{2})?$", "v12");
+    testRE("^v(\\d{2})?$", "v1");
+    testRE("^ab(?:c{1,2})?d", "abd");
+    testRE("^ab(?:c{1,2})?d", "abccd");
+  }
+
+  @Test
+  public void repeatModifiers() {
+    testRE("^a{2}?$", "aa");
+    testRE("^a{1,2}?b", "aab");
+    testRE("^a{2}+$", "aa");
+    testRE("^a{2}+$", "aaaa");
+  }
+
+  @Test
   public void repeatWithOr() {
     testRE("(a|b|c){1,3}d", "aaad");
     testRE("(a|b|c){1,3}d", "aaa");
