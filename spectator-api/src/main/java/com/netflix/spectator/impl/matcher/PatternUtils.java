@@ -519,7 +519,15 @@ public final class PatternUtils {
 
   private static boolean endsWithWildcard(StringBuilder builder) {
     int n = builder.length();
-    return n > 0 && builder.charAt(n - 1) == '%';
+    if (n == 0 || builder.charAt(n - 1) != '%') {
+      return false;
+    }
+    // The '%' is a literal if it is preceded by an odd number of escape characters
+    int escapes = 0;
+    for (int i = n - 2; i >= 0 && builder.charAt(i) == '\\'; --i) {
+      ++escapes;
+    }
+    return escapes % 2 == 0;
   }
 
   private static String sqlEscape(String str) {

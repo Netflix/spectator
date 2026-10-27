@@ -100,6 +100,13 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void startAnchorLiteralPercent() {
+    testRE("^a%", "a%tail");
+    testRE("^a%", "a%");
+    testRE("^a%", "ab");
+  }
+
+  @Test
   public void isStartAnchored() {
     Assertions.assertTrue(PatternMatcher.compile("^abc").isStartAnchored());
     Assertions.assertTrue(PatternMatcher.compile("^[a-z]").isStartAnchored());
