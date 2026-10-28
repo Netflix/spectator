@@ -182,6 +182,7 @@ final class Optimizer {
         .rewrite(Optimizer::removeRepeatedStart)
         .rewrite(Optimizer::combineAdjacentStart)
         .rewrite(Optimizer::convertRepeatedAnyCharSeqToIndexOf)
+        .rewrite(Optimizer::flattenRepeatedUnbounded)
         .rewriteEnd(Optimizer::removeTrailingMatchAny);
   }
 
@@ -668,6 +669,95 @@ final class Optimizer {
       }
     }
     return matcher;
+  }
+
+  /**
+   * Repetition of an unbounded repetition can be simplified to a single unbounded
+   * repetition. Since only the yes or no answer for a match is needed, this does not change
+   * the result, but allows the trailing zero or more to backtrack. Examples:
+   *
+   * <pre>
+   * (a{2,}){2}  => a{4,}
+   * (a+){2,3}   => a{2,}
+   * (a+)?b      => a*b
+   * (a*)*b      => a*b
+   * </pre>
+   */
+  static Matcher flattenRepeatedUnbounded(Matcher matcher) {
+    if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      Matcher x = unboundedRepeated(m.repeated());
+      if (x != null && m.min() > 0) {
+        long min = (long) unboundedMin(m.repeated()) * m.min();
+        return unbounded(x, (int) Math.min(min, Integer.MAX_VALUE), TrueMatcher.INSTANCE);
+      }
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      Matcher x = unboundedRepeated(m.repeated());
+      if (x != null && unboundedMin(m.repeated()) <= 1) {
+        return new ZeroOrMoreMatcher(x, m.next());
+      }
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      Matcher x = unboundedRepeated(m.repeated());
+      if (x != null && unboundedMin(m.repeated()) <= 1) {
+        return new ZeroOrMoreMatcher(x, m.next());
+      }
+    }
+    return matcher;
+  }
+
+  /**
+   * If the matcher is an unbounded repetition, {@code x{n,}}, with nothing following it,
+   * then return the repeated matcher {@code x}. Otherwise return null.
+   */
+  private static Matcher unboundedRepeated(Matcher matcher) {
+    if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher zm = matcher.as();
+      return zm.next() instanceof TrueMatcher ? zm.repeated() : null;
+    } else if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      if (ms.size() == 2) {
+        Matcher x = unboundedRepeated(ms.get(1));
+        if (x != null && ms.get(1) instanceof ZeroOrMoreMatcher && prefixCount(ms.get(0), x) > 0) {
+          return x;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Returns the minimum number of repetitions for an unbounded repetition. */
+  private static int unboundedMin(Matcher matcher) {
+    if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      return prefixCount(ms.get(0), ms.get(1).<ZeroOrMoreMatcher>as().repeated());
+    }
+    return 0;
+  }
+
+  /**
+   * Returns the number of times {@code x} is repeated by the prefix matcher, or -1 if it is
+   * not a fixed repetition of {@code x}.
+   */
+  private static int prefixCount(Matcher prefix, Matcher x) {
+    if (prefix.equals(x)) {
+      return 1;
+    } else if (prefix instanceof RepeatMatcher) {
+      RepeatMatcher r = prefix.as();
+      return r.min() == r.max() && r.repeated().equals(x) ? r.min() : -1;
+    }
+    return -1;
+  }
+
+  /** Create a matcher for an unbounded repetition, {@code x{min,}}. */
+  private static Matcher unbounded(Matcher x, int min, Matcher next) {
+    Matcher zeroOrMore = new ZeroOrMoreMatcher(x, next);
+    if (min == 0) {
+      return zeroOrMore;
+    }
+    Matcher prefix = (min == 1) ? x : new RepeatMatcher(x, min, min);
+    return SeqMatcher.create(prefix, zeroOrMore);
   }
 
   /**
