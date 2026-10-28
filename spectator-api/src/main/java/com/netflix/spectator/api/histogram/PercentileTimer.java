@@ -261,9 +261,22 @@ public final class PercentileTimer implements Timer {
   }
 
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = restrict(unit.toNanos(amount));
     timer.record(amount, unit);
-    counterFor(PercentileBuckets.indexOf(nanos)).increment();
+    if (amount >= 0) {
+      final long nanos = restrict(unit.toNanos(amount));
+      counterFor(PercentileBuckets.indexOf(nanos)).increment();
+    }
+  }
+
+  @Override public void record(long[] amounts, int n, TimeUnit unit) {
+    timer.record(amounts, n, unit);
+    final int limit = Math.min(n, amounts.length);
+    for (int i = 0; i < limit; i++) {
+      if (amounts[i] >= 0) {
+        final long nanos = restrict(unit.toNanos(amounts[i]));
+        counterFor(PercentileBuckets.indexOf(nanos)).increment();
+      }
+    }
   }
 
   /**

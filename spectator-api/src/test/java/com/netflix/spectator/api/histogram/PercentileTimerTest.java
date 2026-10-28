@@ -16,6 +16,7 @@
 package com.netflix.spectator.api.histogram;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExpiringRegistry;
 import com.netflix.spectator.api.ManualClock;
@@ -145,5 +146,60 @@ public class PercentileTimerTest {
     t.record(5, TimeUnit.SECONDS);
     Assertions.assertFalse(t.hasExpired());
     Assertions.assertEquals(1, r.timer("test").count());
+  }
+
+  private long bucketCount(Registry r, String name) {
+    return r.counters()
+        .filter(c -> c.id().name().equals(name))
+        .mapToLong(Counter::count)
+        .sum();
+  }
+
+  @Test
+  public void negativeAmountIgnored() {
+    Registry r = newRegistry();
+    PercentileTimer t = PercentileTimer.get(r, r.createId("test"));
+    t.record(-5, TimeUnit.SECONDS);
+    Assertions.assertEquals(0, t.count());
+    Assertions.assertEquals(0, bucketCount(r, "test"));
+  }
+
+  private void checkBatchMatchesSingle(
+      Registry r, PercentileTimer t1, PercentileTimer t2) {
+    Assertions.assertEquals(t1.count(), t2.count());
+    Assertions.assertEquals(t1.count(), bucketCount(r, t1.id().name()));
+    Assertions.assertEquals(t2.count(), bucketCount(r, t2.id().name()));
+    for (int i = 0; i <= 100; ++i) {
+      Assertions.assertEquals(t1.percentile(i), t2.percentile(i), 1e-12);
+    }
+  }
+
+  private void checkBatchRecord(long min, long max) {
+    Registry r = newRegistry();
+    PercentileTimer t1 = PercentileTimer.builder(r)
+        .withName("single")
+        .withRange(min, max, TimeUnit.SECONDS)
+        .build();
+    PercentileTimer t2 = PercentileTimer.builder(r)
+        .withName("batch")
+        .withRange(min, max, TimeUnit.SECONDS)
+        .build();
+
+    long[] amounts = {-5L, 0L, 0L, 0L, 500L, -1L};
+    for (long amount : amounts) {
+      t1.record(amount, TimeUnit.MILLISECONDS);
+    }
+    t2.record(amounts, amounts.length, TimeUnit.MILLISECONDS);
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecord() {
+    checkBatchRecord(10, 1000);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecordDefaultRange() {
+    checkBatchRecord(0, Long.MAX_VALUE);
   }
 }
