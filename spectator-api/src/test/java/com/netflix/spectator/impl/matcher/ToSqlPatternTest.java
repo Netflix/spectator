@@ -98,9 +98,9 @@ public class ToSqlPatternTest {
   }
 
   @Test
-  public void startsWithWildcard() {
-    String sql = PatternMatcher.compile("^a.*").toSqlPattern();
-    Assertions.assertEquals("a%", sql);
+  public void startsWithLiteralBackslash() {
+    String sql = PatternMatcher.compile("^a\\\\.*").toSqlPattern();
+    Assertions.assertEquals("a\\\\%", sql);
   }
 
   @Test

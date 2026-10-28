@@ -506,10 +506,10 @@ public final class PatternUtils {
 
   /** Convert a matcher to a SQL pattern or return null if not possible. */
   static String toSqlPattern(Matcher matcher) {
-    StringBuilder builder = new StringBuilder();
+    SqlPatternBuilder builder = new SqlPatternBuilder();
     if (toSqlPattern(builder, matcher)) {
-      if (!endsWithWildcard(builder) && !matcher.isEndAnchored()) {
-        builder.append('%');
+      if (!builder.endsWithWildcard() && !matcher.isEndAnchored()) {
+        builder.appendWildcard('%');
       }
       return builder.toString();
     } else {
@@ -517,46 +517,60 @@ public final class PatternUtils {
     }
   }
 
-  private static boolean endsWithWildcard(StringBuilder builder) {
-    int n = builder.length();
-    if (n == 0 || builder.charAt(n - 1) != '%') {
-      return false;
-    }
-    // The '%' is a literal if it is preceded by an odd number of escape characters
-    int escapes = 0;
-    for (int i = n - 2; i >= 0 && builder.charAt(i) == '\\'; --i) {
-      ++escapes;
-    }
-    return escapes % 2 == 0;
-  }
+  /**
+   * Builder for SQL LIKE patterns that tracks whether the pattern currently ends with
+   * a '%' wildcard. Literals are escaped using backslash as the escape character.
+   */
+  @SuppressWarnings("PMD.AvoidStringBufferField")
+  private static final class SqlPatternBuilder {
 
-  private static String sqlEscape(String str) {
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < str.length(); ++i) {
-      char c = str.charAt(i);
-      switch (c) {
-        case '_':  builder.append("\\_");  break;
-        case '%':  builder.append("\\%");  break;
-        case '\\': builder.append("\\\\"); break;
-        default:   builder.append(c);      break;
+    private final StringBuilder builder = new StringBuilder();
+    private boolean endsWithWildcard = false;
+
+    /** Append a wildcard, either '%' or '_'. */
+    void appendWildcard(char c) {
+      builder.append(c);
+      endsWithWildcard = c == '%';
+    }
+
+    /** Append an escaped literal string. */
+    void appendLiteral(String str) {
+      for (int i = 0; i < str.length(); ++i) {
+        char c = str.charAt(i);
+        switch (c) {
+          case '_':  builder.append("\\_");  break;
+          case '%':  builder.append("\\%");  break;
+          case '\\': builder.append("\\\\"); break;
+          default:   builder.append(c);      break;
+        }
+      }
+      if (!str.isEmpty()) {
+        endsWithWildcard = false;
       }
     }
-    return builder.toString();
+
+    boolean endsWithWildcard() {
+      return endsWithWildcard;
+    }
+
+    @Override public String toString() {
+      return builder.toString();
+    }
   }
 
-  private static boolean toSqlPattern(StringBuilder builder, Matcher matcher) {
+  private static boolean toSqlPattern(SqlPatternBuilder builder, Matcher matcher) {
     if (matcher instanceof TrueMatcher) {
-      builder.append("%");
+      builder.appendWildcard('%');
       return true;
     } else if (matcher instanceof AnyMatcher) {
-      builder.append('_');
+      builder.appendWildcard('_');
       return true;
     } else if (matcher instanceof StartMatcher || matcher instanceof EndMatcher) {
       return true;
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       if (m.repeated() == AnyMatcher.INSTANCE) {
-        builder.append('%');
+        builder.appendWildcard('%');
         return toSqlPattern(builder, m.next());
       }
     } else if (matcher instanceof SeqMatcher) {
@@ -569,15 +583,16 @@ public final class PatternUtils {
       return true;
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
-      builder.append(sqlEscape(m.pattern()));
+      builder.appendLiteral(m.pattern());
       return true;
     } else if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
-      builder.append('%').append(sqlEscape(m.pattern()));
+      builder.appendWildcard('%');
+      builder.appendLiteral(m.pattern());
       return toSqlPattern(builder, m.next());
     } else if (matcher instanceof StartsWithMatcher) {
       StartsWithMatcher m = matcher.as();
-      builder.append(sqlEscape(m.pattern()));
+      builder.appendLiteral(m.pattern());
       return true;
     }
 
