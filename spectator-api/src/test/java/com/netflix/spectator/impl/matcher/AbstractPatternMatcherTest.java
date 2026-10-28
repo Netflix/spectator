@@ -611,6 +611,74 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatNoUpperBound() {
+    testRE("^a{2,}$", "a");
+    testRE("^a{2,}$", "aa");
+    testRE("^a{2,}$", "aaaaa");
+    testRE("xa{2,}b", "xab");
+    testRE("xa{2,}b", "xaaab");
+    testRE("^(ab){2,}$", "ababab");
+    testRE("^a{0,}$", "");
+    testRE("^a{0,}$", "aaa");
+    testRE("^a{2,}a$", "aa");
+    testRE("^a{2,}a$", "aaa");
+    testRE("(a*)(b{0,1})(b{1,})b{3}", "aaabbbbbbb");
+    testRE("x(a{2,})?y", "xy");
+    testRE("x(a{2,})?y", "xay");
+    testRE("x(a{2,})?y", "xaaay");
+  }
+
+  @Test
+  public void repeatNoUpperBoundModifiers() {
+    testRE("^a{2,}?$", "aaaa");
+    testRE("^a{2,}?a$", "aaa");
+    testRE("^a{2,}?b", "ab");
+    testRE("^\\d{2,}+$", "1111");
+    testRE("^a{2,}+$", "a");
+    testRE("^a{2,}+a$", "aaa");
+    testRE("x(a{2,}+)?y", "xy");
+    testRE("x(a{2,}+)?y", "xaay");
+  }
+
+  @Test
+  public void repeatOneNoUpperBound() {
+    testRE("^ab{1,}c$", "ac");
+    testRE("^ab{1,}c$", "abc");
+    testRE("^ab{1,}c$", "abbbc");
+    Assertions.assertEquals("abc", PatternMatcher.compile("^abc{1,}").prefix());
+  }
+
+  @Test
+  public void optionalGroupWithRepeat() {
+    testRE("x(a{2})?y", "xy");
+    testRE("x(a{2})?y", "xaay");
+    testRE("x(?:a{2,3})?y", "xy");
+    testRE("x(?:a{2,3})?y", "xaaay");
+
+    // Large repeat count nested inside another matcher
+    testRE("x(a{0,2000}b)?y", "xaby");
+    testRE("x(a*+)?y", "xy");
+  }
+
+  @Test
+  public void oneOrMorePossessive() {
+    testRE("^a++$", "");
+    testRE("^a++$", "a");
+    testRE("^a++$", "aaa");
+    testRE("^a++b", "ab");
+  }
+
+  @Test
+  public void repeatMalformed() {
+    testBadExpression("a{2,3", "unclosed repetition");
+    testBadExpression("a{2,3,4}", "illegal repetition");
+    testBadExpression("a{2,,}", "illegal repetition");
+    testBadExpression("{2}", "dangling modifier");
+    testBadExpression("a*{3}", "dangling modifier");
+    testBadExpression("a{2,}{3}", "dangling modifier");
+  }
+
+  @Test
   public void repeatEmptyClause() {
     // Repetition whose body can match the empty string, via the {n,m} RepeatMatcher path
     // (the +/* paths go through ZeroOrMoreMatcher which is covered separately). Compared
@@ -639,6 +707,9 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^a{1,2}?b", "aab");
     testRE("^a{2}+$", "aa");
     testRE("^a{2}+$", "aaaa");
+    testRE("^(?:ab){2}+$", "abababab");
+    testRE("^a{2,3}+a$", "aaaa");
+    testRE("^a{2,3}?$", "aaa");
   }
 
   @Test

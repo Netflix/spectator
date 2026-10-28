@@ -87,6 +87,11 @@ class Parser {
           matchers.add(group());
           break;
         case '{':
+          // Can be empty if following another quantifier that consumed the rest of the
+          // term, e.g. a*{3} or a{2,}{3}.
+          if (matchers.isEmpty()) {
+            throw error("dangling modifier");
+          }
           matchers.add(repeat(pop(matchers)));
           break;
         case '.':
@@ -313,21 +318,59 @@ class Parser {
   private Matcher repeat(Matcher matcher) {
     int start = current;
     advance(c -> c != '}');
-    String[] numbers = tokens.subSequence(start, current - 1).toString().split(",");
+    if (previous() != '}') {
+      throw error("unclosed repetition");
+    }
+    // Use a negative limit so the trailing empty string for "{n,}" is preserved
+    String[] numbers = tokens.subSequence(start, current - 1).toString().split(",", -1);
+    if (numbers.length > 2) {
+      throw error("illegal repetition");
+    }
     int min = Integer.parseInt(numbers[0]);
-    int max = (numbers.length > 1) ? Integer.parseInt(numbers[1]) : min;
+    boolean unbounded = numbers.length == 2 && numbers[1].isEmpty();
+    int max;
+    if (numbers.length == 1) {
+      max = min;
+    } else if (unbounded) {
+      max = Integer.MAX_VALUE;
+    } else {
+      max = Integer.parseInt(numbers[1]);
+    }
     if (min < 0) {
       throw error("illegal repetition, min < 0");
     }
     if (min > max) {
       throw error("illegal repetition, min > max");
     }
-    // A trailing '?' (reluctant) or '+' (possessive) modifies this repetition. Consume it
-    // here so it is not treated as a separate quantifier applied to the repetition.
-    if (!isAtEnd() && (peek() == '?' || peek() == '+')) {
-      advance();
+
+    boolean possessive = repeatModifier();
+    if (unbounded && !possessive) {
+      // No upper bound, treat as min repetitions followed by zero or more. This is
+      // consistent with how * and + are handled.
+      Matcher zeroOrMore = new ZeroOrMoreMatcher(matcher, term());
+      if (min == 0) {
+        return zeroOrMore;
+      }
+      Matcher prefix = (min == 1) ? matcher : new RepeatMatcher(matcher, min, min);
+      return SeqMatcher.create(prefix, zeroOrMore);
     }
+
+    // RepeatMatcher is greedy without backtracking, so it also covers the possessive case
     return new RepeatMatcher(matcher, min, max);
+  }
+
+  /**
+   * Consume the optional possessive (+) or reluctant (?) modifier for a repetition and
+   * return true if it is possessive. Reluctant matching behavior is the same as greedy,
+   * consistent with *? and +?. Modifiers are consumed here rather than in meta() because
+   * meta() cannot tell a modifier, a{2}?, apart from a quantifier on a group that ends
+   * with a repeat, (a{2})?.
+   */
+  private boolean repeatModifier() {
+    if (!isAtEnd() && (peek() == '+' || peek() == '?')) {
+      return advance() == '+';
+    }
+    return false;
   }
 
   private Matcher meta(Matcher matcher) {
@@ -349,7 +392,7 @@ class Parser {
       case "+?":
         return SeqMatcher.create(matcher, new ZeroOrMoreMatcher(matcher, term()));
       case "++":
-        return SeqMatcher.create(matcher, new RepeatMatcher(matcher, 1, Integer.MAX_VALUE));
+        return SeqMatcher.create(matcher, new RepeatMatcher(matcher, 0, Integer.MAX_VALUE));
       default:
         throw new IllegalArgumentException("unknown quantifier: " + quantifier);
     }

@@ -418,7 +418,7 @@ public final class PatternUtils {
       }
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
-      if (containsLookahead(m.repeated())) {
+      if (containsUnsupported(m.repeated())) {
         return;
       }
       removeNextLookahead(m.next(), results);
@@ -429,7 +429,7 @@ public final class PatternUtils {
       }
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
-      if (containsLookahead(m.repeated())) {
+      if (containsUnsupported(m.repeated())) {
         return;
       }
       removeNextLookahead(m.next(), results);
@@ -440,28 +440,26 @@ public final class PatternUtils {
       }
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
-      if (m.max() > 1000 || containsLookahead(m.repeated())) {
-        // Some engines like RE2 have limitations on the number of repetitions. Treat
-        // those as failures to match to the expression.
+      if (containsUnsupported(m)) {
         return;
       } else {
         results[0] = matcher;
       }
     } else if (matcher instanceof PositiveLookaheadMatcher) {
       PositiveLookaheadMatcher m = matcher.as();
-      if (containsLookahead(m.matcher())) {
+      if (containsUnsupported(m.matcher())) {
         return;
       }
       results[0] = m.matcher();
       results[2] = TrueMatcher.INSTANCE;
     } else if (matcher instanceof NegativeLookaheadMatcher) {
       NegativeLookaheadMatcher m = matcher.as();
-      if (containsLookahead(m.matcher())) {
+      if (containsUnsupported(m.matcher())) {
         return;
       }
       results[1] = m.matcher();
       results[2] = TrueMatcher.INSTANCE;
-    } else if (!containsLookahead(matcher)) {
+    } else if (!containsUnsupported(matcher)) {
       results[0] = matcher;
     }
 
@@ -472,37 +470,42 @@ public final class PatternUtils {
     }
   }
 
-  private static boolean containsLookahead(Matcher matcher) {
+  /**
+   * Returns true if the matcher contains a lookahead or a repetition with a large upper bound
+   * anywhere in the tree. Some engines like RE2 have limitations on the number of repetitions,
+   * treat those as failures to match to the expression.
+   */
+  private static boolean containsUnsupported(Matcher matcher) {
     if (matcher instanceof NegativeLookaheadMatcher) {
       return true;
     } else if (matcher instanceof PositiveLookaheadMatcher) {
       return true;
     } else if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
-      return containsLookahead(m.next());
+      return containsUnsupported(m.next());
     } else if (matcher instanceof OrMatcher) {
       for (Matcher m : matcher.<OrMatcher>as().matchers()) {
-        if (containsLookahead(m)) {
+        if (containsUnsupported(m)) {
           return true;
         }
       }
       return false;
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
-      return containsLookahead(m.repeated());
+      return m.max() > 1000 || containsUnsupported(m.repeated());
     } else if (matcher instanceof SeqMatcher) {
       for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
-        if (containsLookahead(m)) {
+        if (containsUnsupported(m)) {
           return true;
         }
       }
       return false;
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
-      return containsLookahead(m.repeated()) || containsLookahead(m.next());
+      return containsUnsupported(m.repeated()) || containsUnsupported(m.next());
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
-      return containsLookahead(m.repeated()) || containsLookahead(m.next());
+      return containsUnsupported(m.repeated()) || containsUnsupported(m.next());
     } else {
       return false;
     }
