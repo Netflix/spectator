@@ -52,6 +52,12 @@ final class StartsWithMatcher implements Matcher, Serializable {
 
   @Override
   public int matches(String str, int start, int length) {
+    // Anchored to the absolute start of the string like StartMatcher. When used as a
+    // sub-matcher at a non-zero offset it cannot match, and returning the prefix length
+    // would move the position backwards.
+    if (start != 0) {
+      return Constants.NO_MATCH;
+    }
     boolean matched = ignoreCase
         ? str.regionMatches(true, 0, pattern, 0, pattern.length())
         : str.startsWith(pattern);

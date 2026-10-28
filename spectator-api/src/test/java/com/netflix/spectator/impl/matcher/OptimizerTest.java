@@ -59,6 +59,63 @@ public class OptimizerTest {
   }
 
   @Test
+  public void sequenceWithEmptyMatchAfterEnd() {
+    Matcher input = SeqMatcher.create(
+        AnyMatcher.INSTANCE,
+        EndMatcher.INSTANCE,
+        new ZeroOrMoreMatcher(new CharSeqMatcher("a"), TrueMatcher.INSTANCE)
+    );
+    Assertions.assertEquals(input, Optimizer.sequenceWithStuffAfterEndIsFalse(input));
+  }
+
+  @Test
+  public void sequenceWithStartAfterEnd() {
+    Matcher input = SeqMatcher.create(
+        EndMatcher.INSTANCE,
+        StartMatcher.INSTANCE
+    );
+    Assertions.assertEquals(input, Optimizer.sequenceWithStuffAfterEndIsFalse(input));
+  }
+
+  @Test
+  public void sequenceWithLookaheadAfterEnd() {
+    Matcher input = SeqMatcher.create(
+        EndMatcher.INSTANCE,
+        new PositiveLookaheadMatcher(new CharSeqMatcher("a"))
+    );
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.sequenceWithStuffAfterEndIsFalse(input));
+  }
+
+  @Test
+  public void startAfterContentIsFalse() {
+    Matcher input = SeqMatcher.create(
+        new CharSeqMatcher("a"),
+        EndMatcher.INSTANCE,
+        StartMatcher.INSTANCE
+    );
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.startAfterContentIsFalse(input));
+  }
+
+  @Test
+  public void startAfterContentIsFalse_IndexOf() {
+    Matcher input = new IndexOfMatcher("a", new StartsWithMatcher("b"));
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.startAfterContentIsFalse(input));
+  }
+
+  @Test
+  public void startAfterEmptyContent() {
+    Matcher input = SeqMatcher.create(
+        new ZeroOrMoreMatcher(new CharSeqMatcher("a"), TrueMatcher.INSTANCE),
+        EndMatcher.INSTANCE,
+        StartMatcher.INSTANCE
+    );
+    Assertions.assertEquals(input, Optimizer.startAfterContentIsFalse(input));
+  }
+
+  @Test
   public void zeroOrMoreFalse_Repeated() {
     Matcher input = new ZeroOrMoreMatcher(FalseMatcher.INSTANCE, AnyMatcher.INSTANCE);
     Matcher expected = AnyMatcher.INSTANCE;
@@ -370,8 +427,11 @@ public class OptimizerTest {
 
   @Test
   public void optimizeEndStart() {
+    // Matches an empty string, so it cannot be simplified to false
     PatternMatcher actual = PatternMatcher.compile("$^");
-    PatternMatcher expected = FalseMatcher.INSTANCE;
+    PatternMatcher expected = new ZeroOrMoreMatcher(
+        AnyMatcher.INSTANCE,
+        SeqMatcher.create(EndMatcher.INSTANCE, StartMatcher.INSTANCE));
     Assertions.assertEquals(expected, actual);
   }
 
