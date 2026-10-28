@@ -161,6 +161,7 @@ final class Optimizer {
         .rewrite(Optimizer::removeTrueInSequence)
         .rewrite(Optimizer::sequenceWithFalseIsFalse)
         .rewrite(Optimizer::sequenceWithStuffAfterEndIsFalse)
+        .rewrite(Optimizer::startAfterContentIsFalse)
         .rewrite(Optimizer::zeroOrMoreFalse)
         .rewrite(Optimizer::convertEmptyCharClassToFalse)
         .rewrite(Optimizer::convertSingleCharClassToSeq)
@@ -253,7 +254,8 @@ final class Optimizer {
 
   /**
    * If a sequence contains content after an end anchor then it will never be able to match
-   * and can be treated as false.
+   * and can be treated as false. Matchers that can match an empty string, such as
+   * {@code a*} or {@code ^}, may still match after the end anchor and are left as is.
    */
   static Matcher sequenceWithStuffAfterEndIsFalse(Matcher matcher) {
     if (matcher instanceof SeqMatcher) {
@@ -261,12 +263,57 @@ final class Optimizer {
       for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
         if (m instanceof EndMatcher) {
           end = true;
-        } else if (end && !m.alwaysMatches()) {
+        } else if (end && (m.minLength() > 0 || lookaheadRequiresContent(m))) {
           return FalseMatcher.INSTANCE;
         }
       }
     }
     return matcher;
+  }
+
+  private static boolean lookaheadRequiresContent(Matcher matcher) {
+    return matcher instanceof PositiveLookaheadMatcher
+        && matcher.<PositiveLookaheadMatcher>as().matcher().minLength() > 0;
+  }
+
+  /**
+   * If a start anchor follows content that consumes at least one character, then it will
+   * never be able to match and can be treated as false. For example: {@code "a^b" => "$."}
+   * or {@code "a$^" => "$."}.
+   */
+  static Matcher startAfterContentIsFalse(Matcher matcher) {
+    if (matcher instanceof SeqMatcher) {
+      long consumed = 0L;
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (consumed > 0L && requiresStart(m)) {
+          return FalseMatcher.INSTANCE;
+        }
+        consumed += m.minLength();
+      }
+    } else if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher m = matcher.as();
+      if (!m.pattern().isEmpty() && requiresStart(m.next())) {
+        return FalseMatcher.INSTANCE;
+      }
+    }
+    return matcher;
+  }
+
+  /**
+   * Returns true if the matcher can only match at the start of the string. For a sequence,
+   * that is the case if any of the elements can only match at the start.
+   */
+  private static boolean requiresStart(Matcher matcher) {
+    if (matcher.isStartAnchored()) {
+      return true;
+    } else if (matcher instanceof SeqMatcher) {
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (requiresStart(m)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**

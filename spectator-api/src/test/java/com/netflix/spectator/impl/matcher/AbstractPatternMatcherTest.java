@@ -18,12 +18,14 @@ package com.netflix.spectator.impl.matcher;
 import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractPatternMatcherTest {
 
@@ -122,6 +124,32 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void endAnchorFollowedByEmptyMatch() {
+    // Content after the end anchor that can match an empty string
+    testRE("(a$)c*", "xa");
+    testRE("(a$)c*", "xac");
+    testRE("a$(b)?", "xa");
+    testRE("a$c+", "xa");
+    testRE("(.*a$)+", "xa");
+    testRE("q(.*a$)+", "qza");
+    testRE("$^", "");
+    testRE("$^", "x");
+    testRE("a$^", "a");
+    testRE("a*$^", "");
+    testRE("a$(?=b)", "a");
+    testRE("a$(?!b)", "a");
+  }
+
+  @Test
+  public void startAnchorAfterContent() {
+    testRE("a^b", "ab");
+    testRE("a^", "a");
+    testRE("x(^b|^c)", "xb");
+    testRE("(a$|b)^", "a");
+    testRE("(a$|b)^", "b");
+  }
+
+  @Test
   public void isEndAnchored() {
     Assertions.assertTrue(PatternMatcher.compile("abc$").isEndAnchored());
     Assertions.assertTrue(PatternMatcher.compile("[a-z]$").isEndAnchored());
@@ -142,6 +170,12 @@ public abstract class AbstractPatternMatcherTest {
     Assertions.assertFalse(PatternMatcher.compile(".*").neverMatches());
     Assertions.assertFalse(PatternMatcher.compile(".?").neverMatches());
     Assertions.assertTrue(PatternMatcher.compile("$.").neverMatches());
+    Assertions.assertTrue(PatternMatcher.compile("a^b").neverMatches());
+    Assertions.assertTrue(PatternMatcher.compile("a$^").neverMatches());
+    Assertions.assertTrue(PatternMatcher.compile("a$(?=b)").neverMatches());
+    Assertions.assertFalse(PatternMatcher.compile("$^").neverMatches());
+    Assertions.assertFalse(PatternMatcher.compile("a*$^").neverMatches());
+    Assertions.assertFalse(PatternMatcher.compile("a$(?!b)").neverMatches());
   }
 
   @Test
@@ -268,6 +302,19 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^a(^b.*c|d.*e)", "abxc");
     testRE("x(^b.*c|q)", "xbzc");
     testRE("x(^b.*c|q)", "xq");
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  public void startsWithEmbeddedAtOffset() {
+    // A start-anchored literal reached at a non-zero offset must not match even if the string
+    // starts with the literal. Matching would also move the position backwards, which caused an
+    // endless loop in an enclosing repetition, hence the timeout.
+    testRE("b^a", "aba");
+    testRE("x(^b.*c|q)", "bxbzc");
+    testRE("a$(?=^a)", "a");
+    testRE("^b(?!(a|^b)*c)", "bab");
+    testRE("^b(?!(a|^b)*c)$^", "bab");
   }
 
   @Test

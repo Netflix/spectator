@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Helper functions for working with patterns.
@@ -329,10 +328,15 @@ public final class PatternUtils {
     if (matchers == null) {
       return null;
     } else {
-      List<PatternExpr> exprs = matchers
-          .stream()
-          .map(PatternUtils::expandLookahead)
-          .collect(Collectors.toList());
+      List<PatternExpr> exprs = new ArrayList<>(matchers.size());
+      for (Matcher m : matchers) {
+        PatternExpr expr = expandLookahead(m);
+        if (expr == null) {
+          // If any branch cannot be simplified, then neither can the overall expression
+          return null;
+        }
+        exprs.add(expr);
+      }
       return PatternExpr.or(exprs);
     }
   }
