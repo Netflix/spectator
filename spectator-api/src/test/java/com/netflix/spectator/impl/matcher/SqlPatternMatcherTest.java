@@ -22,15 +22,32 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.List;
 
 public class SqlPatternMatcherTest extends AbstractPatternMatcherTest {
 
   @Override
   protected void testRE(String regex, String value) {
-    PatternMatcher matcher = PatternMatcher.compile(regex);
-    String sqlPattern = PatternMatcher.compile(regex).toSqlPattern();
     // hsqldb 2.6+ requires jdk11+
-    if (sqlPattern != null && JavaVersion.major() >= 11) {
+    if (JavaVersion.major() < 11) {
+      return;
+    }
+    PatternMatcher matcher = PatternMatcher.compile(regex);
+    checkSqlPattern(matcher, value);
+
+    // Each of the alternatives from expanding the OR clauses should also have a SQL
+    // pattern that is consistent with the matcher for that alternative
+    List<PatternMatcher> alternatives = matcher.expandOrClauses(1000);
+    if (alternatives != null && alternatives.size() > 1) {
+      for (PatternMatcher alternative : alternatives) {
+        checkSqlPattern(alternative, value);
+      }
+    }
+  }
+
+  private void checkSqlPattern(PatternMatcher matcher, String value) {
+    String sqlPattern = matcher.toSqlPattern();
+    if (sqlPattern != null) {
       String desc = "[" + matcher + "] => [" + sqlPattern + "]";
       if (matcher.matches(value)) {
         Assertions.assertTrue(sqlMatches(sqlPattern, value), desc + " should match " + value);
