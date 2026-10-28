@@ -141,6 +141,43 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void startAnchorFollowedByMatchAnyInOr() {
+    // Start anchor can only be removed when it is at the start of the pattern
+    testRE("x(^.*a|b)c", "xac");
+    testRE("x(^.*a|b)c", "xbc");
+    testRE("(^.*a|b)c", "xac");
+    testRE("(^.*a|b)c", "ac");
+    testRE("(^.*a|b)c", "xbc");
+    testRE("^(.*a|b)c", "xac");
+    testRE("^(.*a|b)c", "bc");
+    testRE("^(.*a|b)c", "xbc");
+  }
+
+  @Test
+  public void startAnchorFollowedByMatchAnyNested() {
+    // Nested start anchor that is known to be checked at the start of the string
+    testRE("^(^.*)?a", "ba");
+    testRE("^(^.*)?a", "b");
+    testRE("^(^.*)*a", "ba");
+    testRE("^(^.*)+a", "ba");
+    testRE("^(^.*)?$", "a");
+    testRE("(^.*)?a", "ba");
+    testRE("(^.*)?", "a");
+    testRE("^(^.*a)?b", "xab");
+    testRE("^(^.*a)?b", "b");
+    testRE("^(^.*a)?b", "xb");
+    testRE("b(^.*)?a", "bxa");
+    testRE("b(^.*)?a", "ba");
+  }
+
+  @Test
+  public void startAnchorAfterIndexOf() {
+    testRE("a..*^", "a");
+    testRE("a..*^", "ab");
+    testRE("a.+^", "ab");
+  }
+
+  @Test
   public void startAnchorAfterContent() {
     testRE("a^b", "ab");
     testRE("a^", "a");
