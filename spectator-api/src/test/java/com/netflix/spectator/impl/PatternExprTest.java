@@ -254,6 +254,14 @@ public class PatternExprTest {
   }
 
   @Test
+  public void orWithBranchThatCannotBeSimplified() {
+    // One branch of the expanded OR has a nested lookahead that cannot be simplified, so
+    // the overall expression cannot be either
+    PatternExpr expr = PatternMatcher.compile("(?=a)((?=.)a|b)?").toPatternExpr(50);
+    Assertions.assertNull(expr);
+  }
+
+  @Test
   public void zeroOrMoreRepeatedNegativeLookahead() {
     PatternExpr expr = PatternMatcher.compile("((?!bar)foo)*baz").toPatternExpr(50);
     Assertions.assertNull(expr);

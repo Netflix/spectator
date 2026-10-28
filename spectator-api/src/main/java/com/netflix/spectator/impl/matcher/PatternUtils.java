@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Helper functions for working with patterns.
@@ -329,10 +328,15 @@ public final class PatternUtils {
     if (matchers == null) {
       return null;
     } else {
-      List<PatternExpr> exprs = matchers
-          .stream()
-          .map(PatternUtils::expandLookahead)
-          .collect(Collectors.toList());
+      List<PatternExpr> exprs = new ArrayList<>(matchers.size());
+      for (Matcher m : matchers) {
+        PatternExpr expr = expandLookahead(m);
+        if (expr == null) {
+          // If any branch cannot be simplified, then neither can the overall expression
+          return null;
+        }
+        exprs.add(expr);
+      }
       return PatternExpr.or(exprs);
     }
   }
@@ -506,10 +510,10 @@ public final class PatternUtils {
 
   /** Convert a matcher to a SQL pattern or return null if not possible. */
   static String toSqlPattern(Matcher matcher) {
-    StringBuilder builder = new StringBuilder();
-    if (toSqlPattern(builder, matcher)) {
-      if (!endsWithWildcard(builder) && !matcher.isEndAnchored()) {
-        builder.append('%');
+    SqlPatternBuilder builder = new SqlPatternBuilder();
+    if (toSqlPattern(builder, matcher) && builder.isValid()) {
+      if (!builder.endsWithWildcard() && !builder.isEndAnchored()) {
+        builder.appendWildcard('%');
       }
       return builder.toString();
     } else {
@@ -517,38 +521,95 @@ public final class PatternUtils {
     }
   }
 
-  private static boolean endsWithWildcard(StringBuilder builder) {
-    int n = builder.length();
-    return n > 0 && builder.charAt(n - 1) == '%';
-  }
+  /**
+   * Builder for SQL LIKE patterns that tracks whether the pattern currently ends with
+   * a '%' wildcard. Literals are escaped using backslash as the escape character. LIKE
+   * patterns are implicitly anchored, so the builder also tracks whether anything has
+   * been appended after an end anchor, which cannot be represented.
+   */
+  @SuppressWarnings("PMD.AvoidStringBufferField")
+  private static final class SqlPatternBuilder {
 
-  private static String sqlEscape(String str) {
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < str.length(); ++i) {
-      char c = str.charAt(i);
-      switch (c) {
-        case '_':  builder.append("\\_");  break;
-        case '%':  builder.append("\\%");  break;
-        case '\\': builder.append("\\\\"); break;
-        default:   builder.append(c);      break;
+    private final StringBuilder builder = new StringBuilder();
+    private boolean endsWithWildcard = false;
+    private boolean endAnchored = false;
+    private boolean valid = true;
+
+    /** Append a wildcard, either '%' or '_'. */
+    void appendWildcard(char c) {
+      checkNotEnded();
+      builder.append(c);
+      endsWithWildcard = c == '%';
+    }
+
+    /** Append an escaped literal string. */
+    void appendLiteral(String str) {
+      for (int i = 0; i < str.length(); ++i) {
+        char c = str.charAt(i);
+        switch (c) {
+          case '_':  builder.append("\\_");  break;
+          case '%':  builder.append("\\%");  break;
+          case '\\': builder.append("\\\\"); break;
+          default:   builder.append(c);      break;
+        }
+      }
+      if (!str.isEmpty()) {
+        checkNotEnded();
+        endsWithWildcard = false;
       }
     }
-    return builder.toString();
+
+    private void checkNotEnded() {
+      if (endAnchored) {
+        valid = false;
+      }
+    }
+
+    /** Mark the end anchor, nothing else can be appended after this point. */
+    void markEnd() {
+      endAnchored = true;
+    }
+
+    boolean isEmpty() {
+      return builder.length() == 0;
+    }
+
+    boolean endsWithWildcard() {
+      return endsWithWildcard;
+    }
+
+    /** Returns true if an end anchor has been seen. */
+    boolean isEndAnchored() {
+      return endAnchored;
+    }
+
+    /** Returns false if something was appended after the end anchor. */
+    boolean isValid() {
+      return valid;
+    }
+
+    @Override public String toString() {
+      return builder.toString();
+    }
   }
 
-  private static boolean toSqlPattern(StringBuilder builder, Matcher matcher) {
+  private static boolean toSqlPattern(SqlPatternBuilder builder, Matcher matcher) {
     if (matcher instanceof TrueMatcher) {
-      builder.append("%");
+      builder.appendWildcard('%');
       return true;
     } else if (matcher instanceof AnyMatcher) {
-      builder.append('_');
+      builder.appendWildcard('_');
       return true;
-    } else if (matcher instanceof StartMatcher || matcher instanceof EndMatcher) {
+    } else if (matcher instanceof StartMatcher) {
+      // Start anchor is only supported at the beginning of the pattern
+      return builder.isEmpty();
+    } else if (matcher instanceof EndMatcher) {
+      builder.markEnd();
       return true;
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       if (m.repeated() == AnyMatcher.INSTANCE) {
-        builder.append('%');
+        builder.appendWildcard('%');
         return toSqlPattern(builder, m.next());
       }
     } else if (matcher instanceof SeqMatcher) {
@@ -560,16 +621,28 @@ public final class PatternUtils {
       }
       return true;
     } else if (matcher instanceof CharSeqMatcher) {
+      // LIKE is case sensitive, so case insensitive literals cannot be represented
       CharSeqMatcher m = matcher.as();
-      builder.append(sqlEscape(m.pattern()));
+      if (m.isIgnoreCase()) {
+        return false;
+      }
+      builder.appendLiteral(m.pattern());
       return true;
     } else if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
-      builder.append('%').append(sqlEscape(m.pattern()));
+      if (m.isIgnoreCase()) {
+        return false;
+      }
+      builder.appendWildcard('%');
+      builder.appendLiteral(m.pattern());
       return toSqlPattern(builder, m.next());
     } else if (matcher instanceof StartsWithMatcher) {
+      // Start anchor is only supported at the beginning of the pattern
       StartsWithMatcher m = matcher.as();
-      builder.append(sqlEscape(m.pattern()));
+      if (!builder.isEmpty() || m.isIgnoreCase()) {
+        return false;
+      }
+      builder.appendLiteral(m.pattern());
       return true;
     }
 

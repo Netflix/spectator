@@ -19,6 +19,10 @@ import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class ToSqlPatternTest {
 
   @Test
@@ -73,6 +77,95 @@ public class ToSqlPatternTest {
   public void escaping() {
     String sql = PatternMatcher.compile(".*foo_bar%baz.*").toSqlPattern();
     Assertions.assertEquals("%foo\\_bar\\%baz%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralPercent() {
+    String sql = PatternMatcher.compile("^a%").toSqlPattern();
+    Assertions.assertEquals("a\\%%", sql);
+  }
+
+  @Test
+  public void exactLiteralPercent() {
+    String sql = PatternMatcher.compile("^a%$").toSqlPattern();
+    Assertions.assertEquals("a\\%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralBackslashPercent() {
+    String sql = PatternMatcher.compile("^a\\\\%").toSqlPattern();
+    Assertions.assertEquals("a\\\\\\%%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralBackslash() {
+    String sql = PatternMatcher.compile("^a\\\\.*").toSqlPattern();
+    Assertions.assertEquals("a\\\\%", sql);
+  }
+
+  @Test
+  public void expandOrLiteralPercent() {
+    List<String> sql = PatternMatcher.compile("^(a%|b)")
+        .expandOrClauses(5)
+        .stream()
+        .map(PatternMatcher::toSqlPattern)
+        .collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList("a\\%%", "b%"), sql);
+  }
+
+  @Test
+  public void startAnchorInMiddle() {
+    String sql = PatternMatcher.compile("foo.*^bar").toSqlPattern();
+    Assertions.assertNull(sql);
+  }
+
+  @Test
+  public void endAnchorInMiddle() {
+    // The optimizer will typically rewrite these to a FalseMatcher, so construct directly
+    Matcher matcher = SeqMatcher.create(
+        new CharSeqMatcher("a"), EndMatcher.INSTANCE, new CharSeqMatcher("b"));
+    Assertions.assertNull(PatternUtils.toSqlPattern(matcher));
+  }
+
+  @Test
+  public void endAnchorInMiddleWildcard() {
+    Matcher matcher = SeqMatcher.create(
+        new CharSeqMatcher("a"), EndMatcher.INSTANCE, AnyMatcher.INSTANCE);
+    Assertions.assertNull(PatternUtils.toSqlPattern(matcher));
+  }
+
+  @Test
+  public void endAnchorFollowedByStartAnchor() {
+    // Zero width matchers after the end anchor are allowed, but the pattern is still
+    // end anchored so no trailing wildcard should be added
+    Matcher matcher = SeqMatcher.create(EndMatcher.INSTANCE, StartMatcher.INSTANCE);
+    Assertions.assertEquals("", PatternUtils.toSqlPattern(matcher));
+  }
+
+  @Test
+  public void endAnchorFollowedByEmptyLiteral() {
+    Matcher matcher = SeqMatcher.create(
+        StartMatcher.INSTANCE, new CharSeqMatcher("a"), EndMatcher.INSTANCE, new CharSeqMatcher(""));
+    Assertions.assertEquals("a", PatternUtils.toSqlPattern(matcher));
+  }
+
+  @Test
+  public void ignoreCaseLiterals() {
+    // LIKE is case sensitive, so case insensitive matchers cannot be mapped
+    Assertions.assertNull(PatternUtils.toSqlPattern(new CharSeqMatcher("abc", true)));
+    Assertions.assertNull(PatternUtils.toSqlPattern(new StartsWithMatcher("abc", true)));
+    Assertions.assertNull(PatternUtils.toSqlPattern(
+        new IndexOfMatcher("abc", TrueMatcher.INSTANCE, true)));
+  }
+
+  @Test
+  public void expandOrStartAnchor() {
+    List<String> sql = PatternMatcher.compile("(^a|b)%")
+        .expandOrClauses(5)
+        .stream()
+        .map(PatternMatcher::toSqlPattern)
+        .collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList(null, "%b\\%%"), sql);
   }
 
   @Test

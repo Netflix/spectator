@@ -186,6 +186,10 @@ public interface PatternMatcher {
    * Returns a pattern that can be used with a SQL LIKE clause or null if this expression
    * cannot be expressed as a SQL pattern. Can be used to more optimally map the pattern
    * to a SQL data store.
+   *
+   * <p>Literal '%', '_', and '\' characters are escaped with a backslash. The query must
+   * use backslash as the escape character, e.g. {@code LIKE ? ESCAPE '\'}, as that is not
+   * the default for all databases.
    */
   default String toSqlPattern() {
     return null;
