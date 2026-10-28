@@ -19,6 +19,10 @@ import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class ToSqlPatternTest {
 
   @Test
@@ -73,6 +77,40 @@ public class ToSqlPatternTest {
   public void escaping() {
     String sql = PatternMatcher.compile(".*foo_bar%baz.*").toSqlPattern();
     Assertions.assertEquals("%foo\\_bar\\%baz%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralPercent() {
+    String sql = PatternMatcher.compile("^a%").toSqlPattern();
+    Assertions.assertEquals("a\\%%", sql);
+  }
+
+  @Test
+  public void exactLiteralPercent() {
+    String sql = PatternMatcher.compile("^a%$").toSqlPattern();
+    Assertions.assertEquals("a\\%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralBackslashPercent() {
+    String sql = PatternMatcher.compile("^a\\\\%").toSqlPattern();
+    Assertions.assertEquals("a\\\\\\%%", sql);
+  }
+
+  @Test
+  public void startsWithLiteralBackslash() {
+    String sql = PatternMatcher.compile("^a\\\\.*").toSqlPattern();
+    Assertions.assertEquals("a\\\\%", sql);
+  }
+
+  @Test
+  public void expandOrLiteralPercent() {
+    List<String> sql = PatternMatcher.compile("^(a%|b)")
+        .expandOrClauses(5)
+        .stream()
+        .map(PatternMatcher::toSqlPattern)
+        .collect(Collectors.toList());
+    Assertions.assertEquals(Arrays.asList("a\\%%", "b%"), sql);
   }
 
   @Test
