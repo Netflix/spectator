@@ -59,4 +59,23 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     PatternMatcher nonEmpty = PatternMatcher.compile("(ab){2000000000}");
     Assertions.assertFalse(nonEmpty.matches("abab"));
   }
+
+  @Test
+  public void repeatLargeBoundMinLengthDoesNotOverflow() {
+    // The repeat saturates its minLength at Integer.MAX_VALUE. Adding the literal length in the
+    // enclosing index of matcher must not overflow to a negative value, which would corrupt the
+    // bounds check of the outer matcher and reject the alternative branch.
+    PatternMatcher m = PatternMatcher.compile("q(.*x(ab){2000000000}|c)");
+    Assertions.assertTrue(m.matches("qc"));
+    Assertions.assertFalse(m.matches("qd"));
+
+    PatternMatcher m2 = PatternMatcher.compile("q.*(xy(ab){2000000000}|c)");
+    Assertions.assertTrue(m2.matches("qzc"));
+    Assertions.assertFalse(m2.matches("qzd"));
+
+    // Same for the sum in a sequence matcher
+    PatternMatcher m3 = PatternMatcher.compile("q(x(ab){2000000000}|c)");
+    Assertions.assertTrue(m3.matches("qc"));
+    Assertions.assertFalse(m3.matches("qd"));
+  }
 }

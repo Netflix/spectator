@@ -201,6 +201,23 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void indexOfEndAnchoredWithOffset() {
+    // The end anchored index of is evaluated at a non-zero start position
+    testRE("x.+.+a$", "xyza");
+    testRE("x.+.+a$", "_xyza");
+    testRE("x.+.+a$", "xyzab");
+    testRE("^x.+.+a$", "xyza");
+    testRE("b.+.+a$", "bb_a");
+    testRE("ab.+.+cd$", "abxycd");
+    // ZeroOrOne and Repeat consumers also reject a returned position before the start
+    testRE("x(.*a$)?$", "zzzxa");
+    testRE("x(?:.*ab$)?$", "zzzxab");
+    testRE("x(.*a$){1,2}", "zzzxa");
+    testRE("x(.*a$){1,2}$", "zzzxa");
+    testRE("x(.*a$){1,2}$", "zzzxab");
+  }
+
+  @Test
   public void indexOfSeqStartAnchored() {
     testRE("^abc.*def", "abcdef");
     testRE("^abc.*def", "xabcdef");

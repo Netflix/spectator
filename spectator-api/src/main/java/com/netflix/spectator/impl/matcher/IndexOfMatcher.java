@@ -44,8 +44,10 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     this.next = next;
     this.ignoreCase = ignoreCase;
     // minLength is fixed for an immutable matcher; precompute it to avoid walking the
-    // next chain on every matches() call (the hot path uses next.minLength()).
-    this.minLength = pattern.length() + next.minLength();
+    // next chain on every matches() call. Saturate so that a next matcher whose minLength is
+    // already saturated (e.g. a RepeatMatcher with a huge count) cannot overflow to a negative
+    // value that would corrupt the bounds arithmetic in this and enclosing matchers.
+    this.minLength = (int) Math.min((long) pattern.length() + next.minLength(), Integer.MAX_VALUE);
   }
 
   /** Sub-string to look for within the string being checked. */
@@ -117,21 +119,24 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
       int pos = indexOf(str, start);
       return pos >= 0 ? pos + pattern.length() : Constants.NO_MATCH;
     } else if (next == EndMatcher.INSTANCE) {
-      return endsWith(str, start) ? length : Constants.NO_MATCH;
+      // endsWith checks the absolute end of the string, so the match ends at str.length()
+      return endsWith(str, start) ? str.length() : Constants.NO_MATCH;
     } else {
       final int end = start + length;
-      final int stop = end - next.minLength();
+      // Last position where the pattern and the minimum length of next can still fit
+      final int stop = end - minLength;
       int pos = start;
-      while (pos >= 0 && pos <= stop) {
+      while (pos <= stop) {
         pos = indexOf(str, pos);
-        if (pos >= 0) {
-          int s = pos + pattern.length();
-          int p = next.matches(str, s, end - s);
-          if (p >= 0) {
-            return p;
-          }
-          ++pos;
+        if (pos < 0 || pos > stop) {
+          break;
         }
+        int s = pos + pattern.length();
+        int p = next.matches(str, s, end - s);
+        if (p >= 0) {
+          return p;
+        }
+        ++pos;
       }
       return Constants.NO_MATCH;
     }

@@ -51,11 +51,13 @@ final class SeqMatcher implements Matcher, Serializable {
   /** Create a new instance. */
   private SeqMatcher(Matcher... matchers) {
     this.matchers = matchers;
-    int min = 0;
+    // Saturate so that a sub-matcher whose minLength is already saturated (e.g. a RepeatMatcher
+    // with a huge count) cannot overflow the sum to a negative value.
+    long min = 0L;
     for (Matcher matcher : matchers) {
       min += matcher.minLength();
     }
-    this.minLength = min;
+    this.minLength = (int) Math.min(min, Integer.MAX_VALUE);
   }
 
   /** Return the sub-matchers for this sequence. */
