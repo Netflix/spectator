@@ -96,12 +96,14 @@ final class RepeatMatcher implements Matcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    return new RepeatMatcher(f.apply(repeated), min, max);
+    return f.apply(new RepeatMatcher(repeated.rewrite(f), min, max));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    return new RepeatMatcher(f.apply(repeated), min, max);
+    // The repeated portion is not in the final position unless it is the last repetition,
+    // so only apply to this matcher.
+    return f.apply(this);
   }
 
   @Override

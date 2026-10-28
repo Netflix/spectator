@@ -58,7 +58,7 @@ public class ExpandOrTest {
   @Test
   public void expandRepeatMatcher() {
     // OR within repeat cannot be expanded without changing the interpretation.
-    Assertions.assertEquals(list("(.)*(?:((ABC)|(abc))){2,5}"), expand("(ABC|abc){2,5}"));
+    Assertions.assertEquals(list("(.)*(?:(ABC|abc)){2,5}"), expand("(ABC|abc){2,5}"));
   }
 
   @Test

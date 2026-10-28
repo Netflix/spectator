@@ -641,6 +641,29 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatOfUnbounded() {
+    // Repetition of an unbounded repetition is flattened so the result is consistent
+    testRE("^(a{2,}){2}$", "aaa");
+    testRE("^(a{2,}){2}$", "aaaa");
+    testRE("^(a{2,}){2}a$", "aaaaa");
+    testRE("^(a+){2}$", "a");
+    testRE("^(a+){2}$", "aa");
+    testRE("^(a+){2,3}$", "aaaa");
+    testRE("(a+){2}b", "xaab");
+    testRE("^(a+)?ab$", "aab");
+    testRE("^(?:a*)?ab$", "aab");
+    testRE("^(a+)*ab$", "aab");
+    testRE("^(a{2,}){0,2}$", "aaaa");
+  }
+
+  @Test
+  public void repeatIgnoreCase() {
+    testRE("(?i)(ab|cd){2,}", "ABCD");
+    testRE("(?i)(ab|cd){2}", "abCD");
+    testRE("(?i)(ab|cd){2}", "ABxCD");
+  }
+
+  @Test
   public void repeatOneNoUpperBound() {
     testRE("^ab{1,}c$", "ac");
     testRE("^ab{1,}c$", "abc");

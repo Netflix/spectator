@@ -378,6 +378,56 @@ public class OptimizerTest {
   }
 
   @Test
+  public void flattenRepeatedUnbounded() {
+    // (a{2,}){3} => a{6,}
+    Matcher a = new CharSeqMatcher("a");
+    Matcher input = new RepeatMatcher(
+        SeqMatcher.create(
+            new RepeatMatcher(a, 2, 2),
+            new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE)),
+        3, 3);
+    Matcher expected = SeqMatcher.create(
+        new RepeatMatcher(a, 6, 6),
+        new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE));
+    Assertions.assertEquals(expected, Optimizer.flattenRepeatedUnbounded(input));
+  }
+
+  @Test
+  public void flattenRepeatedUnbounded_OneOrMore() {
+    // (a+){2} => a{2,}
+    Matcher a = new CharSeqMatcher("a");
+    Matcher input = new RepeatMatcher(
+        SeqMatcher.create(a, new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE)), 2, 2);
+    Matcher expected = SeqMatcher.create(
+        new RepeatMatcher(a, 2, 2),
+        new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE));
+    Assertions.assertEquals(expected, Optimizer.flattenRepeatedUnbounded(input));
+  }
+
+  @Test
+  public void flattenRepeatedUnbounded_Optional() {
+    // (a+)?b => a*b
+    Matcher a = new CharSeqMatcher("a");
+    Matcher b = new CharSeqMatcher("b");
+    Matcher input = new ZeroOrOneMatcher(
+        SeqMatcher.create(a, new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE)), b);
+    Matcher expected = new ZeroOrMoreMatcher(a, b);
+    Assertions.assertEquals(expected, Optimizer.flattenRepeatedUnbounded(input));
+  }
+
+  @Test
+  public void flattenRepeatedUnbounded_OptionalMinTwo() {
+    // (a{2,})?b cannot be simplified
+    Matcher a = new CharSeqMatcher("a");
+    Matcher input = new ZeroOrOneMatcher(
+        SeqMatcher.create(
+            new RepeatMatcher(a, 2, 2),
+            new ZeroOrMoreMatcher(a, TrueMatcher.INSTANCE)),
+        new CharSeqMatcher("b"));
+    Assertions.assertEquals(input, Optimizer.flattenRepeatedUnbounded(input));
+  }
+
+  @Test
   public void removeRepeatedStart() {
     Matcher input = new ZeroOrMoreMatcher(StartMatcher.INSTANCE, AnyMatcher.INSTANCE);
     Matcher expected = AnyMatcher.INSTANCE;
