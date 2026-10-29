@@ -35,7 +35,11 @@ final class Optimizer {
   private Optimizer() {
   }
 
-  /** Return a new instance of the matcher that has been optimized. */
+  /**
+   * Return a new instance of the matcher that has been optimized. The matcher must be a
+   * complete pattern that is checked from the start of the string, some of the rewrites are
+   * only valid at the start. It should not be used to optimize a sub-matcher.
+   */
   static Matcher optimize(Matcher matcher) {
     Matcher m = matcher;
     Matcher opt = optimizeSinglePass(m);
@@ -156,7 +160,7 @@ final class Optimizer {
   }
 
   private static Matcher optimizeSinglePass(Matcher matcher) {
-    return matcher
+    Matcher m = matcher
         .rewrite(Optimizer::mergeNext)
         .rewrite(Optimizer::removeTrueInSequence)
         .rewrite(Optimizer::sequenceWithFalseIsFalse)
@@ -164,8 +168,10 @@ final class Optimizer {
         .rewrite(Optimizer::startAfterContentIsFalse)
         .rewrite(Optimizer::zeroOrMoreFalse)
         .rewrite(Optimizer::convertEmptyCharClassToFalse)
-        .rewrite(Optimizer::convertSingleCharClassToSeq)
-        .rewrite(Optimizer::removeStartFollowedByMatchAny)
+        .rewrite(Optimizer::convertSingleCharClassToSeq);
+    // Only valid at the start of the pattern so it is not applied recursively
+    m = removeStartFollowedByMatchAny(m);
+    return m
         .rewrite(Optimizer::removeMatchAnyFollowedByStart)
         .rewrite(Optimizer::removeMatchAnyFollowedByIndexOf)
         .rewrite(Optimizer::removeSequentialMatchAny)
@@ -318,11 +324,15 @@ final class Optimizer {
   }
 
   /**
-   * If the match after a repeated pattern is false, then treat the whole match as false.
-   * For example: {@code ".*$." => "$."}.
+   * If the match after a repeated pattern or index of is false, then treat the whole match as
+   * false. For example: {@code ".*$." => "$."} or {@code ".*a$." => "$."}.
    */
   static Matcher zeroOrMoreFalse(Matcher matcher) {
-    if (matcher instanceof ZeroOrMoreMatcher) {
+    if (matcher instanceof IndexOfMatcher) {
+      if (matcher.<IndexOfMatcher>as().next() instanceof FalseMatcher) {
+        return FalseMatcher.INSTANCE;
+      }
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher zm = matcher.as();
       if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
         return zm.next();
@@ -366,21 +376,103 @@ final class Optimizer {
 
   /**
    * If a start anchor is followed by a repeated any match, then the start anchor can be removed
-   * as it will not change the result ({@code "^.*" => ".*"}).
+   * as it will not change the result ({@code "^.*" => ".*"}). This is only true at the start
+   * of the pattern, for example {@code "b(^.*a)"} can never match, but {@code "b.*a"} can. So
+   * it should be applied to the overall pattern rather than via rewrite. The rule is also
+   * applied to nested matchers that are known to be checked at the start, such as alternatives
+   * of an OR or the optional portion of {@code "^(^.*)?a"}.
    */
   static Matcher removeStartFollowedByMatchAny(Matcher matcher) {
+    return removeStartFollowedByMatchAny(matcher, true);
+  }
+
+  /**
+   * Remove start anchors that are followed by a repeated any match for the given position.
+   *
+   * @param matcher
+   *     Matcher to rewrite.
+   * @param atStart
+   *     If true, then the matcher is checked at the start of the string. Otherwise, it is only
+   *     known to be preceded by a repeated any match from the start of the string. For that case,
+   *     {@code ".*(^.*a)" == ".*(.*a)"}, but a start anchor by itself cannot be removed.
+   */
+  private static Matcher removeStartFollowedByMatchAny(Matcher matcher, boolean atStart) {
+    if (matcher instanceof OrMatcher) {
+      List<Matcher> ms = new ArrayList<>();
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        ms.add(removeStartFollowedByMatchAny(m, atStart));
+      }
+      return OrMatcher.create(ms);
+    } else if (matcher instanceof StartMatcher) {
+      // Start anchor by itself at the start of the pattern will always match
+      return atStart ? TrueMatcher.INSTANCE : matcher;
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      // Optional portion is checked at the same position
+      ZeroOrOneMatcher zm = matcher.as();
+      Matcher repeated = removeStartFollowedByMatchAny(zm.repeated(), atStart);
+      return new ZeroOrOneMatcher(repeated, zm.next());
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher zm = matcher.as();
+      if (zm.repeated() instanceof AnyMatcher) {
+        Matcher next = removeStartFollowedByMatchAny(zm.next(), false);
+        return new ZeroOrMoreMatcher(zm.repeated(), next);
+      }
+      // Only the first repetition is at the start. For a repeated "^.*x", anything matched
+      // by later repetitions could also be matched by the first, so the start anchor can
+      // still be removed.
+      Matcher repeated = removeLeadingStart(zm.repeated());
+      return (repeated == null) ? matcher : new ZeroOrMoreMatcher(repeated, zm.next());
+    } else if (matcher instanceof SeqMatcher) {
+      Matcher stripped = removeLeadingStart(matcher);
+      if (stripped != null) {
+        return stripped;
+      }
+      List<Matcher> matchers = matcher.<SeqMatcher>as().matchers();
+      List<Matcher> ms = new ArrayList<>(matchers);
+      if (matchers.get(0) instanceof StartMatcher) {
+        // Start anchor matches an empty string at the start, so the next matcher is also
+        // checked at the start. The start anchor is kept so the sequence is still anchored.
+        ms.set(1, removeStartFollowedByMatchAny(matchers.get(1), true));
+      } else {
+        ms.set(0, removeStartFollowedByMatchAny(matchers.get(0), atStart));
+      }
+      return SeqMatcher.create(ms);
+    }
+    return matcher;
+  }
+
+  /**
+   * If the matcher is a start anchor followed by a repeated any match, then return the
+   * matcher without the start anchor. Otherwise return null.
+   */
+  private static Matcher removeLeadingStart(Matcher matcher) {
     if (matcher instanceof SeqMatcher) {
       List<Matcher> matchers = matcher.<SeqMatcher>as().matchers();
       if (matchers.size() == 2
           && matchers.get(0) instanceof StartMatcher
-          && matchers.get(1) instanceof ZeroOrMoreMatcher) {
-        ZeroOrMoreMatcher zm = matchers.get(1).as();
-        if (zm.repeated() instanceof AnyMatcher) {
-          return zm;
-        }
+          && startsWithMatchAny(matchers.get(1))) {
+        return matchers.get(1);
       }
     }
-    return matcher;
+    return null;
+  }
+
+  /** Returns true if the matcher starts with a repeated any match. */
+  private static boolean startsWithMatchAny(Matcher matcher) {
+    if (matcher instanceof ZeroOrMoreMatcher) {
+      return matcher.<ZeroOrMoreMatcher>as().repeated() instanceof AnyMatcher;
+    } else if (matcher instanceof IndexOfMatcher) {
+      // Index of is equivalent to a repeated any match followed by a string
+      return true;
+    } else if (matcher instanceof OrMatcher) {
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        if (!startsWithMatchAny(m)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -390,9 +482,7 @@ final class Optimizer {
   static Matcher removeMatchAnyFollowedByStart(Matcher matcher) {
     if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher zm = matcher.as();
-      if (zm.repeated() instanceof AnyMatcher
-          && zm.next() instanceof SeqMatcher
-          && zm.next().<SeqMatcher>as().matchers().get(0).isStartAnchored()) {
+      if (zm.repeated() instanceof AnyMatcher && zm.next().isStartAnchored()) {
         return zm.next();
       }
     }

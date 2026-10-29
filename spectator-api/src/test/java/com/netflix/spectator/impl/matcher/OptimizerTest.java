@@ -144,6 +144,13 @@ public class OptimizerTest {
   }
 
   @Test
+  public void indexOfFalse_Next() {
+    Matcher input = new IndexOfMatcher("a", FalseMatcher.INSTANCE);
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
   public void convertEmptyCharClassToFalse() {
     Matcher input = new CharClassMatcher(AsciiSet.none());
     Matcher expected = FalseMatcher.INSTANCE;
@@ -165,6 +172,154 @@ public class OptimizerTest {
     );
     Matcher expected = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, AnyMatcher.INSTANCE);
     Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_IndexOf() {
+    Matcher input = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new IndexOfMatcher("foo", TrueMatcher.INSTANCE)
+    );
+    Matcher expected = new IndexOfMatcher("foo", TrueMatcher.INSTANCE);
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_Or() {
+    Matcher input = OrMatcher.create(
+        SeqMatcher.create(
+            StartMatcher.INSTANCE,
+            new IndexOfMatcher("foo", TrueMatcher.INSTANCE)),
+        new CharSeqMatcher("bar")
+    );
+    Matcher expected = OrMatcher.create(
+        new IndexOfMatcher("foo", TrueMatcher.INSTANCE),
+        new CharSeqMatcher("bar")
+    );
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_StartOnly() {
+    Matcher input = StartMatcher.INSTANCE;
+    Matcher expected = TrueMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_NotAtStart() {
+    // b(^.*a) can never match, the start anchor must be preserved
+    Matcher nested = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new IndexOfMatcher("a", TrueMatcher.INSTANCE)
+    );
+    Matcher input = SeqMatcher.create(new CharSeqMatcher("b"), nested);
+    Assertions.assertEquals(input, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_ZeroOrOneAfterStart() {
+    // ^(^.*)?a, the optional portion is checked at the start
+    Matcher matchAny = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, TrueMatcher.INSTANCE);
+    Matcher input = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new ZeroOrOneMatcher(
+            SeqMatcher.create(StartMatcher.INSTANCE, matchAny),
+            new CharSeqMatcher("a"))
+    );
+    Matcher expected = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new ZeroOrOneMatcher(matchAny, new CharSeqMatcher("a"))
+    );
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_ZeroOrOneNotAtStart() {
+    // b(^.*)?a, the optional portion can never match
+    Matcher matchAny = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, TrueMatcher.INSTANCE);
+    Matcher input = SeqMatcher.create(
+        new CharSeqMatcher("b"),
+        new ZeroOrOneMatcher(
+            SeqMatcher.create(StartMatcher.INSTANCE, matchAny),
+            new CharSeqMatcher("a"))
+    );
+    Assertions.assertEquals(input, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_ZeroOrMoreAfterStart() {
+    // ^(^.*a)*b
+    Matcher input = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new ZeroOrMoreMatcher(
+            SeqMatcher.create(
+                StartMatcher.INSTANCE,
+                new IndexOfMatcher("a", TrueMatcher.INSTANCE)),
+            new CharSeqMatcher("b"))
+    );
+    Matcher expected = SeqMatcher.create(
+        StartMatcher.INSTANCE,
+        new ZeroOrMoreMatcher(
+            new IndexOfMatcher("a", TrueMatcher.INSTANCE),
+            new CharSeqMatcher("b"))
+    );
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeStartFollowedByMatchAny_AfterMatchAny() {
+    // .*(^.*a|^b), a start anchor followed by match any is redundant, but a start anchor
+    // that is not followed by match any must be preserved
+    Matcher input = new ZeroOrMoreMatcher(
+        AnyMatcher.INSTANCE,
+        OrMatcher.create(
+            SeqMatcher.create(
+                StartMatcher.INSTANCE,
+                new IndexOfMatcher("a", TrueMatcher.INSTANCE)),
+            SeqMatcher.create(StartMatcher.INSTANCE, new CharSeqMatcher("b")),
+            StartMatcher.INSTANCE)
+    );
+    Matcher expected = new ZeroOrMoreMatcher(
+        AnyMatcher.INSTANCE,
+        OrMatcher.create(
+            new IndexOfMatcher("a", TrueMatcher.INSTANCE),
+            SeqMatcher.create(StartMatcher.INSTANCE, new CharSeqMatcher("b")),
+            StartMatcher.INSTANCE)
+    );
+    Assertions.assertEquals(expected, Optimizer.removeStartFollowedByMatchAny(input));
+  }
+
+  @Test
+  public void removeMatchAnyFollowedByStart_StartsWith() {
+    Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, new StartsWithMatcher("a"));
+    Matcher expected = new StartsWithMatcher("a");
+    Assertions.assertEquals(expected, Optimizer.removeMatchAnyFollowedByStart(input));
+  }
+
+  @Test
+  public void removeMatchAnyFollowedByStart_StartOnly() {
+    Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, StartMatcher.INSTANCE);
+    Matcher expected = StartMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.removeMatchAnyFollowedByStart(input));
+  }
+
+  @Test
+  public void removeMatchAnyFollowedByStart_Or() {
+    Matcher anchored = OrMatcher.create(
+        new StartsWithMatcher("a"),
+        new StartsWithMatcher("b"));
+    Matcher input = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, anchored);
+    Assertions.assertEquals(anchored, Optimizer.removeMatchAnyFollowedByStart(input));
+  }
+
+  @Test
+  public void removeMatchAnyFollowedByStart_OrPartial() {
+    // Not all alternatives are anchored, so the match any cannot be removed
+    Matcher input = new ZeroOrMoreMatcher(
+        AnyMatcher.INSTANCE,
+        OrMatcher.create(new StartsWithMatcher("a"), new CharSeqMatcher("b")));
+    Assertions.assertEquals(input, Optimizer.removeMatchAnyFollowedByStart(input));
   }
 
   @Test

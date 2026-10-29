@@ -373,6 +373,19 @@ public final class PatternUtils {
   }
 
   private static void removeNextLookahead(Matcher matcher, Matcher[] results) {
+    clearAndRewriteNextLookahead(matcher, results);
+
+    // The results are complete patterns, so they can be optimized. This should not be done
+    // for the partial results when recursing, because some optimizations are only valid at
+    // the start of the pattern.
+    for (int i = 0; i < results.length; ++i) {
+      if (results[i] != null) {
+        results[i] = Optimizer.optimize(results[i]);
+      }
+    }
+  }
+
+  private static void clearAndRewriteNextLookahead(Matcher matcher, Matcher[] results) {
     Arrays.fill(results, null);
     rewriteNextLookahead(matcher, results);
   }
@@ -421,7 +434,7 @@ public final class PatternUtils {
       if (containsUnsupported(m.repeated())) {
         return;
       }
-      removeNextLookahead(m.next(), results);
+      clearAndRewriteNextLookahead(m.next(), results);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
           results[i] = new ZeroOrMoreMatcher(m.repeated(), results[i]);
@@ -432,7 +445,7 @@ public final class PatternUtils {
       if (containsUnsupported(m.repeated())) {
         return;
       }
-      removeNextLookahead(m.next(), results);
+      clearAndRewriteNextLookahead(m.next(), results);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
           results[i] = new ZeroOrOneMatcher(m.repeated(), results[i]);
@@ -461,12 +474,6 @@ public final class PatternUtils {
       results[2] = TrueMatcher.INSTANCE;
     } else if (!containsUnsupported(matcher)) {
       results[0] = matcher;
-    }
-
-    for (int i = 0; i < results.length; ++i) {
-      if (results[i] != null) {
-        results[i] = Optimizer.optimize(results[i]);
-      }
     }
   }
 

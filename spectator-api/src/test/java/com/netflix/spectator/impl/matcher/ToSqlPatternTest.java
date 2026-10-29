@@ -165,7 +165,7 @@ public class ToSqlPatternTest {
         .stream()
         .map(PatternMatcher::toSqlPattern)
         .collect(Collectors.toList());
-    Assertions.assertEquals(Arrays.asList(null, "%b\\%%"), sql);
+    Assertions.assertEquals(Arrays.asList("a\\%%", "%b\\%%"), sql);
   }
 
   @Test
