@@ -94,4 +94,25 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
       }
     }
   }
+
+  @Test
+  public void caseIndependentProperties() {
+    // Ignoring the case does not change the length, anchoring, or whether the pattern can
+    // match at all
+    String[] patterns = {
+        "", ".*", "^.*", "[^\\s\\S]", "a^b", "^abc$", "abc", "^ab.*", "x{3}y", "(?:)", "[^a]+$"
+    };
+    for (String p : patterns) {
+      PatternMatcher m = PatternMatcher.compile(p);
+      PatternMatcher ic = m.ignoreCase();
+      Assertions.assertEquals(m.minLength(), ic.minLength(), p);
+      Assertions.assertEquals(m.isStartAnchored(), ic.isStartAnchored(), p);
+      Assertions.assertEquals(m.isEndAnchored(), ic.isEndAnchored(), p);
+      Assertions.assertEquals(m.alwaysMatches(), ic.alwaysMatches(), p);
+      Assertions.assertEquals(m.neverMatches(), ic.neverMatches(), p);
+    }
+    Assertions.assertTrue(PatternMatcher.compile(".*").ignoreCase().alwaysMatches());
+    Assertions.assertTrue(PatternMatcher.compile("[^\\s\\S]").ignoreCase().neverMatches());
+    Assertions.assertEquals(3, PatternMatcher.compile("^abc$").ignoreCase().minLength());
+  }
 }
