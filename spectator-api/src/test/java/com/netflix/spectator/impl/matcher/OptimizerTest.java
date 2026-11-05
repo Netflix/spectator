@@ -782,4 +782,54 @@ public class OptimizerTest {
     );
     Assertions.assertEquals(expected, actual);
   }
+
+  private static Matcher ignoreCaseMatcher(String pattern) {
+    PatternMatcher m = PatternMatcher.compile(pattern).ignoreCase();
+    Assertions.assertTrue(m instanceof IgnoreCaseMatcher, pattern);
+    return ((IgnoreCaseMatcher) m).matcher();
+  }
+
+  @Test
+  public void ignoreCaseKeepsFolds() {
+    // The rewrite for ignoring the case goes through the delegate of the folded matchers,
+    // so they need to be folded again
+    Assertions.assertTrue(ignoreCaseMatcher("a.*b.*c") instanceof IndexOfSeqMatcher);
+    Assertions.assertTrue(ignoreCaseMatcher("^(abc|def|ghi)") instanceof OrStartsWithMatcher);
+  }
+
+  @Test
+  public void ignoreCaseOptimizesFoldedClass() {
+    // The class is not empty, but the folded set is, so it can never match
+    Assertions.assertEquals(FalseMatcher.INSTANCE, ignoreCaseMatcher("^[^\\x00-`b-\\x7f]$"));
+    Assertions.assertTrue(PatternMatcher.compile("^[^\\x00-`b-\\x7f]$").ignoreCase().neverMatches());
+  }
+
+  @Test
+  public void ignoreCaseKeptWhenMerging() {
+    Assertions.assertEquals(
+        new StartsWithMatcher("abcd", true),
+        ignoreCaseMatcher("^ab[c]d"));
+    Assertions.assertEquals(
+        new IndexOfMatcher("abcd", TrueMatcher.INSTANCE, true),
+        Optimizer.combineCharSeqAfterIndexOf(
+            new IndexOfMatcher("ab", new CharSeqMatcher("cd", true), true)));
+
+    // Not merged if the case is different
+    Matcher input = new IndexOfMatcher("ab", new CharSeqMatcher("cd"), true);
+    Assertions.assertEquals(input, Optimizer.combineCharSeqAfterIndexOf(input));
+  }
+
+  @Test
+  public void combineAdjacentCharSeqsDifferentCase() {
+    Matcher input = SeqMatcher.create(
+        new CharSeqMatcher("ab", true),
+        new CharSeqMatcher("cd"),
+        new CharSeqMatcher("ef")
+    );
+    Matcher expected = SeqMatcher.create(
+        new CharSeqMatcher("ab", true),
+        new CharSeqMatcher("cdef")
+    );
+    Assertions.assertEquals(expected, Optimizer.combineAdjacentCharSeqs(input));
+  }
 }
