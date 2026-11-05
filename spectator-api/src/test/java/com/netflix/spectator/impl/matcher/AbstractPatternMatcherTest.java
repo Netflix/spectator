@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public abstract class AbstractPatternMatcherTest {
 
@@ -927,6 +928,41 @@ public abstract class AbstractPatternMatcherTest {
         IllegalArgumentException.class,
         () -> PatternMatcher.compile("a{1000,-5}"));
     testRE("a{0,100000}", "a");
+  }
+
+  @Test
+  public void charClassInvalid() {
+    // Like java, a backwards range, a range ending with a named class, and an intersection
+    // without operands are errors
+    String[] ranges = {
+        "[z-a]", "[b-a]", "[a-\\]]", "[a-\\x5d]", "[a-\\t]", "[\\x7f-\\x00]", "[a-&&b]",
+        "[a-\\w]", "[a-\\d]", "[a-\\s]", "[a-\\p{Lower}]"
+    };
+    for (String p : ranges) {
+      Assertions.assertThrows(IllegalArgumentException.class, () -> Pattern.compile(p), p);
+      testBadExpression(p, "illegal character range");
+    }
+    String[] intersections = {"[&&]", "[^&&]", "[&&&]", "[&&&a]"};
+    for (String p : intersections) {
+      Assertions.assertThrows(IllegalArgumentException.class, () -> Pattern.compile(p), p);
+      testBadExpression(p, "bad class syntax");
+    }
+  }
+
+  @Test
+  public void charClassValidEdgeCases() {
+    // Like java, these are valid. The negated [^&&a] is checked by negatedNestedCharClass,
+    // it is limited to Java 9+ as Java 8 did not negate the intersection.
+    String[] patterns = {
+        "^[a-a]$", "^[\\w-a]$", "^[a&&]$", "^[&&a]$", "^[a&&&b]$", "^[a-c&&&]$",
+        "^[a-c&&b&&]$", "^[a-[b]]$", "^[!-&&b]$", "^[\\]-a]$"
+    };
+    String[] values = {"", "a", "b", "c", "&", "-", "^", "!", "1"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
   }
 
   @Test
