@@ -377,6 +377,13 @@ public final class CardinalityLimiters {
         return AUTO_ROLLUP;
       }
 
+      // Check before adding, contains is lock free. On JDK 8 the add will lock the bin
+      // even if the value is already present, so threads using the same value would
+      // contend on every call.
+      if (values.contains(s)) {
+        return s;
+      }
+
       if (values.add(s) && count.incrementAndGet() > n) {
         rollup = true;
         values.clear();
