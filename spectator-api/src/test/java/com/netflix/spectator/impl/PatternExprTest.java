@@ -215,8 +215,94 @@ public class PatternExprTest {
 
   @Test
   public void indexOfNegativeLookahead() {
+    // Position is not fixed, so the lookahead is rewritten rather than split into a NOT
     PatternExpr expr = PatternMatcher.compile("foo-(?!bar)").toPatternExpr(50);
-    Assertions.assertEquals("(NOT '.*foo-bar' AND '.*foo-')", expr.toString());
+    Assertions.assertEquals(
+        "'.*foo-($|[^b]|(b($|[^a]|(a($|[^r])))))'",
+        expr.toString());
+    Assertions.assertTrue(expr.matches("foo-bar foo-baz"));
+    Assertions.assertTrue(expr.matches("foo-"));
+    Assertions.assertTrue(expr.matches("foo-ba"));
+    Assertions.assertFalse(expr.matches("foo-bar"));
+  }
+
+  @Test
+  public void indexOfNegativeLookaheadIgnoreCase() {
+    PatternExpr expr = PatternMatcher.compile("(?i)foo-(?!bar)").toPatternExpr(50);
+    Assertions.assertEquals(
+        "'(?i).*foo-($|[^Bb]|([Bb]($|[^Aa]|([Aa]($|[^Rr])))))'",
+        expr.toString());
+    Assertions.assertTrue(expr.matches("FOO-BAZ"));
+    Assertions.assertFalse(expr.matches("FOO-BAR"));
+    Assertions.assertFalse(expr.matches("foo-Bar"));
+  }
+
+  @Test
+  public void indexOfNegativeLookaheadCharClass() {
+    PatternExpr expr = PatternMatcher.compile("foo-(?![a-c].)").toPatternExpr(50);
+    Assertions.assertEquals("'.*foo-($|[^a-c]|([a-c]$))'", expr.toString());
+    Assertions.assertTrue(expr.matches("foo-a"));
+    Assertions.assertTrue(expr.matches("foo-d"));
+    Assertions.assertFalse(expr.matches("foo-ab"));
+  }
+
+  @Test
+  public void negativeLookaheadInvertedSetNotNegatedClass() {
+    // The inverted set would be written as [a{-\x7f] which would not match non-ascii
+    // characters for engines like RE2, so it cannot be inlined
+    PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x60b-z])").toPatternExpr(50);
+    Assertions.assertNull(expr);
+  }
+
+  @Test
+  public void negativeLookaheadAllAscii() {
+    // Inverted set is empty, but a non-ascii character would not match the lookahead
+    PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x7f])").toPatternExpr(50);
+    Assertions.assertNull(expr);
+  }
+
+  @Test
+  public void negativeLookaheadTooLongToInline() {
+    // Each character adds a level of nesting, so long lookaheads are not inlined
+    StringBuilder builder = new StringBuilder();
+    for (int i = 0; i < 10_000; ++i) {
+      builder.append((char) ('a' + i % 26));
+    }
+    String lookahead = builder.toString();
+    Assertions.assertNull(PatternMatcher.compile("foo-(?!" + lookahead + ")").toPatternExpr(50));
+
+    // Fixed position can still be split into a separate clause
+    PatternExpr expr = PatternMatcher.compile("^foo-(?!" + lookahead + ")").toPatternExpr(50);
+    Assertions.assertEquals("(NOT '^foo-" + lookahead + "' AND '^foo-')", expr.toString());
+  }
+
+  @Test
+  public void negativeLookaheadFollowedByContent() {
+    // Position is not fixed and something follows the lookahead
+    PatternExpr expr = PatternMatcher.compile("foo-(?!bar)x").toPatternExpr(50);
+    Assertions.assertNull(expr);
+  }
+
+  @Test
+  public void negativeLookaheadFixedPosition() {
+    PatternExpr expr = PatternMatcher.compile("^[a-z]{3}(?!bar)x").toPatternExpr(50);
+    Assertions.assertEquals(
+        "(NOT '(^(?:[a-z]){3}bar)' AND '(^(?:[a-z]){3}x)')",
+        expr.toString());
+  }
+
+  @Test
+  public void positiveLookaheadFollowedByContent() {
+    // Position is not fixed, the lookahead and the content after could match at different
+    // positions, e.g. "ba" would match both '.*b.' and '.*a'
+    PatternExpr expr = PatternMatcher.compile("(?=b.)a").toPatternExpr(50);
+    Assertions.assertNull(expr);
+  }
+
+  @Test
+  public void positiveLookaheadFixedPosition() {
+    PatternExpr expr = PatternMatcher.compile("^(?=b.)a").toPatternExpr(50);
+    Assertions.assertEquals("('(^b.)' AND '^a')", expr.toString());
   }
 
   @Test
@@ -227,17 +313,23 @@ public class PatternExprTest {
 
   @Test
   public void seqNegativeLookahead() {
-    PatternExpr expr = PatternMatcher.compile("foo-(?!bar)(?!baz)").toPatternExpr(50);
+    // Position is not fixed and the first lookahead is followed by another
+    Assertions.assertNull(PatternMatcher.compile("foo-(?!bar)(?!baz)").toPatternExpr(50));
+
+    PatternExpr expr = PatternMatcher.compile("^foo-(?!bar)(?!baz)").toPatternExpr(50);
     Assertions.assertEquals(
-        "(NOT '.*foo-bar' AND NOT '.*foo-baz' AND '.*foo-')",
+        "(NOT '^foo-bar' AND NOT '^foo-baz' AND '^foo-')",
         expr.toString());
   }
 
   @Test
   public void seqPositiveLookahead() {
-    PatternExpr expr = PatternMatcher.compile("foo-(?=bar)(?=baz)").toPatternExpr(50);
+    // Position is not fixed and the first lookahead is followed by another
+    Assertions.assertNull(PatternMatcher.compile("foo-(?=bar)(?=baz)").toPatternExpr(50));
+
+    PatternExpr expr = PatternMatcher.compile("^foo-(?=bar)(?=baz)").toPatternExpr(50);
     Assertions.assertEquals(
-        "('.*foo-bar' AND '.*foo-baz' AND '.*foo-')",
+        "('^foo-bar' AND '^foo-baz' AND '^foo-')",
         expr.toString());
   }
 
@@ -276,7 +368,11 @@ public class PatternExprTest {
   @Test
   public void zeroOrMoreNextNegativeLookahead() {
     PatternExpr expr = PatternMatcher.compile("(foo-)*(?!bar)").toPatternExpr(50);
-    Assertions.assertEquals("(NOT '(.)*(foo-)*bar' AND '(.)*(foo-)*')", expr.toString());
+    Assertions.assertEquals(
+        "'(.)*(foo-)*($|[^b]|(b($|[^a]|(a($|[^r])))))'",
+        expr.toString());
+    // Matches at the end of any string
+    Assertions.assertTrue(expr.matches("bar"));
   }
 
   @Test
@@ -300,7 +396,10 @@ public class PatternExprTest {
   @Test
   public void zeroOrOneNextNegativeLookahead() {
     PatternExpr expr = PatternMatcher.compile("(foo-)?(?!bar)").toPatternExpr(50);
-    Assertions.assertEquals("(NOT '(.)*(?:foo-)?bar' AND '(.)*(?:foo-)?')", expr.toString());
+    Assertions.assertEquals(
+        "'(.)*(?:foo-)?($|[^b]|(b($|[^a]|(a($|[^r])))))'",
+        expr.toString());
+    Assertions.assertTrue(expr.matches("bar"));
   }
 
   @Test
