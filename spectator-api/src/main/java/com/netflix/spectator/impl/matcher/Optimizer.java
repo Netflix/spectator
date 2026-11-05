@@ -285,8 +285,8 @@ final class Optimizer {
 
   /**
    * If a start anchor follows content that consumes at least one character, then it will
-   * never be able to match and can be treated as false. For example: {@code "a^b" => "$."}
-   * or {@code "a$^" => "$."}.
+   * never be able to match and can be treated as false. For example: {@code "a^b" => "[^\s\S]"}
+   * or {@code "a$^" => "[^\s\S]"}.
    */
   static Matcher startAfterContentIsFalse(Matcher matcher) {
     if (matcher instanceof SeqMatcher) {
@@ -325,7 +325,7 @@ final class Optimizer {
 
   /**
    * If the match after a repeated pattern or index of is false, then treat the whole match as
-   * false. For example: {@code ".*$." => "$."} or {@code ".*a$." => "$."}.
+   * false. For example: {@code ".*$." => "[^\s\S]"} or {@code ".*a$." => "[^\s\S]"}.
    */
   static Matcher zeroOrMoreFalse(Matcher matcher) {
     if (matcher instanceof IndexOfMatcher) {

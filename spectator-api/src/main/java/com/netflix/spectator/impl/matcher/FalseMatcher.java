@@ -38,7 +38,9 @@ enum FalseMatcher implements Matcher {
 
   @Override
   public String toString() {
-    // Pattern that can never match, nothing can be after the end
-    return "$.";
+    // Pattern that can never match, an empty character class. It is not written as $.
+    // because java's $ can match before a final line terminator, so with DOTALL it would
+    // match "\n".
+    return "[^\\s\\S]";
   }
 }
