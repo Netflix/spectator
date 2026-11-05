@@ -503,6 +503,28 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void quantifierAfterSurrogatePair() {
+    // A quantifier applies to the whole code point, not only the low surrogate
+    String[] patterns = {
+        "^\uD83D\uDE00+$", "^\uD83D\uDE00{2}$", "^a\uD83D\uDE00?b$", "^\uD83D\uDE00*$",
+        "^x\uD83D\uDE00+?y$", "^(\uD83D\uDE00)+$", "^\uD83D\uDE00+\uD83D\uDE01$",
+        "^\\uD83D\\uDE00+$", "^\\uD83D\\uDE00{2}$",
+        // Escaped code point, e.g. from a helper that escapes all non-word characters
+        "^\\\uD83D\uDE00+$", "^\\\uD83D\uDE00{2}$"
+    };
+    String[] values = {
+        "", "\uD83D\uDE00", "\uD83D\uDE00\uD83D\uDE00", "\uD83D\uDE00\uDE00", "ab",
+        "a\uD83D\uDE00b", "a\uD83D\uDE00\uD83D\uDE00b", "xy", "x\uD83D\uDE00y",
+        "\uD83D\uDE00\uD83D\uDE01"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");
