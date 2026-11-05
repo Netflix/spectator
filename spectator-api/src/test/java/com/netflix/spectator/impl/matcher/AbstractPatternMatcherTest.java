@@ -932,4 +932,23 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^\\Q\\t\\E$", "\t");
     testRE("^\\Qa\\E\\x2b$", "a+");
   }
+
+  @Test
+  public void lookaheadPositionNotFixed() {
+    // The lookahead can match at a different position than the rest of the pattern
+    String[] patterns = {
+        "foo-(?!bar)", "foo-(?!bar)x", "foo-(?![a-c].)", "(foo-)*(?!bar)", "(foo-)?(?!bar)",
+        "(?=b.)a", "a(?=b)", "^(?=b.)a", "^foo-(?!bar)(?!baz)", "foo-(?!bar)(?!baz)",
+        "^[a-z]{3}(?!bar)x", "[a-z]+(?!bar)"
+    };
+    String[] values = {
+        "", "ba", "ab", "foo-", "foo-b", "foo-ba", "foo-bar", "foo-baz", "foo-bar foo-baz",
+        "foo-barx foo-x", "foo-d", "foo-ad", "bar", "abcx", "abcbarx"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
 }

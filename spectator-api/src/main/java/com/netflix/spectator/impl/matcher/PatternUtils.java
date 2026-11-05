@@ -41,6 +41,14 @@ public final class PatternUtils {
    */
   private static final AsciiSet STRUCTURAL_CHARS = AsciiSet.fromPattern("-\\^$.|?*+()[]{}&");
 
+  /**
+   * Maximum number of characters for a negative lookahead that will be inlined. Each
+   * character adds a level of nesting to the rewritten pattern, so long lookaheads could
+   * overflow the stack when processing the matcher or exceed the nesting limits of other
+   * regex engines.
+   */
+  private static final int MAX_INLINE_LOOKAHEAD_LENGTH = 100;
+
   private PatternUtils() {
   }
 
@@ -363,7 +371,7 @@ public final class PatternUtils {
     } else {
       List<PatternExpr> exprs = new ArrayList<>(matchers.size());
       for (Matcher m : matchers) {
-        PatternExpr expr = expandLookahead(m);
+        PatternExpr expr = expandLookahead(inlineNegativeLookahead(m, false, true));
         if (expr == null) {
           // If any branch cannot be simplified, then neither can the overall expression
           return null;
@@ -371,6 +379,200 @@ public final class PatternUtils {
         exprs.add(expr);
       }
       return PatternExpr.or(exprs);
+    }
+  }
+
+  /**
+   * Splitting out a lookahead into a separate clause is only valid if the lookahead is at a
+   * fixed position. For example, with {@code foo-(?!bar)} the clause {@code NOT '.*foo-bar'}
+   * would reject {@code foo-bar foo-baz} even though the second {@code foo-} is not followed
+   * by {@code bar}. If nothing needs to match after the lookahead and it is for a fixed
+   * sequence of characters, then it can instead be rewritten as a pattern that matches
+   * anything other than that sequence. For example, {@code (?!ab)} is the same as
+   * {@code ($|[^a]|a($|[^b]))} if nothing follows.
+   *
+   * @param matcher
+   *     Matcher to rewrite.
+   * @param fixed
+   *     True if the start position of the matcher is fixed, i.e. it is start anchored and
+   *     preceded only by fixed length matchers.
+   * @param restAny
+   *     True if whatever follows the matcher will match any suffix.
+   */
+  private static Matcher inlineNegativeLookahead(Matcher matcher, boolean fixed, boolean restAny) {
+    if (matcher instanceof IndexOfMatcher) {
+      IndexOfMatcher m = matcher.as();
+      Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
+      return next == m.next() ? m : new IndexOfMatcher(m.pattern(), next, m.isIgnoreCase());
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
+      return next == m.next() ? m : new ZeroOrMoreMatcher(m.repeated(), next);
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
+      return next == m.next() ? m : new ZeroOrOneMatcher(m.repeated(), next);
+    } else if (matcher instanceof SeqMatcher) {
+      Matcher[] ms = matcher.<SeqMatcher>as().matchers().toArray(new Matcher[0]);
+      boolean changed = false;
+      boolean f = fixed;
+      for (int i = 0; i < ms.length; ++i) {
+        Matcher m = ms[i];
+        ms[i] = inlineNegativeLookahead(m, f, restAny && matchesAnySuffix(ms, i + 1));
+        changed |= ms[i] != m;
+        f = isFixedAfter(f, m);
+      }
+      return changed ? SeqMatcher.create(ms) : matcher;
+    } else if (matcher instanceof NegativeLookaheadMatcher && !fixed && restAny) {
+      Matcher m = negateCharSeq(matcher.<NegativeLookaheadMatcher>as().matcher());
+      return m == null ? matcher : m;
+    } else {
+      return matcher;
+    }
+  }
+
+  /**
+   * Create a matcher for anything other than the sequence of characters matched by the
+   * lookahead, or null if the lookahead is not a sequence of single character matchers or
+   * is longer than {@link #MAX_INLINE_LOOKAHEAD_LENGTH}. It will also be null if an inverted
+   * set cannot be written as a negated class. The end of the string is also allowed as the
+   * lookahead would not match.
+   */
+  private static Matcher negateCharSeq(Matcher matcher) {
+    List<AsciiSet> sets = new ArrayList<>();
+    if (!charSets(matcher, sets) || sets.isEmpty() || sets.size() > MAX_INLINE_LOOKAHEAD_LENGTH) {
+      return null;
+    }
+    Matcher tail = null;
+    for (int i = sets.size() - 1; i >= 0; --i) {
+      AsciiSet set = sets.get(i);
+      AsciiSet inverted = (set == null) ? null : set.invert();
+      List<Matcher> alternatives = new ArrayList<>(3);
+      alternatives.add(EndMatcher.INSTANCE);
+      if (inverted != null) {
+        // AsciiSet cannot include non-ascii characters, but they would not match the
+        // lookahead. The inverted class must be written as a negated class, e.g. [^b],
+        // so that engines like RE2 will match non-ascii characters as well.
+        Matcher m = new CharClassMatcher(inverted);
+        if (inverted.isEmpty() || !m.toString().startsWith("[^")) {
+          return null;
+        }
+        alternatives.add(m);
+      }
+      if (tail != null) {
+        Matcher m = (set == null) ? AnyMatcher.INSTANCE : new CharClassMatcher(set);
+        alternatives.add(SeqMatcher.create(m, tail));
+      }
+      tail = OrMatcher.create(alternatives);
+    }
+    return tail;
+  }
+
+  /**
+   * Add the set of characters for each position of the matcher. A null entry is used for
+   * any character. Returns false if the matcher is not a sequence of single character
+   * matchers. For ignore case, the sets will include both cases so that the inverted set
+   * will be correct.
+   */
+  private static boolean charSets(Matcher matcher, List<AsciiSet> sets) {
+    if (matcher instanceof CharSeqMatcher) {
+      CharSeqMatcher m = matcher.as();
+      String pattern = m.pattern();
+      for (int i = 0; i < pattern.length(); ++i) {
+        char c = pattern.charAt(i);
+        if (c >= 128) {
+          return false;
+        }
+        AsciiSet set = AsciiSet.fromPattern(Character.toString(c));
+        sets.add(m.isIgnoreCase() ? withOtherCase(set) : set);
+      }
+      return true;
+    } else if (matcher instanceof CharClassMatcher) {
+      CharClassMatcher m = matcher.as();
+      sets.add(m.isIgnoreCase() ? withOtherCase(m.set()) : m.set());
+      return true;
+    } else if (matcher instanceof AnyMatcher) {
+      sets.add(null);
+      return true;
+    } else if (matcher instanceof SeqMatcher) {
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (!charSets(m, sets)) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static AsciiSet withOtherCase(AsciiSet set) {
+    StringBuilder builder = new StringBuilder();
+    for (char c = 'a'; c <= 'z'; ++c) {
+      char upper = Character.toUpperCase(c);
+      if (set.contains(c) || set.contains(upper)) {
+        builder.append(c).append(upper);
+      }
+    }
+    return builder.length() == 0 ? set : set.union(AsciiSet.fromPattern(builder.toString()));
+  }
+
+  /** Returns true if the matchers starting at the offset will match any suffix. */
+  private static boolean matchesAnySuffix(Matcher[] ms, int offset) {
+    for (int i = offset; i < ms.length; ++i) {
+      if (!matchesAnySuffix(ms[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean matchesAnySuffix(Matcher matcher) {
+    if (matcher instanceof SeqMatcher) {
+      return matchesAnySuffix(matcher.<SeqMatcher>as().matchers().toArray(new Matcher[0]), 0);
+    } else {
+      return matcher.alwaysMatches();
+    }
+  }
+
+  /**
+   * Returns true if the position after the matcher is fixed.
+   *
+   * @param fixed
+   *     True if the position before the matcher is fixed.
+   * @param matcher
+   *     Matcher to check.
+   */
+  private static boolean isFixedAfter(boolean fixed, Matcher matcher) {
+    if (matcher instanceof StartMatcher || matcher instanceof StartsWithMatcher) {
+      return true;
+    } else {
+      return fixed && isFixedLength(matcher);
+    }
+  }
+
+  private static boolean isFixedLength(Matcher matcher) {
+    if (matcher instanceof CharSeqMatcher
+        || matcher instanceof CharClassMatcher
+        || matcher instanceof AnyMatcher
+        || matcher instanceof TrueMatcher
+        || matcher instanceof StartMatcher
+        || matcher instanceof EndMatcher
+        || matcher instanceof PositiveLookaheadMatcher
+        || matcher instanceof NegativeLookaheadMatcher) {
+      return true;
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      return m.min() == m.max() && isFixedLength(m.repeated());
+    } else if (matcher instanceof SeqMatcher) {
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (!isFixedLength(m)) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -406,7 +608,7 @@ public final class PatternUtils {
   }
 
   private static void removeNextLookahead(Matcher matcher, Matcher[] results) {
-    clearAndRewriteNextLookahead(matcher, results);
+    clearAndRewriteNextLookahead(matcher, results, false, true);
 
     // The results are complete patterns, so they can be optimized. This should not be done
     // for the partial results when recursing, because some optimizations are only valid at
@@ -418,16 +620,18 @@ public final class PatternUtils {
     }
   }
 
-  private static void clearAndRewriteNextLookahead(Matcher matcher, Matcher[] results) {
+  private static void clearAndRewriteNextLookahead(
+      Matcher matcher, Matcher[] results, boolean fixed, boolean restAny) {
     Arrays.fill(results, null);
-    rewriteNextLookahead(matcher, results);
+    rewriteNextLookahead(matcher, results, fixed, restAny);
   }
 
   @SuppressWarnings("PMD")
-  private static void rewriteNextLookahead(Matcher matcher, Matcher[] results) {
+  private static void rewriteNextLookahead(
+      Matcher matcher, Matcher[] results, boolean fixed, boolean restAny) {
     if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
-      rewriteNextLookahead(m.next(), results);
+      rewriteNextLookahead(m.next(), results, false, restAny);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
           results[i] = new IndexOfMatcher(m.pattern(), results[i]);
@@ -436,9 +640,11 @@ public final class PatternUtils {
     } else if (matcher instanceof SeqMatcher) {
       SeqMatcher m = matcher.as();
       Matcher[] ms = m.matchers().toArray(new Matcher[0]);
+      boolean f = fixed;
       for (int i = 0; i < ms.length; ++i) {
         results[0] = null;
-        rewriteNextLookahead(ms[i], results);
+        rewriteNextLookahead(ms[i], results, f, restAny && matchesAnySuffix(ms, i + 1));
+        f = isFixedAfter(f, ms[i]);
         if (results[2] != null) {
           // Truncated sequence with lookahead match at the end
           List<Matcher> matchers = new ArrayList<>(i + 1);
@@ -467,7 +673,7 @@ public final class PatternUtils {
       if (containsUnsupported(m.repeated())) {
         return;
       }
-      clearAndRewriteNextLookahead(m.next(), results);
+      clearAndRewriteNextLookahead(m.next(), results, false, restAny);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
           results[i] = new ZeroOrMoreMatcher(m.repeated(), results[i]);
@@ -478,7 +684,7 @@ public final class PatternUtils {
       if (containsUnsupported(m.repeated())) {
         return;
       }
-      clearAndRewriteNextLookahead(m.next(), results);
+      clearAndRewriteNextLookahead(m.next(), results, false, restAny);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
           results[i] = new ZeroOrOneMatcher(m.repeated(), results[i]);
@@ -492,15 +698,19 @@ public final class PatternUtils {
         results[0] = matcher;
       }
     } else if (matcher instanceof PositiveLookaheadMatcher) {
+      // X(?=Y)Z is split into XY AND XZ. If the position is not fixed, this is only valid
+      // when Z will match anything, e.g. foo-(?=bar).
       PositiveLookaheadMatcher m = matcher.as();
-      if (containsUnsupported(m.matcher())) {
+      if (containsUnsupported(m.matcher()) || !(fixed || restAny)) {
         return;
       }
       results[0] = m.matcher();
       results[2] = TrueMatcher.INSTANCE;
     } else if (matcher instanceof NegativeLookaheadMatcher) {
+      // X(?!Y)Z is split into XZ AND NOT XY. This is only valid if the position is fixed,
+      // see inlineNegativeLookahead for how some other cases are handled.
       NegativeLookaheadMatcher m = matcher.as();
-      if (containsUnsupported(m.matcher())) {
+      if (containsUnsupported(m.matcher()) || !fixed) {
         return;
       }
       results[1] = m.matcher();

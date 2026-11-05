@@ -44,6 +44,11 @@ final class CharClassMatcher implements Matcher, Serializable {
     return set;
   }
 
+  /** Returns true if the match should ignore case. */
+  boolean isIgnoreCase() {
+    return ignoreCase;
+  }
+
   private char toOtherCase(char c) {
     final char amount = 'a' - 'A';
     if (c >= 'A' && c <= 'Z') {
