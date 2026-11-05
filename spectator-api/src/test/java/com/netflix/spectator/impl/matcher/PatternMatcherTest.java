@@ -78,4 +78,25 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     Assertions.assertTrue(m3.matches("qc"));
     Assertions.assertFalse(m3.matches("qd"));
   }
+
+  @Test
+  public void negatedNestedCharClassAnyJdk() {
+    // The negation applies to the whole class as in Java 9+, independent of the JDK version.
+    // Named differently so it does not override the shared JDK 9+ test in the base class.
+    PatternMatcher m = PatternMatcher.compile("^[^a[b]]$");
+    Assertions.assertFalse(m.matches("a"));
+    Assertions.assertFalse(m.matches("b"));
+    Assertions.assertTrue(m.matches("c"));
+    m = PatternMatcher.compile("^[^[^a]]$");
+    Assertions.assertTrue(m.matches("a"));
+    Assertions.assertFalse(m.matches("b"));
+    m = PatternMatcher.compile("^[^a-z&&[aeiou]]$");
+    Assertions.assertFalse(m.matches("a"));
+    Assertions.assertTrue(m.matches("b"));
+    Assertions.assertTrue(m.matches("A"));
+    m = PatternMatcher.compile("^[^a[b]]$").ignoreCase();
+    Assertions.assertFalse(m.matches("A"));
+    Assertions.assertFalse(m.matches("B"));
+    Assertions.assertTrue(m.matches("C"));
+  }
 }

@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -458,6 +459,25 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^[a-f[A-F][G-I&&[H]]]*$", "abcdef&");
     testRE("^[a-f[A-F]]*$", "abcdef[]ABCDEF");
     testRE("^[a-f[A-F[0-2]]]*$", "abcdefABCDEF012");
+  }
+
+  @Test
+  public void negatedNestedCharClass() {
+    // Since Java 9, a negation applies to the whole class, including nested classes and
+    // intersections. Java 8 did not negate the nested classes.
+    Assumptions.assumeTrue(JavaVersion.major() >= 9);
+    String[] patterns = {
+        "^[^[^a]]$", "^[^a[b]]$", "^[^[a]b]$", "^[^a[^b]]$", "^[^a[b[c]]]$", "^[a[^b]]$",
+        "^[^a-z&&[aeiou]]$", "^[^a&&b]$", "^[^ab&&b]$", "^[^[ab]&&[bc]]$", "^[^a&&[^b]]$",
+        "^[^a&&[a-c]&&[b-d]]$", "^[&&a]$", "^[^&&a]$", "^[^&&[a]]$", "^[a&&]$", "^[^a&&]$",
+        "^x[^a[b]]+y$"
+    };
+    String[] values = {"", "a", "A", "b", "B", "c", "C", "d", "e", "1", "xcdy", "xcby"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
   }
 
   @Test

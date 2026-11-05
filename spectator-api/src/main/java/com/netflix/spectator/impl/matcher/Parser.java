@@ -242,20 +242,14 @@ class Parser {
    * negation or intersection, so {@code (?i)[^a]} matches neither 'a' nor 'A'.
    */
   private static final class CharClassBuilder {
-    private final boolean invert;
-    private AsciiSet set;
-    private AsciiSet folded;
+    private AsciiSet set = AsciiSet.none();
+    private AsciiSet folded = AsciiSet.none();
+    private boolean empty = true;
 
-    CharClassBuilder(boolean invert) {
-      this.invert = invert;
-      this.set = invert ? AsciiSet.all() : AsciiSet.none();
-      this.folded = set;
-    }
-
-    /** Add an element to the class, or remove it if the class is negated. */
     private void add(AsciiSet s, AsciiSet f) {
-      set = invert ? set.diff(s) : set.union(s);
-      folded = invert ? folded.diff(f) : folded.union(f);
+      set = set.union(s);
+      folded = folded.union(f);
+      empty = false;
     }
 
     void add(AsciiSet s) {
@@ -271,23 +265,29 @@ class Parser {
       add(AsciiSet.fromPattern(new String(new char[] {s, '-', e})));
     }
 
-    /** Add a named class to the class, or remove it if the class is negated. */
+    /** Add a named or nested class to the class. */
     void add(CharClassMatcher m) {
       add(m.set(), m.foldedSet());
     }
 
-    void union(CharClassMatcher m) {
-      set = set.union(m.set());
-      folded = folded.union(m.foldedSet());
-    }
-
+    /** Intersect with a class. If nothing has been added yet, e.g. [&&a], then use it as is. */
     void intersection(CharClassMatcher m) {
-      set = set.intersection(m.set());
-      folded = folded.intersection(m.foldedSet());
+      if (empty) {
+        add(m);
+      } else {
+        set = set.intersection(m.set());
+        folded = folded.intersection(m.foldedSet());
+      }
     }
 
-    CharClassMatcher build() {
-      return new CharClassMatcher(set, folded, false);
+    /**
+     * Create the matcher. Since Java 9, a negation applies to the whole class, including
+     * nested classes and intersections, e.g. {@code [^a[b]]} matches neither 'a' nor 'b'.
+     */
+    CharClassMatcher build(boolean invert) {
+      return invert
+          ? new CharClassMatcher(set.invert(), folded.invert(), false)
+          : new CharClassMatcher(set, folded, false);
     }
   }
 
@@ -301,7 +301,7 @@ class Parser {
     if (invert) {
       advance();
     }
-    CharClassBuilder builder = new CharClassBuilder(invert);
+    CharClassBuilder builder = new CharClassBuilder();
     if (peek() == ']' || peek() == '-') {
       char c = advance();
       rangeStart = c;
@@ -311,7 +311,7 @@ class Parser {
       char c = advance();
       switch (c) {
         case '[':
-          builder.union(charClass());
+          builder.add(charClass());
           rangeStart = -1;
           break;
         case '&':
@@ -372,7 +372,7 @@ class Parser {
     if (advance() != ']') {
       throw error("unclosed character class");
     }
-    return builder.build();
+    return builder.build(invert);
   }
 
   private CharClassMatcher newNamedCharSet(String name, boolean invert) {
