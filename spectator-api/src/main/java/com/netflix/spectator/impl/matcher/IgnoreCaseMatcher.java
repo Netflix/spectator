@@ -41,6 +41,35 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
     return matcher.matches(str);
   }
 
+  // The properties below do not depend on the case, so they are the same as the underlying
+  // matcher. Others, such as the prefix or trigrams, are case sensitive and are left as the
+  // defaults.
+
+  @Override
+  public int minLength() {
+    return matcher.minLength();
+  }
+
+  @Override
+  public boolean isStartAnchored() {
+    return matcher.isStartAnchored();
+  }
+
+  @Override
+  public boolean isEndAnchored() {
+    return matcher.isEndAnchored();
+  }
+
+  @Override
+  public boolean alwaysMatches() {
+    return matcher.alwaysMatches();
+  }
+
+  @Override
+  public boolean neverMatches() {
+    return matcher.neverMatches();
+  }
+
   @Override
   public PatternExpr toPatternExpr(int max) {
     PatternExpr expr = PatternUtils.toPatternExpr(matcher, max);

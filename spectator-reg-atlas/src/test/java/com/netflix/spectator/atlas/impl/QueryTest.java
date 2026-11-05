@@ -200,6 +200,12 @@ public class QueryTest {
   }
 
   @Test
+  public void reicQueryAlwaysMatches() {
+    Query q = Parser.parseQuery("name,.*,:reic");
+    Assertions.assertEquals(Parser.parseQuery("name,:has"), q);
+  }
+
+  @Test
   public void reicQuery() {
     Query q = parse("name,foO,:reic");
     Assertions.assertTrue(q.matches(registry.createId("fOo")));
