@@ -149,5 +149,6 @@ class AtlasDistributionSummary extends AtlasMeter implements DistributionSummary
     this.total.addAndGet(now, total);
     this.totalOfSquares.addAndGet(now, totalOfSquares);
     this.max.max(now, max);
+    updateLastModTime(now);
   }
 }
