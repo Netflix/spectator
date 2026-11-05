@@ -224,11 +224,18 @@ class Parser {
     return invert ? s1.diff(s2) : s1.union(s2);
   }
 
+  /** Create a set for the range of characters from s to e, inclusive. */
+  private AsciiSet range(char s, char e) {
+    return AsciiSet.fromPattern(new String(new char[] {s, '-', e}));
+  }
+
   @SuppressWarnings("PMD")
   private AsciiSet charClass() {
     AsciiSet tmp;
     AsciiSet set = AsciiSet.none();
-    boolean rangeStart = false;
+    // Literal character that can be used as the start of a range, -1 if the previous
+    // element cannot start a range.
+    int rangeStart = -1;
     boolean invert = peek() == '^';
     if (invert) {
       advance();
@@ -236,6 +243,7 @@ class Parser {
     }
     if (peek() == ']' || peek() == '-') {
       char c = advance();
+      rangeStart = c;
       set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
     }
     while (!isAtEnd() && peek() != ']') {
@@ -243,7 +251,7 @@ class Parser {
       switch (c) {
         case '[':
           set = set.union(charClass());
-          rangeStart = false;
+          rangeStart = -1;
           break;
         case '&':
           if (peek() == '&') {
@@ -255,45 +263,47 @@ class Parser {
               set = set.intersection(charClass());
               --current;
             }
+            rangeStart = -1;
           } else {
             set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
+            rangeStart = c;
           }
-          rangeStart = false;
           break;
         case '\\':
           tmp = namedCharClass();
           if (tmp == null) {
             c = advance();
-            rangeStart = true;
+            rangeStart = c;
             set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
           } else {
-            rangeStart = false;
+            rangeStart = -1;
             set = update(set, tmp, invert);
           }
           break;
         case '-':
-          if (rangeStart && peek() != ']') {
+          // The end of the range is consumed so it cannot start another range, e.g. [a-c-e]
+          // is a-c, '-', and 'e'. If followed by a nested class, then '-' is a literal.
+          if (rangeStart >= 0 && peek() != ']' && peek() != '[') {
             if (peek() == '\\') {
               advance();
               tmp = namedCharClass();
               if (tmp == null) {
-                String range = tokens.subSequence(current - 3, current - 1).toString() + advance();
-                set = update(set, AsciiSet.fromPattern(range), invert);
+                set = update(set, range((char) rangeStart, advance()), invert);
               } else {
                 set = update(set, AsciiSet.fromPattern("-"), invert);
                 set = update(set, tmp, invert);
               }
             } else {
-              String range = tokens.subSequence(current - 2, current + 1).toString();
-              set = update(set, AsciiSet.fromPattern(range), invert);
+              set = update(set, range((char) rangeStart, advance()), invert);
             }
+            rangeStart = -1;
           } else {
             set = update(set, AsciiSet.fromPattern("-"), invert);
+            rangeStart = c;
           }
-          rangeStart = false;
           break;
         default:
-          rangeStart = true;
+          rangeStart = c;
           set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
           break;
       }
