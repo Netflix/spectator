@@ -281,11 +281,11 @@ public class PatternUtilsTest {
   @Test
   public void charClassToStringRoundTrip() {
     // Characters that are special in a class, plus neighbors of the dash so ranges
-    // starting or ending at it get covered.
-    // The empty set is skipped, it prints as a pattern that never matches rather than a class.
+    // starting or ending at it get covered. The empty set prints as the never matching
+    // class of FalseMatcher.
     String chars = " ,-./[\\]^&ab";
     int n = chars.length();
-    for (int i = 1; i < (1 << n); ++i) {
+    for (int i = 0; i < (1 << n); ++i) {
       AsciiSet set = AsciiSet.none();
       for (int j = 0; j < n; ++j) {
         if ((i & (1 << j)) != 0) {
@@ -294,6 +294,29 @@ public class PatternUtilsTest {
       }
       checkCharClassRoundTrip(set);
       checkCharClassRoundTrip(set.invert());
+    }
+  }
+
+  @Test
+  public void falseMatcherToString() {
+    // The pattern should never match in java, RE2, or after a round trip, with or without
+    // ignoring the case
+    String regex = FalseMatcher.INSTANCE.toString();
+    Pattern javaPattern = Pattern.compile("^.*(" + regex + ")", Pattern.DOTALL);
+    Pattern javaPatternIc = Pattern.compile(
+        "^.*(" + regex + ")", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
+    com.google.re2j.Pattern re2Pattern = com.google.re2j.Pattern.compile(regex);
+    com.google.re2j.Pattern re2PatternIc = com.google.re2j.Pattern.compile("(?i)" + regex);
+    PatternMatcher matcher = PatternMatcher.compile(regex);
+    PatternMatcher matcherIc = PatternMatcher.compile("(?i)" + regex);
+    Assertions.assertTrue(matcher.neverMatches());
+    for (String v : new String[] {"", "a", "\n", "a\n", "\r\n", "\u00e9", "\ud83d\ude00"}) {
+      Assertions.assertFalse(javaPattern.matcher(v).find(), v);
+      Assertions.assertFalse(javaPatternIc.matcher(v).find(), v);
+      Assertions.assertFalse(re2Pattern.matcher(v).find(), v);
+      Assertions.assertFalse(re2PatternIc.matcher(v).find(), v);
+      Assertions.assertFalse(matcher.matches(v), v);
+      Assertions.assertFalse(matcherIc.matches(v), v);
     }
   }
 
