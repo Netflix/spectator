@@ -123,10 +123,14 @@ public final class AsciiSet implements Serializable {
     if (contains('-')) {
       buf.append('-');
     }
+    // The dash is a literal at the start. It is only also kept in a range if it is in the
+    // middle, such as ",-.". A range that starts or ends with it, such as "---/" or ",-a",
+    // would be parsed as a different range.
+    final boolean dashInRange = contains(',') && contains('.');
     boolean previous = false;
     char s = 0;
     for (int i = 0; i < 128; ++i) {
-      final boolean member = contains((char) i);
+      final boolean member = contains((char) i) && (i != '-' || dashInRange);
       if (member && !previous) {
         s = (char) i;
       } else if (!member && previous) {
@@ -143,7 +147,7 @@ public final class AsciiSet implements Serializable {
 
   private static void append(StringBuilder buf, char s, char e) {
     switch (e - s) {
-      case 0:  if (s != '-') buf.append(s);         break;
+      case 0:  buf.append(s);                       break;
       case 1:  buf.append(s).append(e);             break;
       default: buf.append(s).append('-').append(e); break;
     }

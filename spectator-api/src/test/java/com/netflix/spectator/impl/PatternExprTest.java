@@ -255,6 +255,19 @@ public class PatternExprTest {
   }
 
   @Test
+  public void negativeLookaheadDashInRange() {
+    // The dash is in the middle of the range, so the set should not be split around it
+    // which would make the negated class longer than the inverted set.
+    PatternExpr expr = PatternMatcher.compile("foo-(?![$-x{-}])").toPatternExpr(50);
+    Assertions.assertNotNull(expr);
+    Assertions.assertEquals("'.*foo-($|[^-\\$-x\\{-\\}])'", expr.toString());
+    Assertions.assertTrue(expr.matches("foo-"));
+    Assertions.assertTrue(expr.matches("foo-y"));
+    Assertions.assertFalse(expr.matches("foo--"));
+    Assertions.assertFalse(expr.matches("foo-a"));
+  }
+
+  @Test
   public void negativeLookaheadAllAscii() {
     // Inverted set is empty, but a non-ascii character would not match the lookahead
     PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x7f])").toPatternExpr(50);

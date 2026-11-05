@@ -228,8 +228,10 @@ public final class PatternUtils {
         case '{':  builder.append("\\{"); break;
         case '}':  builder.append("\\}"); break;
         default:
-          if (c <= ' ' || c > '~') {
-            builder.append(String.format("\\u%04x", (int) c));
+          if (c <= ' ' || (c > '~' && c <= 0xFF)) {
+            // Use the hex escape, RE2 doesn't support the unicode escape. Characters
+            // above 0xFF are not special, so they are kept as is.
+            builder.append(String.format("\\x%02x", (int) c));
           } else {
             builder.append(c);
           }

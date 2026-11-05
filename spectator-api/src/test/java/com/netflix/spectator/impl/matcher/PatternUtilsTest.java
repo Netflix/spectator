@@ -15,6 +15,8 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.AsciiSet;
+import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 public class PatternUtilsTest {
 
@@ -218,14 +221,19 @@ public class PatternUtilsTest {
         continue;
       }
       String input = Character.toString((char) i);
-      String expected = String.format("\\u%04x", i);
+      String expected = String.format("\\x%02x", i);
       Assertions.assertEquals(expected, PatternUtils.escape(input));
     }
   }
 
   @Test
   public void escapeDelete() {
-    Assertions.assertEquals("\\u007f", PatternUtils.escape("\u007f"));
+    Assertions.assertEquals("\\x7f", PatternUtils.escape("\u007f"));
+  }
+
+  @Test
+  public void escapeNonAscii() {
+    Assertions.assertEquals("\\x20\\xe9\u0101", PatternUtils.escape(" \u00e9\u0101"));
   }
 
   @Test
@@ -246,5 +254,44 @@ public class PatternUtilsTest {
         sortedSet("abc", "bcd", "cde", "def", "efg"),
         PatternUtils.computeTrigrams("abcdefg")
     );
+  }
+
+  private void checkCharClassRoundTrip(AsciiSet set) {
+    String regex = new CharClassMatcher(set).toString();
+    Pattern javaPattern = Pattern.compile(regex);
+    com.google.re2j.Pattern re2Pattern = com.google.re2j.Pattern.compile(regex);
+    PatternMatcher matcher = PatternMatcher.compile("^" + regex + "$");
+    for (char c = 0; c < 128; ++c) {
+      String str = String.valueOf(c);
+      String msg = regex + " with " + (int) c;
+      Assertions.assertEquals(set.contains(c), javaPattern.matcher(str).matches(), msg);
+      Assertions.assertEquals(set.contains(c), re2Pattern.matches(str), msg);
+      Assertions.assertEquals(set.contains(c), matcher.matches(str), msg);
+    }
+  }
+
+  @Test
+  public void charClassToStringRoundTrip() {
+    // Characters that are special in a class, plus neighbors of the dash so ranges
+    // starting or ending at it get covered.
+    // The empty set is skipped, it prints as [] which isn't a valid regex.
+    String chars = " ,-./[\\]^&ab";
+    int n = chars.length();
+    for (int i = 1; i < (1 << n); ++i) {
+      AsciiSet set = AsciiSet.none();
+      for (int j = 0; j < n; ++j) {
+        if ((i & (1 << j)) != 0) {
+          set = set.union(AsciiSet.fromPattern(chars.substring(j, j + 1)));
+        }
+      }
+      checkCharClassRoundTrip(set);
+      checkCharClassRoundTrip(set.invert());
+    }
+  }
+
+  @Test
+  public void charClassToStringDashRange() {
+    AsciiSet set = AsciiSet.fromPattern("-./");
+    Assertions.assertEquals("[-\\./]", new CharClassMatcher(set).toString());
   }
 }

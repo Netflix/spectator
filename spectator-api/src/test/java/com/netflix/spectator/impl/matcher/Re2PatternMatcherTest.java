@@ -45,10 +45,8 @@ public class Re2PatternMatcherTest extends AbstractPatternMatcherTest {
 
     @Override
     public String regex(PatternMatcher matcher) {
-      // RE2 unicode escape is \\x{NNNN} instead of \\uNNNN
-      String re = matcher.toString().replaceAll("\\\\u([0-9a-fA-F]{4})", "\\\\x{$1}");
       com.google.re2j.Pattern p = com.google.re2j.Pattern.compile(
-          "^.*(" + re + ")",
+          "^.*(" + matcher + ")",
           com.google.re2j.Pattern.DOTALL
       );
       return p.pattern();
