@@ -158,6 +158,13 @@ public class OptimizerTest {
   }
 
   @Test
+  public void convertEmptyCharClassToFalseFoldedNotEmpty() {
+    // For [a&&A], nothing matches unless the case is ignored
+    Matcher input = new CharClassMatcher(AsciiSet.none(), AsciiSet.fromPattern("aA"), false);
+    Assertions.assertEquals(input, Optimizer.convertEmptyCharClassToFalse(input));
+  }
+
+  @Test
   public void convertSingleCharClassToSeq() {
     Matcher input = new CharClassMatcher(AsciiSet.fromPattern("a"));
     Matcher expected = new CharSeqMatcher('a');

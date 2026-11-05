@@ -29,7 +29,7 @@ public class MatcherEqualsTest {
   public void charClass() {
     EqualsVerifier
         .forClass(CharClassMatcher.class)
-        .withNonnullFields("set")
+        .withNonnullFields("set", "foldedSet")
         .verify();
   }
 

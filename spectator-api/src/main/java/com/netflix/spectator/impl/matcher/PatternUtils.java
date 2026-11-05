@@ -244,8 +244,9 @@ public final class PatternUtils {
   /** Convert to a matchers that ignores the case. */
   static Matcher ignoreCase(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
-      CharClassMatcher m = matcher.as();
-      return new CharClassMatcher(m.set(), true);
+      // The folded set can be empty even if the set is not, e.g. [^\\x00-`b-\\x7f].
+      CharClassMatcher m = matcher.<CharClassMatcher>as().withIgnoreCase();
+      return m.set().isEmpty() ? FalseMatcher.INSTANCE : m;
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       return new CharSeqMatcher(m.pattern(), true);
@@ -441,28 +442,32 @@ public final class PatternUtils {
    * lookahead would not match.
    */
   private static Matcher negateCharSeq(Matcher matcher) {
-    List<AsciiSet> sets = new ArrayList<>();
-    if (!charSets(matcher, sets) || sets.isEmpty() || sets.size() > MAX_INLINE_LOOKAHEAD_LENGTH) {
+    List<CharClassMatcher> classes = new ArrayList<>();
+    if (!charClasses(matcher, classes)
+        || classes.isEmpty()
+        || classes.size() > MAX_INLINE_LOOKAHEAD_LENGTH) {
       return null;
     }
     Matcher tail = null;
-    for (int i = sets.size() - 1; i >= 0; --i) {
-      AsciiSet set = sets.get(i);
-      AsciiSet inverted = (set == null) ? null : set.invert();
+    for (int i = classes.size() - 1; i >= 0; --i) {
+      CharClassMatcher cls = classes.get(i);
       List<Matcher> alternatives = new ArrayList<>(3);
       alternatives.add(EndMatcher.INSTANCE);
-      if (inverted != null) {
+      if (cls != null) {
         // AsciiSet cannot include non-ascii characters, but they would not match the
         // lookahead. The inverted class must be written as a negated class, e.g. [^b],
-        // so that engines like RE2 will match non-ascii characters as well.
-        Matcher m = new CharClassMatcher(inverted);
+        // so that engines like RE2 will match non-ascii characters as well. The folded
+        // set is inverted as well so that if the case is ignored later, [^b] will match
+        // neither 'b' nor 'B'.
+        AsciiSet inverted = cls.set().invert();
+        Matcher m = new CharClassMatcher(inverted, cls.foldedSet().invert(), false);
         if (inverted.isEmpty() || !m.toString().startsWith("[^")) {
           return null;
         }
         alternatives.add(m);
       }
       if (tail != null) {
-        Matcher m = (set == null) ? AnyMatcher.INSTANCE : new CharClassMatcher(set);
+        Matcher m = (cls == null) ? AnyMatcher.INSTANCE : cls;
         alternatives.add(SeqMatcher.create(m, tail));
       }
       tail = OrMatcher.create(alternatives);
@@ -471,12 +476,13 @@ public final class PatternUtils {
   }
 
   /**
-   * Add the set of characters for each position of the matcher. A null entry is used for
-   * any character. Returns false if the matcher is not a sequence of single character
+   * Add a class for the characters at each position of the matcher. A null entry is used
+   * for any character. Returns false if the matcher is not a sequence of single character
    * matchers. For ignore case, the sets will include both cases so that the inverted set
-   * will be correct.
+   * will be correct. The classes will not ignore case, but keep the folded set so the
+   * case can be ignored later.
    */
-  private static boolean charSets(Matcher matcher, List<AsciiSet> sets) {
+  private static boolean charClasses(Matcher matcher, List<CharClassMatcher> classes) {
     if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       String pattern = m.pattern();
@@ -486,19 +492,22 @@ public final class PatternUtils {
           return false;
         }
         AsciiSet set = AsciiSet.fromPattern(Character.toString(c));
-        sets.add(m.isIgnoreCase() ? withOtherCase(set) : set);
+        classes.add(new CharClassMatcher(
+            m.isIgnoreCase() ? CharClassMatcher.withOtherCase(set) : set));
       }
       return true;
     } else if (matcher instanceof CharClassMatcher) {
       CharClassMatcher m = matcher.as();
-      sets.add(m.isIgnoreCase() ? withOtherCase(m.set()) : m.set());
+      classes.add(m.isIgnoreCase()
+          ? new CharClassMatcher(CharClassMatcher.withOtherCase(m.set()))
+          : m);
       return true;
     } else if (matcher instanceof AnyMatcher) {
-      sets.add(null);
+      classes.add(null);
       return true;
     } else if (matcher instanceof SeqMatcher) {
       for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
-        if (!charSets(m, sets)) {
+        if (!charClasses(m, classes)) {
           return false;
         }
       }
@@ -506,17 +515,6 @@ public final class PatternUtils {
     } else {
       return false;
     }
-  }
-
-  private static AsciiSet withOtherCase(AsciiSet set) {
-    StringBuilder builder = new StringBuilder();
-    for (char c = 'a'; c <= 'z'; ++c) {
-      char upper = Character.toUpperCase(c);
-      if (set.contains(c) || set.contains(upper)) {
-        builder.append(c).append(upper);
-      }
-    }
-    return builder.length() == 0 ? set : set.union(AsciiSet.fromPattern(builder.toString()));
   }
 
   /** Returns true if the matchers starting at the offset will match any suffix. */

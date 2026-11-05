@@ -348,11 +348,13 @@ final class Optimizer {
 
   /**
    * If a character class is empty, then it will not match anything and can be treated
-   * as false.
+   * as false. The folded set must also be empty, otherwise it would match if the case
+   * is ignored, e.g. {@code [a&&A]}.
    */
   static Matcher convertEmptyCharClassToFalse(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
-      return matcher.<CharClassMatcher>as().set().isEmpty()
+      CharClassMatcher m = matcher.as();
+      return m.set().isEmpty() && m.foldedSet().isEmpty()
           ? FalseMatcher.INSTANCE
           : matcher;
     }
@@ -366,8 +368,12 @@ final class Optimizer {
    */
   static Matcher convertSingleCharClassToSeq(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
-      Optional<Character> opt = matcher.<CharClassMatcher>as().set().character();
-      if (opt.isPresent()) {
+      // Only if the fold is simple, otherwise the CharSeqMatcher would ignore case
+      // differently, e.g. for [^\\x00-`b-\\x7f], only 'a', which matches nothing if
+      // the case is ignored.
+      CharClassMatcher m = matcher.as();
+      Optional<Character> opt = m.set().character();
+      if (opt.isPresent() && m.isSimpleFold()) {
         return new CharSeqMatcher(opt.get());
       }
     }

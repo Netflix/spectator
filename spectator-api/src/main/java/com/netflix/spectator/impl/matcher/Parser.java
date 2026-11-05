@@ -81,7 +81,7 @@ class Parser {
           matchers.add(EndMatcher.INSTANCE);
           break;
         case '[':
-          matchers.add(new CharClassMatcher(charClass()));
+          matchers.add(charClass());
           break;
         case '(':
           matchers.add(group());
@@ -126,12 +126,12 @@ class Parser {
     } else if (Constants.DIGIT.contains(c) || c == 'k') {
       throw unsupported("back references");
     } else {
-      AsciiSet set = namedCharClass();
-      if (set == null) {
+      CharClassMatcher m = namedCharClass();
+      if (m == null) {
         advance();
         return new CharSeqMatcher(String.valueOf(c));
       } else {
-        return new CharClassMatcher(set);
+        return m;
       }
     }
   }
@@ -180,16 +180,16 @@ class Parser {
   }
 
   @SuppressWarnings("PMD.ImplicitSwitchFallThrough")
-  private AsciiSet namedCharClass() {
+  private CharClassMatcher namedCharClass() {
     boolean invert = false;
     char c = advance();
     switch (c) {
-      case 'd': return Constants.DIGIT;
-      case 'D': return Constants.DIGIT.invert();
-      case 's': return Constants.SPACE;
-      case 'S': return Constants.SPACE.invert();
-      case 'w': return Constants.WORD_CHARS;
-      case 'W': return Constants.WORD_CHARS.invert();
+      case 'd': return new CharClassMatcher(Constants.DIGIT);
+      case 'D': return negated(Constants.DIGIT);
+      case 's': return new CharClassMatcher(Constants.SPACE);
+      case 'S': return negated(Constants.SPACE);
+      case 'w': return new CharClassMatcher(Constants.WORD_CHARS);
+      case 'W': return negated(Constants.WORD_CHARS);
       case 'h':
       case 'H':
         throw unsupported("horizontal whitespace class");
@@ -220,37 +220,82 @@ class Parser {
     }
   }
 
-  private AsciiSet update(AsciiSet s1, AsciiSet s2, boolean invert) {
-    return invert ? s1.diff(s2) : s1.union(s2);
-  }
+  /**
+   * Builds the sets for a character class. Along with the set of characters, it tracks the
+   * set to use if the case is ignored. Java folds the case of each element before applying
+   * negation or intersection, so {@code (?i)[^a]} matches neither 'a' nor 'A'.
+   */
+  private static final class CharClassBuilder {
+    private final boolean invert;
+    private AsciiSet set;
+    private AsciiSet folded;
 
-  /** Create a set for the range of characters from s to e, inclusive. */
-  private AsciiSet range(char s, char e) {
-    return AsciiSet.fromPattern(new String(new char[] {s, '-', e}));
+    CharClassBuilder(boolean invert) {
+      this.invert = invert;
+      this.set = invert ? AsciiSet.all() : AsciiSet.none();
+      this.folded = set;
+    }
+
+    /** Add an element to the class, or remove it if the class is negated. */
+    private void add(AsciiSet s, AsciiSet f) {
+      set = invert ? set.diff(s) : set.union(s);
+      folded = invert ? folded.diff(f) : folded.union(f);
+    }
+
+    void add(AsciiSet s) {
+      add(s, CharClassMatcher.withOtherCase(s));
+    }
+
+    void add(char c) {
+      add(AsciiSet.fromPattern(Character.toString(c)));
+    }
+
+    /** Add a range of characters from s to e, inclusive. */
+    void add(char s, char e) {
+      add(AsciiSet.fromPattern(new String(new char[] {s, '-', e})));
+    }
+
+    /** Add a named class to the class, or remove it if the class is negated. */
+    void add(CharClassMatcher m) {
+      add(m.set(), m.foldedSet());
+    }
+
+    void union(CharClassMatcher m) {
+      set = set.union(m.set());
+      folded = folded.union(m.foldedSet());
+    }
+
+    void intersection(CharClassMatcher m) {
+      set = set.intersection(m.set());
+      folded = folded.intersection(m.foldedSet());
+    }
+
+    CharClassMatcher build() {
+      return new CharClassMatcher(set, folded, false);
+    }
   }
 
   @SuppressWarnings("PMD")
-  private AsciiSet charClass() {
-    AsciiSet tmp;
-    AsciiSet set = AsciiSet.none();
+  private CharClassMatcher charClass() {
+    CharClassMatcher tmp;
     // Literal character that can be used as the start of a range, -1 if the previous
     // element cannot start a range.
     int rangeStart = -1;
     boolean invert = peek() == '^';
     if (invert) {
       advance();
-      set = AsciiSet.all();
     }
+    CharClassBuilder builder = new CharClassBuilder(invert);
     if (peek() == ']' || peek() == '-') {
       char c = advance();
       rangeStart = c;
-      set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
+      builder.add(c);
     }
     while (!isAtEnd() && peek() != ']') {
       char c = advance();
       switch (c) {
         case '[':
-          set = set.union(charClass());
+          builder.union(charClass());
           rangeStart = -1;
           break;
         case '&':
@@ -258,14 +303,14 @@ class Parser {
             advance();
             if (peek() == '[') {
               advance();
-              set = set.intersection(charClass());
+              builder.intersection(charClass());
             } else if (peek() != ']') {
-              set = set.intersection(charClass());
+              builder.intersection(charClass());
               --current;
             }
             rangeStart = -1;
           } else {
-            set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
+            builder.add(c);
             rangeStart = c;
           }
           break;
@@ -274,10 +319,10 @@ class Parser {
           if (tmp == null) {
             c = advance();
             rangeStart = c;
-            set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
+            builder.add(c);
           } else {
             rangeStart = -1;
-            set = update(set, tmp, invert);
+            builder.add(tmp);
           }
           break;
         case '-':
@@ -288,38 +333,46 @@ class Parser {
               advance();
               tmp = namedCharClass();
               if (tmp == null) {
-                set = update(set, range((char) rangeStart, advance()), invert);
+                builder.add((char) rangeStart, advance());
               } else {
-                set = update(set, AsciiSet.fromPattern("-"), invert);
-                set = update(set, tmp, invert);
+                builder.add('-');
+                builder.add(tmp);
               }
             } else {
-              set = update(set, range((char) rangeStart, advance()), invert);
+              builder.add((char) rangeStart, advance());
             }
             rangeStart = -1;
           } else {
-            set = update(set, AsciiSet.fromPattern("-"), invert);
+            builder.add('-');
             rangeStart = c;
           }
           break;
         default:
           rangeStart = c;
-          set = update(set, AsciiSet.fromPattern(Character.toString(c)), invert);
+          builder.add(c);
           break;
       }
     }
     if (advance() != ']') {
       throw error("unclosed character class");
     }
-    return set;
+    return builder.build();
   }
 
-  private AsciiSet newNamedCharSet(String name, boolean invert) {
+  private CharClassMatcher newNamedCharSet(String name, boolean invert) {
     AsciiSet set = Constants.NAMED_CHAR_CLASSES.get(name);
     if (set == null) {
       throw error("unknown character property name: " + name);
     }
-    return invert ? set.invert() : set;
+    return invert ? negated(set) : new CharClassMatcher(set);
+  }
+
+  /**
+   * Create a class that matches characters not in the set. If the case is ignored, then
+   * the case is folded before negation, e.g. {@code (?i)\\P{Lower}} doesn't match any letter.
+   */
+  private static CharClassMatcher negated(AsciiSet set) {
+    return new CharClassMatcher(set.invert(), CharClassMatcher.withOtherCase(set).invert(), false);
   }
 
   private Matcher repeat(Matcher matcher) {
