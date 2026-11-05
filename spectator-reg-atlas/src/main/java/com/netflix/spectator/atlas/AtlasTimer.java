@@ -187,5 +187,6 @@ class AtlasTimer extends AtlasMeter implements Timer {
     this.total.addAndGet(now, total);
     this.totalOfSquares.addAndGet(now, totalOfSquares);
     this.max.max(now, max);
+    updateLastModTime(now);
   }
 }

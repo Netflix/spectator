@@ -309,4 +309,19 @@ public class AtlasTimerTest {
     clock.setWallTime(start + step * 3 + 1);
     Assertions.assertTrue(dist.hasExpired());
   }
+
+  @Test
+  public void expirationBatch() throws Exception {
+    long start = clock.wallTime();
+    clock.setWallTime(start + step * 2);
+    Assertions.assertTrue(dist.hasExpired());
+
+    try (Timer.BatchUpdater b = dist.batchUpdater(10)) {
+      b.record(42, TimeUnit.MICROSECONDS);
+    }
+    Assertions.assertFalse(dist.hasExpired());
+
+    clock.setWallTime(start + step * 3 + 1);
+    Assertions.assertTrue(dist.hasExpired());
+  }
 }

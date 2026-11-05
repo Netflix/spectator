@@ -216,4 +216,19 @@ public class AtlasDistributionSummaryTest {
     clock.setWallTime(start + step * 3 + 1);
     Assertions.assertTrue(dist.hasExpired());
   }
+
+  @Test
+  public void expirationBatch() throws Exception {
+    long start = clock.wallTime();
+    clock.setWallTime(start + step * 2);
+    Assertions.assertTrue(dist.hasExpired());
+
+    try (DistributionSummary.BatchUpdater b = dist.batchUpdater(10)) {
+      b.record(42);
+    }
+    Assertions.assertFalse(dist.hasExpired());
+
+    clock.setWallTime(start + step * 3 + 1);
+    Assertions.assertTrue(dist.hasExpired());
+  }
 }
