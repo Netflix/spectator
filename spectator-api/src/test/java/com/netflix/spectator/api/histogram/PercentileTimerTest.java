@@ -16,10 +16,12 @@
 package com.netflix.spectator.api.histogram;
 
 import com.netflix.spectator.api.Clock;
+import com.netflix.spectator.api.Counter;
 import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.ExpiringRegistry;
 import com.netflix.spectator.api.ManualClock;
 import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Timer;
 import com.netflix.spectator.api.Spectator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -145,5 +147,126 @@ public class PercentileTimerTest {
     t.record(5, TimeUnit.SECONDS);
     Assertions.assertFalse(t.hasExpired());
     Assertions.assertEquals(1, r.timer("test").count());
+  }
+
+  private long bucketCount(Registry r, String name) {
+    return r.counters()
+        .filter(c -> c.id().name().equals(name))
+        .mapToLong(Counter::count)
+        .sum();
+  }
+
+  private void checkNegativeAmountIgnored(Registry r) {
+    PercentileTimer t = PercentileTimer.get(r, r.createId("test"));
+    t.record(-5, TimeUnit.SECONDS);
+    Assertions.assertEquals(0, t.count());
+    Assertions.assertEquals(0, bucketCount(r, "test"));
+  }
+
+  @Test
+  public void negativeAmountIgnored() {
+    checkNegativeAmountIgnored(newRegistry());
+  }
+
+  @Test
+  public void negativeAmountIgnoredNegativeCountingRegistry() {
+    checkNegativeAmountIgnored(new NegativeCountingRegistry());
+  }
+
+  private void checkBatchMatchesSingle(
+      Registry r, PercentileTimer t1, PercentileTimer t2) {
+    Assertions.assertEquals(t1.count(), t2.count());
+    Assertions.assertEquals(t1.count(), bucketCount(r, t1.id().name()));
+    Assertions.assertEquals(t2.count(), bucketCount(r, t2.id().name()));
+    for (int i = 0; i <= 100; ++i) {
+      Assertions.assertEquals(t1.percentile(i), t2.percentile(i), 1e-12);
+    }
+  }
+
+  private void checkBatchRecord(Registry r, long min, long max) {
+    PercentileTimer t1 = PercentileTimer.builder(r)
+        .withName("single")
+        .withRange(min, max, TimeUnit.SECONDS)
+        .build();
+    PercentileTimer t2 = PercentileTimer.builder(r)
+        .withName("batch")
+        .withRange(min, max, TimeUnit.SECONDS)
+        .build();
+
+    long[] amounts = {-5L, 0L, 0L, 0L, 500L, -1L};
+    for (long amount : amounts) {
+      t1.record(amount, TimeUnit.MILLISECONDS);
+    }
+    t2.record(amounts, amounts.length, TimeUnit.MILLISECONDS);
+    Assertions.assertEquals(4, t2.count());
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecord() {
+    checkBatchRecord(newRegistry(), 10, 1000);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecordDefaultRange() {
+    checkBatchRecord(newRegistry(), 0, Long.MAX_VALUE);
+  }
+
+  @Test
+  public void batchRecordMatchesSingleRecordNegativeCountingRegistry() {
+    checkBatchRecord(new NegativeCountingRegistry(), 10, 1000);
+  }
+
+  private void checkBatchRecordPartial(Registry r, int n, int expected) {
+    PercentileTimer t1 = PercentileTimer.get(r, r.createId("single"));
+    PercentileTimer t2 = PercentileTimer.get(r, r.createId("batch"));
+
+    long[] amounts = {0L, -1L, 500L, 0L, 1000L, -2000L};
+    final int limit = Math.min(n, amounts.length);
+    for (int i = 0; i < limit; ++i) {
+      t1.record(amounts[i], TimeUnit.MILLISECONDS);
+    }
+    t2.record(amounts, n, TimeUnit.MILLISECONDS);
+    Assertions.assertEquals(expected, t2.count());
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchRecordPartial() {
+    checkBatchRecordPartial(newRegistry(), 3, 2);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), 3, 2);
+  }
+
+  @Test
+  public void batchRecordNegativeN() {
+    checkBatchRecordPartial(newRegistry(), -1, 0);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), -1, 0);
+  }
+
+  @Test
+  public void batchRecordLargeN() {
+    checkBatchRecordPartial(newRegistry(), 100, 4);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), 100, 4);
+  }
+
+  private void checkBatchUpdater(Registry r) throws Exception {
+    PercentileTimer t1 = PercentileTimer.get(r, r.createId("single"));
+    PercentileTimer t2 = PercentileTimer.get(r, r.createId("batch"));
+
+    long[] amounts = {0L, -1L, 0L, 500L, 0L, 42L, -7L};
+    try (Timer.BatchUpdater b = t2.batchUpdater(3)) {
+      for (long amount : amounts) {
+        t1.record(amount, TimeUnit.MILLISECONDS);
+        b.record(amount, TimeUnit.MILLISECONDS);
+      }
+    }
+    Assertions.assertEquals(5, t2.count());
+    checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchUpdaterMatchesSingleRecord() throws Exception {
+    checkBatchUpdater(newRegistry());
+    checkBatchUpdater(new NegativeCountingRegistry());
   }
 }

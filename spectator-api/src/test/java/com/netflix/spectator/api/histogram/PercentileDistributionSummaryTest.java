@@ -103,6 +103,23 @@ public class PercentileDistributionSummaryTest {
         .sum();
   }
 
+  private void checkNegativeAmountIgnored(Registry r) {
+    PercentileDistributionSummary t = PercentileDistributionSummary.get(r, r.createId("test"));
+    t.record(-5);
+    Assertions.assertEquals(0, t.count());
+    Assertions.assertEquals(0, bucketCount(r, "test"));
+  }
+
+  @Test
+  public void negativeAmountIgnored() {
+    checkNegativeAmountIgnored(newRegistry());
+  }
+
+  @Test
+  public void negativeAmountIgnoredNegativeCountingRegistry() {
+    checkNegativeAmountIgnored(new NegativeCountingRegistry());
+  }
+
   private void checkBatchMatchesSingle(
       Registry r, PercentileDistributionSummary t1, PercentileDistributionSummary t2) {
     Assertions.assertEquals(t1.count(), t2.count());
@@ -113,8 +130,7 @@ public class PercentileDistributionSummaryTest {
     }
   }
 
-  private void checkBatchRecord(long min, long max) {
-    Registry r = newRegistry();
+  private void checkBatchRecord(Registry r, long min, long max) {
     PercentileDistributionSummary t1 = PercentileDistributionSummary.builder(r)
         .withName("single")
         .withRange(min, max)
@@ -124,54 +140,80 @@ public class PercentileDistributionSummaryTest {
         .withRange(min, max)
         .build();
 
-    long[] amounts = {0L, 0L, 0L, 500L};
+    long[] amounts = {-5L, 0L, 0L, 0L, 500L, -1L};
     for (long amount : amounts) {
       t1.record(amount);
     }
     t2.record(amounts, amounts.length);
+    Assertions.assertEquals(4, t2.count());
     checkBatchMatchesSingle(r, t1, t2);
   }
 
   @Test
   public void batchRecordMatchesSingleRecord() {
-    checkBatchRecord(10, 1000);
+    checkBatchRecord(newRegistry(), 10, 1000);
   }
 
   @Test
   public void batchRecordMatchesSingleRecordDefaultRange() {
-    checkBatchRecord(0, Long.MAX_VALUE);
+    checkBatchRecord(newRegistry(), 0, Long.MAX_VALUE);
   }
 
   @Test
-  public void batchRecordPartial() {
-    Registry r = newRegistry();
+  public void batchRecordMatchesSingleRecordNegativeCountingRegistry() {
+    checkBatchRecord(new NegativeCountingRegistry(), 10, 1000);
+  }
+
+  private void checkBatchRecordPartial(Registry r, int n, int expected) {
     PercentileDistributionSummary t1 = PercentileDistributionSummary.get(r, r.createId("single"));
     PercentileDistributionSummary t2 = PercentileDistributionSummary.get(r, r.createId("batch"));
 
-    long[] amounts = {0L, 500L, 0L, 1000L, 2000L};
-    int n = 3;
-    for (int i = 0; i < n; ++i) {
+    long[] amounts = {0L, -1L, 500L, 0L, 1000L, -2000L};
+    final int limit = Math.min(n, amounts.length);
+    for (int i = 0; i < limit; ++i) {
       t1.record(amounts[i]);
     }
     t2.record(amounts, n);
-    Assertions.assertEquals(n, t2.count());
+    Assertions.assertEquals(expected, t2.count());
     checkBatchMatchesSingle(r, t1, t2);
   }
 
   @Test
-  public void batchUpdaterMatchesSingleRecord() throws Exception {
-    Registry r = newRegistry();
+  public void batchRecordPartial() {
+    checkBatchRecordPartial(newRegistry(), 3, 2);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), 3, 2);
+  }
+
+  @Test
+  public void batchRecordNegativeN() {
+    checkBatchRecordPartial(newRegistry(), -1, 0);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), -1, 0);
+  }
+
+  @Test
+  public void batchRecordLargeN() {
+    checkBatchRecordPartial(newRegistry(), 100, 4);
+    checkBatchRecordPartial(new NegativeCountingRegistry(), 100, 4);
+  }
+
+  private void checkBatchUpdater(Registry r) throws Exception {
     PercentileDistributionSummary t1 = PercentileDistributionSummary.get(r, r.createId("single"));
     PercentileDistributionSummary t2 = PercentileDistributionSummary.get(r, r.createId("batch"));
 
-    long[] amounts = {0L, 0L, 0L, 500L, 0L, 42L, 0L};
+    long[] amounts = {0L, -1L, 0L, 500L, 0L, 42L, -7L};
     try (DistributionSummary.BatchUpdater b = t2.batchUpdater(3)) {
       for (long amount : amounts) {
         t1.record(amount);
         b.record(amount);
       }
     }
-    Assertions.assertEquals(amounts.length, t2.count());
+    Assertions.assertEquals(5, t2.count());
     checkBatchMatchesSingle(r, t1, t2);
+  }
+
+  @Test
+  public void batchUpdaterMatchesSingleRecord() throws Exception {
+    checkBatchUpdater(newRegistry());
+    checkBatchUpdater(new NegativeCountingRegistry());
   }
 }

@@ -234,16 +234,29 @@ public final class PercentileDistributionSummary implements DistributionSummary 
     return Math.max(v, min);
   }
 
+  private void updateBucket(long amount) {
+    counterFor(PercentileBuckets.indexOf(restrict(amount))).increment();
+  }
+
   @Override public void record(long amount) {
+    // Negative amounts are dropped before updating either the summary or the buckets so
+    // the summary count is consistent with the bucket counts.
     if (amount >= 0L) {
       summary.record(amount);
-      counterFor(PercentileBuckets.indexOf(restrict(amount))).increment();
+      updateBucket(amount);
     }
   }
 
   @Override public void record(long[] amounts, int n) {
-    // update core summary
-    summary.record(amounts, n);
+    // Negative amounts are dropped before updating either the summary or the buckets so
+    // the summary count is consistent with the bucket counts.
+    int limit = NonNegativeAmounts.limit(amounts, n);
+    final long[] values = NonNegativeAmounts.filter(amounts, limit);
+    if (values != amounts) {
+      limit = values.length;
+    }
+
+    summary.record(values, limit);
 
     // If 'n' is really large, it might pay to allocate and accumulate
     // an array of counts, and then issue the increment() calls once per
@@ -251,12 +264,8 @@ public final class PercentileDistributionSummary implements DistributionSummary 
     // PercentileBuckets.length() (275 entries), ~1KB, so for the moment
     // we defer this optimisation until someone can do the homework
     // on where the right memory / CPU crossover is.
-
-    final int limit = Math.min(n, amounts.length);
     for (int i = 0; i < limit; i++) {
-      if (amounts[i] >= 0) {
-        counterFor(PercentileBuckets.indexOf(restrict(amounts[i]))).increment();
-      }
+      updateBucket(values[i]);
     }
   }
 

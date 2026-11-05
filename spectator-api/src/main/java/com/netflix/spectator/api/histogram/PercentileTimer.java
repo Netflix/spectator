@@ -260,10 +260,39 @@ public final class PercentileTimer implements Timer {
     return registry.clock();
   }
 
+  private void updateBucket(long amount, TimeUnit unit) {
+    counterFor(PercentileBuckets.indexOf(restrict(unit.toNanos(amount)))).increment();
+  }
+
   @Override public void record(long amount, TimeUnit unit) {
-    final long nanos = restrict(unit.toNanos(amount));
-    timer.record(amount, unit);
-    counterFor(PercentileBuckets.indexOf(nanos)).increment();
+    // Negative amounts are dropped before updating either the timer or the buckets so
+    // the timer count is consistent with the bucket counts.
+    if (amount >= 0L) {
+      timer.record(amount, unit);
+      updateBucket(amount, unit);
+    }
+  }
+
+  @Override public void record(long[] amounts, int n, TimeUnit unit) {
+    // Negative amounts are dropped before updating either the timer or the buckets so
+    // the timer count is consistent with the bucket counts.
+    int limit = NonNegativeAmounts.limit(amounts, n);
+    final long[] values = NonNegativeAmounts.filter(amounts, limit);
+    if (values != amounts) {
+      limit = values.length;
+    }
+
+    timer.record(values, limit, unit);
+
+    // If 'n' is really large, it might pay to allocate and accumulate
+    // an array of counts, and then issue the increment() calls once per
+    // bucket. However, it also requires generating an array of ints of
+    // PercentileBuckets.length() (275 entries), ~1KB, so for the moment
+    // we defer this optimisation until someone can do the homework
+    // on where the right memory / CPU crossover is.
+    for (int i = 0; i < limit; i++) {
+      updateBucket(values[i], unit);
+    }
   }
 
   /**
