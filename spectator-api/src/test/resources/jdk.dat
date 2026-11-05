@@ -34,16 +34,16 @@ E	[a-z&&[^m-p]]	a
 E	[a-z&&[^m-p]]	m
 E	[a-z&&[^m-p]]	q
 E	[^c[a]]	c
-# JDK8 a matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+# JDK8 a matches, on JDK11 it does not. PatternMatcher has the JDK9+ behavior, see negatedNestedCharClass
 U	[^c[a]]	a
 E	[^a-d[m-p]]	a
 E	[^a-d[m-p]]	e
-# JDK8 n matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+# JDK8 n matches, on JDK11 it does not. PatternMatcher has the JDK9+ behavior, see negatedNestedCharClass
 U	[^a-d[m-p]]	n
 E	[a-d[^m-p]]	a
 E	[a-d[^m-p]]	e
 E	[a-d[^m-p]]	n
-# JDK8 a and e matches, on JDK11 it does not. For now we have JDK8 behavior and ignore
+# JDK8 a and e matches, on JDK11 it does not. PatternMatcher has the JDK9+ behavior, see negatedNestedCharClass
 U	[^a-d[^m-p]]	a
 U	[^a-d[^m-p]]	e
 E	[^a-d[^m-p]]	n
