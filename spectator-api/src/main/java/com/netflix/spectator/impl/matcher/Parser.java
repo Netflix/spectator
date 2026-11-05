@@ -87,8 +87,8 @@ class Parser {
           matchers.add(group());
           break;
         case '{':
-          // Can be empty if following another quantifier that consumed the rest of the
-          // term, e.g. a*{3} or a{2,}{3}.
+          // Repetitions following a quantifier are handled by repeat() and meta(), so if
+          // empty, then the repetition is at the start of a term, e.g. {3} or a|{3}.
           if (matchers.isEmpty()) {
             throw error("dangling modifier");
           }
@@ -316,34 +316,14 @@ class Parser {
   }
 
   private Matcher repeat(Matcher matcher) {
-    int start = current;
-    advance(c -> c != '}');
-    if (previous() != '}') {
-      throw error("unclosed repetition");
-    }
-    // Use a negative limit so the trailing empty string for "{n,}" is preserved
-    String[] numbers = tokens.subSequence(start, current - 1).toString().split(",", -1);
-    if (numbers.length > 2) {
-      throw error("illegal repetition");
-    }
-    int min = Integer.parseInt(numbers[0]);
-    boolean unbounded = numbers.length == 2 && numbers[1].isEmpty();
-    int max;
-    if (numbers.length == 1) {
-      max = min;
-    } else if (unbounded) {
-      max = Integer.MAX_VALUE;
-    } else {
-      max = Integer.parseInt(numbers[1]);
-    }
-    if (min < 0) {
-      throw error("illegal repetition, min < 0");
-    }
-    if (min > max) {
-      throw error("illegal repetition, min > max");
-    }
+    int[] bounds = repeatBounds();
+    int min = bounds[0];
+    boolean unbounded = bounds[1] < 0;
+    int max = unbounded ? Integer.MAX_VALUE : bounds[1];
 
     boolean possessive = repeatModifier();
+    ignoreFollowingRepeats();
+
     if (unbounded && !possessive) {
       // No upper bound, treat as min repetitions followed by zero or more. This is
       // consistent with how * and + are handled.
@@ -357,6 +337,65 @@ class Parser {
 
     // RepeatMatcher is greedy without backtracking, so it also covers the possessive case
     return new RepeatMatcher(matcher, min, max);
+  }
+
+  /**
+   * Additional repetitions that follow a quantifier are ignored, e.g. a{2}{3} is the same as
+   * a{2}. This is consistent with java.util.regex. They are still validated. After that, only
+   * a single modifier is allowed, e.g. a{2}?? or a{2}* are invalid.
+   */
+  private void ignoreFollowingRepeats() {
+    while (!isAtEnd() && peek() == '{') {
+      advance();
+      repeatBounds();
+      repeatModifier();
+    }
+    if (!isAtEnd() && META.contains(peek())) {
+      throw error("dangling modifier");
+    }
+  }
+
+  /**
+   * Parse the bounds for a repetition after the opening brace. Returns an array with the
+   * min and max. The max will be -1 if there is no upper bound.
+   */
+  private int[] repeatBounds() {
+    int start = current;
+    advance(c -> c != '}');
+    if (previous() != '}') {
+      throw error("unclosed repetition");
+    }
+    // Use a negative limit so the trailing empty string for "{n,}" is preserved
+    String[] numbers = tokens.subSequence(start, current - 1).toString().split(",", -1);
+    if (numbers.length > 2) {
+      throw error("illegal repetition");
+    }
+    int min = parseRepeatCount(numbers[0]);
+    if (numbers.length == 1) {
+      return new int[] {min, min};
+    } else if (numbers[1].isEmpty()) {
+      return new int[] {min, -1};
+    }
+    int max = parseRepeatCount(numbers[1]);
+    if (min > max) {
+      throw error("illegal repetition, min > max");
+    }
+    return new int[] {min, max};
+  }
+
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  private int parseRepeatCount(String num) {
+    // Validate explicitly as Integer.parseInt allows a leading sign and non-ascii digits
+    for (int i = 0; i < num.length(); ++i) {
+      if (!Constants.DIGIT.contains(num.charAt(i))) {
+        throw error("illegal repetition");
+      }
+    }
+    try {
+      return Integer.parseInt(num);
+    } catch (NumberFormatException e) {
+      throw error("illegal repetition");
+    }
   }
 
   /**
@@ -378,10 +417,16 @@ class Parser {
     advance(c -> META.contains((char) c));
     --current;
     String quantifier = tokens.subSequence(start, current).toString();
+    // Must be checked before the rest of the term is parsed, e.g. a*{3} is the same as a*
+    ignoreFollowingRepeats();
     switch (quantifier) {
       case "?":
       case "??":
       case "?+":
+        // Possessive is treated as greedy. A RepeatMatcher would avoid backtracking, but
+        // it is not possible to tell it apart from a greedy repeat when converting to a
+        // string or optimizing, and a ZeroOrOneMatcher is more consistent with the other
+        // greedy matchers that do not backtrack.
         return new ZeroOrOneMatcher(matcher, term());
       case "*":
       case "*?":

@@ -734,8 +734,28 @@ public abstract class AbstractPatternMatcherTest {
     testBadExpression("a{2,3,4}", "illegal repetition");
     testBadExpression("a{2,,}", "illegal repetition");
     testBadExpression("{2}", "dangling modifier");
-    testBadExpression("a*{3}", "dangling modifier");
-    testBadExpression("a{2,}{3}", "dangling modifier");
+    testBadExpression("a{2}{3}*", "dangling modifier");
+    testBadExpression("a{2}{x}", "illegal repetition");
+    testBadExpression("a{x}", "illegal repetition");
+    testBadExpression("a{,3}", "illegal repetition");
+    testBadExpression("a?+{3}*", "dangling modifier");
+    testBadExpression("a++{3}??", "dangling modifier");
+    testBadExpression("a*+{3}{x}", "illegal repetition");
+    testBadExpression("a{2}{3", "unclosed repetition");
+    testBadExpression("a{2}{3,2}", "illegal repetition, min > max");
+    testBadExpression("a{2}??", "dangling modifier");
+    testBadExpression("a{2}?+", "dangling modifier");
+    testBadExpression("a{2}+?", "dangling modifier");
+    testBadExpression("a{2}++", "dangling modifier");
+    testBadExpression("a{2}*", "dangling modifier");
+    testBadExpression("a{2,}??", "dangling modifier");
+    testBadExpression("a{2,3}?*", "dangling modifier");
+    testBadExpression("a*{3}*", "dangling modifier");
+    testBadExpression("a?{x}", "illegal repetition");
+    testBadExpression("a{+2}", "illegal repetition");
+    testBadExpression("a{2,+3}", "illegal repetition");
+    testBadExpression("a{0,-0}", "illegal repetition");
+    testBadExpression("a{２}", "illegal repetition");
   }
 
   @Test
@@ -770,6 +790,36 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^(?:ab){2}+$", "abababab");
     testRE("^a{2,3}+a$", "aaaa");
     testRE("^a{2,3}?$", "aaa");
+  }
+
+  @Test
+  public void repeatFollowedByRepeat() {
+    // Repetitions following another repetition are ignored, consistent with java.util.regex
+    String[] patterns = {
+        "^a{2}{3}$", "^a{2,}{3}$", "^a{2}+{3}$", "^a{2}?{3}$", "^a{2}{3}?$", "^a{2}{3}+$",
+        "^a{2}{3}{4}$", "^a{2}{3,}$", "^a{1,2}{3}b$", "^a?+{3}$", "^a*+{3}$", "^a++{3}$",
+        "^a++{3}b$", "^a*{3}$", "^a?{3}$", "^a+{3}$", "^a??{3}$", "^a*?{3}$", "^a+?{3}$",
+        "^(aa)?{2}$", "^a+{3}b$", "^a*{3}?$", "^a?{3}+$"
+    };
+    String[] values = {"aa", "aaa", "aaaa", "aaaaaa", "ab", "aab", "aaab"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void possessiveZeroOrOne() {
+    testRE("^a?+a$", "aa");
+    testRE("^a?+b$", "b");
+    testRE("^a?+b$", "ab");
+    testRE("^(ab)?+a", "aba");
+    testRE("^(a??)?+a$", "a");
+    testRE("^(a*?)?+a$", "a");
+    testRE("^(a+?)?+a$", "aa");
+    testRE("^a{1,2}a?+a$", "aaa");
+    testRE("^a{0,1}a?+a$", "aa");
   }
 
   @Test
