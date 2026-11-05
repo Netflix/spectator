@@ -80,11 +80,11 @@ final class CharClassMatcher implements Matcher, Serializable {
 
   @Override
   public String toString() {
-    String p = set.toString();
-    String n = set.invert().toString();
-    String str = (p.length() < n.length() || n.isEmpty())
-        ? PatternUtils.escape(p)
-        : "^" + PatternUtils.escape(n);
+    // AsciiSet.toString only puts the dash at the start or in the middle of a range, so
+    // it is a valid regex character class body once escaped.
+    String p = PatternUtils.escape(set.toString());
+    String n = PatternUtils.escape(set.invert().toString());
+    String str = (p.length() < n.length() || n.isEmpty()) ? p : "^" + n;
     return "[" + str + "]";
   }
 

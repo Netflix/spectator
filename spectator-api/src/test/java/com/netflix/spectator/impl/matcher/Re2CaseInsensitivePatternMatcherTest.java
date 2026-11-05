@@ -78,9 +78,7 @@ public class Re2CaseInsensitivePatternMatcherTest extends AbstractPatternMatcher
   }
 
   private static com.google.re2j.Pattern compileRE2(String matcher) {
-    // RE2 unicode escape is \\x{NNNN} instead of \\uNNNN
-    String re = matcher.replaceAll("\\\\u([0-9a-fA-F]{4})", "\\\\x{$1}");
-    return com.google.re2j.Pattern.compile("^.*(" + re + ")", com.google.re2j.Pattern.DOTALL);
+    return com.google.re2j.Pattern.compile("^.*(" + matcher + ")", com.google.re2j.Pattern.DOTALL);
   }
 
   private static class Re2Encoder implements PatternExpr.Encoder {

@@ -97,6 +97,23 @@ public class AsciiSetTest {
   }
 
   @Test
+  public void dashToStringRoundTrip() {
+    // Ranges that would start or end with the dash, plus one with the dash in the middle
+    String[] patterns = {"-./", "-,a", "-+,a", "-,a-c", "-./a", "-,./", ",-.", "+-/a"};
+    for (String pattern : patterns) {
+      AsciiSet s = AsciiSet.fromPattern(pattern);
+      Assertions.assertEquals(s, AsciiSet.fromPattern(s.toString()), pattern);
+    }
+  }
+
+  @Test
+  public void dashToStringRange() {
+    Assertions.assertEquals("-./", AsciiSet.fromPattern("-./").toString());
+    Assertions.assertEquals("-,a", AsciiSet.fromPattern("-,a").toString());
+    Assertions.assertEquals("-+-/", AsciiSet.fromPattern("+-/").toString());
+  }
+
+  @Test
   public void multiRangeContains() {
     AsciiSet s = AsciiSet.fromPattern("0-2A-C");
     Assertions.assertTrue(s.containsAll("012ABC"));
