@@ -252,6 +252,11 @@ class Parser {
       empty = false;
     }
 
+    /** Returns true if nothing has been added. */
+    boolean isEmpty() {
+      return empty;
+    }
+
     void add(AsciiSet s) {
       add(s, CharClassMatcher.withOtherCase(s));
     }
@@ -291,16 +296,26 @@ class Parser {
     }
   }
 
-  @SuppressWarnings("PMD")
+  /** Parse a character class after the opening bracket. */
   private CharClassMatcher charClass() {
-    CharClassMatcher tmp;
-    // Literal character that can be used as the start of a range, -1 if the previous
-    // element cannot start a range.
-    int rangeStart = -1;
     boolean invert = peek() == '^';
     if (invert) {
       advance();
     }
+    return charClass(invert);
+  }
+
+  /**
+   * Parse the rest of a character class up to and including the closing bracket. A leading
+   * negation, if any, has already been consumed by the caller and is passed as
+   * {@code invert}. A '^' at the current position is treated as a literal.
+   */
+  @SuppressWarnings("PMD")
+  private CharClassMatcher charClass(boolean invert) {
+    CharClassMatcher tmp;
+    // Literal character that can be used as the start of a range, -1 if the previous
+    // element cannot start a range.
+    int rangeStart = -1;
     CharClassBuilder builder = new CharClassBuilder();
     if (peek() == ']' || peek() == '-') {
       char c = advance();
@@ -317,12 +332,25 @@ class Parser {
         case '&':
           if (peek() == '&') {
             advance();
-            if (peek() == '[') {
-              advance();
-              builder.intersection(charClass());
-            } else if (peek() != ']') {
-              builder.intersection(charClass());
-              --current;
+            // As with Java, the right operand is any nested classes followed by the rest of
+            // the elements up to the closing bracket, e.g. [a-c&&[b]x] is a-c and {b, x}. A
+            // '^' at the start of those elements is a literal. A '&' right after a nested
+            // class ends the operand, e.g. [a-c&&[b]&] is the intersection of a-c and {b},
+            // then '&'. The closing bracket is left for the outer class. Nested classes are
+            // parsed here rather than by a recursive call so that a long chain such as
+            // [a&&[b]&&[c]...] does not need a stack frame for each intersection.
+            CharClassBuilder right = new CharClassBuilder();
+            while (!isAtEnd() && peek() != ']' && peek() != '&') {
+              if (peek() == '[') {
+                advance();
+                right.add(charClass());
+              } else {
+                right.add(charClass(false));
+                --current;
+              }
+            }
+            if (!right.isEmpty()) {
+              builder.intersection(right.build(false));
             }
             rangeStart = -1;
           } else {
