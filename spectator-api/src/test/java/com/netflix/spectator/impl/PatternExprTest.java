@@ -238,6 +238,18 @@ public class PatternExprTest {
   }
 
   @Test
+  public void indexOfNegativeLookaheadThenIgnoreCase() {
+    // The case is folded before negation, so [^b] matches neither 'b' nor 'B'
+    PatternExpr expr = PatternMatcher.compile("foo-(?!bar)").toPatternExpr(50).ignoreCase();
+    Assertions.assertEquals(
+        "'(?i).*foo-($|[^Bb]|(b($|[^Aa]|(a($|[^Rr])))))'",
+        expr.toString());
+    Assertions.assertTrue(expr.matches("FOO-BAZ"));
+    Assertions.assertFalse(expr.matches("FOO-BAR"));
+    Assertions.assertFalse(expr.matches("foo-bar"));
+  }
+
+  @Test
   public void indexOfNegativeLookaheadCharClass() {
     PatternExpr expr = PatternMatcher.compile("foo-(?![a-c].)").toPatternExpr(50);
     Assertions.assertEquals("'.*foo-($|[^a-c]|([a-c]$))'", expr.toString());
@@ -248,10 +260,24 @@ public class PatternExprTest {
 
   @Test
   public void negativeLookaheadInvertedSetNotNegatedClass() {
-    // The inverted set would be written as [a{-\x7f] which would not match non-ascii
+    // The inverted set would be written as [0-9] which would not match non-ascii
     // characters for engines like RE2, so it cannot be inlined
-    PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x60b-z])").toPatternExpr(50);
+    PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-/:-\\x7f])").toPatternExpr(50);
     Assertions.assertNull(expr);
+  }
+
+  @Test
+  public void negativeLookaheadInvertedSetKeepsFold() {
+    // The inverted set, [a{-\x7f], is written as a negated class so that 'a' would not
+    // match if the case is ignored later, the same as the lookahead
+    PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x60b-z])").toPatternExpr(50);
+    Assertions.assertEquals("'.*foo-($|[^-\\x00-`b-z])'", expr.toString());
+    Assertions.assertTrue(expr.matches("foo-"));
+    Assertions.assertTrue(expr.matches("foo-a"));
+    Assertions.assertTrue(expr.matches("foo-{"));
+    Assertions.assertFalse(expr.matches("foo-b"));
+    Assertions.assertFalse(expr.matches("foo-A"));
+    Assertions.assertFalse(expr.ignoreCase().matches("foo-a"));
   }
 
   @Test

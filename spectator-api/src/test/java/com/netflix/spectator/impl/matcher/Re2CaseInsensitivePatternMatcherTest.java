@@ -36,10 +36,8 @@ public class Re2CaseInsensitivePatternMatcherTest extends AbstractPatternMatcher
     // of the same character class. For now we skip regex that use POSIX classes.
     // https://bugs.openjdk.java.net/browse/JDK-8214245
     // Bug was fixed in jdk15.
-    return JavaVersion.major() < 15
-        && !regex.contains("\\p{")
-        && !regex.contains("\\P{")
-        && !regex.contains("[^");
+    return JavaVersion.major() >= 15
+        || (!regex.contains("\\p{") && !regex.contains("\\P{"));
   }
 
   @Override

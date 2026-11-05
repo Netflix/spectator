@@ -24,6 +24,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Field;
 
 public class MatcherSerializationTest {
 
@@ -52,6 +53,35 @@ public class MatcherSerializationTest {
   @Test
   public void charClass() {
     checkSerde(new CharClassMatcher(AsciiSet.fromPattern("abc")));
+  }
+
+  @Test
+  public void charClassNegated() {
+    // The folded set is different from the set with the other case added
+    AsciiSet set = AsciiSet.fromPattern("a").invert();
+    AsciiSet foldedSet = AsciiSet.fromPattern("aA").invert();
+    checkSerde(new CharClassMatcher(set, foldedSet, false));
+    checkSerde(PatternMatcher.compile("[^a]b").ignoreCase());
+  }
+
+  @Test
+  public void charClassWithoutFoldedSet() throws Exception {
+    // Instances serialized by an older version will not have the folded set
+    CharClassMatcher matcher = new CharClassMatcher(AsciiSet.fromPattern("a"), true);
+    Field field = CharClassMatcher.class.getDeclaredField("foldedSet");
+    field.setAccessible(true);
+    field.set(matcher, null);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (ObjectOutputStream out = new ObjectOutputStream(baos)) {
+      out.writeObject(matcher);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    try (ObjectInputStream in = new ObjectInputStream(bais)) {
+      CharClassMatcher deserialized = (CharClassMatcher) in.readObject();
+      Assertions.assertEquals(new CharClassMatcher(AsciiSet.fromPattern("a"), true), deserialized);
+      Assertions.assertEquals(AsciiSet.fromPattern("aA"), deserialized.foldedSet());
+    }
   }
 
   @Test

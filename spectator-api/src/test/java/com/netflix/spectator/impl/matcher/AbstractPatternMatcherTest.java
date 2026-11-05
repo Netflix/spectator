@@ -951,4 +951,20 @@ public abstract class AbstractPatternMatcherTest {
       }
     }
   }
+
+  @Test
+  public void negatedCharClassCase() {
+    // If the case is ignored, java folds the case of each element in the class before
+    // applying negation or intersection
+    String[] patterns = {
+        "^[^a]$", "^[^A]$", "^[^aB]$", "^[^b-d]$", "^[^a-z]$", "^[a-z&&[^a]]$", "^[^\\W]$",
+        "^\\P{Lower}$", "^[^\\p{Lower}]$", "^[\\P{Lower}]$", "^x[^a]+y$"
+    };
+    String[] values = {"", "a", "A", "b", "B", "c", "C", "z", "1", "-", "xaby", "xbcy", "xBCy"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
 }

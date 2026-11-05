@@ -274,7 +274,7 @@ public class PatternUtilsTest {
   public void charClassToStringRoundTrip() {
     // Characters that are special in a class, plus neighbors of the dash so ranges
     // starting or ending at it get covered.
-    // The empty set is skipped, it prints as [] which isn't a valid regex.
+    // The empty set is skipped, it prints as a pattern that never matches rather than a class.
     String chars = " ,-./[\\]^&ab";
     int n = chars.length();
     for (int i = 1; i < (1 << n); ++i) {
