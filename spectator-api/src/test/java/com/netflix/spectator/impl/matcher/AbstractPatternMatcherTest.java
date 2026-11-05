@@ -967,4 +967,54 @@ public abstract class AbstractPatternMatcherTest {
       }
     }
   }
+
+  @Test
+  public void quotationFollowedByQuantifier() {
+    // The quantifier only applies to the last character of the quotation, and an empty
+    // quotation is ignored
+    String[] patterns = {
+        "^\\Qab\\E{2}$", "^\\Qab\\E*$", "^\\Qab\\E+$", "^\\Qab\\E?$", "^\\Qab\\E{2}?$",
+        "^\\Qab\\E{1,}$", "^a\\Q\\E{2}$", "^a\\Q\\E*$", "^\\Q\\Ea$", "^\\Qa\\E?$",
+        "^x\\Qa\\E\\Qb\\E{2}$", "^(\\Qab\\E)+$", "^\\Q.*\\E+$"
+    };
+    String[] values = {"", "a", "aa", "aaa", "ab", "abb", "abbb", "abab", "xabb", ".*", ".**"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+    testBadExpression("\\Q\\E*", "dangling modifier");
+    testBadExpression("a|\\Q\\E{2}", "dangling modifier");
+  }
+
+  @Test
+  public void emptyQuotationBetweenQuantifiers() {
+    // An empty quotation joins the elements on either side, so a*\Q\E? is the reluctant
+    // quantifier a*? and a{2}\Q\E{3} is a{2} with the following repeat ignored
+    String[] patterns = {
+        "^a{2}\\Q\\E{3}$", "^a{2}\\Q\\E?$", "^a{2}\\Q\\E+$", "^a*\\Q\\E?$", "^a*\\Q\\E+$",
+        "^a?\\Q\\E?$", "^a+\\Q\\E?$", "^a*\\Q\\E{2}$", "^a\\Q\\E+\\Q\\E?$",
+        "^\\Qab\\E{2}\\Q\\E{3}$", "^a\\Q\\E\\Q\\E{2}$", "^(\\Q\\E?:a)$", "^[\\Q\\E^a]$"
+    };
+    String[] values = {"", "a", "aa", "aaa", "aaaa", "aaaaaa", "ab", "abb", ":a", "b"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+    testBadExpression("a{2}+\\Q\\E?", "dangling modifier");
+  }
+
+  @Test
+  public void quotationFollowedByQuantifierSurrogatePair() {
+    // The quantifier applies to the last code point rather than only the low surrogate
+    String e = "\uD83D\uDE00";
+    String[] patterns = {"^\\Q" + e + "\\E+$", "^\\Qa" + e + "\\E{2}$"};
+    String[] values = {e, e + e, e + "\uDE00", "a" + e + e, "a" + e + "\uDE00"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
 }

@@ -171,11 +171,17 @@ public final class PatternUtils {
             i += 4;
             break;
           case 'Q':
-            // Quoted sections are literal, so they are passed through as is to the parser
+            // Quoted sections are literal, so they are passed through as is to the parser.
+            // An empty quotation is dropped so, like java, the elements on either side are
+            // joined, e.g. a*\Q\E? is the reluctant quantifier a*? and a{2}\Q\E{3} is a{2}.
             int end = str.indexOf("\\E", i + 1);
-            end = (end == -1) ? str.length() : end + 2;
-            builder.append('\\').append(str, i, end);
-            i = end - 1;
+            if (end == i + 1) {
+              i = end + 1;
+            } else {
+              end = (end == -1) ? str.length() : end + 2;
+              builder.append('\\').append(str, i, end);
+              i = end - 1;
+            }
             break;
           default:
             builder.append('\\').append(c);
