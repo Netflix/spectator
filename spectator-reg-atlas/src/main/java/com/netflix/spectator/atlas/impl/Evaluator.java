@@ -208,7 +208,13 @@ public class Evaluator {
               }
             } else if (expr instanceof DataExpr.AggregateFunction) {
               DataExpr.AggregateFunction af = (DataExpr.AggregateFunction) expr;
-              tags = new HashMap<>(af.resultTags(af.queryTags()));
+              // The aggregator is created with the result tags and will not read the tags
+              // from the pair, so the shared map can be used as is. A copy is only needed
+              // if the tags will be modified for delayed gauge aggregation.
+              Map<String, String> resultTags = af.resultTags(af.queryTags());
+              tags = (delayGaugeAggr && consolidator.isGauge())
+                  ? new HashMap<>(resultTags)
+                  : resultTags;
             }
             if (delayGaugeAggr && consolidator.isGauge()) {
               if (tags != null) {
