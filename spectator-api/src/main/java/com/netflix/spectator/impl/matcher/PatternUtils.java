@@ -34,6 +34,9 @@ import java.util.function.Function;
  */
 public final class PatternUtils {
 
+  /** Characters that need to be escaped to be treated as a literal by the parser. */
+  private static final String STRUCTURAL_CHARS = "\\^$.|?*+()[]{}-&";
+
   private PatternUtils() {
   }
 
@@ -129,7 +132,7 @@ public final class PatternUtils {
               throw error("invalid octal escape sequence", str, i);
             }
             c = parse(str.substring(i + 1, i + numDigits + 1), 8, "octal", str, i);
-            builder.append(c);
+            appendLiteral(builder, c);
             i += numDigits;
             break;
           case 'x':
@@ -137,7 +140,7 @@ public final class PatternUtils {
               throw error("invalid hexadecimal escape sequence", str, i);
             }
             c = parse(str.substring(i + 1, i + 3), 16, "hexadecimal", str, i);
-            builder.append(c);
+            appendLiteral(builder, c);
             i += 2;
             break;
           case 'u':
@@ -145,8 +148,15 @@ public final class PatternUtils {
               throw error("invalid unicode escape sequence", str, i);
             }
             c = parse(str.substring(i + 1, i + 5), 16, "unicode", str, i);
-            builder.append(c);
+            appendLiteral(builder, c);
             i += 4;
+            break;
+          case 'Q':
+            // Quoted sections are literal, so they are passed through as is to the parser
+            int end = str.indexOf("\\E", i + 1);
+            end = (end == -1) ? str.length() : end + 2;
+            builder.append('\\').append(str, i, end);
+            i = end - 1;
             break;
           default:
             builder.append('\\').append(c);
@@ -157,6 +167,17 @@ public final class PatternUtils {
       }
     }
     return builder.toString();
+  }
+
+  /**
+   * Append an expanded character so it will be treated as a literal by the parser. For
+   * example, {@code \x2b} should match a literal '+' rather than being a quantifier.
+   */
+  private static void appendLiteral(StringBuilder builder, char c) {
+    if (STRUCTURAL_CHARS.indexOf(c) >= 0) {
+      builder.append('\\');
+    }
+    builder.append(c);
   }
 
   /**
@@ -177,6 +198,7 @@ public final class PatternUtils {
         case '^':  builder.append("\\^"); break;
         case '$':  builder.append("\\$"); break;
         case '.':  builder.append("\\."); break;
+        case '|':  builder.append("\\|"); break;
         case '?':  builder.append("\\?"); break;
         case '*':  builder.append("\\*"); break;
         case '+':  builder.append("\\+"); break;

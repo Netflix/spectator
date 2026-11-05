@@ -277,10 +277,7 @@ class Parser {
               advance();
               tmp = namedCharClass();
               if (tmp == null) {
-                String range = tokens.subSequence(current - 3, current - 1).toString() + peek();
-                if (range.endsWith("\\")) {
-                  advance();
-                }
+                String range = tokens.subSequence(current - 3, current - 1).toString() + advance();
                 set = update(set, AsciiSet.fromPattern(range), invert);
               } else {
                 set = update(set, AsciiSet.fromPattern("-"), invert);

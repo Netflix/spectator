@@ -69,7 +69,7 @@ public class PatternUtilsTest {
   @Test
   public void expandOctal() {
     for (int i = 0; i < 128; ++i) {
-      String expected = Character.toString((char) i);
+      String expected = literal(i);
       String str = "\\0" + Integer.toString(i, 8);
       Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
@@ -81,10 +81,15 @@ public class PatternUtilsTest {
         () -> PatternUtils.expandEscapedChars("\\0AAA"));
   }
 
+  private static String literal(int i) {
+    String c = Character.toString((char) i);
+    return "\\^$.|?*+()[]{}-&".contains(c) ? "\\" + c : c;
+  }
+
   @Test
   public void expandHexLower() {
     for (int i = 0; i < 0xFF; ++i) {
-      String expected = Character.toString((char) i);
+      String expected = literal(i);
       String str = String.format("\\x%02x", i);
       Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
@@ -93,7 +98,7 @@ public class PatternUtilsTest {
   @Test
   public void expandHexUpper() {
     for (int i = 0; i < 0xFF; ++i) {
-      String expected = Character.toString((char) i);
+      String expected = literal(i);
       String str = String.format("\\x%02X", i);
       Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
@@ -114,10 +119,18 @@ public class PatternUtilsTest {
   @Test
   public void expandUnicode() {
     for (int i = 0; i < 0xFFFF; ++i) {
-      String expected = Character.toString((char) i);
+      String expected = literal(i);
       String str = String.format("\\u%04x", i);
       Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
     }
+  }
+
+  @Test
+  public void expandQuotation() {
+    Assertions.assertEquals(
+        "\\Q\\x2b\\t\\E\\+",
+        PatternUtils.expandEscapedChars("\\Q\\x2b\\t\\E\\x2b"));
+    Assertions.assertEquals("\\Q\\x2b", PatternUtils.expandEscapedChars("\\Q\\x2b"));
   }
 
   @Test
@@ -150,14 +163,14 @@ public class PatternUtilsTest {
 
   @Test
   public void escapeSpecial() {
-    String input = "\t\n\r\f\\^$.?*+[](){}";
-    String expected = "\\t\\n\\r\\f\\\\\\^\\$\\.\\?\\*\\+\\[\\]\\(\\)\\{\\}";
+    String input = "\t\n\r\f\\^$.|?*+[](){}";
+    String expected = "\\t\\n\\r\\f\\\\\\^\\$\\.\\|\\?\\*\\+\\[\\]\\(\\)\\{\\}";
     Assertions.assertEquals(expected, PatternUtils.escape(input));
   }
 
   @Test
   public void escapePrintable() {
-    String special = "\t\n\r\f\\^$.?*+[](){}";
+    String special = "\t\n\r\f\\^$.|?*+[](){}";
     for (char i = '!'; i <= '~'; ++i) {
       if (special.indexOf(i) != -1) {
         continue;

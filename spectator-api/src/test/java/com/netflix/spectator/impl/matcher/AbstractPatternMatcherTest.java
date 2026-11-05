@@ -814,4 +814,49 @@ public abstract class AbstractPatternMatcherTest {
         () -> PatternMatcher.compile("a{1000,-5}"));
     testRE("a{0,100000}", "a");
   }
+
+  @Test
+  public void escapedStructuralChars() {
+    // Characters from hex, octal, and unicode escapes are literals
+    testRE("^a\\x2b$", "a+");
+    testRE("^a\\x2b$", "aa");
+    testRE("^a\\x3f$", "a?");
+    testRE("^a\\x3f$", "");
+    testRE("^a\\x2a$", "a*");
+    testRE("^a\\u002b$", "a+");
+    testRE("^a\\053$", "a+");
+    testRE("^\\x28a\\x29$", "(a)");
+    testRE("^\\x5ba\\x5d$", "[a]");
+    testRE("^a\\x7cb$", "a|b");
+    testRE("^a\\x7cb$", "b");
+    testRE("^a\\x2e$", "a.");
+    testRE("^a\\x2e$", "ab");
+    testRE("^\\x5ea", "^a");
+    testRE("a\\x24", "a$");
+    testRE("^a\\x7b2\\x7d$", "a{2}");
+    testRE("^a\\x5c$", "a\\");
+    testRE("^[a\\x2dz]$", "-");
+    testRE("^[a\\x2dz]$", "b");
+    testRE("^[\\x5d]$", "]");
+    testRE("^[\\x5e]$", "^");
+    testRE("^[a\\x26\\x26b]$", "&");
+    testRE("^[\\x20-\\x2f]$", "+");
+    testRE("^[\\x20-\\x2f]$", "0");
+    testRE("^[!-\\x5d]$", "]");
+    testRE("^[!-\\x5d]$", "!");
+    testRE("^[!-\\x5d]$", "^");
+    testRE("^[!-\\x5b]$", "[");
+    testRE("^[!-\\]]$", "]");
+    testRE("^[!-\\]]$", "!]");
+  }
+
+  @Test
+  public void escapesInQuotation() {
+    // Escapes within a quotation are literal
+    testRE("^\\Q\\x2b\\E$", "\\x2b");
+    testRE("^\\Q\\x2b\\E$", "+");
+    testRE("^\\Q\\t\\E$", "\\t");
+    testRE("^\\Q\\t\\E$", "\t");
+    testRE("^\\Qa\\E\\x2b$", "a+");
+  }
 }
