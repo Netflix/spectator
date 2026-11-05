@@ -159,6 +159,14 @@ public class PatternUtilsTest {
   }
 
   @Test
+  public void expandEmptyQuotation() {
+    Assertions.assertEquals("a*?", PatternUtils.expandEscapedChars("a*\\Q\\E?"));
+    Assertions.assertEquals("a", PatternUtils.expandEscapedChars("\\Q\\E\\Q\\Ea\\Q\\E"));
+    Assertions.assertEquals("\\\\Q\\E", PatternUtils.expandEscapedChars("\\\\Q\\E"));
+    Assertions.assertEquals("\\Q", PatternUtils.expandEscapedChars("\\Q"));
+  }
+
+  @Test
   public void expandUnicodePartial() {
     Assertions.assertThrows(IllegalArgumentException.class,
         () -> PatternUtils.expandEscapedChars("\\u00A"));

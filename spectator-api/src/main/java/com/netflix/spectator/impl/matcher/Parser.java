@@ -72,7 +72,11 @@ class Parser {
       char c = advance();
       switch (c) {
         case '\\':
-          matchers.add(escape());
+          if (peek() == 'Q') {
+            quotation(matchers);
+          } else {
+            matchers.add(escape());
+          }
           break;
         case '^':
           matchers.add(StartMatcher.INSTANCE);
@@ -119,9 +123,7 @@ class Parser {
 
   private Matcher escape() {
     char c = peek();
-    if (c == 'Q') {
-      return quotation();
-    } else if (c == 'c') {
+    if (c == 'c') {
       throw unsupported("control character");
     } else if (Constants.DIGIT.contains(c) || c == 'k') {
       throw unsupported("back references");
@@ -136,14 +138,28 @@ class Parser {
     }
   }
 
-  private Matcher quotation() {
+  /**
+   * Add the literal text of a quotation, {@code \\Q...\\E}. Like java, a quantifier
+   * following the quotation only applies to the last code point, e.g. {@code \\Qab\\E{2}}
+   * is {@code ab{2}}. An empty quotation adds nothing. Empty quotations are normally
+   * removed by {@link PatternUtils#expandEscapedChars(String)} so that the elements on
+   * either side are joined, e.g. {@code a*\\Q\\E?} is {@code a*?}.
+   */
+  private void quotation(List<Matcher> matchers) {
     int start = current + 1;
     int end = tokens.indexOf("\\E", start);
     if (end == -1) {
       throw error("unclosed quotation");
     }
     current = end + 2;
-    return new CharSeqMatcher(tokens.substring(start, end));
+    if (start < end) {
+      // Character before start is 'Q', so the offset cannot be before the start
+      int last = tokens.offsetByCodePoints(end, -1);
+      if (start < last) {
+        matchers.add(new CharSeqMatcher(tokens.substring(start, last)));
+      }
+      matchers.add(new CharSeqMatcher(tokens.substring(last, end)));
+    }
   }
 
   private Matcher groupExpr() {
