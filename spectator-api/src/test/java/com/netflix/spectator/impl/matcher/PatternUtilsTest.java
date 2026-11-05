@@ -81,6 +81,14 @@ public class PatternUtilsTest {
         () -> PatternUtils.expandEscapedChars("\\0AAA"));
   }
 
+  @Test
+  public void expandOctalMax() {
+    // Max octal value is \0377, for \0400 it is \040 followed by a literal 0
+    Assertions.assertEquals("ÿ",PatternUtils.expandEscapedChars("\\0377"));
+    Assertions.assertEquals(" 0", PatternUtils.expandEscapedChars("\\0400"));
+    Assertions.assertEquals("'7", PatternUtils.expandEscapedChars("\\0477"));
+  }
+
   private static String literal(int i) {
     String c = Character.toString((char) i);
     return "\\^$.|?*+()[]{}-&".contains(c) ? "\\" + c : c;
@@ -117,6 +125,20 @@ public class PatternUtilsTest {
   }
 
   @Test
+  public void expandHexSign() {
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\x+1"));
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\x-1"));
+  }
+
+  @Test
+  public void expandHexNonAsciiDigit() {
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\x\uFF11\uFF12"));
+  }
+
+  @Test
   public void expandUnicode() {
     for (int i = 0; i < 0xFFFF; ++i) {
       String expected = literal(i);
@@ -143,6 +165,14 @@ public class PatternUtilsTest {
   public void expandUnicodeInvalid() {
     Assertions.assertThrows(IllegalArgumentException.class,
         () -> PatternUtils.expandEscapedChars("\\uZZZZ"));
+  }
+
+  @Test
+  public void expandUnicodeSign() {
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\u+02b"));
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternUtils.expandEscapedChars("\\u-02b"));
   }
 
   @Test

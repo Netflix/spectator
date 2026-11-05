@@ -851,6 +851,29 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void charClassRanges() {
+    // End of a range cannot start another range
+    testRE("^[a-c-e]$", "d");
+    testRE("^[a-c-e]$", "-");
+    testRE("^[a-c-e]$", "e");
+    testRE("^[a-\\x63-e]$", "d");
+    // Literal dash can start a range
+    Assertions.assertTrue(PatternMatcher.compile("^[a-c--/]$").matches("."));
+    Assertions.assertTrue(PatternMatcher.compile("^[\\d--/]$").matches("."));
+    Assertions.assertTrue(PatternMatcher.compile("^[--/]$").matches("."));
+    // Dash before a nested class is a literal
+    testRE("^[!-[a]]$", "\"");
+    testRE("^[!-[a]]$", "-");
+    testRE("^[!-[a]]$", "a");
+    // Leading ] and a single & can start a range
+    testRE("^[]-a]$", "^");
+    testRE("^[^]-a]$", "^");
+    testRE("^[&-(]$", "'");
+    testRE("^[!-&&b]$", "\"");
+    testRE("^[!-&&b]$", "b");
+  }
+
+  @Test
   public void escapesInQuotation() {
     // Escapes within a quotation are literal
     testRE("^\\Q\\x2b\\E$", "\\x2b");

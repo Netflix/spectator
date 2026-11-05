@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
@@ -34,8 +35,11 @@ import java.util.function.Function;
  */
 public final class PatternUtils {
 
-  /** Characters that need to be escaped to be treated as a literal by the parser. */
-  private static final String STRUCTURAL_CHARS = "\\^$.|?*+()[]{}-&";
+  /**
+   * Characters that need to be escaped to be treated as a literal by the parser. The dash
+   * must be first so it is not treated as a range.
+   */
+  private static final AsciiSet STRUCTURAL_CHARS = AsciiSet.fromPattern("-\\^$.|?*+()[]{}&");
 
   private PatternUtils() {
   }
@@ -87,13 +91,15 @@ public final class PatternUtils {
     return new IllegalArgumentException("unsupported: " + message + "\n" + context(str, pos));
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
   private static char parse(String num, int radix, String mode, String str, int pos) {
-    try {
-      return (char) Integer.parseInt(num, radix);
-    } catch (NumberFormatException e) {
-      throw error("invalid " + mode + " escape sequence", str, pos);
+    // Validate explicitly as Integer.parseInt allows a leading sign and non-ascii digits
+    for (int i = 0; i < num.length(); ++i) {
+      char c = num.charAt(i);
+      if (c >= 128 || Character.digit(c, radix) < 0) {
+        throw error("invalid " + mode + " escape sequence", str, pos);
+      }
     }
+    return (char) Integer.parseInt(num, radix);
   }
 
   /**
@@ -130,6 +136,11 @@ public final class PatternUtils {
             }
             if (numDigits < 1 || numDigits > 3) {
               throw error("invalid octal escape sequence", str, i);
+            }
+            if (numDigits == 3 && str.charAt(i + 1) > '3') {
+              // Max is \0377, for \0mnn the m must be 0-3. Otherwise, the last digit is
+              // a literal character following the escape.
+              numDigits = 2;
             }
             c = parse(str.substring(i + 1, i + numDigits + 1), 8, "octal", str, i);
             appendLiteral(builder, c);
@@ -174,7 +185,7 @@ public final class PatternUtils {
    * example, {@code \x2b} should match a literal '+' rather than being a quantifier.
    */
   private static void appendLiteral(StringBuilder builder, char c) {
-    if (STRUCTURAL_CHARS.indexOf(c) >= 0) {
+    if (STRUCTURAL_CHARS.contains(c)) {
       builder.append('\\');
     }
     builder.append(c);
