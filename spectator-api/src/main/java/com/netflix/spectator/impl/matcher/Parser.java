@@ -110,7 +110,7 @@ class Parser {
           matchers.add(meta(pop(matchers)));
           break;
         default:
-          matchers.add(new CharSeqMatcher(c));
+          matchers.add(literal());
           break;
       }
     }
@@ -119,6 +119,17 @@ class Parser {
 
   private Matcher pop(List<Matcher> matchers) {
     return matchers.remove(matchers.size() - 1);
+  }
+
+  /**
+   * Create a matcher for the literal character that was just consumed. If it is the high
+   * surrogate of a pair, then the low surrogate is consumed as well so that a quantifier
+   * applies to the whole code point like java, e.g. for an emoji.
+   */
+  private Matcher literal() {
+    int start = current - 1;
+    current = tokens.offsetByCodePoints(start, 1);
+    return new CharSeqMatcher(tokens.substring(start, current));
   }
 
   private Matcher escape() {
@@ -131,7 +142,7 @@ class Parser {
       CharClassMatcher m = namedCharClass();
       if (m == null) {
         advance();
-        return new CharSeqMatcher(String.valueOf(c));
+        return literal();
       } else {
         return m;
       }
