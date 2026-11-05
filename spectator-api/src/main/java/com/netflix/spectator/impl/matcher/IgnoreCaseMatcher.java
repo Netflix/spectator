@@ -29,11 +29,16 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
   private final Matcher matcher;
 
   /**
-   * Underlying matcher to use for checking the string. It should have already been converted
-   * to match on the lower case version of the string.
+   * Underlying matcher to use for checking the string. It should have already been rewritten
+   * to ignore the case, see {@link Matcher#ignoreCase()}.
    */
   IgnoreCaseMatcher(Matcher matcher) {
     this.matcher = matcher;
+  }
+
+  /** Underlying matcher that has been rewritten to ignore the case. */
+  Matcher matcher() {
+    return matcher;
   }
 
   @Override
@@ -41,9 +46,10 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
     return matcher.matches(str);
   }
 
-  // The properties below do not depend on the case, so they are the same as the underlying
-  // matcher. Others, such as the prefix or trigrams, are case sensitive and are left as the
-  // defaults.
+  // The properties below come from the underlying matcher, which has already been rewritten
+  // to ignore the case. They can differ from the case sensitive pattern, e.g. [a&&A] can only
+  // match if the case is ignored. Others, such as the prefix or trigrams, are case sensitive
+  // and are left as the defaults.
 
   @Override
   public int minLength() {
@@ -72,7 +78,7 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
 
   @Override
   public PatternExpr toPatternExpr(int max) {
-    PatternExpr expr = PatternUtils.toPatternExpr(matcher, max);
+    PatternExpr expr = matcher.toPatternExpr(max);
     return expr == null ? null : expr.ignoreCase();
   }
 

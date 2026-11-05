@@ -273,9 +273,15 @@ public final class PatternUtils {
    */
   @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   static List<Matcher> expandOrClauses(Matcher matcher, int max) {
-    if (matcher instanceof IndexOfMatcher) {
+    if (matcher instanceof OrStartsWithMatcher) {
+      // Folded alternation, expand the original form so the branches are visible
+      return expandOrClauses(matcher.<OrStartsWithMatcher>as().delegate(), max);
+    } else if (matcher instanceof IndexOfMatcher) {
       IndexOfMatcher m = matcher.as();
-      return map(expandOrClauses(m.next(), max), n -> new IndexOfMatcher(m.pattern(), n), max);
+      return map(
+          expandOrClauses(m.next(), max),
+          n -> new IndexOfMatcher(m.pattern(), n, m.isIgnoreCase()),
+          max);
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       return map(expandOrClauses(m.next(), max), n -> new ZeroOrMoreMatcher(m.repeated(), n), max);
@@ -640,7 +646,7 @@ public final class PatternUtils {
       rewriteNextLookahead(m.next(), results, false, restAny);
       for (int i = 0; i < results.length; ++i) {
         if (results[i] != null) {
-          results[i] = new IndexOfMatcher(m.pattern(), results[i]);
+          results[i] = new IndexOfMatcher(m.pattern(), results[i], m.isIgnoreCase());
         }
       }
     } else if (matcher instanceof SeqMatcher) {
@@ -943,8 +949,9 @@ public final class PatternUtils {
       ZeroOrMoreMatcher zm = matcher.as();
       return new ZeroOrMoreMatcher(zm.repeated(), TrueMatcher.INSTANCE);
     } else if (matcher instanceof CharSeqMatcher) {
-      String pattern = matcher.<CharSeqMatcher>as().pattern();
-      return pattern.isEmpty() ? null : new CharSeqMatcher(pattern.charAt(0));
+      CharSeqMatcher m = matcher.as();
+      String pattern = m.pattern();
+      return pattern.isEmpty() ? null : new CharSeqMatcher(pattern.substring(0, 1), m.isIgnoreCase());
     } else {
       return matcher;
     }
@@ -962,8 +969,11 @@ public final class PatternUtils {
       ZeroOrMoreMatcher zm = matcher.as();
       return zm.next();
     } else if (matcher instanceof CharSeqMatcher) {
-      String pattern = matcher.<CharSeqMatcher>as().pattern();
-      return pattern.length() <= 1 ? TrueMatcher.INSTANCE : new CharSeqMatcher(pattern.substring(1));
+      CharSeqMatcher m = matcher.as();
+      String pattern = m.pattern();
+      return pattern.length() <= 1
+          ? TrueMatcher.INSTANCE
+          : new CharSeqMatcher(pattern.substring(1), m.isIgnoreCase());
     } else {
       return TrueMatcher.INSTANCE;
     }

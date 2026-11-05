@@ -53,7 +53,10 @@ interface Matcher extends PatternMatcher {
 
   @Override
   default PatternMatcher ignoreCase() {
-    Matcher m = rewrite(PatternUtils::ignoreCase);
+    // Optimize again after the rewrite, the folded character classes may allow other
+    // simplifications, and the rewrite undoes the final folds of the optimizer. Like the
+    // optimizer, this is only valid for a complete pattern, not a sub-matcher.
+    Matcher m = Optimizer.optimize(rewrite(PatternUtils::ignoreCase));
     return new IgnoreCaseMatcher(m);
   }
 

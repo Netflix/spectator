@@ -446,4 +446,27 @@ public class PatternExprTest {
     PatternExpr expr = PatternMatcher.compile("(foo-)?(?=bar)").toPatternExpr(50);
     Assertions.assertEquals("('(.)*(?:foo-)?bar' AND '(.)*(?:foo-)?')", expr.toString());
   }
+
+  @Test
+  public void startsWithOrIgnoreCase() {
+    // The alternation is folded into a single matcher, the branches should still be expanded
+    PatternExpr expr = PatternMatcher.compile("(?i)^(abc|def)").toPatternExpr(50);
+    Assertions.assertEquals("('(?i)^abc' OR '(?i)^def')", expr.toString());
+    Assertions.assertTrue(expr.matches("DEFx"));
+    Assertions.assertFalse(expr.matches("xdef"));
+  }
+
+  @Test
+  public void nestedStartsWithOr() {
+    PatternExpr expr = PatternMatcher.compile("x|^(ab|cd)").toPatternExpr(50);
+    Assertions.assertEquals("('.*x' OR '^ab' OR '^cd')", expr.toString());
+  }
+
+  @Test
+  public void nestedStartsWithOrIgnoreCase() {
+    PatternExpr expr = PatternMatcher.compile("(?i)x|^(ab|cd)").toPatternExpr(50);
+    Assertions.assertEquals("('(?i).*x' OR '(?i)^ab' OR '(?i)^cd')", expr.toString());
+    Assertions.assertTrue(expr.matches("CDx"));
+    Assertions.assertFalse(expr.matches("acd"));
+  }
 }

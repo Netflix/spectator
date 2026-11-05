@@ -374,7 +374,7 @@ final class Optimizer {
       CharClassMatcher m = matcher.as();
       Optional<Character> opt = m.set().character();
       if (opt.isPresent() && m.isSimpleFold()) {
-        return new CharSeqMatcher(opt.get());
+        return new CharSeqMatcher(String.valueOf(opt.get()), m.isIgnoreCase());
       }
     }
     return matcher;
@@ -669,8 +669,9 @@ final class Optimizer {
       if (matchers.size() >= 2
           && matchers.get(0) instanceof StartMatcher
           && matchers.get(1) instanceof CharSeqMatcher) {
+        CharSeqMatcher cs = matchers.get(1).as();
         List<Matcher> ms = new ArrayList<>();
-        ms.add(new StartsWithMatcher(matchers.get(1).<CharSeqMatcher>as().pattern()));
+        ms.add(new StartsWithMatcher(cs.pattern(), cs.isIgnoreCase()));
         ms.addAll(matchers.subList(2, matchers.size()));
         return SeqMatcher.create(ms);
       }
@@ -688,14 +689,14 @@ final class Optimizer {
       if (matchers.size() >= 2
           && matchers.get(0) instanceof StartsWithMatcher
           && matchers.get(1) instanceof CharSeqMatcher) {
-        List<Matcher> ms = new ArrayList<>();
-        String prefix = matchers.get(0).<StartsWithMatcher>as().pattern()
-            + matchers.get(1).<CharSeqMatcher>as().pattern();
-        ms.add(new StartsWithMatcher(prefix));
-        ms.addAll(matchers.subList(2, matchers.size()));
-        return SeqMatcher.create(ms);
-      } else {
-        return matcher;
+        StartsWithMatcher sw = matchers.get(0).as();
+        CharSeqMatcher cs = matchers.get(1).as();
+        if (sw.isIgnoreCase() == cs.isIgnoreCase()) {
+          List<Matcher> ms = new ArrayList<>();
+          ms.add(new StartsWithMatcher(sw.pattern() + cs.pattern(), sw.isIgnoreCase()));
+          ms.addAll(matchers.subList(2, matchers.size()));
+          return SeqMatcher.create(ms);
+        }
       }
     }
     return matcher;
@@ -710,8 +711,11 @@ final class Optimizer {
       IndexOfMatcher m = matcher.as();
       Matcher next = PatternUtils.head(m.next());
       if (next instanceof CharSeqMatcher) {
-        String pattern = m.pattern() + next.<CharSeqMatcher>as().pattern();
-        return new IndexOfMatcher(pattern, PatternUtils.tail(m.next()));
+        CharSeqMatcher cs = next.as();
+        if (cs.isIgnoreCase() == m.isIgnoreCase()) {
+          String pattern = m.pattern() + cs.pattern();
+          return new IndexOfMatcher(pattern, PatternUtils.tail(m.next()), m.isIgnoreCase());
+        }
       }
     }
     return matcher;
@@ -727,11 +731,14 @@ final class Optimizer {
       CharSeqMatcher cs1 = null;
       for (Matcher m : matchers) {
         if (m instanceof CharSeqMatcher) {
+          CharSeqMatcher cs2 = m.as();
           if (cs1 == null) {
-            cs1 = m.as();
+            cs1 = cs2;
+          } else if (cs1.isIgnoreCase() == cs2.isIgnoreCase()) {
+            cs1 = new CharSeqMatcher(cs1.pattern() + cs2.pattern(), cs1.isIgnoreCase());
           } else {
-            CharSeqMatcher cs2 = m.as();
-            cs1 = new CharSeqMatcher(cs1.pattern() + cs2.pattern());
+            ms.add(cs1);
+            cs1 = cs2;
           }
         } else {
           if (cs1 != null) {
@@ -759,9 +766,9 @@ final class Optimizer {
       ZeroOrMoreMatcher zm1 = matcher.as();
       Matcher prefix = PatternUtils.getPrefix(zm1.next());
       if (zm1.repeated() instanceof AnyMatcher && prefix instanceof CharSeqMatcher) {
-        String pattern = prefix.<CharSeqMatcher>as().pattern();
+        CharSeqMatcher cs = prefix.as();
         Matcher suffix = PatternUtils.getSuffix(zm1.next());
-        return new IndexOfMatcher(pattern, suffix);
+        return new IndexOfMatcher(cs.pattern(), suffix, cs.isIgnoreCase());
       }
     }
     return matcher;

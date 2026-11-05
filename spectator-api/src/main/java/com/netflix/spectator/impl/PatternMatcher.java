@@ -143,8 +143,9 @@ public interface PatternMatcher {
 
   /**
    * Returns a new matcher that matches the same pattern only ignoring the case of the input
-   * string. Note, character classes will be matched as is and must explicitly include both
-   * cases if that is the desired matching criteria.
+   * string. Character classes also ignore the case. As with the Java {@code (?i)} flag, the
+   * case of each element is folded before negation or intersection, so {@code [^a]} matches
+   * neither 'a' nor 'A'. Only ASCII letters are folded in character classes.
    */
   default PatternMatcher ignoreCase() {
     return this;

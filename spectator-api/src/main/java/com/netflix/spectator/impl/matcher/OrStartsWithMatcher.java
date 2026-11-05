@@ -63,6 +63,11 @@ final class OrStartsWithMatcher implements Matcher, Serializable {
     this.minLength = min;
   }
 
+  /** Original nested matcher that this matcher was folded from. */
+  Matcher delegate() {
+    return delegate;
+  }
+
   @Override
   public int matches(String str, int start, int length) {
     // The alternation is start-anchored to absolute position 0 (via StartMatcher). When invoked as

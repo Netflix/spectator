@@ -97,8 +97,8 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
 
   @Test
   public void caseIndependentProperties() {
-    // Ignoring the case does not change the length, anchoring, or whether the pattern can
-    // match at all
+    // For these patterns, ignoring the case does not change the length, anchoring, or
+    // whether the pattern can match at all
     String[] patterns = {
         "", ".*", "^.*", "[^\\s\\S]", "a^b", "^abc$", "abc", "^ab.*", "x{3}y", "(?:)", "[^a]+$"
     };
@@ -114,5 +114,21 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
     Assertions.assertTrue(PatternMatcher.compile(".*").ignoreCase().alwaysMatches());
     Assertions.assertTrue(PatternMatcher.compile("[^\\s\\S]").ignoreCase().neverMatches());
     Assertions.assertEquals(3, PatternMatcher.compile("^abc$").ignoreCase().minLength());
+  }
+
+  @Test
+  public void caseDependentProperties() {
+    // The properties come from the matcher after the case is folded. The intersection can
+    // only match if the case is ignored.
+    PatternMatcher intersection = PatternMatcher.compile("^[a&&A]$").ignoreCase();
+    Assertions.assertTrue(intersection.matches("A"));
+    Assertions.assertFalse(intersection.neverMatches());
+    Assertions.assertEquals(1, intersection.minLength());
+
+    // Only matches 'a', and nothing if the case is ignored
+    PatternMatcher negated = PatternMatcher.compile("^[^\\x00-`b-\\x7f]$").ignoreCase();
+    Assertions.assertFalse(negated.matches("a"));
+    Assertions.assertFalse(negated.alwaysMatches());
+    Assertions.assertEquals(0, negated.minLength());
   }
 }
