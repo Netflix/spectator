@@ -481,6 +481,28 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void charClassIntersectionOperand() {
+    // Since Java 9, the right operand of an intersection is everything up to the closing
+    // bracket, a '^' at the start of it is a literal, and a negation applies to the whole
+    // class. Java 8 parsed these differently.
+    Assumptions.assumeTrue(JavaVersion.major() >= 9);
+    String[] patterns = {
+        "^[a-c&&[b]x]$", "^[a-c&&[b][x]]$", "^[a&&[b]c]$", "^[a-z&&^a]$", "^[a-z&&^b[c]]$",
+        "^[a-e&&b-d&&c]$", "^[a-e&&[b-d]&&[c-x]]$", "^[a-z&&[^b]x]$", "^[x[a-c]&&[b]]$",
+        "^[a-c&&b[x]]$", "^[a&&^]$", "^[a&&-x]$", "^[a-z&&\\w]$", "^x[a-c&&[b]x]+y$",
+        "^[^a-z&&^b]$", "^[^a-c&&[b]x]$", "^[^a-z&&^b[c]]$", "^[b-d&&[b]&]$",
+        "^[a-z&&[aeiou]&]$", "^[a-z&&[b]&-]$", "^[a-z&&[b]&x]$", "^[a-z&&[b]x&&[x]]$",
+        "^[a-z&&[b][c]x&&[x]]$", "^[a-c&&&x]$", "^[^c&&&]$", "^[x&&&]$"
+    };
+    String[] values = {"", "a", "A", "b", "B", "c", "x", "^", "-", "&", "1", "xby", "xbxy"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");

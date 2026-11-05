@@ -99,4 +99,41 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     Assertions.assertFalse(m.matches("B"));
     Assertions.assertTrue(m.matches("C"));
   }
+
+  @Test
+  public void charClassIntersectionOperandAnyJdk() {
+    // The right operand is parsed as in Java 9+, independent of the JDK version. Named
+    // differently so it does not override the shared JDK 9+ test in the base class.
+    PatternMatcher m = PatternMatcher.compile("^[a-c&&[b]x]$");
+    Assertions.assertTrue(m.matches("b"));
+    Assertions.assertFalse(m.matches("x"));
+    m = PatternMatcher.compile("^[a-z&&^a]$");
+    Assertions.assertTrue(m.matches("a"));
+    Assertions.assertFalse(m.matches("b"));
+    m = PatternMatcher.compile("^[^a-z&&^b]$");
+    Assertions.assertFalse(m.matches("b"));
+    Assertions.assertTrue(m.matches("a"));
+    Assertions.assertTrue(m.matches("^"));
+    // A '&' right after a nested class ends the operand
+    m = PatternMatcher.compile("^[a-z&&[b]&]$");
+    Assertions.assertTrue(m.matches("b"));
+    Assertions.assertTrue(m.matches("&"));
+    Assertions.assertFalse(m.matches("a"));
+    m = PatternMatcher.compile("^[a-z&&[b]x&&[x]]$");
+    Assertions.assertTrue(m.matches("b"));
+    Assertions.assertTrue(m.matches("x"));
+  }
+
+  @Test
+  public void charClassLongIntersectionChain() {
+    // Each intersection with a nested class should not need another stack frame
+    StringBuilder builder = new StringBuilder("^[a-c");
+    for (int i = 0; i < 20_000; ++i) {
+      builder.append("&&[ab]");
+    }
+    builder.append("]$");
+    PatternMatcher m = PatternMatcher.compile(builder.toString());
+    Assertions.assertTrue(m.matches("a"));
+    Assertions.assertFalse(m.matches("c"));
+  }
 }
