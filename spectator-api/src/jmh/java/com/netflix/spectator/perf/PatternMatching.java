@@ -142,7 +142,15 @@ public class PatternMatching {
   // String.{startsWith, contains} tests
   private final String exampleCopy = new String(example);
 
-  private final String substr = example.substring(example.length() - 17, example.length() - 4);
+  // Fixed input for the substr, multiIndexOf, and or cases so the results are comparable
+  // across forks and runs. With a random UUID the cost depends on whether and where the
+  // pattern occurs, which varied the results for all of the engines by ~2x between forks.
+  // For multiIndexOf it matches with each segment found after some scanning. For or, only
+  // the 8th alternative (123) matches, near the end.
+  private final String fixedInput = new String("7f3e9c1a-ab52-4d45-9e07-c8f2123b6d90");
+
+  private final String substr =
+      fixedInput.substring(fixedInput.length() - 17, fixedInput.length() - 4);
 
   private final Pattern javaMatcherPrefix = Pattern.compile("^" + example);
   private final com.google.re2j.Pattern re2jMatcherPrefix = com.google.re2j.Pattern.compile("^" + example);
@@ -178,6 +186,32 @@ public class PatternMatching {
       com.google.re2j.Pattern.compile(listPattern);
   private final PatternMatcher customMatcherList = PatternMatcher.compile(listPattern);
 
+  // Fixed input for the ignore case and character class cases, so results are comparable
+  // across runs.
+  private final String text = "The-Quick-Brown-Fox-Jumps-Over-The-Lazy-Dog-0123456789";
+
+  // Ignore case substring with letters
+  private final String icLetters = "lazy-dog";
+  private final Pattern javaMatcherIcLetters = Pattern.compile(icLetters, Pattern.CASE_INSENSITIVE);
+  private final PatternMatcher customMatcherIcLetters = PatternMatcher.compile(icLetters).ignoreCase();
+
+  // Ignore case substring where case does not matter
+  private final String icDigits = "-0123";
+  private final Pattern javaMatcherIcDigits = Pattern.compile(icDigits, Pattern.CASE_INSENSITIVE);
+  private final PatternMatcher customMatcherIcDigits = PatternMatcher.compile(icDigits).ignoreCase();
+
+  // Ignore case multi-segment contains
+  private final String icMultiIndexOf = "QUICK.*FOX.*DOG";
+  private final Pattern javaMatcherIcMultiIndexOf =
+      Pattern.compile(icMultiIndexOf, Pattern.CASE_INSENSITIVE);
+  private final PatternMatcher customMatcherIcMultiIndexOf =
+      PatternMatcher.compile(icMultiIndexOf).ignoreCase();
+
+  // Repeated character class followed by more of the pattern
+  private final String charClassStar = "^[a-zA-Z-]*0123";
+  private final Pattern javaMatcherCharClassStar = Pattern.compile(charClassStar);
+  private final PatternMatcher customMatcherCharClassStar = PatternMatcher.compile(charClassStar);
+
   @Benchmark
   public void prefixString(Blackhole bh) {
     bh.consume(example.startsWith(exampleCopy));
@@ -200,22 +234,22 @@ public class PatternMatching {
 
   @Benchmark
   public void substrString(Blackhole bh) {
-    bh.consume(exampleCopy.contains(substr));
+    bh.consume(fixedInput.contains(substr));
   }
 
   @Benchmark
   public void substrJava(Blackhole bh) {
-    bh.consume(javaMatcherSubstr.matcher(exampleCopy).find());
+    bh.consume(javaMatcherSubstr.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void substrRe2j(Blackhole bh) {
-    bh.consume(re2jMatcherSubstr.matcher(exampleCopy).find());
+    bh.consume(re2jMatcherSubstr.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void substrCustom(Blackhole bh) {
-    bh.consume(customMatcherSubstr.matches(exampleCopy));
+    bh.consume(customMatcherSubstr.matches(fixedInput));
   }
 
   @Benchmark
@@ -235,32 +269,32 @@ public class PatternMatching {
 
   @Benchmark
   public void multiIndexOfJava(Blackhole bh) {
-    bh.consume(javaMatcherMultiIndexOf.matcher(exampleCopy).find());
+    bh.consume(javaMatcherMultiIndexOf.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void multiIndexOfRe2j(Blackhole bh) {
-    bh.consume(re2jMatcherMultiIndexOf.matcher(exampleCopy).find());
+    bh.consume(re2jMatcherMultiIndexOf.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void multiIndexOfCustom(Blackhole bh) {
-    bh.consume(customMatcherMultiIndexOf.matches(exampleCopy));
+    bh.consume(customMatcherMultiIndexOf.matches(fixedInput));
   }
 
   @Benchmark
   public void orJava(Blackhole bh) {
-    bh.consume(javaMatcherOr.matcher(exampleCopy).find());
+    bh.consume(javaMatcherOr.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void orRe2j(Blackhole bh) {
-    bh.consume(re2jMatcherOr.matcher(exampleCopy).find());
+    bh.consume(re2jMatcherOr.matcher(fixedInput).find());
   }
 
   @Benchmark
   public void orCustom(Blackhole bh) {
-    bh.consume(customMatcherOr.matches(exampleCopy));
+    bh.consume(customMatcherOr.matches(fixedInput));
   }
 
   @Benchmark
@@ -276,5 +310,45 @@ public class PatternMatching {
   @Benchmark
   public void listCustom(Blackhole bh) {
     bh.consume(customMatcherList.matches(list));
+  }
+
+  @Benchmark
+  public void icLettersJava(Blackhole bh) {
+    bh.consume(javaMatcherIcLetters.matcher(text).find());
+  }
+
+  @Benchmark
+  public void icLettersCustom(Blackhole bh) {
+    bh.consume(customMatcherIcLetters.matches(text));
+  }
+
+  @Benchmark
+  public void icDigitsJava(Blackhole bh) {
+    bh.consume(javaMatcherIcDigits.matcher(text).find());
+  }
+
+  @Benchmark
+  public void icDigitsCustom(Blackhole bh) {
+    bh.consume(customMatcherIcDigits.matches(text));
+  }
+
+  @Benchmark
+  public void icMultiIndexOfJava(Blackhole bh) {
+    bh.consume(javaMatcherIcMultiIndexOf.matcher(text).find());
+  }
+
+  @Benchmark
+  public void icMultiIndexOfCustom(Blackhole bh) {
+    bh.consume(customMatcherIcMultiIndexOf.matches(text));
+  }
+
+  @Benchmark
+  public void charClassStarJava(Blackhole bh) {
+    bh.consume(javaMatcherCharClassStar.matcher(text).find());
+  }
+
+  @Benchmark
+  public void charClassStarCustom(Blackhole bh) {
+    bh.consume(customMatcherCharClassStar.matches(text));
   }
 }

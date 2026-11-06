@@ -74,6 +74,8 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
         }
       }
       return Constants.NO_MATCH;
+    } else if (repeated instanceof CharClassMatcher) {
+      return matchesCharClass((CharClassMatcher) repeated, str, start, end);
     } else if (next != TrueMatcher.INSTANCE) {
       final int stop = end - next.minLength();
       int pos = start;
@@ -99,6 +101,35 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
         pos = repeated.matches(str, pos, end - pos);
       }
       return matchPos;
+    }
+  }
+
+  /**
+   * Fast path for a repeated character class such as {@code [0-9]*}. It is equivalent to the
+   * general case, but checks the class directly rather than calling {@code repeated.matches}
+   * for each character. That call site is megamorphic once many patterns have been compiled,
+   * so it cannot be inlined.
+   */
+  private int matchesCharClass(CharClassMatcher cls, String str, int start, int end) {
+    if (next == TrueMatcher.INSTANCE) {
+      // Greedy, consume as many characters from the class as possible
+      int pos = start;
+      while (pos < end && cls.matches(str.charAt(pos))) {
+        ++pos;
+      }
+      return pos;
+    } else {
+      final int stop = end - next.minLength();
+      for (int pos = start; pos <= stop; ++pos) {
+        int p = next.matches(str, pos, end - pos);
+        if (p >= start) {
+          return p;
+        }
+        if (pos >= end || !cls.matches(str.charAt(pos))) {
+          break;
+        }
+      }
+      return Constants.NO_MATCH;
     }
   }
 

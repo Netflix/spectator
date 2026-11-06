@@ -107,28 +107,18 @@ final class CharClassMatcher implements Matcher, Serializable {
     return ignoreCase;
   }
 
-  private char toOtherCase(char c) {
-    final char amount = 'a' - 'A';
-    if (c >= 'A' && c <= 'Z') {
-      return (char) (c + amount);
-    } else if (c >= 'a' && c <= 'z') {
-      return (char) (c - amount);
-    } else {
-      return c;
-    }
+
+  /**
+   * Returns true if the character is in the class. When ignoring case, the folded set
+   * already includes the other case of each letter, so a single lookup is sufficient.
+   */
+  boolean matches(char c) {
+    return ignoreCase ? foldedSet.contains(c) : set.contains(c);
   }
 
   @Override
   public int matches(String str, int start, int length) {
-    if (length > 0) {
-      char c = str.charAt(start);
-      boolean matched = ignoreCase
-          ? set.contains(c) || set.contains(toOtherCase(c))
-          : set.contains(c);
-      return matched ? start + 1 : Constants.NO_MATCH;
-    } else {
-      return Constants.NO_MATCH;
-    }
+    return length > 0 && matches(str.charAt(start)) ? start + 1 : Constants.NO_MATCH;
   }
 
   @Override

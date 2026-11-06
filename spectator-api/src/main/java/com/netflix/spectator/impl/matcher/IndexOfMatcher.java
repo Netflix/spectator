@@ -83,19 +83,10 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     return ts;
   }
 
-  private int indexOfIgnoreCase(String str, int offset) {
-    final int length = pattern.length();
-    final int end = (str.length() - length) + 1;
-    for (int i = offset; i < end; ++i) {
-      if (str.regionMatches(true, i, pattern, 0, length)) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
   private int indexOf(String str, int offset) {
-    return ignoreCase ? indexOfIgnoreCase(str, offset) : str.indexOf(pattern, offset);
+    return ignoreCase
+        ? PatternUtils.indexOfIgnoreCase(str, pattern, offset)
+        : str.indexOf(pattern, offset);
   }
 
   private boolean endsWithIgnoreCase(String str) {

@@ -112,17 +112,9 @@ final class IndexOfSeqMatcher implements Matcher, Serializable {
   }
 
   private int indexOf(String str, String seg, int offset) {
-    if (!ignoreCase) {
-      return str.indexOf(seg, offset);
-    }
-    final int segLength = seg.length();
-    final int end = (str.length() - segLength) + 1;
-    for (int i = offset; i < end; ++i) {
-      if (str.regionMatches(true, i, seg, 0, segLength)) {
-        return i;
-      }
-    }
-    return -1;
+    return ignoreCase
+        ? PatternUtils.indexOfIgnoreCase(str, seg, offset)
+        : str.indexOf(seg, offset);
   }
 
   @Override
