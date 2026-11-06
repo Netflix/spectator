@@ -15,6 +15,7 @@
  */
 package com.netflix.spectator.impl.matcher;
 
+import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -39,8 +40,30 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     PatternMatcher actual = PatternMatcher.compile(matcher.toString());
     Assertions.assertEquals(matcher, actual);
 
+    // The strings are used with other regex engines, so they should not split a surrogate
+    // pair unless the input already had a lone surrogate
+    if (!hasLoneSurrogate(regex)) {
+      Assertions.assertFalse(hasLoneSurrogate(matcher.toString()), matcher.toString());
+      PatternExpr expr = matcher.toPatternExpr(1000);
+      if (expr != null) {
+        Assertions.assertFalse(hasLoneSurrogate(expr.toString()), expr.toString());
+      }
+    }
+
     // Check we can serialize and deserialize the matchers
     MatcherSerializationTest.checkSerde(matcher);
+  }
+
+  private static boolean hasLoneSurrogate(String str) {
+    for (int i = 0; i < str.length(); i = str.offsetByCodePoints(i, 1)) {
+      // A code point is only a surrogate if it is not part of a pair. The code point should
+      // not be cast to char, that would truncate a supplementary code point like U+1D800.
+      int cp = str.codePointAt(i);
+      if (cp >= Character.MIN_SURROGATE && cp <= Character.MAX_SURROGATE) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test
@@ -135,5 +158,16 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     PatternMatcher m = PatternMatcher.compile(builder.toString());
     Assertions.assertTrue(m.matches("a"));
     Assertions.assertFalse(m.matches("c"));
+  }
+
+  @Test
+  public void toStringKeepsSurrogatePairs() {
+    // The string is used with other regex engines, so it should not have a lone surrogate
+    PatternMatcher m = PatternMatcher.compile("^(\uD83D\uDE00|\uD83D\uDE01)+$");
+    String str = m.toString();
+    Assertions.assertFalse(hasLoneSurrogate(str), str);
+    Pattern p = Pattern.compile(str);
+    Assertions.assertTrue(p.matcher("\uD83D\uDE00\uD83D\uDE01").find());
+    Assertions.assertFalse(p.matcher("\uD83D\uDE02").find());
   }
 }

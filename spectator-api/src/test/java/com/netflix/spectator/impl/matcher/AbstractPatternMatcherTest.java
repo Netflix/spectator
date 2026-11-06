@@ -526,6 +526,24 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void alternativesWithSurrogatePairs() {
+    // A common prefix is split by code point, so a surrogate pair is not split
+    String[] patterns = {
+        "^(\uD83D\uDE00|\uD83D\uDE01)+$", "^(\uD83D\uDE00a|\uD83D\uDE00b)$",
+        "^(\uD83D\uDE00|\uD83D\uDE01)x$", "(\uD83D\uDE00|\uD83D\uDE01)*y"
+    };
+    String[] values = {
+        "", "\uD83D\uDE00", "\uD83D\uDE00\uD83D\uDE01", "\uD83D\uDE02", "\uD83D\uDE00a",
+        "\uD83D\uDE00b", "\uD83D\uDE01x", "y", "\uD83D\uDE01y"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");
