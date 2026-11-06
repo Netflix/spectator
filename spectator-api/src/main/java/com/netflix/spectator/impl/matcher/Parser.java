@@ -53,15 +53,13 @@ class Parser {
     return m;
   }
 
+  /** Parse alternatives up to the end of the pattern or a closing parenthesis. */
   private Matcher expr() {
     List<Matcher> matchers = new ArrayList<>();
     matchers.add(term());
-    while (!isAtEnd() && peek() != ')' && peek() == '|') {
+    while (!isAtEnd() && peek() == '|') {
       advance();
       matchers.add(term());
-    }
-    if (!isAtEnd() && peek() == ')') {
-      advance();
     }
     return OrMatcher.create(matchers);
   }
@@ -286,31 +284,36 @@ class Parser {
     }
   }
 
+  /** Parse the expression for a group and the closing parenthesis. */
   private Matcher groupExpr() {
     Matcher m = expr();
-    if (previous() != ')') {
+    if (isAtEnd()) {
       throw error("unclosed group");
     }
+    advance();
     return m;
   }
 
   private Matcher group() {
     if (peek() == '?') {
       advance();
+      if (isAtEnd()) {
+        throw error("unclosed group");
+      }
       char c = advance();
       switch (c) {
         case '<': // Named capturing group
           advance(v -> v != '>');
-          if (isAtEnd()) {
+          if (previous() != '>') {
             throw error("unclosed name for capturing group");
           }
           return groupExpr();
         case ':': // Non-capturing group
           return groupExpr();
         case '=':
-          return new PositiveLookaheadMatcher(expr());
+          return new PositiveLookaheadMatcher(groupExpr());
         case '!':
-          return new NegativeLookaheadMatcher(expr());
+          return new NegativeLookaheadMatcher(groupExpr());
         default:
           throw unsupported("inline flags");
       }
@@ -347,14 +350,18 @@ class Parser {
   }
 
   private String name() {
+    if (isAtEnd()) {
+      throw error("missing character property name");
+    }
     char c = advance();
     if (c == '{') {
-      StringBuilder builder = new StringBuilder();
-      while (peek() != '}') {
-        builder.append(advance());
+      int start = current;
+      int end = tokens.indexOf('}', start);
+      if (end < 0) {
+        throw error("unclosed character property name");
       }
-      advance();
-      return builder.toString();
+      current = end + 1;
+      return tokens.substring(start, end);
     } else {
       return String.valueOf(c);
     }
@@ -494,8 +501,9 @@ class Parser {
             }
             if (!right.isEmpty()) {
               builder.intersection(right.build(false));
-            } else if (builder.isEmpty()) {
-              // Like java, an intersection needs at least one operand, e.g. [&&] is an error
+            } else if (builder.isEmpty() && !isAtEnd()) {
+              // Like java, an intersection needs at least one operand, e.g. [&&] is an error.
+              // At the end of the pattern, e.g. [&&, it is reported as an unclosed class.
               throw error("bad class syntax");
             }
             rangeStart = -1;
@@ -544,9 +552,10 @@ class Parser {
           break;
       }
     }
-    if (advance() != ']') {
+    if (isAtEnd()) {
       throw error("unclosed character class");
     }
+    advance();
     return builder.build(invert);
   }
 
@@ -665,9 +674,10 @@ class Parser {
 
   private Matcher meta(Matcher matcher) {
     int start = current - 1;
-    advance(c -> META.contains((char) c));
-    --current;
-    String quantifier = tokens.subSequence(start, current).toString();
+    while (!isAtEnd() && META.contains(peek())) {
+      advance();
+    }
+    String quantifier = tokens.substring(start, current);
     // Must be checked before the rest of the term is parsed, e.g. a*{3} is the same as a*
     ignoreFollowingRepeats();
     switch (quantifier) {
@@ -698,17 +708,22 @@ class Parser {
     return current >= tokens.length();
   }
 
+  /** Returns the next character or 0 if at the end of the pattern. */
   private char peek() {
-    return tokens.charAt(current);
+    return isAtEnd() ? '\0' : tokens.charAt(current);
   }
 
   private char previous() {
     return tokens.charAt(current - 1);
   }
 
+  /**
+   * Consume and return the next character or 0 if at the end of the pattern. Like
+   * {@link #peek()}, returning 0 rather than the last character means a caller that does
+   * not check for the end cannot mistake an earlier character for the next one.
+   */
   private char advance() {
-    if (!isAtEnd()) current++;
-    return previous();
+    return isAtEnd() ? '\0' : tokens.charAt(current++);
   }
 
   @SuppressWarnings("PMD.AvoidBranchingStatementAsLastInLoop")

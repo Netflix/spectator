@@ -591,6 +591,48 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void syntaxNotMixedWithWrapper() {
+    // The pattern is parsed on its own, so it cannot close or extend the group used to
+    // match anywhere in the string
+    testBadExpression("a)|(b", "unmatched closing parenthesis");
+    testBadExpression("a)", "unmatched closing parenthesis");
+    testBadExpression(")", "unmatched closing parenthesis");
+    testBadExpression("abc\\", "dangling escape");
+    testBadExpression("(a\\)", "unclosed group");
+    testBadExpression("(?=a", "unclosed group");
+    testBadExpression("(?!a", "unclosed group");
+    testBadExpression("(?", "unclosed group");
+    testBadExpression("(?<name", "unclosed name for capturing group");
+    testBadExpression("(?<name>a", "unclosed group");
+    testBadExpression("[a\\]", "unclosed character class");
+    testBadExpression("[&&", "unclosed character class");
+    testBadExpression("[!-", "illegal character range");
+    testBadExpression("\\p{Lower", "unclosed character property name");
+    testBadExpression("\\p", "missing character property name");
+    testBadExpression("[\\P", "missing character property name");
+    testBadExpression("?", "dangling modifier");
+  }
+
+  @Test
+  public void errorContextIsPattern() {
+    // The context shows the pattern and position without the wrapper text
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class, () -> PatternMatcher.compile("a)|(b"));
+    Assertions.assertEquals("unmatched closing parenthesis\na)|(b\n ^", e.getMessage());
+  }
+
+  @Test
+  public void quantifierAtEndOfPattern() {
+    String[] patterns = {"a*", "a+", "a?", "a*?", "a+?", "a??", "a*+", "a++", "a?+", "a{2}", "a{2,}?"};
+    String[] values = {"", "a", "aa", "aaa", "b"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void unsupportedFeatures() {
     testUnsupported("\\h", "horizontal whitespace class");
     testUnsupported("\\H", "horizontal whitespace class");
