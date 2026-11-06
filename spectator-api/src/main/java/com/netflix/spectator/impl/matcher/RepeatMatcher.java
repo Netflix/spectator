@@ -123,7 +123,9 @@ final class RepeatMatcher implements GreedyMatcher, Serializable {
   @Override
   public int matches(String str, int start, int length) {
     final int end = start + length;
-    if (possessive || min == max || next instanceof TrueMatcher) {
+    if (isSingleCharClass(repeated)) {
+      return matchesCharClass(repeated.as(), str, start, end);
+    } else if (possessive || min == max || next instanceof TrueMatcher) {
       int pos = consume(str, start, end);
       return (pos < 0 || next instanceof TrueMatcher)
           ? pos
@@ -132,6 +134,47 @@ final class RepeatMatcher implements GreedyMatcher, Serializable {
 
     // Greedy with a range, check the rest of the pattern after each repetition
     return matchesLongestFirst(str, start, end);
+  }
+
+  /**
+   * Returns true if the matcher is a class that only matches ASCII chars, so each
+   * repetition is a single char.
+   */
+  private static boolean isSingleCharClass(Matcher matcher) {
+    return matcher instanceof CharClassMatcher && !matcher.<CharClassMatcher>as().nonAscii();
+  }
+
+  /**
+   * Fast path for a repeated class such as {@code [0-9]{1,3}}. It is equivalent to the
+   * general case, but each repetition is a single char, so the class can be checked
+   * directly and the position for fewer repetitions is known. The call to
+   * {@code repeated.matches} is megamorphic once many patterns have been compiled, so it
+   * cannot be inlined.
+   */
+  private int matchesCharClass(CharClassMatcher cls, String str, int start, int end) {
+    final int limit = (int) Math.min((long) start + max, end);
+    int pos = start;
+    while (pos < limit && cls.matches(str.charAt(pos))) {
+      ++pos;
+    }
+    // Compare the count rather than start + min, that could overflow for a large min
+    if (pos - start < min) {
+      return Constants.NO_MATCH;
+    } else if (next instanceof TrueMatcher) {
+      return pos;
+    } else if (possessive) {
+      return next.matches(str, pos, end - pos);
+    }
+    // Greedy, try the most repetitions first. The count is at least min, so the sum
+    // cannot overflow.
+    final int stop = start + min;
+    for (; pos >= stop; --pos) {
+      int p = next.matches(str, pos, end - pos);
+      if (p >= 0) {
+        return p;
+      }
+    }
+    return Constants.NO_MATCH;
   }
 
   /**

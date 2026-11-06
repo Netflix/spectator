@@ -119,6 +119,30 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
   }
 
   @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  public void repeatLargeBoundCharClass() {
+    // A repeated class is checked directly. Adding a large min to the start position must
+    // not overflow, that would match without the repetitions or loop forever.
+    PatternMatcher m = PatternMatcher.compile("x(?=[ab]{2147483647})");
+    Assertions.assertFalse(m.matches("xa"));
+
+    PatternMatcher m2 = PatternMatcher.compile("xx(?:[ab]{2147483646,2147483647}y|z)");
+    Assertions.assertFalse(m2.matches("xxay"));
+    Assertions.assertFalse(m2.matches("xxaq"));
+    Assertions.assertTrue(m2.matches("xxz"));
+  }
+
+  @Test
+  public void possessiveClassMatchesAnyOnceCaseIgnored() {
+    // The class only matches any code point once the case is ignored and is then converted
+    // to '.', the possessive repetition should still consume the rest of the string
+    PatternMatcher m = PatternMatcher.compile("^(?:x[[^a]A]*)?+y").ignoreCase();
+    Assertions.assertFalse(m.matches("xy"));
+    Assertions.assertFalse(m.matches("xay"));
+    Assertions.assertTrue(m.matches("y"));
+  }
+
+  @Test
   public void negatedNestedCharClassAnyJdk() {
     // The negation applies to the whole class as in Java 9+, independent of the JDK version.
     // Named differently so it does not override the shared JDK 9+ test in the base class.

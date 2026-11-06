@@ -218,6 +218,11 @@ public class PatternMatching {
   private final Pattern javaMatcherBounded = Pattern.compile(bounded);
   private final PatternMatcher customMatcherBounded = PatternMatcher.compile(bounded);
 
+  // Class that matches any char, the same as .*
+  private final String matchAll = "[\\s\\S]*Lazy-Dog";
+  private final Pattern javaMatcherMatchAll = Pattern.compile(matchAll);
+  private final PatternMatcher customMatcherMatchAll = PatternMatcher.compile(matchAll);
+
   // Optional portion that can match different lengths
   private final String optional = "^(The-.*)?Lazy-Dog";
   private final Pattern javaMatcherOptional = Pattern.compile(optional);
@@ -381,5 +386,15 @@ public class PatternMatching {
   @Benchmark
   public void optionalCustom(Blackhole bh) {
     bh.consume(customMatcherOptional.matches(text));
+  }
+
+  @Benchmark
+  public void matchAllJava(Blackhole bh) {
+    bh.consume(javaMatcherMatchAll.matcher(text).find());
+  }
+
+  @Benchmark
+  public void matchAllCustom(Blackhole bh) {
+    bh.consume(customMatcherMatchAll.matches(text));
   }
 }

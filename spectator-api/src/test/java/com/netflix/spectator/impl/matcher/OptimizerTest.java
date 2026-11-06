@@ -172,6 +172,28 @@ public class OptimizerTest {
   }
 
   @Test
+  public void convertMatchAllCharClassToAny() {
+    AsciiSet all = AsciiSet.all();
+    Matcher input = new CharClassMatcher(all, all, false, true);
+    Assertions.assertEquals(AnyMatcher.INSTANCE, Optimizer.convertMatchAllCharClassToAny(input));
+  }
+
+  @Test
+  public void convertMatchAllCharClassToAnyAsciiOnly() {
+    // Does not match non-ASCII code points, so it is not the same as '.'
+    AsciiSet all = AsciiSet.all();
+    Matcher input = new CharClassMatcher(all, all, false, false);
+    Assertions.assertEquals(input, Optimizer.convertMatchAllCharClassToAny(input));
+  }
+
+  @Test
+  public void matchAllCharClassUsesIndexOf() {
+    Assertions.assertEquals(
+        new IndexOfMatcher("foo", TrueMatcher.INSTANCE),
+        PatternMatcher.compile("[\\s\\S]*foo"));
+  }
+
+  @Test
   public void removeStartFollowedByMatchAny() {
     Matcher input = SeqMatcher.create(
         StartMatcher.INSTANCE,
