@@ -47,7 +47,9 @@ public class SqlPatternMatcherTest extends AbstractPatternMatcherTest {
 
   private void checkSqlPattern(PatternMatcher matcher, String value) {
     String sqlPattern = matcher.toSqlPattern();
-    if (sqlPattern != null) {
+    // A '.' is written as '_', which in hsqldb matches a UTF-16 char rather than a code point
+    boolean supplementary = value.codePointCount(0, value.length()) != value.length();
+    if (sqlPattern != null && !(supplementary && hasSingleCharWildcard(sqlPattern))) {
       String desc = "[" + matcher + "] => [" + sqlPattern + "]";
       if (matcher.matches(value)) {
         Assertions.assertTrue(sqlMatches(sqlPattern, value), desc + " should match " + value);
@@ -55,6 +57,19 @@ public class SqlPatternMatcherTest extends AbstractPatternMatcherTest {
         Assertions.assertFalse(sqlMatches(sqlPattern, value), desc + " shouldn't match " + value);
       }
     }
+  }
+
+  /** Returns true if the pattern has a '_' wildcard, an escaped literal '\_' is ignored. */
+  private static boolean hasSingleCharWildcard(String pattern) {
+    for (int i = 0; i < pattern.length(); ++i) {
+      char c = pattern.charAt(i);
+      if (c == '\\') {
+        ++i;
+      } else if (c == '_') {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean sqlMatches(String pattern, String value) {

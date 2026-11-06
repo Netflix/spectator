@@ -54,7 +54,7 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     MatcherSerializationTest.checkSerde(matcher);
   }
 
-  private static boolean hasLoneSurrogate(String str) {
+  static boolean hasLoneSurrogate(String str) {
     for (int i = 0; i < str.length(); i = str.offsetByCodePoints(i, 1)) {
       // A code point is only a surrogate if it is not part of a pair. The code point should
       // not be cast to char, that would truncate a supplementary code point like U+1D800.

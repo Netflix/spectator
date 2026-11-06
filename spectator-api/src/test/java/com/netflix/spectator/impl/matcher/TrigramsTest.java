@@ -34,6 +34,22 @@ public class TrigramsTest {
   }
 
   @Test
+  public void surrogatePairs() {
+    // Each trigram is three code points
+    String s = "\uD83D\uDE00\uD83D\uDE01ab";
+    Assertions.assertEquals(
+        sortedSet("\uD83D\uDE00\uD83D\uDE01a", "\uD83D\uDE01ab"),
+        PatternUtils.computeTrigrams(s));
+    Assertions.assertEquals(
+        Collections.emptySortedSet(), PatternUtils.computeTrigrams("\uD83D\uDE00\uD83D\uDE01"));
+    Assertions.assertEquals(
+        sortedSet("a\uD83Db", "\uD83Dbc"), PatternUtils.computeTrigrams("a\uD83Dbc"));
+    Assertions.assertEquals(
+        sortedSet("x\uD83D\uDE00\uD83D\uDE01"),
+        PatternMatcher.compile("^x\uD83D\uDE00\uD83D\uDE01").trigrams());
+  }
+
+  @Test
   public void contains() {
     PatternMatcher m = PatternMatcher.compile(".*abcd");
     Assertions.assertEquals(sortedSet("abc", "bcd"), m.trigrams());

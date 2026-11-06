@@ -800,8 +800,8 @@ public class OptimizerTest {
   @Test
   public void ignoreCaseOptimizesFoldedClass() {
     // The class is not empty, but the folded set is, so it can never match
-    Assertions.assertEquals(FalseMatcher.INSTANCE, ignoreCaseMatcher("^[^\\x00-`b-\\x7f]$"));
-    Assertions.assertTrue(PatternMatcher.compile("^[^\\x00-`b-\\x7f]$").ignoreCase().neverMatches());
+    Assertions.assertEquals(FalseMatcher.INSTANCE, ignoreCaseMatcher("^[^\\x00-`b-\\x7f\\x{80}-\\x{10ffff}]$"));
+    Assertions.assertTrue(PatternMatcher.compile("^[^\\x00-`b-\\x7f\\x{80}-\\x{10ffff}]$").ignoreCase().neverMatches());
   }
 
   @Test

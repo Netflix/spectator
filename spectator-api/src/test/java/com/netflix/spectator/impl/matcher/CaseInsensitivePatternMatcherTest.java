@@ -126,7 +126,7 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
     Assertions.assertEquals(1, intersection.minLength());
 
     // Only matches 'a', and nothing if the case is ignored
-    PatternMatcher negated = PatternMatcher.compile("^[^\\x00-`b-\\x7f]$").ignoreCase();
+    PatternMatcher negated = PatternMatcher.compile("^[^\\x00-`b-\\x7f\\x{80}-\\x{10ffff}]$").ignoreCase();
     Assertions.assertFalse(negated.matches("a"));
     Assertions.assertFalse(negated.alwaysMatches());
     Assertions.assertEquals(0, negated.minLength());

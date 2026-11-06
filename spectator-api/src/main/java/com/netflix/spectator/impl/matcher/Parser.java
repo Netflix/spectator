@@ -375,6 +375,7 @@ class Parser {
   private static final class CharClassBuilder {
     private AsciiSet set = AsciiSet.none();
     private AsciiSet folded = AsciiSet.none();
+    private boolean nonAscii;
     private boolean empty = true;
 
     private void add(AsciiSet s, AsciiSet f) {
@@ -401,9 +402,16 @@ class Parser {
       add(AsciiSet.fromPattern(new String(new char[] {s, '-', e})));
     }
 
+    /** Add all non-ASCII code points. */
+    void addNonAscii() {
+      nonAscii = true;
+      empty = false;
+    }
+
     /** Add a named or nested class to the class. */
     void add(CharClassMatcher m) {
       add(m.set(), m.foldedSet());
+      nonAscii = nonAscii || m.nonAscii();
     }
 
     /** Intersect with a class. If nothing has been added yet, e.g. [&&a], then use it as is. */
@@ -413,6 +421,7 @@ class Parser {
       } else {
         set = set.intersection(m.set());
         folded = folded.intersection(m.foldedSet());
+        nonAscii = nonAscii && m.nonAscii();
       }
     }
 
@@ -422,8 +431,8 @@ class Parser {
      */
     CharClassMatcher build(boolean invert) {
       return invert
-          ? new CharClassMatcher(set.invert(), folded.invert(), false)
-          : new CharClassMatcher(set, folded, false);
+          ? new CharClassMatcher(set.invert(), folded.invert(), false, !nonAscii)
+          : new CharClassMatcher(set, folded, false, nonAscii);
     }
   }
 
@@ -436,23 +445,44 @@ class Parser {
     return charClass(invert);
   }
 
+  /** Code point at the start of the range of non-ASCII code points. */
+  private static final int MIN_NON_ASCII = 0x80;
+
   /**
    * Check that a decoded character can be used in a character class. Classes only support
-   * ASCII characters.
+   * ASCII characters, other than a range that includes all non-ASCII code points.
    */
   private int classChar(int cp) {
     if (cp >= 128) {
-      throw error("invalid pattern, '" + new String(Character.toChars(cp)) + "' is not ascii");
+      throw notAscii(cp);
     }
     return cp;
   }
 
-  /** Add a range of characters. Like java, it is an error if the end is before the start. */
-  private void addRange(CharClassBuilder builder, char s, char e) {
+  private IllegalArgumentException notAscii(int cp) {
+    return error("invalid pattern, '" + new String(Character.toChars(cp)) + "' is not ascii");
+  }
+
+  /**
+   * Add a range of characters. Like java, it is an error if the end is before the start.
+   * Non-ASCII code points are only supported if the range includes all of them, e.g.
+   * {@code [\x{80}-\x{10ffff}]}, which is how the class is written by toString.
+   */
+  private void addRange(CharClassBuilder builder, int s, int e) {
     if (e < s) {
       throw error("illegal character range");
     }
-    builder.add(s, e);
+    if (e < MIN_NON_ASCII) {
+      builder.add((char) s, (char) e);
+    } else if (s <= MIN_NON_ASCII && e == Character.MAX_CODE_POINT) {
+      if (s < MIN_NON_ASCII) {
+        builder.add((char) s, (char) (MIN_NON_ASCII - 1));
+      }
+      builder.addNonAscii();
+    } else {
+      // Any other range with non-ASCII code points is not supported
+      throw notAscii(s < MIN_NON_ASCII ? e : s);
+    }
   }
 
   /**
@@ -516,8 +546,11 @@ class Parser {
           checkEscape();
           tmp = namedCharClass();
           if (tmp == null) {
-            rangeStart = classChar(escapedChar());
-            builder.add((char) rangeStart);
+            rangeStart = escapedChar();
+            if (rangeStart != MIN_NON_ASCII || peek() != '-') {
+              // The start of the non-ASCII range is only added with the range
+              builder.add((char) classChar(rangeStart));
+            }
           } else {
             rangeStart = -1;
             builder.add(tmp);
@@ -535,13 +568,20 @@ class Parser {
               if (namedCharClass() != null) {
                 throw error("illegal character range");
               }
-              end = classChar(escapedChar());
-            } else {
+              end = escapedChar();
+            } else if (isAtEnd()) {
               end = advance();
+            } else {
+              // Keep a surrogate pair together so the end is the code point
+              end = tokens.codePointAt(current);
+              current = tokens.offsetByCodePoints(current, 1);
             }
-            addRange(builder, (char) rangeStart, (char) end);
+            addRange(builder, rangeStart, end);
             rangeStart = -1;
           } else {
+            if (rangeStart >= MIN_NON_ASCII) {
+              classChar(rangeStart);
+            }
             builder.add('-');
             rangeStart = c;
           }
@@ -572,7 +612,8 @@ class Parser {
    * the case is folded before negation, e.g. {@code (?i)\\P{Lower}} doesn't match any letter.
    */
   private static CharClassMatcher negated(AsciiSet set) {
-    return new CharClassMatcher(set.invert(), CharClassMatcher.withOtherCase(set).invert(), false);
+    AsciiSet folded = CharClassMatcher.withOtherCase(set).invert();
+    return new CharClassMatcher(set.invert(), folded, false, true);
   }
 
   private Matcher repeat(Matcher matcher) {

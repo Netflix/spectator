@@ -354,7 +354,7 @@ final class Optimizer {
   static Matcher convertEmptyCharClassToFalse(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
       CharClassMatcher m = matcher.as();
-      return m.set().isEmpty() && m.foldedSet().isEmpty()
+      return m.isEmpty()
           ? FalseMatcher.INSTANCE
           : matcher;
     }
@@ -369,11 +369,11 @@ final class Optimizer {
   static Matcher convertSingleCharClassToSeq(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
       // Only if the fold is simple, otherwise the CharSeqMatcher would ignore case
-      // differently, e.g. for [^\\x00-`b-\\x7f], only 'a', which matches nothing if
+      // differently, e.g. for [a&&[^A]], only 'a', which matches nothing if
       // the case is ignored.
       CharClassMatcher m = matcher.as();
       Optional<Character> opt = m.set().character();
-      if (opt.isPresent() && m.isSimpleFold()) {
+      if (opt.isPresent() && m.isSimpleFold() && !m.nonAscii()) {
         return new CharSeqMatcher(String.valueOf(opt.get()), m.isIgnoreCase());
       }
     }

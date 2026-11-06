@@ -66,8 +66,10 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
   public int matches(String str, int start, int length) {
     final int end = start + length;
     if (repeated instanceof AnyMatcher) {
+      // Like java, each repetition is a code point, so the next matcher is never tried
+      // between the chars of a surrogate pair
       final int stop = end - next.minLength();
-      for (int pos = start; pos >= 0 && pos <= stop; ++pos) {
+      for (int pos = start; pos >= 0 && pos <= stop; pos = PatternUtils.nextCodePoint(str, pos, end)) {
         int p = next.matches(str, pos, end - pos);
         if (p >= start) {
           return p;
@@ -119,8 +121,11 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
       }
       return pos;
     } else {
+      // As with the class, each repetition is a code point, so the next matcher is never
+      // tried between the chars of a surrogate pair
       final int stop = end - next.minLength();
-      for (int pos = start; pos <= stop; ++pos) {
+      int pos = start;
+      while (pos <= stop) {
         int p = next.matches(str, pos, end - pos);
         if (p >= start) {
           return p;
@@ -128,6 +133,7 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
         if (pos >= end || !cls.matches(str.charAt(pos))) {
           break;
         }
+        pos = PatternUtils.nextCodePoint(str, pos, end);
       }
       return Constants.NO_MATCH;
     }

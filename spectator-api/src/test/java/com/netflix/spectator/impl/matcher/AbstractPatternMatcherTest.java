@@ -594,6 +594,45 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void codePoints() {
+    // Like java, '.' and a class that includes non-ASCII characters, e.g. [^a], match a
+    // code point, so a surrogate pair is matched as a whole
+    String[] patterns = {
+        "^.$", "^..$", "^.{2}$", "^a.b$", "^[^a]$", "^[^a]{2}$", "^[^a]+$", "^[^a]*$",
+        "^x[^a]y$", "^\\S$", "^\\W+$", "^\\D\\D$", "^\\P{Alpha}$", "[^a-z]", "^[^\\s\\S]$",
+        "^[\\x00-\\x{10ffff}]$", "^[\\x{80}-\\x{10ffff}]+$", "^[^\\x{80}-\\x{10ffff}]$",
+        "^[a\\x{80}-\\x{10ffff}]$", "^[^a\\x{80}-\\x{10ffff}]$", "^[a-c\\W]$", "(?!b)\\W$",
+        // Repetitions, including the implicit .* at the start, should not stop between the
+        // chars of a surrogate pair
+        "(?!😀)\\S", "(?!😀).$", "^.*(?!😀)\\W$",
+        "^[^a]*(?!😀)\\W$", "x.*(?!😀)[^a]$", "(?!😀)(?=.{3})",
+        "^[\\x{80}-􏿿]$"
+    };
+    String[] values = {
+        "", "a", "b", "-", "\u00E9", "ab", "a\u00E9", "\uD83D\uDE00", "\uD83D\uDE00\uD83D\uDE00",
+        "x\uD83D\uDE00y", "a\uD83D\uDE00b", "\uD83D", "\uDE00", "\uDE00\uD83D", "a\uD83D\uDE00",
+        "\uD83D\uDE00a", "\uD801\uDC00", "\uDBFF\uDFFF"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+
+    // Nested classes and intersections are parsed differently by java 8
+    if (JavaVersion.major() >= 9) {
+      String[] nested = {
+          "^[^[^b]]$", "^[^a&&[^b]]$", "^[\\S&&[^a]]$", "^[a-z&&\\W]$", "^[\\W&&\\S]$"
+      };
+      for (String p : nested) {
+        for (String v : values) {
+          testRE(p, v);
+        }
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");

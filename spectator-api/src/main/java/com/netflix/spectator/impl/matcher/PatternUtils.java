@@ -250,9 +250,9 @@ public final class PatternUtils {
   /** Convert to a matchers that ignores the case. */
   static Matcher ignoreCase(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
-      // The folded set can be empty even if the set is not, e.g. [^\\x00-`b-\\x7f].
+      // The folded set can be empty even if the set is not, e.g. [a&&[^A]].
       CharClassMatcher m = matcher.<CharClassMatcher>as().withIgnoreCase();
-      return m.set().isEmpty() ? FalseMatcher.INSTANCE : m;
+      return m.isEmpty() ? FalseMatcher.INSTANCE : m;
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       return new CharSeqMatcher(m.pattern(), true);
@@ -449,9 +449,9 @@ public final class PatternUtils {
   /**
    * Create a matcher for anything other than the sequence of characters matched by the
    * lookahead, or null if the lookahead is not a sequence of single character matchers or
-   * is longer than {@link #MAX_INLINE_LOOKAHEAD_LENGTH}. It will also be null if an inverted
-   * set cannot be written as a negated class. The end of the string is also allowed as the
-   * lookahead would not match.
+   * is longer than {@link #MAX_INLINE_LOOKAHEAD_LENGTH}. It will also be null if a class in
+   * the lookahead matches every code point, as the inverted class would be empty. The end of
+   * the string is also allowed as the lookahead would not match.
    */
   private static Matcher negateCharSeq(Matcher matcher) {
     List<CharClassMatcher> classes = new ArrayList<>();
@@ -466,14 +466,11 @@ public final class PatternUtils {
       List<Matcher> alternatives = new ArrayList<>(3);
       alternatives.add(EndMatcher.INSTANCE);
       if (cls != null) {
-        // AsciiSet cannot include non-ascii characters, but they would not match the
-        // lookahead. The inverted class must be written as a negated class, e.g. [^b],
-        // so that engines like RE2 will match non-ascii characters as well. The folded
-        // set is inverted as well so that if the case is ignored later, [^b] will match
-        // neither 'b' nor 'B'.
-        AsciiSet inverted = cls.set().invert();
-        Matcher m = new CharClassMatcher(inverted, cls.foldedSet().invert(), false);
-        if (inverted.isEmpty() || !m.toString().startsWith("[^")) {
+        // The folded set is inverted as well so that if the case is ignored later, [^b]
+        // will match neither 'b' nor 'B'.
+        CharClassMatcher m = new CharClassMatcher(
+            cls.set().invert(), cls.foldedSet().invert(), false, !cls.nonAscii());
+        if (m.isEmpty()) {
           return null;
         }
         alternatives.add(m);
@@ -511,7 +508,7 @@ public final class PatternUtils {
     } else if (matcher instanceof CharClassMatcher) {
       CharClassMatcher m = matcher.as();
       classes.add(m.isIgnoreCase()
-          ? new CharClassMatcher(CharClassMatcher.withOtherCase(m.set()))
+          ? new CharClassMatcher(m.foldedSet(), m.foldedSet(), false, m.nonAscii())
           : m);
       return true;
     } else if (matcher instanceof AnyMatcher) {
@@ -1029,17 +1026,43 @@ public final class PatternUtils {
     return folded >= 'a' && folded <= 'z' ? (char) (c ^ 0x20) : c;
   }
 
-  /** Compute the set of trigrams for an input string. */
+  /**
+   * Compute the set of trigrams for an input string. Each trigram is three code points, so
+   * a surrogate pair is never split and a trigram with supplementary characters, such as
+   * emoji, will be longer than three chars. An index of the values should be built with
+   * this method so that the trigrams are consistent.
+   */
   public static SortedSet<String> computeTrigrams(String input) {
-    if (input.length() < 3) {
+    final int length = input.length();
+    if (length < 3) {
       return Collections.emptySortedSet();
-    } else {
-      SortedSet<String> trigrams = new TreeSet<>();
-      int n = input.length() - 3;
-      for (int i = 0; i <= n; ++i) {
-        trigrams.add(input.substring(i, i + 3));
-      }
-      return trigrams;
     }
+    // The indices a, b, and c are the starts of the three code points of the current
+    // trigram. The length is at least 3, so b is always before the end.
+    SortedSet<String> trigrams = new TreeSet<>();
+    int a = 0;
+    int b = nextCodePoint(input, a, length);
+    int c = nextCodePoint(input, b, length);
+    while (c < length) {
+      int d = nextCodePoint(input, c, length);
+      trigrams.add(input.substring(a, d));
+      a = b;
+      b = c;
+      c = d;
+    }
+    return trigrams;
+  }
+
+  /**
+   * Returns the index after the code point that starts at {@code i}. Like java, a surrogate
+   * pair is a single code point, so it is consumed as a whole if it ends before {@code end}.
+   * Any other char, including a lone surrogate, is a single code point.
+   */
+  static int nextCodePoint(String str, int i, int end) {
+    return i + 1 < end
+        && Character.isHighSurrogate(str.charAt(i))
+        && Character.isLowSurrogate(str.charAt(i + 1))
+        ? i + 2
+        : i + 1;
   }
 }
