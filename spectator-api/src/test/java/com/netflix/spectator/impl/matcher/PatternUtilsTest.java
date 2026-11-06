@@ -28,178 +28,108 @@ import java.util.regex.Pattern;
 
 public class PatternUtilsTest {
 
-  @Test
-  public void expandTab() {
-    Assertions.assertEquals("\t", PatternUtils.expandEscapedChars("\\t"));
+  /** Check that the escaped pattern is a literal that only matches the expected string. */
+  private static void assertLiteral(String expected, String pattern) {
+    PatternMatcher m = PatternMatcher.compile("^" + pattern + "$");
+    Assertions.assertTrue(m.matches(expected), pattern);
+    Assertions.assertFalse(m.matches(expected + expected), pattern);
+    Assertions.assertFalse(m.matches(""), pattern);
+  }
+
+  private static void assertInvalid(String pattern) {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> PatternMatcher.compile(pattern));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> Pattern.compile(pattern));
   }
 
   @Test
-  public void expandNewLine() {
-    Assertions.assertEquals("\n", PatternUtils.expandEscapedChars("\\n"));
+  public void escapedControlChars() {
+    assertLiteral("\t", "\\t");
+    assertLiteral("\n", "\\n");
+    assertLiteral("\r", "\\r");
+    assertLiteral("\f", "\\f");
+    assertLiteral("\u0007", "\\a");
+    assertLiteral("\u001B", "\\e");
   }
 
   @Test
-  public void expandCarriageReturn() {
-    Assertions.assertEquals("\r", PatternUtils.expandEscapedChars("\\r"));
+  public void escapedSlash() {
+    assertLiteral("\\", "\\\\");
   }
 
   @Test
-  public void expandFormFeed() {
-    Assertions.assertEquals("\f", PatternUtils.expandEscapedChars("\\f"));
-  }
-
-  @Test
-  public void expandAlert() {
-    Assertions.assertEquals("\u0007", PatternUtils.expandEscapedChars("\\a"));
-  }
-
-  @Test
-  public void expandEscape() {
-    Assertions.assertEquals("\u001B", PatternUtils.expandEscapedChars("\\e"));
-  }
-
-  @Test
-  public void expandSlash() {
-    Assertions.assertEquals("\\\\", PatternUtils.expandEscapedChars("\\\\"));
-  }
-
-  @Test
-  public void expandOctalEmpty() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\0"));
-  }
-
-  @Test
-  public void expandOctal() {
+  public void escapedOctal() {
     for (int i = 0; i < 128; ++i) {
-      String expected = literal(i);
-      String str = "\\0" + Integer.toString(i, 8);
-      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+      assertLiteral(Character.toString((char) i), "\\0" + Integer.toString(i, 8));
     }
+    assertInvalid("\\0");
+    assertInvalid("\\0AAA");
   }
 
   @Test
-  public void expandOctalInvalid() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\0AAA"));
-  }
-
-  @Test
-  public void expandOctalMax() {
+  public void escapedOctalMax() {
     // Max octal value is \0377, for \0400 it is \040 followed by a literal 0
-    Assertions.assertEquals("ÿ",PatternUtils.expandEscapedChars("\\0377"));
-    Assertions.assertEquals(" 0", PatternUtils.expandEscapedChars("\\0400"));
-    Assertions.assertEquals("'7", PatternUtils.expandEscapedChars("\\0477"));
-  }
-
-  private static String literal(int i) {
-    String c = Character.toString((char) i);
-    return "\\^$.|?*+()[]{}-&".contains(c) ? "\\" + c : c;
+    assertLiteral("\u00FF", "\\0377");
+    assertLiteral(" 0", "\\0400");
+    assertLiteral("'7", "\\0477");
   }
 
   @Test
-  public void expandHexLower() {
-    for (int i = 0; i < 0xFF; ++i) {
-      String expected = literal(i);
-      String str = String.format("\\x%02x", i);
-      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+  public void escapedHex() {
+    for (int i = 0; i <= 0xFF; ++i) {
+      String expected = Character.toString((char) i);
+      assertLiteral(expected, String.format("\\x%02x", i));
+      assertLiteral(expected, String.format("\\x%02X", i));
+      assertLiteral(expected, String.format("\\x{%x}", i));
     }
+    assertLiteral("\uD83D\uDE00", "\\x{1F600}");
+    assertInvalid("\\xF");
+    assertInvalid("\\xZZ");
+    assertInvalid("\\x+1");
+    assertInvalid("\\x-1");
+    assertInvalid("\\x\uFF11\uFF12");
+    assertInvalid("\\x{}");
+    assertInvalid("\\x{110000}");
+    assertInvalid("\\x{FFFFFFFFF}");
+    assertInvalid("\\x{41");
   }
 
   @Test
-  public void expandHexUpper() {
-    for (int i = 0; i < 0xFF; ++i) {
-      String expected = literal(i);
-      String str = String.format("\\x%02X", i);
-      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
+  public void escapedUnicode() {
+    for (int i = 0; i <= 0xFFFF; ++i) {
+      assertLiteral(Character.toString((char) i), String.format("\\u%04x", i));
     }
+    assertInvalid("\\u00A");
+    assertInvalid("\\uZZZZ");
+    assertInvalid("\\u+02b");
+    assertInvalid("\\u-02b");
   }
 
   @Test
-  public void expandHexPartial() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\xF"));
+  public void escapedOther() {
+    assertLiteral("[", "\\[");
+    assertLiteral("+", "\\+");
+    assertLiteral("\u00E9", "\\\u00E9");
+    assertInvalid("\\");
+    assertInvalid("\\y");
+    assertInvalid("\\E");
   }
 
   @Test
-  public void expandHexInvalid() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\xZZ"));
-  }
-
-  @Test
-  public void expandHexSign() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\x+1"));
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\x-1"));
-  }
-
-  @Test
-  public void expandHexNonAsciiDigit() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\x\uFF11\uFF12"));
-  }
-
-  @Test
-  public void expandUnicode() {
-    for (int i = 0; i < 0xFFFF; ++i) {
-      String expected = literal(i);
-      String str = String.format("\\u%04x", i);
-      Assertions.assertEquals(expected, PatternUtils.expandEscapedChars(str));
-    }
-  }
-
-  @Test
-  public void expandQuotation() {
+  public void removeQuotations() {
     Assertions.assertEquals(
-        "\\Q\\x2b\\t\\E\\+",
-        PatternUtils.expandEscapedChars("\\Q\\x2b\\t\\E\\x2b"));
-    Assertions.assertEquals("\\Q\\x2b", PatternUtils.expandEscapedChars("\\Q\\x2b"));
+        "\\\\x2b\\\\t\\x2b", PatternUtils.removeQuotations("\\Q\\x2b\\t\\E\\x2b"));
+    Assertions.assertEquals("a\\+b", PatternUtils.removeQuotations("\\Qa+b"));
+    Assertions.assertEquals("abc", PatternUtils.removeQuotations("abc"));
+    // Leading digit is a hex escape so it cannot join a preceding escape, e.g. \07
+    Assertions.assertEquals("\\07\\x37a8", PatternUtils.removeQuotations("\\07\\Q7a8\\E"));
   }
 
   @Test
-  public void expandEmptyQuotation() {
-    Assertions.assertEquals("a*?", PatternUtils.expandEscapedChars("a*\\Q\\E?"));
-    Assertions.assertEquals("a", PatternUtils.expandEscapedChars("\\Q\\E\\Q\\Ea\\Q\\E"));
-    Assertions.assertEquals("\\\\Q\\E", PatternUtils.expandEscapedChars("\\\\Q\\E"));
-    Assertions.assertEquals("\\Q", PatternUtils.expandEscapedChars("\\Q"));
-  }
-
-  @Test
-  public void expandUnicodePartial() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\u00A"));
-  }
-
-  @Test
-  public void expandUnicodeInvalid() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\uZZZZ"));
-  }
-
-  @Test
-  public void expandUnicodeSign() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\u+02b"));
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\u-02b"));
-  }
-
-  @Test
-  public void danglingEscape() {
-    Assertions.assertThrows(IllegalArgumentException.class,
-        () -> PatternUtils.expandEscapedChars("\\"));
-  }
-
-  @Test
-  public void other() {
-    Assertions.assertEquals("\\[", PatternUtils.expandEscapedChars("\\["));
-  }
-
-  @Test
-  public void nonEscapedData() {
-    Assertions.assertEquals("abc", PatternUtils.expandEscapedChars("abc"));
+  public void removeEmptyQuotations() {
+    Assertions.assertEquals("a*?", PatternUtils.removeQuotations("a*\\Q\\E?"));
+    Assertions.assertEquals("a", PatternUtils.removeQuotations("\\Q\\E\\Q\\Ea\\Q\\E"));
+    Assertions.assertEquals("\\\\Q\\E", PatternUtils.removeQuotations("\\\\Q\\E"));
+    Assertions.assertEquals("", PatternUtils.removeQuotations("\\Q"));
   }
 
   @Test

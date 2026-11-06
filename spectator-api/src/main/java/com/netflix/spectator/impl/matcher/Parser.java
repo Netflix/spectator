@@ -72,11 +72,7 @@ class Parser {
       char c = advance();
       switch (c) {
         case '\\':
-          if (peek() == 'Q') {
-            quotation(matchers);
-          } else {
-            matchers.add(escape());
-          }
+          matchers.add(escape());
           break;
         case '^':
           matchers.add(StartMatcher.INSTANCE);
@@ -133,43 +129,160 @@ class Parser {
   }
 
   private Matcher escape() {
+    checkEscape();
+    char c = peek();
+    switch (c) {
+      case 'b':
+      case 'B':
+        throw unsupported("word boundary");
+      case 'A':
+      case 'G':
+      case 'Z':
+      case 'z':
+        throw unsupported("boundary matcher");
+      case 'R':
+      case 'X':
+        throw unsupported("escape sequence \\" + c);
+      case 'k':
+        throw unsupported("back references");
+      default:
+        if (c != '0' && Constants.DIGIT.contains(c)) {
+          throw unsupported("back references");
+        }
+        break;
+    }
+    CharClassMatcher m = namedCharClass();
+    return m == null ? new CharSeqMatcher(new String(Character.toChars(escapedChar()))) : m;
+  }
+
+  /**
+   * Check the character after a backslash for escapes that are valid in any context, but
+   * are not supported. The backslash has already been consumed. Escapes that are only valid
+   * outside of a character class, e.g. boundary matchers, are checked by {@link #escape()}.
+   * Like java, they are illegal in a class and are rejected by {@link #escapedChar()}.
+   */
+  private void checkEscape() {
+    if (isAtEnd()) {
+      throw error("dangling escape");
+    }
     char c = peek();
     if (c == 'c') {
       throw unsupported("control character");
-    } else if (Constants.DIGIT.contains(c) || c == 'k') {
-      throw unsupported("back references");
-    } else {
-      CharClassMatcher m = namedCharClass();
-      if (m == null) {
-        advance();
-        return literal();
-      } else {
-        return m;
-      }
+    } else if (c == 'N') {
+      throw unsupported("escape sequence \\N");
     }
   }
 
   /**
-   * Add the literal text of a quotation, {@code \\Q...\\E}. Like java, a quantifier
-   * following the quotation only applies to the last code point, e.g. {@code \\Qab\\E{2}}
-   * is {@code ab{2}}. An empty quotation adds nothing. Empty quotations are normally
-   * removed by {@link PatternUtils#expandEscapedChars(String)} so that the elements on
-   * either side are joined, e.g. {@code a*\\Q\\E?} is {@code a*?}.
+   * Decode an escaped literal character after the backslash and return the code point.
+   * Like java, ASCII letters and digits that are not a known escape are an error, any other
+   * character is a literal, e.g. \\+.
    */
-  private void quotation(List<Matcher> matchers) {
-    int start = current + 1;
-    int end = tokens.indexOf("\\E", start);
-    if (end == -1) {
-      throw error("unclosed quotation");
+  private int escapedChar() {
+    char c = advance();
+    switch (c) {
+      case 't': return '\t';
+      case 'n': return '\n';
+      case 'r': return '\r';
+      case 'f': return '\f';
+      case 'a': return '\u0007';
+      case 'e': return '\u001B';
+      case '0': return octalEscape();
+      case 'x': return hexEscape();
+      case 'u': return unicodeEscape();
+      default:
+        if (Constants.ALNUM.contains(c)) {
+          --current;
+          throw error("illegal/unsupported escape sequence");
+        }
+        // Keep a surrogate pair together, e.g. for an escaped emoji
+        int cp = tokens.codePointAt(current - 1);
+        current = tokens.offsetByCodePoints(current - 1, 1);
+        return cp;
     }
-    current = end + 2;
-    if (start < end) {
-      // Character before start is 'Q', so the offset cannot be before the start
-      int last = tokens.offsetByCodePoints(end, -1);
-      if (start < last) {
-        matchers.add(new CharSeqMatcher(tokens.substring(start, last)));
+  }
+
+  /** Octal escape, \\0n, \\0nn, or \\0mnn where m is 0-3. */
+  private int octalEscape() {
+    int start = current;
+    int end = start;
+    while (end < tokens.length() && end < start + 3 && isOctal(tokens.charAt(end))) {
+      ++end;
+    }
+    if (end == start) {
+      throw error("invalid octal escape sequence");
+    }
+    if (end - start == 3 && tokens.charAt(start) > '3') {
+      // Max is \\0377, otherwise the last digit is a literal following the escape
+      --end;
+    }
+    current = end;
+    return Integer.parseInt(tokens.substring(start, end), 8);
+  }
+
+  private static boolean isOctal(char c) {
+    return c >= '0' && c <= '7';
+  }
+
+  /** Hexadecimal escape, \\xhh or \\x{h...h}. */
+  private int hexEscape() {
+    if (!isAtEnd() && peek() == '{') {
+      int start = current + 1;
+      int end = tokens.indexOf('}', start);
+      if (end <= start) {
+        throw error("invalid hexadecimal escape sequence");
       }
-      matchers.add(new CharSeqMatcher(tokens.substring(last, end)));
+      int cp = parseHex(start, end, "hexadecimal");
+      if (cp > Character.MAX_CODE_POINT) {
+        throw error("hexadecimal code point is too big");
+      }
+      current = end + 1;
+      return cp;
+    }
+    return parseFixedHex(2, "hexadecimal");
+  }
+
+  /**
+   * Unicode escape, \\uhhhh. Like java, a high surrogate followed by an escaped low
+   * surrogate is a single code point.
+   */
+  private int unicodeEscape() {
+    int c = parseFixedHex(4, "unicode");
+    if (Character.isHighSurrogate((char) c) && tokens.startsWith("\\u", current)) {
+      int saved = current;
+      current += 2;
+      int low = parseFixedHex(4, "unicode");
+      if (Character.isLowSurrogate((char) low)) {
+        return Character.toCodePoint((char) c, (char) low);
+      }
+      current = saved;
+    }
+    return c;
+  }
+
+  private int parseFixedHex(int n, String mode) {
+    int start = current;
+    int end = start + n;
+    if (end > tokens.length()) {
+      throw error("invalid " + mode + " escape sequence");
+    }
+    int v = parseHex(start, end, mode);
+    current = end;
+    return v;
+  }
+
+  @SuppressWarnings("PMD.PreserveStackTrace")
+  private int parseHex(int start, int end, String mode) {
+    // Validate explicitly as Integer.parseInt allows a leading sign and non-ascii digits
+    for (int i = start; i < end; ++i) {
+      if (!Constants.XDIGIT.contains(tokens.charAt(i))) {
+        throw error("invalid " + mode + " escape sequence");
+      }
+    }
+    try {
+      return Integer.parseInt(tokens.substring(start, end), 16);
+    } catch (NumberFormatException e) {
+      throw error("hexadecimal code point is too big");
     }
   }
 
@@ -316,6 +429,17 @@ class Parser {
     return charClass(invert);
   }
 
+  /**
+   * Check that a decoded character can be used in a character class. Classes only support
+   * ASCII characters.
+   */
+  private int classChar(int cp) {
+    if (cp >= 128) {
+      throw error("invalid pattern, '" + new String(Character.toChars(cp)) + "' is not ascii");
+    }
+    return cp;
+  }
+
   /** Add a range of characters. Like java, it is an error if the end is before the start. */
   private void addRange(CharClassBuilder builder, char s, char e) {
     if (e < s) {
@@ -381,11 +505,11 @@ class Parser {
           }
           break;
         case '\\':
+          checkEscape();
           tmp = namedCharClass();
           if (tmp == null) {
-            c = advance();
-            rangeStart = c;
-            builder.add(c);
+            rangeStart = classChar(escapedChar());
+            builder.add((char) rangeStart);
           } else {
             rangeStart = -1;
             builder.add(tmp);
@@ -396,13 +520,18 @@ class Parser {
           // is a-c, '-', and 'e'. If followed by a nested class, then '-' is a literal.
           // Like java, a range that ends with a named class, e.g. [a-\\w], is an error.
           if (rangeStart >= 0 && peek() != ']' && peek() != '[') {
+            int end;
             if (peek() == '\\') {
               advance();
+              checkEscape();
               if (namedCharClass() != null) {
                 throw error("illegal character range");
               }
+              end = classChar(escapedChar());
+            } else {
+              end = advance();
             }
-            addRange(builder, (char) rangeStart, advance());
+            addRange(builder, (char) rangeStart, (char) end);
             rangeStart = -1;
           } else {
             builder.add('-');
