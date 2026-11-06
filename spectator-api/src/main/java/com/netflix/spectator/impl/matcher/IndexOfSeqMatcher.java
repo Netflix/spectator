@@ -108,7 +108,9 @@ final class IndexOfSeqMatcher implements Matcher, Serializable {
   }
 
   private boolean regionMatches(String str, int offset, String seg) {
-    return str.regionMatches(ignoreCase, offset, seg, 0, seg.length());
+    return ignoreCase
+        ? PatternUtils.regionMatchesIgnoreCase(str, offset, seg)
+        : str.startsWith(seg, offset);
   }
 
   private int indexOf(String str, String seg, int offset) {

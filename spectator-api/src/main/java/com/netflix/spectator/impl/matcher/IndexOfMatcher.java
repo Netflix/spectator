@@ -90,9 +90,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   }
 
   private boolean endsWithIgnoreCase(String str) {
-    final int length = pattern.length();
-    final int offset = str.length() - length;
-    return str.regionMatches(true, offset, pattern, 0, length);
+    return PatternUtils.regionMatchesIgnoreCase(str, str.length() - pattern.length(), pattern);
   }
 
   private boolean endsWith(String str, int offset) {

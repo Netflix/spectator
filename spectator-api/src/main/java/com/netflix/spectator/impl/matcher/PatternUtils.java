@@ -47,14 +47,13 @@ public final class PatternUtils {
   }
 
   /**
-   * Returns true if ignoring the case could change which characters match the given
-   * character. That is the case for ASCII letters and any character outside of the ASCII
-   * range. For other ASCII characters, such as digits or punctuation, only the character
-   * itself will match. This is verified for all characters by the tests.
+   * Returns true if ignoring the case changes which characters match the given character.
+   * Only ASCII letters are folded, see {@link #regionMatchesIgnoreCase(String, int, String)},
+   * so for any other character only the character itself will match.
    */
   static boolean caseMatters(char c) {
-    final char lower = (char) (c | 0x20);
-    return c >= 128 || (lower >= 'a' && lower <= 'z');
+    final int lower = c | 0x20;
+    return lower >= 'a' && lower <= 'z';
   }
 
   /** Returns true if ignoring the case could change which strings match the given string. */
@@ -70,17 +69,15 @@ public final class PatternUtils {
 
   /**
    * Find the first position at or after the offset where the pattern occurs in the string
-   * ignoring the case. The result is the same as checking
-   * {@code str.regionMatches(true, i, pattern, 0, pattern.length())} for each position, but
-   * it avoids most of the per-position checks:
+   * ignoring the case of ASCII letters, or -1 if not found. The result is the same as checking
+   * {@link #regionMatchesIgnoreCase(String, int, String)} for each position, but it avoids
+   * most of the per-position checks:
    *
    * <ul>
    *   <li>If case does not matter for any character in the pattern, then it will use
    *   {@link String#indexOf(String, int)}.</li>
-   *   <li>If the first character of the pattern is ASCII, then the full comparison is only
-   *   done for positions where the character could match. An ASCII character can only
-   *   match itself, the other case for a letter, or a character outside the ASCII range
-   *   such as {@code U+212A} (Kelvin sign) for {@code k}.</li>
+   *   <li>Otherwise, the full comparison is only done for positions where the first
+   *   character matches, either as is or as the other case of an ASCII letter.</li>
    * </ul>
    */
   static int indexOfIgnoreCase(String str, String pattern, int offset) {
@@ -93,21 +90,11 @@ public final class PatternUtils {
     }
 
     final char first = pattern.charAt(0);
-    if (first < 128) {
-      final char lower = Character.toLowerCase(first);
-      final char upper = Character.toUpperCase(first);
-      for (int i = offset; i <= end; ++i) {
-        final char c = str.charAt(i);
-        if ((c == lower || c == upper || c >= 128)
-            && str.regionMatches(true, i, pattern, 0, length)) {
-          return i;
-        }
-      }
-    } else {
-      for (int i = offset; i <= end; ++i) {
-        if (str.regionMatches(true, i, pattern, 0, length)) {
-          return i;
-        }
+    final char other = toOtherCase(first);
+    for (int i = Math.max(offset, 0); i <= end; ++i) {
+      final char c = str.charAt(i);
+      if ((c == first || c == other) && regionMatchesIgnoreCase(str, i, pattern)) {
+        return i;
       }
     }
     return -1;
@@ -1001,6 +988,45 @@ public final class PatternUtils {
    */
   private static int firstCodePointLength(String str) {
     return str.isEmpty() ? 0 : str.offsetByCodePoints(0, 1);
+  }
+
+  /**
+   * Returns true if the string has the pattern at the offset, ignoring the case of ASCII
+   * letters. Like java.util.regex with CASE_INSENSITIVE, other characters must be equal,
+   * e.g. 'k' does not match the Kelvin sign. This is also faster than
+   * {@link String#regionMatches(boolean, int, String, int, int)}, which uses the Unicode
+   * case tables for each char that differs.
+   */
+  static boolean regionMatchesIgnoreCase(String str, int offset, String pattern) {
+    final int length = pattern.length();
+    if (offset < 0 || offset > str.length() - length) {
+      return false;
+    }
+    for (int i = 0; i < length; ++i) {
+      if (!equalsIgnoreCase(str.charAt(offset + i), pattern.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns true if the chars are equal ignoring the case of ASCII letters. Setting the 0x20
+   * bit maps an upper case ASCII letter to lower case, so if both are the same letter after
+   * that, then they only differ by case.
+   */
+  private static boolean equalsIgnoreCase(char a, char b) {
+    if (a == b) {
+      return true;
+    }
+    final int c = a | 0x20;
+    return c == (b | 0x20) && c >= 'a' && c <= 'z';
+  }
+
+  /** Returns the other case of an ASCII letter, or the char itself if it is not one. */
+  static char toOtherCase(char c) {
+    final int folded = c | 0x20;
+    return folded >= 'a' && folded <= 'z' ? (char) (c ^ 0x20) : c;
   }
 
   /** Compute the set of trigrams for an input string. */

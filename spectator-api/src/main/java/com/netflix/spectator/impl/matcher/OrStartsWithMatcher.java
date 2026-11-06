@@ -28,7 +28,7 @@ import java.util.function.Function;
  * Matches a start-anchored alternation of literal prefixes, e.g. {@code ^(abc|def|ghi)}. The
  * equivalent {@code SeqMatcher(StartMatcher, OrMatcher(CharSeq, ...))} matches the same strings by
  * dispatching an interface call per branch; this matcher collapses it to a single monomorphic loop
- * of {@code regionMatches} checks, equivalent to "does the value start with any of these prefixes".
+ * of prefix checks, equivalent to "does the value start with any of these prefixes".
  *
  * <p>Only {@link #matches(String, int, int)} and {@link #minLength()} use the flattened form; all
  * other operations forward to the original nested {@code delegate} so behavior is identical.</p>
@@ -77,7 +77,10 @@ final class OrStartsWithMatcher implements Matcher, Serializable {
       return delegate.matches(str, start, length);
     }
     for (String p : prefixes) {
-      if (str.regionMatches(ignoreCase, 0, p, 0, p.length())) {
+      boolean matched = ignoreCase
+          ? PatternUtils.regionMatchesIgnoreCase(str, 0, p)
+          : str.startsWith(p);
+      if (matched) {
         return p.length();
       }
     }

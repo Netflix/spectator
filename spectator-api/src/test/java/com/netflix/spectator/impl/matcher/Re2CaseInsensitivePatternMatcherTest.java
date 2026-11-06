@@ -50,8 +50,15 @@ public class Re2CaseInsensitivePatternMatcherTest extends AbstractPatternMatcher
       } else {
         // Validate that all remaining patterns can be processed with RE2
         expr.toQueryString(new Re2Encoder());
-        if (expr instanceof PatternExpr.Regex)
-          re2 = compileRE2(((PatternExpr.Regex) expr).matcher().toString());
+        // RE2 folds the case of non-ASCII letters, e.g. (?i)k matches the Kelvin sign, while
+        // java and spectator only fold ASCII letters. So RE2 is only compared for ASCII. The
+        // pattern passed to RE2 is checked rather than the regex, which can have escapes for
+        // non-ASCII chars such as \\u212A.
+        String re2Pattern = expr instanceof PatternExpr.Regex
+            ? ((PatternExpr.Regex) expr).matcher().toString()
+            : null;
+        if (re2Pattern != null && isAscii(re2Pattern) && isAscii(value))
+          re2 = compileRE2(re2Pattern);
         else
           re2 = null;
         /*try {
@@ -73,6 +80,10 @@ public class Re2CaseInsensitivePatternMatcherTest extends AbstractPatternMatcher
           Assertions.assertFalse(re2.matcher(value).find(), re2 + " shouldn't match " + value);
       }
     }
+  }
+
+  private static boolean isAscii(String str) {
+    return str.chars().allMatch(c -> c < 128);
   }
 
   private static com.google.re2j.Pattern compileRE2(String matcher) {
