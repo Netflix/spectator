@@ -529,7 +529,65 @@ public abstract class AbstractPatternMatcherTest {
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");
-    testBadExpression("\\Q])(?\\${*", "unclosed quotation");
+    // Like java, an unclosed quotation extends to the end of the pattern. The test helper
+    // wraps the pattern in a group, so it would also be quoted for java.
+    Assertions.assertTrue(PatternMatcher.compile("\\Q])(?\\${*").matches("x])(?\\${*"));
+    Assertions.assertTrue(PatternMatcher.compile("^a\\Qb+c$").matches("ab+c$"));
+    Assertions.assertFalse(PatternMatcher.compile("^a\\Qb+c$").matches("abc"));
+  }
+
+  @Test
+  public void quotationInCharClass() {
+    // Quotations are removed before parsing, so they can be used anywhere a literal can
+    String[] patterns = {
+        "^[a-\\Qz\\E]$", "^[a\\Q]\\E]$", "^[a\\Q-\\E]$", "^[a\\Q-\\Ec]$", "^[\\Qa-c\\E]$",
+        "^[\\Q^\\Ea]$", "^\\Q\\\\E$", "^\\Qa\\\\E$"
+    };
+    String[] values = {"", "a", "b", "c", "m", "z", "-", "]", "^", "\\", "a\\"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void escapesDecodedByParser() {
+    // Escaped characters are always literals, so they cannot act as syntax
+    testBadExpression("a{2\\x2c3}", "illegal repetition");
+    testUnsupported("(?\\x3aa)", "inline flags");
+    // Like java, a code point can be written as \x{h...h} and an escaped surrogate pair is
+    // a single code point
+    testRE("^\\x{1F600}+$", "\uD83D\uDE00\uD83D\uDE00");
+    testRE("^\\x{61}{2}$", "aa");
+    testRE("^[\\x{61}-c]$", "b");
+    testRE("^\\uD83D\\uDE00{2}$", "\uD83D\uDE00\uD83D\uDE00");
+    // Like java, an unknown escape for an ASCII letter or digit is an error. Boundary
+    // matchers and sequences are not allowed in a character class.
+    String[] illegal = {
+        "\\y", "\\E", "[\\y]", "[\\1]", "[0-\\9]", "[a-\\y]",
+        "[\\b]", "[\\B]", "[\\A]", "[\\G]", "[\\Z]", "[\\z]", "[\\R]", "[\\X]", "[a-\\b]"
+    };
+    for (String p : illegal) {
+      testBadExpression(p, "illegal/unsupported escape sequence");
+    }
+  }
+
+  @Test
+  public void quotationLeadingDigit() {
+    // Like java, a digit at the start of a quotation is not joined with an escape or a
+    // repetition count before the quotation
+    testRE("^\\07\\Q7\\E$", "\u00077");
+    testRE("^\\07\\Q7\\E$", "?");
+    testRE("^\\Q12\\E{2}$", "122");
+    testRE("^[\\Q1\\E-3]$", "2");
+    testRE("^\\0\\Q\\E7$", "\u0007");
+    testBadExpression("\\0\\Q1\\E", "invalid octal escape sequence");
+    testBadExpression("\\x4\\Q1\\E", "invalid hexadecimal escape sequence");
+    testBadExpression("\\x\\Q41\\E", "invalid hexadecimal escape sequence");
+    testBadExpression("\\u004\\Q1\\E", "invalid unicode escape sequence");
+    testBadExpression("a{\\Q2\\E}", "illegal repetition");
+    testBadExpression("a{1\\Q2\\E}", "illegal repetition");
   }
 
   @Test
@@ -541,6 +599,15 @@ public abstract class AbstractPatternMatcherTest {
     testUnsupported("\\1", "back references");
     testUnsupported("\\99", "back references");
     testUnsupported("\\k<foo>", "back references");
+    testUnsupported("\\cA", "control character");
+    testUnsupported("[\\cA]", "control character");
+    testUnsupported("a\\b", "word boundary");
+    testUnsupported("a\\B", "word boundary");
+    testUnsupported("\\Aa", "boundary matcher");
+    testUnsupported("a\\z", "boundary matcher");
+    testUnsupported("a\\Z", "boundary matcher");
+    testUnsupported("\\Ga", "boundary matcher");
+    testUnsupported("\\R", "escape sequence \\R");
   }
 
   @Test

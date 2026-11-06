@@ -36,12 +36,6 @@ import java.util.function.Function;
 public final class PatternUtils {
 
   /**
-   * Characters that need to be escaped to be treated as a literal by the parser. The dash
-   * must be first so it is not treated as a range.
-   */
-  private static final AsciiSet STRUCTURAL_CHARS = AsciiSet.fromPattern("-\\^$.|?*+()[]{}&");
-
-  /**
    * Maximum number of characters for a negative lookahead that will be inlined. Each
    * character adds a level of nesting to the rewritten pattern, so long lookaheads could
    * overflow the stack when processing the matcher or exceed the nesting limits of other
@@ -63,10 +57,13 @@ public final class PatternUtils {
       ignoreCase = true;
       p = pattern.substring(4);
     }
+    // Quotations are removed first, so an unclosed quotation only extends to the end of the
+    // pattern rather than including the wrapper added below
+    p = removeQuotations(p);
     if (p.length() > 0) {
       p = "^.*(" + p + ").*$";
     }
-    Parser parser = new Parser(expandEscapedChars(p));
+    Parser parser = new Parser(p);
     Matcher m = Optimizer.optimize(parser.parse());
     return ignoreCase ? m.ignoreCase() : m;
   }
@@ -99,107 +96,56 @@ public final class PatternUtils {
     return new IllegalArgumentException("unsupported: " + message + "\n" + context(str, pos));
   }
 
-  private static char parse(String num, int radix, String mode, String str, int pos) {
-    // Validate explicitly as Integer.parseInt allows a leading sign and non-ascii digits
-    for (int i = 0; i < num.length(); ++i) {
-      char c = num.charAt(i);
-      if (c >= 128 || Character.digit(c, radix) < 0) {
-        throw error("invalid " + mode + " escape sequence", str, pos);
-      }
-    }
-    return (char) Integer.parseInt(num, radix);
-  }
-
   /**
-   * Expand escaped characters. Escapes that are needed for structural elements of the
-   * pattern will not be expanded.
+   * Replace quotations, {@code \\Q...\\E}, with the escaped text. Like java, this is done
+   * before parsing, so the quoted text can be used anywhere a literal could be used, e.g.
+   * {@code [a-\\Qz\\E]} is {@code [a-z]}, and an empty quotation joins the elements on
+   * either side, e.g. {@code a*\\Q\\E?} is {@code a*?}. An unclosed quotation extends to
+   * the end of the pattern. Other escapes are decoded by the parser.
    */
-  @SuppressWarnings({"PMD.NcssCount", "PMD.AvoidReassigningLoopVariables"})
-  static String expandEscapedChars(String str) {
-    StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < str.length(); ++i) {
+  static String removeQuotations(String str) {
+    if (!str.contains("\\Q")) {
+      return str;
+    }
+    StringBuilder builder = new StringBuilder(str.length());
+    int i = 0;
+    while (i < str.length()) {
       char c = str.charAt(i);
-      if (c == '\\') {
-        ++i;
-        if (i >= str.length()) {
-          throw error("dangling escape", str, i);
-        }
-        c = str.charAt(i);
-        switch (c) {
-          case 't': builder.append('\t'); break;
-          case 'n': builder.append('\n'); break;
-          case 'r': builder.append('\r'); break;
-          case 'f': builder.append('\f'); break;
-          case 'a': builder.append('\u0007'); break;
-          case 'e': builder.append('\u001B'); break;
-          case '0':
-            int numDigits = 0;
-            for (int j = i + 1; j < Math.min(i + 4, str.length()); ++j) {
-              c = str.charAt(j);
-              if (c >= '0' && c <= '7') {
-                ++numDigits;
-              } else {
-                break;
-              }
-            }
-            if (numDigits < 1 || numDigits > 3) {
-              throw error("invalid octal escape sequence", str, i);
-            }
-            if (numDigits == 3 && str.charAt(i + 1) > '3') {
-              // Max is \0377, for \0mnn the m must be 0-3. Otherwise, the last digit is
-              // a literal character following the escape.
-              numDigits = 2;
-            }
-            c = parse(str.substring(i + 1, i + numDigits + 1), 8, "octal", str, i);
-            appendLiteral(builder, c);
-            i += numDigits;
-            break;
-          case 'x':
-            if (i + 3 > str.length()) {
-              throw error("invalid hexadecimal escape sequence", str, i);
-            }
-            c = parse(str.substring(i + 1, i + 3), 16, "hexadecimal", str, i);
-            appendLiteral(builder, c);
-            i += 2;
-            break;
-          case 'u':
-            if (i + 5 > str.length()) {
-              throw error("invalid unicode escape sequence", str, i);
-            }
-            c = parse(str.substring(i + 1, i + 5), 16, "unicode", str, i);
-            appendLiteral(builder, c);
-            i += 4;
-            break;
-          case 'Q':
-            // Quoted sections are literal, so they are passed through as is to the parser.
-            // An empty quotation is dropped so, like java, the elements on either side are
-            // joined, e.g. a*\Q\E? is the reluctant quantifier a*? and a{2}\Q\E{3} is a{2}.
-            int end = str.indexOf("\\E", i + 1);
-            if (end == i + 1) {
-              i = end + 1;
-            } else {
-              end = (end == -1) ? str.length() : end + 2;
-              builder.append('\\').append(str, i, end);
-              i = end - 1;
-            }
-            break;
-          default:
-            builder.append('\\').append(c);
-            break;
-        }
-      } else {
+      if (c != '\\' || i + 1 >= str.length()) {
         builder.append(c);
+        ++i;
+      } else if (str.charAt(i + 1) != 'Q') {
+        // Other escape, e.g. \\\\Q is an escaped backslash followed by 'Q'
+        builder.append(c).append(str.charAt(i + 1));
+        i += 2;
+      } else {
+        int end = str.indexOf("\\E", i + 2);
+        if (end < 0) {
+          end = str.length();
+        }
+        for (int j = i + 2; j < end; ++j) {
+          appendQuoted(builder, str.charAt(j), j == i + 2);
+        }
+        i = Math.min(end + 2, str.length());
       }
     }
     return builder.toString();
   }
 
   /**
-   * Append an expanded character so it will be treated as a literal by the parser. For
-   * example, {@code \x2b} should match a literal '+' rather than being a quantifier.
+   * Append a quoted character so it is a literal for the parser. ASCII letters and digits
+   * are kept as is, since escaping them would change the meaning, e.g. {@code \\d}. Like
+   * java, a digit at the start of the quotation is written as a hex escape so it cannot be
+   * joined with an escape or repetition before the quotation, e.g. {@code \\07\\Q7\\E} is
+   * {@code \\07} followed by '7' rather than {@code \\077}. Surrogates are kept as is so
+   * that a pair stays together.
    */
-  private static void appendLiteral(StringBuilder builder, char c) {
-    if (STRUCTURAL_CHARS.contains(c)) {
+  private static void appendQuoted(StringBuilder builder, char c, boolean first) {
+    if (Constants.DIGIT.contains(c)) {
+      if (first) {
+        builder.append("\\x3");
+      }
+    } else if (!Constants.ALPHA.contains(c) && !Character.isSurrogate(c)) {
       builder.append('\\');
     }
     builder.append(c);
