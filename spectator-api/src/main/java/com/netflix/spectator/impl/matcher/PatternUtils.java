@@ -57,14 +57,14 @@ public final class PatternUtils {
       ignoreCase = true;
       p = pattern.substring(4);
     }
-    // Quotations are removed first, so an unclosed quotation only extends to the end of the
-    // pattern rather than including the wrapper added below
-    p = removeQuotations(p);
-    if (p.length() > 0) {
-      p = "^.*(" + p + ").*$";
-    }
-    Parser parser = new Parser(p);
-    Matcher m = Optimizer.optimize(parser.parse());
+    Matcher m = new Parser(removeQuotations(p)).parse();
+    // Match anywhere in the string, same as the pattern ^.*(p).*$. The matcher is wrapped
+    // rather than the pattern string so the wrapper cannot mix with the syntax of the
+    // pattern, e.g. for a)|(b or a trailing backslash. For an empty pattern, the optimizer
+    // reduces the wrapper to a matcher that always matches.
+    Matcher end = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, EndMatcher.INSTANCE);
+    Matcher any = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, SeqMatcher.create(m, end));
+    m = Optimizer.optimize(SeqMatcher.create(StartMatcher.INSTANCE, any));
     return ignoreCase ? m.ignoreCase() : m;
   }
 
