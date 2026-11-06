@@ -105,13 +105,9 @@ public final class PatternUtils {
    * match the pattern. Pattern matchers are can be reused many times and are thread safe.
    */
   public static PatternMatcher compile(String pattern) {
-    String p = pattern;
-    boolean ignoreCase = false;
-    if (p.startsWith("(?i)")) {
-      ignoreCase = true;
-      p = pattern.substring(4);
-    }
-    Matcher m = new Parser(removeQuotations(p)).parse();
+    boolean ignoreCase = pattern.startsWith("(?i)");
+    int offset = ignoreCase ? 4 : 0;
+    Matcher m = Parser.parse(pattern, offset);
     // Match anywhere in the string, same as the pattern ^.*(p).*$. The matcher is wrapped
     // rather than the pattern string so the wrapper cannot mix with the syntax of the
     // pattern, e.g. for a)|(b or a trailing backslash. For an empty pattern, the optimizer
@@ -158,7 +154,18 @@ public final class PatternUtils {
    * the end of the pattern. Other escapes are decoded by the parser.
    */
   static String removeQuotations(String str) {
-    if (!str.contains("\\Q")) {
+    return removeQuotations(str, null);
+  }
+
+  /**
+   * Replace quotations, see {@link #removeQuotations(String)}. If {@code positions} is not
+   * null, then the position in the input of each char in the result is added to it, followed
+   * by the length of the input for the end of the result. It is used to report errors
+   * relative to the pattern as written.
+   */
+  static String removeQuotations(String str, IntArrayBuilder positions) {
+    // The positions are always filled in, even if there are no quotations
+    if (positions == null && !str.contains("\\Q")) {
       return str;
     }
     StringBuilder builder = new StringBuilder(str.length());
@@ -167,10 +174,14 @@ public final class PatternUtils {
       char c = str.charAt(i);
       if (c != '\\' || i + 1 >= str.length()) {
         builder.append(c);
+        addPositions(positions, builder, i);
         ++i;
       } else if (str.charAt(i + 1) != 'Q') {
         // Other escape, e.g. \\\\Q is an escaped backslash followed by 'Q'
-        builder.append(c).append(str.charAt(i + 1));
+        builder.append(c);
+        addPositions(positions, builder, i);
+        builder.append(str.charAt(i + 1));
+        addPositions(positions, builder, i + 1);
         i += 2;
       } else {
         int end = str.indexOf("\\E", i + 2);
@@ -179,11 +190,45 @@ public final class PatternUtils {
         }
         for (int j = i + 2; j < end; ++j) {
           appendQuoted(builder, str.charAt(j), j == i + 2);
+          addPositions(positions, builder, j);
         }
         i = Math.min(end + 2, str.length());
       }
     }
+    if (positions != null) {
+      positions.add(str.length());
+    }
     return builder.toString();
+  }
+
+  /** Add the position for each char appended to the builder that does not have one yet. */
+  private static void addPositions(IntArrayBuilder positions, StringBuilder builder, int pos) {
+    if (positions != null) {
+      while (positions.size() < builder.length()) {
+        positions.add(pos);
+      }
+    }
+  }
+
+  /** Simple growable array of ints. */
+  static final class IntArrayBuilder {
+    private int[] values = new int[16];
+    private int size;
+
+    void add(int v) {
+      if (size == values.length) {
+        values = Arrays.copyOf(values, size * 2);
+      }
+      values[size++] = v;
+    }
+
+    int size() {
+      return size;
+    }
+
+    int[] toArray() {
+      return Arrays.copyOf(values, size);
+    }
   }
 
   /**

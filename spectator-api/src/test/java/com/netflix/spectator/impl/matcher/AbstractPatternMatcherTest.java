@@ -723,9 +723,7 @@ public abstract class AbstractPatternMatcherTest {
   @Test
   public void errorContextIsPattern() {
     // The context shows the pattern and position without the wrapper text
-    IllegalArgumentException e = Assertions.assertThrows(
-        IllegalArgumentException.class, () -> PatternMatcher.compile("a)|(b"));
-    Assertions.assertEquals("unmatched closing parenthesis\na)|(b\n ^", e.getMessage());
+    assertErrorMessage("a)|(b", "unmatched closing parenthesis\na)|(b\n ^");
   }
 
   @Test
@@ -1100,6 +1098,27 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^a{0,1}a?+a$", "aa");
   }
 
+  private static void assertErrorMessage(String regex, String expected) {
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class, () -> PatternMatcher.compile(regex));
+    Assertions.assertEquals(expected, e.getMessage());
+  }
+
+  @Test
+  public void errorPositionRelativeToPattern() {
+    // Errors show the pattern as written, not after the leading (?i) or quotations are
+    // removed, and the caret points to the position in that pattern
+    assertErrorMessage("(?i)a)", "unmatched closing parenthesis\n(?i)a)\n     ^");
+    assertErrorMessage("\\Q+*\\Ea)", "unmatched closing parenthesis\n\\Q+*\\Ea)\n       ^");
+    assertErrorMessage("(?i)\\Q..\\E(a", "unclosed group\n(?i)\\Q..\\E(a\n            ^");
+    assertErrorMessage("a\\Q\\E**", "dangling modifier\na\\Q\\E**\n      ^");
+    assertErrorMessage("\\Q7\\E\\Q8\\Ex{2,1}",
+        "illegal repetition, min > max\n\\Q7\\E\\Q8\\Ex{2,1}\n                ^");
+    assertErrorMessage("(?i)\\b", "unsupported: word boundary\n(?i)\\b\n     ^");
+    // Each char of an escape outside of a quotation keeps its own position
+    assertErrorMessage("\\Qa\\E\\y", "illegal/unsupported escape sequence\n\\Qa\\E\\y\n      ^");
+  }
+
   @Test
   public void stackedModifiers() {
     // Like java, only a single modifier can follow a quantifier
@@ -1108,9 +1127,7 @@ public abstract class AbstractPatternMatcherTest {
       testBadExpression(p, "dangling modifier");
     }
     // The error points to the extra modifier
-    IllegalArgumentException e = Assertions.assertThrows(
-        IllegalArgumentException.class, () -> PatternMatcher.compile("(a)+++b"));
-    Assertions.assertEquals("dangling modifier\n(a)+++b\n     ^", e.getMessage());
+    assertErrorMessage("(a)+++b", "dangling modifier\n(a)+++b\n     ^");
   }
 
   @Test

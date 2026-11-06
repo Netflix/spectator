@@ -124,6 +124,19 @@ public class PatternUtilsTest {
     Assertions.assertEquals("\\07\\x37a8", PatternUtils.removeQuotations("\\07\\Q7a8\\E"));
   }
 
+  private static int[] quotationPositions(String str) {
+    PatternUtils.IntArrayBuilder positions = new PatternUtils.IntArrayBuilder();
+    PatternUtils.removeQuotations(str, positions);
+    return positions.toArray();
+  }
+
+  @Test
+  public void removeQuotationsPositions() {
+    // Position in the input of each char in the result, followed by the end of the input
+    Assertions.assertArrayEquals(new int[] {0, 1, 2}, quotationPositions("ab"));
+    Assertions.assertArrayEquals(new int[] {2, 3, 3, 6, 7, 8}, quotationPositions("\\Qa+\\E\\."));
+  }
+
   @Test
   public void removeEmptyQuotations() {
     Assertions.assertEquals("a*?", PatternUtils.removeQuotations("a*\\Q\\E?"));

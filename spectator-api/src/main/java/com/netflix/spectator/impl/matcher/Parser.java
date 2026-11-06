@@ -24,7 +24,7 @@ import java.util.function.IntPredicate;
 /**
  * Parses a pattern into a {@link Matcher} object.
  */
-class Parser {
+final class Parser {
   private static final AsciiSet META = AsciiSet.fromPattern("?*+");
 
   private final String tokens;
@@ -36,22 +36,57 @@ class Parser {
    */
   private int reluctantCount;
 
-  /** Create a new instance. */
-  Parser(String tokens) {
+  /** Pattern as written, used for error messages. */
+  private final String source;
+
+  /**
+   * Position relative to {@link #offset} in the source for each char of the tokens, followed
+   * by the position for the end of the tokens. Null if the tokens are the source starting at
+   * the offset.
+   */
+  private final int[] positions;
+
+  /** Offset of the tokens in the source, e.g. if a leading (?i) was removed. */
+  private final int offset;
+
+  private Parser(String tokens, String source, int[] positions, int offset) {
     this.tokens = tokens;
+    this.source = source;
+    this.positions = positions;
+    this.offset = offset;
     this.current = 0;
   }
 
+  /**
+   * Parse the pattern starting at {@code offset}, e.g. after a leading (?i) flag. Quotations
+   * are removed before parsing, errors are reported relative to the pattern as written.
+   */
+  static Matcher parse(String pattern, int offset) {
+    String p = pattern.substring(offset);
+    if (!p.contains("\\Q")) {
+      return new Parser(p, pattern, null, offset).parse();
+    }
+    PatternUtils.IntArrayBuilder builder = new PatternUtils.IntArrayBuilder();
+    String tokens = PatternUtils.removeQuotations(p, builder);
+    return new Parser(tokens, pattern, builder.toArray(), offset).parse();
+  }
+
+  /** Position in the source for the current position in the tokens. */
+  private int sourcePosition() {
+    int pos = Math.min(current, tokens.length());
+    return offset + (positions == null ? pos : positions[pos]);
+  }
+
   private IllegalArgumentException error(String message) {
-    return PatternUtils.error(message, tokens, current);
+    return PatternUtils.error(message, source, sourcePosition());
   }
 
   private IllegalArgumentException unsupported(String message) {
-    return PatternUtils.unsupported(message, tokens, current);
+    return PatternUtils.unsupported(message, source, sourcePosition());
   }
 
   /** Return the matcher for the top level expression. */
-  Matcher parse() {
+  private Matcher parse() {
     Matcher m = expr();
     if (!isAtEnd()) {
       throw error("unmatched closing parenthesis");
