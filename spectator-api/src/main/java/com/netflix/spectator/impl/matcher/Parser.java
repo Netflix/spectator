@@ -705,7 +705,8 @@ final class Parser {
       throw unsupported("possessive repetition of a portion that can match different lengths");
     }
     // A trailing .* would consume the rest of the string, but ZeroOrMoreMatcher returns the
-    // start position if nothing follows, so use a possessive repetition, e.g. for (a.*)++
+    // start position if nothing follows, so use a possessive repetition, e.g. for (a.*)++.
+    // The same for a class the optimizer may convert to '.', e.g. (a[\s\S]*)++.
     Matcher repeated = matcher.rewriteEnd(Parser::matchAnyToPossessive);
     return new RepeatMatcher(repeated, min, max, TrueMatcher.INSTANCE, true);
   }
@@ -713,12 +714,24 @@ final class Parser {
   private static Matcher matchAnyToPossessive(Matcher matcher) {
     if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
-      if (m.repeated() instanceof AnyMatcher && m.next() instanceof TrueMatcher) {
+      if (canMatchAny(m.repeated()) && m.next() instanceof TrueMatcher) {
         return new RepeatMatcher(
-            AnyMatcher.INSTANCE, 0, Integer.MAX_VALUE, TrueMatcher.INSTANCE, true);
+            m.repeated(), 0, Integer.MAX_VALUE, TrueMatcher.INSTANCE, true);
       }
     }
     return matcher;
+  }
+
+  /**
+   * Returns true if the matcher is {@code .} or a class that the optimizer could convert
+   * to {@code .}, e.g. {@code [\s\S]}, or {@code [[^a]A]} once the case is ignored.
+   */
+  private static boolean canMatchAny(Matcher matcher) {
+    if (matcher instanceof CharClassMatcher) {
+      CharClassMatcher m = matcher.as();
+      return m.nonAscii() && m.foldedSet().invert().isEmpty();
+    }
+    return matcher instanceof AnyMatcher;
   }
 
   /**

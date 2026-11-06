@@ -191,7 +191,8 @@ final class Optimizer {
         .rewrite(Optimizer::startAfterContentIsFalse)
         .rewrite(Optimizer::zeroOrMoreFalse)
         .rewrite(Optimizer::convertEmptyCharClassToFalse)
-        .rewrite(Optimizer::convertSingleCharClassToSeq);
+        .rewrite(Optimizer::convertSingleCharClassToSeq)
+        .rewrite(Optimizer::convertMatchAllCharClassToAny);
     // Only valid at the start of the pattern so it is not applied recursively
     m = removeStartFollowedByMatchAny(m);
     return m
@@ -444,6 +445,21 @@ final class Optimizer {
       return m.isEmpty()
           ? FalseMatcher.INSTANCE
           : matcher;
+    }
+    return matcher;
+  }
+
+  /**
+   * If a character class matches any code point, e.g. {@code [\s\S]}, then it is the
+   * same as {@code .}. This allows the optimizations for {@code .*}, such as converting
+   * {@code [\s\S]*foo} to an indexOf check.
+   */
+  static Matcher convertMatchAllCharClassToAny(Matcher matcher) {
+    if (matcher instanceof CharClassMatcher) {
+      CharClassMatcher m = matcher.as();
+      if (m.nonAscii() && m.set().invert().isEmpty() && m.foldedSet().invert().isEmpty()) {
+        return AnyMatcher.INSTANCE;
+      }
     }
     return matcher;
   }

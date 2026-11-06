@@ -1142,7 +1142,8 @@ public abstract class AbstractPatternMatcherTest {
         "^(a+){2}+a$", "^(a+){2}+$", "^a*+a$", "^a++a", "^a?+a$", "^(ab)*+ab$", "^[ab]*+b$",
         "^.*+x", "^a{1,3}+a$", "^a{2,}+a$", "^a{2,}+$", "^(ab|cd){1,2}+cd$",
         "^a*+b$", "^(a*)+b", "^(?:a+)?+a$", "^(?:a+)?+$", "^(a{2,})?+a$",
-        "x(?:ab)?+b", "^a{2}+a$"
+        "x(?:ab)?+b", "^a{2}+a$", "^(?:a[\\s\\S]*)++b", "^(?:a[\\s\\S]*)?+b", "^(a[\\s\\S]+)++b",
+        "^(?:a[\\s\\S]*){2}+$"
     };
     String[] values = {
         "", "a", "aa", "aaa", "aaaa", "ab", "abb", "abc", "abab", "abcd", "abcdcd", "b", "bxa",
