@@ -30,6 +30,12 @@ class Parser {
   private final String tokens;
   private int current;
 
+  /**
+   * Number of reluctant quantifiers that have been parsed. It is used to check if the portion
+   * a possessive quantifier applies to has a reluctant quantifier, see {@link #possessive}.
+   */
+  private int reluctantCount;
+
   /** Create a new instance. */
   Parser(String tokens) {
     this.tokens = tokens;
@@ -66,8 +72,14 @@ class Parser {
 
   private Matcher term() {
     List<Matcher> matchers = new ArrayList<>();
+    // Number of reluctant quantifiers parsed before the last element of the sequence, so it
+    // is known if the element a quantifier applies to has a reluctant quantifier.
+    int reluctantBefore = reluctantCount;
     while (!isAtEnd() && peek() != ')' && peek() != '|') {
       char c = advance();
+      if (c != '{' && c != '?' && c != '*' && c != '+') {
+        reluctantBefore = reluctantCount;
+      }
       switch (c) {
         case '\\':
           matchers.add(escape());
@@ -90,7 +102,7 @@ class Parser {
           if (matchers.isEmpty()) {
             throw error("dangling modifier");
           }
-          matchers.add(repeat(pop(matchers)));
+          matchers.add(repeat(pop(matchers), reluctantCount > reluctantBefore));
           break;
         case '.':
           matchers.add(AnyMatcher.INSTANCE);
@@ -101,7 +113,7 @@ class Parser {
           if (matchers.isEmpty()) {
             throw error("dangling modifier");
           }
-          matchers.add(meta(pop(matchers)));
+          matchers.add(meta(pop(matchers), reluctantCount > reluctantBefore));
           break;
         default:
           matchers.add(literal());
@@ -616,7 +628,7 @@ class Parser {
     return new CharClassMatcher(set.invert(), folded, false, true);
   }
 
-  private Matcher repeat(Matcher matcher) {
+  private Matcher repeat(Matcher matcher, boolean hasReluctant) {
     int[] bounds = repeatBounds();
     int min = bounds[0];
     boolean unbounded = bounds[1] < 0;
@@ -625,7 +637,9 @@ class Parser {
     boolean possessive = repeatModifier();
     ignoreFollowingRepeats();
 
-    if (unbounded && !possessive) {
+    if (possessive) {
+      return possessive(matcher, min, max, hasReluctant);
+    } else if (unbounded) {
       // No upper bound, treat as min repetitions followed by zero or more. This is
       // consistent with how * and + are handled.
       Matcher zeroOrMore = new ZeroOrMoreMatcher(matcher, term());
@@ -636,8 +650,77 @@ class Parser {
       return SeqMatcher.create(prefix, zeroOrMore);
     }
 
-    // RepeatMatcher is greedy without backtracking, so it also covers the possessive case
+    // The rest of the term is merged in by the optimizer so that it is checked after each
+    // repetition
     return new RepeatMatcher(matcher, min, max);
+  }
+
+  /**
+   * Create a matcher for a possessive repetition, e.g. a*+ or a{2,3}+. Like java, each
+   * repetition keeps its first match and the rest of the pattern is only checked after all
+   * of the repetitions. That is only supported if the first match of the repeated portion
+   * will be the same as java, see {@link #firstMatchSameAsJava(Matcher)}. Reluctant
+   * quantifiers are matched the same as greedy, so they are not supported in the repeated
+   * portion, e.g. (a??)?+ matches the empty string with java.
+   */
+  private Matcher possessive(Matcher matcher, int min, int max, boolean hasReluctant) {
+    if (hasReluctant) {
+      throw unsupported("reluctant quantifier within a possessive repetition");
+    } else if (!firstMatchSameAsJava(matcher)) {
+      throw unsupported("possessive repetition of a portion that can match different lengths");
+    }
+    // A trailing .* would consume the rest of the string, but ZeroOrMoreMatcher returns the
+    // start position if nothing follows, so use a possessive repetition, e.g. for (a.*)++
+    Matcher repeated = matcher.rewriteEnd(Parser::matchAnyToPossessive);
+    return new RepeatMatcher(repeated, min, max, TrueMatcher.INSTANCE, true);
+  }
+
+  private static Matcher matchAnyToPossessive(Matcher matcher) {
+    if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      if (m.repeated() instanceof AnyMatcher && m.next() instanceof TrueMatcher) {
+        return new RepeatMatcher(
+            AnyMatcher.INSTANCE, 0, Integer.MAX_VALUE, TrueMatcher.INSTANCE, true);
+      }
+    }
+    return matcher;
+  }
+
+  /**
+   * Returns true if the position returned by the matcher, with nothing after it, is the end
+   * of the first match java would find. That is the case if it always matches the same
+   * length, e.g. (ab|cd), or if it is a greedy repetition of a portion that always matches
+   * the same length, e.g. a+ or a{1,3}. Otherwise, the first match can depend on the order
+   * of alternatives or on backtracking, e.g. for (a|ab) java would use 'a'.
+   */
+  private static boolean firstMatchSameAsJava(Matcher matcher) {
+    if (PatternUtils.isFixedLength(matcher)) {
+      return true;
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      return m.next() instanceof TrueMatcher && PatternUtils.isFixedLength(m.repeated());
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      return m.next() instanceof TrueMatcher && PatternUtils.isFixedLength(m.repeated());
+    } else if (matcher instanceof RepeatMatcher) {
+      // A possessive repetition consumes the first match of each repetition. A greedy one
+      // does as well, but java would backtrack into the repeated portion if needed to get
+      // the min, so it must always match the same length.
+      RepeatMatcher m = matcher.as();
+      return m.next() instanceof TrueMatcher
+          && (m.isPossessive()
+              ? firstMatchSameAsJava(m.repeated())
+              : PatternUtils.isFixedLength(m.repeated()));
+    } else if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      for (int i = 0; i < ms.size() - 1; ++i) {
+        if (!PatternUtils.isFixedLength(ms.get(i))) {
+          return false;
+        }
+      }
+      return firstMatchSameAsJava(ms.get(ms.size() - 1));
+    }
+    return false;
   }
 
   /**
@@ -649,7 +732,10 @@ class Parser {
     while (!isAtEnd() && peek() == '{') {
       advance();
       repeatBounds();
+      // The modifier is ignored along with the repeat, so a reluctant one is not counted
+      int saved = reluctantCount;
       repeatModifier();
+      reluctantCount = saved;
     }
     if (!isAtEnd() && META.contains(peek())) {
       throw error("dangling modifier");
@@ -708,40 +794,45 @@ class Parser {
    */
   private boolean repeatModifier() {
     if (!isAtEnd() && (peek() == '+' || peek() == '?')) {
-      return advance() == '+';
+      if (advance() == '+') {
+        return true;
+      }
+      ++reluctantCount;
     }
     return false;
   }
 
-  private Matcher meta(Matcher matcher) {
+  private Matcher meta(Matcher matcher, boolean hasReluctant) {
     int start = current - 1;
-    while (!isAtEnd() && META.contains(peek())) {
+    // A quantifier can be followed by a single possessive (+) or reluctant (?) modifier.
+    // Anything after that is an error, e.g. a+++ or a**.
+    if (!isAtEnd() && (peek() == '+' || peek() == '?')) {
       advance();
     }
     String quantifier = tokens.substring(start, current);
+    if (quantifier.endsWith("?") && quantifier.length() == 2) {
+      ++reluctantCount;
+    }
     // Must be checked before the rest of the term is parsed, e.g. a*{3} is the same as a*
     ignoreFollowingRepeats();
     switch (quantifier) {
       case "?":
       case "??":
-      case "?+":
-        // Possessive is treated as greedy. A RepeatMatcher would avoid backtracking, but
-        // it is not possible to tell it apart from a greedy repeat when converting to a
-        // string or optimizing, and a ZeroOrOneMatcher is more consistent with the other
-        // greedy matchers that do not backtrack.
         return new ZeroOrOneMatcher(matcher, term());
+      case "?+":
+        return possessive(matcher, 0, 1, hasReluctant);
       case "*":
       case "*?":
         return new ZeroOrMoreMatcher(matcher, term());
       case "*+":
-        return new RepeatMatcher(matcher, 0, Integer.MAX_VALUE);
+        return possessive(matcher, 0, Integer.MAX_VALUE, hasReluctant);
       case "+":
       case "+?":
         return SeqMatcher.create(matcher, new ZeroOrMoreMatcher(matcher, term()));
       case "++":
-        return SeqMatcher.create(matcher, new RepeatMatcher(matcher, 0, Integer.MAX_VALUE));
+        return possessive(matcher, 1, Integer.MAX_VALUE, hasReluctant);
       default:
-        throw new IllegalArgumentException("unknown quantifier: " + quantifier);
+        throw new IllegalStateException("unknown quantifier: " + quantifier);
     }
   }
 

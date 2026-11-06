@@ -1096,11 +1096,121 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^a?+b$", "b");
     testRE("^a?+b$", "ab");
     testRE("^(ab)?+a", "aba");
-    testRE("^(a??)?+a$", "a");
-    testRE("^(a*?)?+a$", "a");
-    testRE("^(a+?)?+a$", "aa");
     testRE("^a{1,2}a?+a$", "aaa");
     testRE("^a{0,1}a?+a$", "aa");
+  }
+
+  @Test
+  public void stackedModifiers() {
+    // Like java, only a single modifier can follow a quantifier
+    String[] patterns = {"a+++", "a?+?", "a**", "a*?+", "a+?*", "(a)+++b", "a{2}++", "a??+"};
+    for (String p : patterns) {
+      testBadExpression(p, "dangling modifier");
+    }
+    // The error points to the extra modifier
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class, () -> PatternMatcher.compile("(a)+++b"));
+    Assertions.assertEquals("dangling modifier\n(a)+++b\n     ^", e.getMessage());
+  }
+
+  @Test
+  public void backtrackingQuantifiers() {
+    // Optional portions and bounded repetitions are checked with the rest of the pattern,
+    // possessive repetitions are not. Without capture groups, only the yes or no answer is
+    // needed, so this is done by rewriting rather than general backtracking.
+    String[] patterns = {
+        "^(b.*)?a", "^(b.*)?a$", "^(b[a-z]*)?a", "^(ab|a)?bc", "^(a|ab)?c", "^(a.*)?(b.*)?c$",
+        "^a{2,3}a$", "^(ab){1,2}ab$", "^[ab]{1,3}b$", "^a{0,2}a{2}$", "^(a|b){1,3}ab$",
+        "^\\d{1,3}\\.\\d{1,3}$", "^.{1,3}x", "x.{0,2}y", "^(a{1,2}){2}a$",
+        "^(a+){2}+a$", "^(a+){2}+$", "^a*+a$", "^a++a", "^a?+a$", "^(ab)*+ab$", "^[ab]*+b$",
+        "^.*+x", "^a{1,3}+a$", "^a{2,}+a$", "^a{2,}+$", "^(ab|cd){1,2}+cd$",
+        "^a*+b$", "^(a*)+b", "^(?:a+)?+a$", "^(?:a+)?+$", "^(a{2,})?+a$",
+        "x(?:ab)?+b", "^a{2}+a$"
+    };
+    String[] values = {
+        "", "a", "aa", "aaa", "aaaa", "ab", "abb", "abc", "abab", "abcd", "abcdcd", "b", "bxa",
+        "ba", "aab", "c", "ac", "bc", "abxc", "1.2", "123.45", "1234.5", "ax", "abcx", "xaby",
+        "xy", "xabcy", "xabb"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void possessiveUnsupported() {
+    // Reluctant quantifiers are matched the same as greedy, so the first match java would
+    // keep for each repetition cannot be determined
+    String reluctant = "reluctant quantifier within a possessive repetition";
+    for (String p : new String[] {"^(a??)?+a$", "^(a*?)?+a$", "^(a+?){2}+", "(a(b*?))++"}) {
+      testUnsupported(p, reluctant);
+    }
+    // The first match depends on the order of alternatives or on backtracking
+    String varying = "possessive repetition of a portion that can match different lengths";
+    for (String p : new String[] {"(a|ab)++c", "(a+b?)++", "([ab]+[ab]{2}a)++", "((a+){2}){1,2}+",
+        "(a.*b)*+", "((a+){2})?+"}) {
+      testUnsupported(p, varying);
+    }
+    // Supported forms
+    for (String p : new String[] {"a*+", "[ab]{2,}+", "(ab|cd){1,3}+", "(a+){2}+", "(a?)++",
+        "(ab*)++", "(a{1,3})?+", "((a+){2}+)?+", ".*+x", "(?:ab)?+b", "(a{2}{3}?)++"}) {
+      PatternMatcher.compile(p);
+    }
+  }
+
+  @Test
+  public void manySequentialOptionals() {
+    // Each optional portion copies the rest of the pattern, which is limited so that the
+    // size does not grow exponentially
+    StringBuilder builder = new StringBuilder("^");
+    for (int i = 0; i < 30; ++i) {
+      builder.append("(a.*)?");
+    }
+    builder.append("b$");
+    PatternMatcher m = PatternMatcher.compile(builder.toString());
+    Assertions.assertTrue(m.matches("b"));
+    Assertions.assertTrue(m.matches("axb"));
+    Assertions.assertTrue(m.toString().length() < 100_000, "pattern too large");
+  }
+
+  @Test
+  public void manyGroupedOptionals() {
+    // The rest of the pattern is merged into each optional portion before it is rewritten,
+    // so the size limit applies to all of it. Otherwise, the rest would be copied into both
+    // alternatives for each group and the size would double for each one.
+    StringBuilder builder = new StringBuilder("^");
+    StringBuilder value = new StringBuilder();
+    for (int i = 0; i < 30; ++i) {
+      builder.append("(?:(a.*)?b)-");
+      value.append("b-");
+    }
+    PatternMatcher m = PatternMatcher.compile(builder.toString());
+    Assertions.assertTrue(m.matches(value.toString()));
+    Assertions.assertTrue(m.matches(value.substring(2) + "axb-"));
+    Assertions.assertFalse(m.matches(value.substring(2)));
+    Assertions.assertTrue(m.toString().length() < 100_000, "pattern too large");
+  }
+
+  @Test
+  public void nestedBacktrackingQuantifiers() {
+    // A greedy repetition tries the most repetitions first, like java, even if the repeated
+    // portion can match different lengths. That matters if the position is used by an
+    // enclosing repetition.
+    testRE("^(?:(?:a|bc){1,2}x?){2}$", "aaaa");
+    testRE("^(?:(?:a|bc){1,2}x?){2}$", "aaa");
+    testRE("^(?:(?:ab|a){0,1}x?){2}$", "abab");
+
+    // {0,1} is the same as ?
+    testRE("^(?:a.*){0,1}b$", "abab");
+    testRE("^(?:a.*){0,1}b$", "ab");
+    testRE("^(?:a.*){0,1}b$", "b");
+
+    // The optional portion in a group is rewritten after the rest of the pattern is merged in
+    testRE("^(?:(?:a|ab)?(?:a|ab))$", "ab");
+    testRE("^(?:(?:a|ab)?(?:a|ab))$", "aab");
+    testRE("(?:(?:a|ab)?(?:a|ab))$", "xab");
   }
 
   @Test

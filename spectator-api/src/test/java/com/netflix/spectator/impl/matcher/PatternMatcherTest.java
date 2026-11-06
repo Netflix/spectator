@@ -67,6 +67,22 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
   }
 
   @Test
+  public void repeatStepBackWithLoneSurrogate() {
+    // A lone surrogate in the pattern can match half of a pair in the input, so the position
+    // for fewer repetitions cannot be found by stepping back by code points. That previously
+    // went before the start of the repetitions or out of bounds.
+    String e = "😀";
+    String[][] cases = {
+        {"^(?:\\uD83D.){0,2}\\uDE00", e + e},
+        {"^\\uD83D.{0,1}\\uD83D", e}
+    };
+    for (String[] c : cases) {
+      boolean expected = Pattern.compile(c[0]).matcher(c[1]).find();
+      Assertions.assertEquals(expected, PatternMatcher.compile(c[0]).matches(c[1]), c[0]);
+    }
+  }
+
+  @Test
   @Timeout(value = 10, unit = TimeUnit.SECONDS)
   public void repeatLargeBoundTerminates() {
     // A repetition with a huge count whose body can match the empty string must not loop up

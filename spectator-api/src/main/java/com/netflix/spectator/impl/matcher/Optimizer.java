@@ -32,6 +32,13 @@ final class Optimizer {
   // converge on an optimal solution.
   private static final int MAX_ITERATIONS = 1000;
 
+  /**
+   * Max number of matchers that follow an optional portion for it to be rewritten as
+   * alternatives, see {@link #optionalToAlternatives(Matcher)}. The rest of the pattern is
+   * copied, so this limits the growth for a sequence of optional portions.
+   */
+  private static final int MAX_OPTIONAL_NEXT_SIZE = 100;
+
   private Optimizer() {
   }
 
@@ -41,11 +48,16 @@ final class Optimizer {
    * only valid at the start. It should not be used to optimize a sub-matcher.
    */
   static Matcher optimize(Matcher matcher) {
-    Matcher m = matcher;
-    Matcher opt = optimizeSinglePass(m);
-    for (int i = 0; !m.equals(opt) && i < MAX_ITERATIONS; ++i) {
-      m = opt;
-      opt = optimizeSinglePass(m);
+    Matcher opt = optimizeFixpoint(matcher);
+    // Optional portions are only rewritten as alternatives after the rest of the pattern has
+    // been merged into them. If done earlier, the rest would later be merged into each of the
+    // alternatives, see optionalToAlternatives(Matcher).
+    for (int i = 0; i < MAX_ITERATIONS; ++i) {
+      Matcher alt = opt.rewrite(Optimizer::optionalToAlternatives);
+      if (alt.equals(opt)) {
+        break;
+      }
+      opt = optimizeFixpoint(alt);
     }
     // Flatten contains/anchored IndexOf chains and start-anchored literal alternations into single
     // matchers. Done as one terminal pass after the fixpoint so the new matcher types do not need
@@ -53,6 +65,17 @@ final class Optimizer {
     // rewrites) is required: the folded matchers delegate rewrite() to their original nested form,
     // so a second rewrite pass traversing into them would undo the fold.
     return opt.rewrite(Optimizer::fold);
+  }
+
+  /** Apply the single pass rewrites until the matcher no longer changes. */
+  private static Matcher optimizeFixpoint(Matcher matcher) {
+    Matcher m = matcher;
+    Matcher opt = optimizeSinglePass(m);
+    for (int i = 0; !m.equals(opt) && i < MAX_ITERATIONS; ++i) {
+      m = opt;
+      opt = optimizeSinglePass(m);
+    }
+    return opt;
   }
 
   /** Apply the available flattening folds; the recognized shapes are disjoint. */
@@ -189,6 +212,7 @@ final class Optimizer {
         .rewrite(Optimizer::combineAdjacentStart)
         .rewrite(Optimizer::convertRepeatedAnyCharSeqToIndexOf)
         .rewrite(Optimizer::flattenRepeatedUnbounded)
+        .rewrite(Optimizer::flattenNestedRepeat)
         .rewriteEnd(Optimizer::removeTrailingMatchAny);
   }
 
@@ -213,7 +237,7 @@ final class Optimizer {
             ms.add(m.<GreedyMatcher>as().mergeNext(SeqMatcher.create(after)));
             break;
           }
-        } else if (m instanceof GreedyMatcher) {
+        } else if (m instanceof GreedyMatcher && needsNext(m)) {
           List<Matcher> after = matchers.subList(i + 1, matchers.size());
           ms.add(m.<GreedyMatcher>as().mergeNext(SeqMatcher.create(after)));
           break;
@@ -224,6 +248,19 @@ final class Optimizer {
       return SeqMatcher.create(ms);
     }
     return matcher;
+  }
+
+  /**
+   * A repetition only needs the rest of the pattern if it is greedy with a range, e.g.
+   * {@code a{2,3}}. For a fixed count or a possessive repetition, the rest of the pattern
+   * is only checked after all of the repetitions, so it can be left in the sequence.
+   */
+  private static boolean needsNext(Matcher matcher) {
+    if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      return m.min() != m.max() && !m.isPossessive();
+    }
+    return true;
   }
 
   /**
@@ -344,6 +381,56 @@ final class Optimizer {
       }
     }
     return matcher;
+  }
+
+  /**
+   * An optional portion that can match more than one length will not backtrack to let the
+   * rest of the pattern match, e.g. for {@code (b.*)?a}, the {@code b.*} would consume the
+   * rest of the string. Since only the yes or no answer for a match is needed, it can be
+   * rewritten as alternatives, {@code (?:b.*a|a)}, and the rest of the pattern will be merged
+   * into the optional portion. Since the rest of the pattern is copied, it is only done if
+   * that is small.
+   *
+   * <p>This is applied by {@link #optimize(Matcher)} once the other rewrites are done, so the
+   * optional portion already has the rest of the pattern. Otherwise, for something like
+   * {@code (?:(a.*)?b)-(?:(a.*)?b)-...}, the size would only be checked for {@code b} and
+   * the rest would later be merged into both alternatives, doubling for each optional.
+   *
+   * <p>A greedy {@code (R){0,1}} is the same as {@code (R)?}, so it is rewritten as well.
+   */
+  static Matcher optionalToAlternatives(Matcher matcher) {
+    Matcher repeated;
+    Matcher next;
+    if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher zm = matcher.as();
+      repeated = zm.repeated();
+      next = zm.next();
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher rm = matcher.as();
+      if (rm.min() != 0 || rm.max() != 1 || rm.isPossessive()) {
+        return matcher;
+      }
+      repeated = rm.repeated();
+      next = rm.next();
+    } else {
+      return matcher;
+    }
+    if (!(next instanceof TrueMatcher)
+        && !PatternUtils.isFixedLength(repeated)
+        && size(next) <= MAX_OPTIONAL_NEXT_SIZE) {
+      return OrMatcher.create(SeqMatcher.create(repeated, next), next);
+    }
+    return matcher;
+  }
+
+  /** Returns the number of matchers in the tree. */
+  private static int size(Matcher matcher) {
+    int[] count = {0};
+    matcher.rewrite(m -> {
+      ++count[0];
+      return m;
+    });
+    return count[0];
   }
 
   /**
@@ -785,14 +872,23 @@ final class Optimizer {
    * (a+)?b      => a*b
    * (a*)*b      => a*b
    * </pre>
+   *
+   * <p>A possessive repetition is not flattened. Like java, each repetition keeps its first
+   * match, so {@code (a+){2}+} does not match "aa", but {@code a{2,}+} would.
    */
   static Matcher flattenRepeatedUnbounded(Matcher matcher) {
     if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
       Matcher x = unboundedRepeated(m.repeated());
-      if (x != null && m.min() > 0) {
-        long min = (long) unboundedMin(m.repeated()) * m.min();
-        return unbounded(x, (int) Math.min(min, Integer.MAX_VALUE), TrueMatcher.INSTANCE);
+      if (x == null || m.max() == 0 || m.isPossessive()) {
+        return matcher;
+      }
+      int k = unboundedMin(m.repeated());
+      int min = (int) Math.min((long) k * m.min(), Integer.MAX_VALUE);
+      // With a min of 0, it can only be flattened if a single repetition can match a single
+      // x, e.g. (a{2,}){0,1} does not match "a", but a* would match it.
+      if (m.min() > 0 || k <= 1) {
+        return unbounded(x, min, m.next());
       }
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
@@ -805,6 +901,40 @@ final class Optimizer {
       Matcher x = unboundedRepeated(m.repeated());
       if (x != null && unboundedMin(m.repeated()) <= 1) {
         return new ZeroOrMoreMatcher(x, m.next());
+      }
+    }
+    return matcher;
+  }
+
+  /**
+   * A bounded repetition of a bounded repetition of a fixed length portion can be flattened
+   * if every count in between can be matched, e.g. {@code (a{1,2}){2} => a{2,4}}. Otherwise,
+   * the inner repetition would consume as much as possible and not give any back for the
+   * rest of the pattern. It is not flattened if there would be gaps, e.g. {@code (a{3}){1,2}}
+   * only matches 3 or 6.
+   */
+  static Matcher flattenNestedRepeat(Matcher matcher) {
+    if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher outer = matcher.as();
+      if (outer.isPossessive() || !(outer.repeated() instanceof RepeatMatcher)) {
+        return matcher;
+      }
+      RepeatMatcher inner = outer.repeated().as();
+      if (inner.isPossessive()
+          || !(inner.next() instanceof TrueMatcher)
+          || !PatternUtils.isFixedLength(inner.repeated())) {
+        return matcher;
+      }
+      long a = inner.min();
+      long b = inner.max();
+      long m = outer.min();
+      long n = outer.max();
+      // With k outer repetitions it matches [a * k, b * k], those ranges are contiguous if
+      // b * k >= a * (k + 1) - 1. That gets easier as k increases, so check the min.
+      boolean contiguous = m == n || (b - a) * m >= a - 1;
+      if (contiguous && b * n <= Integer.MAX_VALUE) {
+        return new RepeatMatcher(
+            inner.repeated(), (int) (a * m), (int) (b * n), outer.next(), false);
       }
     }
     return matcher;
@@ -848,7 +978,9 @@ final class Optimizer {
       return 1;
     } else if (prefix instanceof RepeatMatcher) {
       RepeatMatcher r = prefix.as();
-      return r.min() == r.max() && r.repeated().equals(x) ? r.min() : -1;
+      return r.min() == r.max() && r.next() instanceof TrueMatcher && r.repeated().equals(x)
+          ? r.min()
+          : -1;
     }
     return -1;
   }
