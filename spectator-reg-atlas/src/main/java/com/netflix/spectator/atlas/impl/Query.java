@@ -800,11 +800,9 @@ public interface Query {
     Regex(String k, String v, boolean ignoreCase, String name) {
       this.k = Preconditions.checkNotNull(k, "k");
       this.v = Preconditions.checkNotNull(v, "v");
-      if (ignoreCase) {
-        this.pattern = PatternMatcher.compile("^" + v).ignoreCase();
-      } else {
-        this.pattern = PatternMatcher.compile("^" + v);
-      }
+      // The (?i) flag is cheaper than calling ignoreCase() on the compiled matcher, the
+      // pattern only needs to be optimized once
+      this.pattern = PatternMatcher.compile((ignoreCase ? "(?i)^" : "^") + v);
       this.name = Preconditions.checkNotNull(name, "name");
     }
 

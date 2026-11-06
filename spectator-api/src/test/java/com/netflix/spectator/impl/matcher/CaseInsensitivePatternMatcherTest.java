@@ -38,16 +38,33 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
       int flags = Pattern.DOTALL | Pattern.CASE_INSENSITIVE;
       Pattern pattern = Pattern.compile("^.*(" + regex + ")", flags);
       PatternMatcher matcher = PatternMatcher.compile(regex).ignoreCase();
-      if (pattern.matcher(value).find()) {
-        Assertions.assertTrue(matcher.matches(value), regex + " should match " + value);
-      } else {
-        Assertions.assertFalse(matcher.matches(value), regex + " shouldn't match " + value);
-      }
+      // The (?i) flag rewrites the matcher before it is optimized rather than after, it
+      // should give the same result
+      String flagRegex = regex.startsWith("(?i)") ? regex : "(?i)" + regex;
+      PatternMatcher flagMatcher = PatternMatcher.compile(flagRegex);
+      boolean expected = pattern.matcher(value).find();
+      Assertions.assertEquals(expected, matcher.matches(value), regex + " on " + value);
+      Assertions.assertEquals(expected, flagMatcher.matches(value), flagRegex + " on " + value);
 
       // Check pattern can be recreated from toString
       PatternMatcher actual = PatternMatcher.compile(matcher.toString());
       Assertions.assertEquals(matcher, actual);
     }
+  }
+
+  @Test
+  public void flagOptimizedSameAsIgnoreCase() {
+    // The (?i) flag rewrites the matcher before it is optimized. A class for a single letter
+    // should still be merged with adjacent literals, and a class that is empty when ignoring
+    // the case should still count as content after the end anchor.
+    String[] patterns = {
+        "^[a]bc", "[f]oo", "x[a]{3}y", "^([a]bc|def)", "[a].*b.*c", "$[^\\s\\S]++", "$[a&&[^A]]+"
+    };
+    for (String p : patterns) {
+      PatternMatcher expected = PatternMatcher.compile(p).ignoreCase();
+      Assertions.assertEquals(expected, PatternMatcher.compile("(?i)" + p), p);
+    }
+    Assertions.assertTrue(PatternMatcher.compile("(?i)$[^\\s\\S]++").neverMatches());
   }
 
   @Test
