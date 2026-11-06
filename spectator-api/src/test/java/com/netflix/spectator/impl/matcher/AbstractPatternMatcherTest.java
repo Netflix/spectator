@@ -375,6 +375,33 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void charClassZeroOrMore() {
+    testRE("^[0-9]*$", "12345");
+    testRE("^[0-9]*$", "123a5");
+    testRE("^[0-9]*$", "");
+    testRE("^a[0-9]*b", "a123b");
+    testRE("^a[0-9]*b", "a12x3b");
+    testRE("^a[0-9]*b", "ab");
+    testRE("[a-c]*d", "xxabcabd");
+    testRE("[a-c]*d", "xxABCABD");
+    testRE("^[a-c]*$", "abcABC");
+    testRE("^[^0-9]*5", "abc5");
+    testRE("^[^0-9]*5", "ab4c5");
+    testRE("^[a-z]*[0-9]", "abcDEF1");
+    testRE("^\\d*\\d$", "1");
+    testRE("^(ab)[0-9]*", "ab");
+    testRE("^[0-9]*12$", "0001212");
+  }
+
+  @Test
+  public void indexOfIgnoreCaseNoLetters() {
+    testRE("123-456", "abc-123-456-def");
+    testRE("123-456", "abc-123-457-def");
+    testRE("^.*12.*-34", "x12y-34z");
+    testRE("^.*12.*-34", "x12y-35z");
+  }
+
+  @Test
   public void oneOrMore() {
     testRE("a+", "abc");
     testRE("^.+$", "abc");

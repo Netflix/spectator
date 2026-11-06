@@ -255,4 +255,89 @@ public class PatternUtilsTest {
     AsciiSet set = AsciiSet.fromPattern("-./");
     Assertions.assertEquals("[-\\./]", new CharClassMatcher(set).toString());
   }
+
+  private static boolean regionMatchesIgnoreCase(String a, String b) {
+    return a.regionMatches(true, 0, b, 0, b.length());
+  }
+
+  @Test
+  public void caseMattersAllChars() {
+    // Verify the assumptions used by indexOfIgnoreCase against regionMatches for every char.
+    // For an ASCII char where case does not matter, only the char itself can match. For an
+    // ASCII letter, only the char, the other case, or a non-ASCII char can match.
+    String[] ascii = new String[128];
+    for (char a = 0; a < 128; ++a) {
+      ascii[a] = String.valueOf(a);
+    }
+    for (int i = 0; i <= Character.MAX_VALUE; ++i) {
+      char c = (char) i;
+      String cs = String.valueOf(c);
+      for (char a = 0; a < 128; ++a) {
+        if (regionMatchesIgnoreCase(cs, ascii[a])) {
+          if (PatternUtils.caseMatters(a)) {
+            boolean expected = c == Character.toLowerCase(a)
+                || c == Character.toUpperCase(a)
+                || c >= 128;
+            Assertions.assertTrue(expected, "unexpected match: " + (int) c + " ~ " + (int) a);
+          } else {
+            Assertions.assertEquals(a, c, "unexpected match: " + (int) c + " ~ " + (int) a);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  public void caseMattersString() {
+    Assertions.assertFalse(PatternUtils.caseMatters(""));
+    Assertions.assertFalse(PatternUtils.caseMatters("0123-456.789_[@]`{~}"));
+    Assertions.assertTrue(PatternUtils.caseMatters("0123a"));
+    Assertions.assertTrue(PatternUtils.caseMatters("Z"));
+    Assertions.assertTrue(PatternUtils.caseMatters("123\u00e9"));
+  }
+
+  private static int referenceIndexOfIgnoreCase(String str, String pattern, int offset) {
+    final int end = str.length() - pattern.length();
+    for (int i = offset; i <= end; ++i) {
+      if (str.regionMatches(true, i, pattern, 0, pattern.length())) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  @Test
+  public void indexOfIgnoreCase() {
+    Assertions.assertEquals(4, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 0));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 5));
+    Assertions.assertEquals(3, PatternUtils.indexOfIgnoreCase("abc-123", "-1", 0));
+    Assertions.assertEquals(0, PatternUtils.indexOfIgnoreCase("\u212Aelvin", "kelvin", 0));
+    Assertions.assertEquals(2, PatternUtils.indexOfIgnoreCase("ab", "", 2));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("ab", "", 3));
+  }
+
+  @Test
+  public void indexOfIgnoreCaseMatchesReference() {
+    // Alphabet includes chars that match ASCII letters if the case is ignored: Kelvin sign,
+    // long s, and dotted capital I.
+    char[] alphabet = "aAbBkKsSiI01-_.\u212A\u017F\u0130\u00e9\u00c9".toCharArray();
+    java.util.Random r = new java.util.Random(42);
+    for (int i = 0; i < 100_000; ++i) {
+      String str = randomString(r, alphabet, r.nextInt(20));
+      String pattern = randomString(r, alphabet, 1 + r.nextInt(4));
+      int offset = r.nextInt(str.length() + 2);
+      Assertions.assertEquals(
+          referenceIndexOfIgnoreCase(str, pattern, offset),
+          PatternUtils.indexOfIgnoreCase(str, pattern, offset),
+          () -> "indexOfIgnoreCase(\"" + str + "\", \"" + pattern + "\", " + offset + ")");
+    }
+  }
+
+  private static String randomString(java.util.Random r, char[] alphabet, int n) {
+    StringBuilder builder = new StringBuilder(n);
+    for (int i = 0; i < n; ++i) {
+      builder.append(alphabet[r.nextInt(alphabet.length)]);
+    }
+    return builder.toString();
+  }
 }

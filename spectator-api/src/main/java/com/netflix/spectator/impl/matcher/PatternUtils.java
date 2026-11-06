@@ -47,6 +47,73 @@ public final class PatternUtils {
   }
 
   /**
+   * Returns true if ignoring the case could change which characters match the given
+   * character. That is the case for ASCII letters and any character outside of the ASCII
+   * range. For other ASCII characters, such as digits or punctuation, only the character
+   * itself will match. This is verified for all characters by the tests.
+   */
+  static boolean caseMatters(char c) {
+    final char lower = (char) (c | 0x20);
+    return c >= 128 || (lower >= 'a' && lower <= 'z');
+  }
+
+  /** Returns true if ignoring the case could change which strings match the given string. */
+  static boolean caseMatters(String s) {
+    final int n = s.length();
+    for (int i = 0; i < n; ++i) {
+      if (caseMatters(s.charAt(i))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Find the first position at or after the offset where the pattern occurs in the string
+   * ignoring the case. The result is the same as checking
+   * {@code str.regionMatches(true, i, pattern, 0, pattern.length())} for each position, but
+   * it avoids most of the per-position checks:
+   *
+   * <ul>
+   *   <li>If case does not matter for any character in the pattern, then it will use
+   *   {@link String#indexOf(String, int)}.</li>
+   *   <li>If the first character of the pattern is ASCII, then the full comparison is only
+   *   done for positions where the character could match. An ASCII character can only
+   *   match itself, the other case for a letter, or a character outside the ASCII range
+   *   such as {@code U+212A} (Kelvin sign) for {@code k}.</li>
+   * </ul>
+   */
+  static int indexOfIgnoreCase(String str, String pattern, int offset) {
+    final int length = pattern.length();
+    final int end = str.length() - length;
+    if (length == 0) {
+      return offset <= end ? offset : -1;
+    } else if (!caseMatters(pattern)) {
+      return str.indexOf(pattern, offset);
+    }
+
+    final char first = pattern.charAt(0);
+    if (first < 128) {
+      final char lower = Character.toLowerCase(first);
+      final char upper = Character.toUpperCase(first);
+      for (int i = offset; i <= end; ++i) {
+        final char c = str.charAt(i);
+        if ((c == lower || c == upper || c >= 128)
+            && str.regionMatches(true, i, pattern, 0, length)) {
+          return i;
+        }
+      }
+    } else {
+      for (int i = offset; i <= end; ++i) {
+        if (str.regionMatches(true, i, pattern, 0, length)) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  /**
    * Compile a pattern string and return a matcher that can be used to check if string values
    * match the pattern. Pattern matchers are can be reused many times and are thread safe.
    */
