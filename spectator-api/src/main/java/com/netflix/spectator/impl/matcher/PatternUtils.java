@@ -897,7 +897,8 @@ public final class PatternUtils {
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       String pattern = m.pattern();
-      return pattern.isEmpty() ? null : new CharSeqMatcher(pattern.substring(0, 1), m.isIgnoreCase());
+      int n = firstCodePointLength(pattern);
+      return n == 0 ? null : new CharSeqMatcher(pattern.substring(0, n), m.isIgnoreCase());
     } else {
       return matcher;
     }
@@ -917,12 +918,22 @@ public final class PatternUtils {
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       String pattern = m.pattern();
-      return pattern.length() <= 1
+      int n = firstCodePointLength(pattern);
+      return pattern.length() <= n
           ? TrueMatcher.INSTANCE
-          : new CharSeqMatcher(pattern.substring(1), m.isIgnoreCase());
+          : new CharSeqMatcher(pattern.substring(n), m.isIgnoreCase());
     } else {
       return TrueMatcher.INSTANCE;
     }
+  }
+
+  /**
+   * Length of the first code point, or 0 for an empty string. The prefix of a character
+   * sequence is the first code point rather than the first char, so a surrogate pair is not
+   * split, e.g. for an emoji. A lone surrogate would not be valid for other regex engines.
+   */
+  private static int firstCodePointLength(String str) {
+    return str.isEmpty() ? 0 : str.offsetByCodePoints(0, 1);
   }
 
   /** Compute the set of trigrams for an input string. */
