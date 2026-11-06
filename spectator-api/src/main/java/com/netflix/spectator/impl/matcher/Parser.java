@@ -316,6 +316,14 @@ class Parser {
     return charClass(invert);
   }
 
+  /** Add a range of characters. Like java, it is an error if the end is before the start. */
+  private void addRange(CharClassBuilder builder, char s, char e) {
+    if (e < s) {
+      throw error("illegal character range");
+    }
+    builder.add(s, e);
+  }
+
   /**
    * Parse the rest of a character class up to and including the closing bracket. A leading
    * negation, if any, has already been consumed by the caller and is passed as
@@ -362,6 +370,9 @@ class Parser {
             }
             if (!right.isEmpty()) {
               builder.intersection(right.build(false));
+            } else if (builder.isEmpty()) {
+              // Like java, an intersection needs at least one operand, e.g. [&&] is an error
+              throw error("bad class syntax");
             }
             rangeStart = -1;
           } else {
@@ -383,19 +394,15 @@ class Parser {
         case '-':
           // The end of the range is consumed so it cannot start another range, e.g. [a-c-e]
           // is a-c, '-', and 'e'. If followed by a nested class, then '-' is a literal.
+          // Like java, a range that ends with a named class, e.g. [a-\\w], is an error.
           if (rangeStart >= 0 && peek() != ']' && peek() != '[') {
             if (peek() == '\\') {
               advance();
-              tmp = namedCharClass();
-              if (tmp == null) {
-                builder.add((char) rangeStart, advance());
-              } else {
-                builder.add('-');
-                builder.add(tmp);
+              if (namedCharClass() != null) {
+                throw error("illegal character range");
               }
-            } else {
-              builder.add((char) rangeStart, advance());
             }
+            addRange(builder, (char) rangeStart, advance());
             rangeStart = -1;
           } else {
             builder.add('-');
