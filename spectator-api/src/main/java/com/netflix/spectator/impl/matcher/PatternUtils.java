@@ -285,6 +285,12 @@ public final class PatternUtils {
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       return map(expandOrClauses(m.next(), max), n -> new ZeroOrMoreMatcher(m.repeated(), n), max);
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      return map(
+          expandOrClauses(m.next(), max),
+          n -> new RepeatMatcher(m.repeated(), m.min(), m.max(), n, m.isPossessive()),
+          max);
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
       List<Matcher> rs = expandOrClauses(m.repeated(), max);
@@ -427,6 +433,12 @@ public final class PatternUtils {
       ZeroOrOneMatcher m = matcher.as();
       Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
       return next == m.next() ? m : new ZeroOrOneMatcher(m.repeated(), next);
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
+      return next == m.next()
+          ? m
+          : new RepeatMatcher(m.repeated(), m.min(), m.max(), next, m.isPossessive());
     } else if (matcher instanceof SeqMatcher) {
       Matcher[] ms = matcher.<SeqMatcher>as().matchers().toArray(new Matcher[0]);
       boolean changed = false;
@@ -560,29 +572,60 @@ public final class PatternUtils {
     }
   }
 
-  private static boolean isFixedLength(Matcher matcher) {
-    if (matcher instanceof CharSeqMatcher
-        || matcher instanceof CharClassMatcher
-        || matcher instanceof AnyMatcher
-        || matcher instanceof TrueMatcher
+  /** Returns true if the matcher always matches the same number of code points. */
+  static boolean isFixedLength(Matcher matcher) {
+    return fixedLength(matcher) >= 0;
+  }
+
+  /**
+   * Returns the number of code points the matcher always matches, or -1 if it can match
+   * different lengths.
+   */
+  private static long fixedLength(Matcher matcher) {
+    if (matcher instanceof CharSeqMatcher) {
+      String pattern = matcher.<CharSeqMatcher>as().pattern();
+      return pattern.codePointCount(0, pattern.length());
+    } else if (matcher instanceof CharClassMatcher || matcher instanceof AnyMatcher) {
+      return 1;
+    } else if (matcher instanceof TrueMatcher
         || matcher instanceof StartMatcher
         || matcher instanceof EndMatcher
         || matcher instanceof PositiveLookaheadMatcher
         || matcher instanceof NegativeLookaheadMatcher) {
-      return true;
+      return 0;
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
-      return m.min() == m.max() && isFixedLength(m.repeated());
+      long r = fixedLength(m.repeated());
+      long n = fixedLength(m.next());
+      return m.min() == m.max() && r >= 0 && n >= 0 ? saturatedAdd(r * m.min(), n) : -1;
     } else if (matcher instanceof SeqMatcher) {
+      long length = 0;
       for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
-        if (!isFixedLength(m)) {
-          return false;
+        long n = fixedLength(m);
+        if (n < 0) {
+          return -1;
         }
+        length = saturatedAdd(length, n);
       }
-      return true;
+      return length;
+    } else if (matcher instanceof OrMatcher) {
+      // Fixed if all of the alternatives have the same length
+      long length = -1;
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        long n = fixedLength(m);
+        if (n < 0 || (length >= 0 && n != length)) {
+          return -1;
+        }
+        length = n;
+      }
+      return length;
     } else {
-      return false;
+      return -1;
     }
+  }
+
+  private static long saturatedAdd(long a, long b) {
+    return Math.min(a + b, Integer.MAX_VALUE);
   }
 
   private static PatternExpr expandLookahead(Matcher matcher) {
@@ -701,10 +744,14 @@ public final class PatternUtils {
       }
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
-      if (containsUnsupported(m)) {
+      if (m.isPossessive() || m.max() > 1000 || containsUnsupported(m.repeated())) {
         return;
-      } else {
-        results[0] = matcher;
+      }
+      clearAndRewriteNextLookahead(m.next(), results, false, restAny);
+      for (int i = 0; i < results.length; ++i) {
+        if (results[i] != null) {
+          results[i] = new RepeatMatcher(m.repeated(), m.min(), m.max(), results[i], false);
+        }
       }
     } else if (matcher instanceof PositiveLookaheadMatcher) {
       // X(?=Y)Z is split into XY AND XZ. If the position is not fixed, this is only valid
@@ -750,8 +797,12 @@ public final class PatternUtils {
       }
       return false;
     } else if (matcher instanceof RepeatMatcher) {
+      // RE2 does not support possessive repetitions
       RepeatMatcher m = matcher.as();
-      return m.max() > 1000 || containsUnsupported(m.repeated());
+      return m.isPossessive()
+          || m.max() > 1000
+          || containsUnsupported(m.repeated())
+          || containsUnsupported(m.next());
     } else if (matcher instanceof SeqMatcher) {
       for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
         if (containsUnsupported(m)) {

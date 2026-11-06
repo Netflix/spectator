@@ -212,6 +212,17 @@ public class PatternMatching {
   private final Pattern javaMatcherCharClassStar = Pattern.compile(charClassStar);
   private final PatternMatcher customMatcherCharClassStar = PatternMatcher.compile(charClassStar);
 
+  // Bounded repetitions with a range followed by more of the pattern
+  private final String ipInput = "100.66.123.4";
+  private final String bounded = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$";
+  private final Pattern javaMatcherBounded = Pattern.compile(bounded);
+  private final PatternMatcher customMatcherBounded = PatternMatcher.compile(bounded);
+
+  // Optional portion that can match different lengths
+  private final String optional = "^(The-.*)?Lazy-Dog";
+  private final Pattern javaMatcherOptional = Pattern.compile(optional);
+  private final PatternMatcher customMatcherOptional = PatternMatcher.compile(optional);
+
   @Benchmark
   public void prefixString(Blackhole bh) {
     bh.consume(example.startsWith(exampleCopy));
@@ -350,5 +361,25 @@ public class PatternMatching {
   @Benchmark
   public void charClassStarCustom(Blackhole bh) {
     bh.consume(customMatcherCharClassStar.matches(text));
+  }
+
+  @Benchmark
+  public void boundedJava(Blackhole bh) {
+    bh.consume(javaMatcherBounded.matcher(ipInput).find());
+  }
+
+  @Benchmark
+  public void boundedCustom(Blackhole bh) {
+    bh.consume(customMatcherBounded.matches(ipInput));
+  }
+
+  @Benchmark
+  public void optionalJava(Blackhole bh) {
+    bh.consume(javaMatcherOptional.matcher(text).find());
+  }
+
+  @Benchmark
+  public void optionalCustom(Blackhole bh) {
+    bh.consume(customMatcherOptional.matches(text));
   }
 }

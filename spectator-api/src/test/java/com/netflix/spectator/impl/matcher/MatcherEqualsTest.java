@@ -92,7 +92,7 @@ public class MatcherEqualsTest {
   public void repeat() {
     EqualsVerifier
         .forClass(RepeatMatcher.class)
-        .withNonnullFields("repeated")
+        .withNonnullFields("repeated", "next")
         .verify();
   }
 
