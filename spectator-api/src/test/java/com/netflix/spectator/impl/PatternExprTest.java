@@ -260,10 +260,13 @@ public class PatternExprTest {
 
   @Test
   public void negativeLookaheadInvertedSetNotNegatedClass() {
-    // The inverted set would be written as [0-9] which would not match non-ascii
-    // characters for engines like RE2, so it cannot be inlined
+    // The inverted set is the digits and the non-ascii code points
     PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-/:-\\x7f])").toPatternExpr(50);
-    Assertions.assertNull(expr);
+    Assertions.assertEquals("'.*foo-($|[^-\\x00-/:-\\x7f])'", expr.toString());
+    Assertions.assertTrue(expr.matches("foo-"));
+    Assertions.assertTrue(expr.matches("foo-1"));
+    Assertions.assertTrue(expr.matches("foo-\u00e9"));
+    Assertions.assertFalse(expr.matches("foo-a"));
   }
 
   @Test
@@ -295,9 +298,12 @@ public class PatternExprTest {
 
   @Test
   public void negativeLookaheadAllAscii() {
-    // Inverted set is empty, but a non-ascii character would not match the lookahead
+    // Inverted set is the non-ascii code points
     PatternExpr expr = PatternMatcher.compile("foo-(?![\\x00-\\x7f])").toPatternExpr(50);
-    Assertions.assertNull(expr);
+    Assertions.assertEquals("'.*foo-($|[^-\\x00-\\x7f])'", expr.toString());
+    Assertions.assertTrue(expr.matches("foo-"));
+    Assertions.assertTrue(expr.matches("foo-\uD83D\uDE00"));
+    Assertions.assertFalse(expr.matches("foo-a"));
   }
 
   @Test

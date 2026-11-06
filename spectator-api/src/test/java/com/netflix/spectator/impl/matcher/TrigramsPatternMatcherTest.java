@@ -32,6 +32,13 @@ public class TrigramsPatternMatcherTest extends AbstractPatternMatcherTest {
     if (matcher.matches(value)) {
       Assertions.assertTrue(couldMatch(trigrams, value));
     }
+
+    // Trigrams should not split a surrogate pair unless the input already had a lone surrogate
+    if (!PatternMatcherTest.hasLoneSurrogate(regex)) {
+      for (String t : trigrams) {
+        Assertions.assertFalse(PatternMatcherTest.hasLoneSurrogate(t), t);
+      }
+    }
   }
 
   private boolean couldMatch(SortedSet<String> trigrams, String value) {

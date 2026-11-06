@@ -192,6 +192,10 @@ public interface PatternMatcher {
    * <p>Literal '%', '_', and '\' characters are escaped with a backslash. The query must
    * use backslash as the escape character, e.g. {@code LIKE ? ESCAPE '\'}, as that is not
    * the default for all databases.
+   *
+   * <p>A '.' is written as '_'. The regex matches a code point, so for values with
+   * supplementary characters, such as emoji, it is only the same if '_' matches a code
+   * point in the database, e.g. PostgreSQL, rather than a UTF-16 char.
    */
   default String toSqlPattern() {
     return null;
