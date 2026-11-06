@@ -67,7 +67,7 @@ final class CharSeqMatcher implements Matcher, Serializable {
   public int matches(String str, int start, int length) {
     final int plength = pattern.length();
     boolean matched = ignoreCase
-        ? str.regionMatches(true, start, pattern, 0, plength)
+        ? PatternUtils.regionMatchesIgnoreCase(str, start, pattern)
         : str.startsWith(pattern, start);
     //System.out.println(matched + "::-" + str.substring(start));
     return matched ? start + plength : Constants.NO_MATCH;

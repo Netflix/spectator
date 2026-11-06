@@ -59,7 +59,7 @@ final class StartsWithMatcher implements Matcher, Serializable {
       return Constants.NO_MATCH;
     }
     boolean matched = ignoreCase
-        ? str.regionMatches(true, 0, pattern, 0, pattern.length())
+        ? PatternUtils.regionMatchesIgnoreCase(str, 0, pattern)
         : str.startsWith(pattern);
     return matched ? pattern.length() : Constants.NO_MATCH;
   }

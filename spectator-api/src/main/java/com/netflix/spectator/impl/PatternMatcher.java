@@ -145,7 +145,8 @@ public interface PatternMatcher {
    * Returns a new matcher that matches the same pattern only ignoring the case of the input
    * string. Character classes also ignore the case. As with the Java {@code (?i)} flag, the
    * case of each element is folded before negation or intersection, so {@code [^a]} matches
-   * neither 'a' nor 'A'. Only ASCII letters are folded in character classes.
+   * neither 'a' nor 'A'. Like the Java flag without {@code UNICODE_CASE}, only ASCII letters
+   * are folded, other characters must be equal, e.g. 'k' does not match the Kelvin sign.
    */
   default PatternMatcher ignoreCase() {
     return this;

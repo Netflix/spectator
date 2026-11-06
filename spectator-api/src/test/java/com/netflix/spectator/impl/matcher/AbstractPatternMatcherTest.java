@@ -571,6 +571,29 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void nonAsciiCase() {
+    // Like java with CASE_INSENSITIVE, only the case of ASCII letters is ignored, e.g. 'k'
+    // does not match the Kelvin sign and 'e' with an accent does not match the upper case
+    String[] patterns = {
+        "^k$", "^K$", "\u212A", "^\u00E9$", "^\u00C9$", "^\uD801\uDC00+$", "^\uD801\uDC28+$",
+        "^(\uD801\uDC00x|\uD801\uDC01y)$", "^ab.*\u00E9", "\u00E9.*\u00E9", "x\u00E9y",
+        "^(\u00E9a|\u00E9b)", "^(\u00E9a|\u00C9b)", "^a\u00C9b$", "[a-z]\u00E9", "\u00E9$",
+        "^a.*b.*\u00E9$"
+    };
+    String[] values = {
+        "k", "K", "\u212A", "\u00E9", "\u00C9", "\uD801\uDC00", "\uD801\uDC28\uD801\uDC28",
+        "\uD801\uDC29y", "\uD801\uDC00x", "AB\u00C9", "ab\u00E9", "\u00C9 \u00E9", "X\u00C9Y",
+        "x\u00E9y", "\u00C9A", "\u00E9a", "\u00C9B", "\u00E9B", "A\u00E9B", "a\u00C9B", "Z\u00E9",
+        "z\u00C9"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");

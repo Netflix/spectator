@@ -133,6 +133,61 @@ public class PatternUtilsTest {
   }
 
   @Test
+  public void regionMatchesIgnoreCase() {
+    Assertions.assertTrue(PatternUtils.regionMatchesIgnoreCase("xAbC", 1, "abc"));
+    Assertions.assertTrue(PatternUtils.regionMatchesIgnoreCase("x@[`{", 1, "@[`{"));
+    Assertions.assertFalse(PatternUtils.regionMatchesIgnoreCase("x@[`{", 1, "`{@["));
+    Assertions.assertFalse(PatternUtils.regionMatchesIgnoreCase("\u212A", 0, "k"));
+    Assertions.assertFalse(PatternUtils.regionMatchesIgnoreCase("\u00C9", 0, "\u00E9"));
+    Assertions.assertFalse(PatternUtils.regionMatchesIgnoreCase("ab", 1, "bc"));
+    Assertions.assertFalse(PatternUtils.regionMatchesIgnoreCase("ab", -1, "a"));
+    Assertions.assertTrue(PatternUtils.regionMatchesIgnoreCase("ab", 2, ""));
+    // Every pair of ASCII chars, only letters that differ by case are equal
+    for (char a = 0; a < 128; ++a) {
+      for (char b = 0; b < 128; ++b) {
+        boolean expected = Character.toLowerCase(a) == Character.toLowerCase(b);
+        String sa = String.valueOf(a);
+        String sb = String.valueOf(b);
+        Assertions.assertEquals(expected, PatternUtils.regionMatchesIgnoreCase(sa, 0, sb), sa + sb);
+      }
+    }
+  }
+
+  @Test
+  public void indexOfIgnoreCase() {
+    Assertions.assertEquals(2, PatternUtils.indexOfIgnoreCase("xxABcab", "abc", 0));
+    Assertions.assertEquals(5, PatternUtils.indexOfIgnoreCase("xxABcabc", "abc", 3));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("xxABcab", "abc", 3));
+    Assertions.assertEquals(1, PatternUtils.indexOfIgnoreCase("x1-2", "1-2", -5));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("ab", "abc", 0));
+    Assertions.assertEquals(3, PatternUtils.indexOfIgnoreCase("abc", "", 3));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("abc", "", 4));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("\u212Aa", "ka", 0));
+    Assertions.assertEquals(1, PatternUtils.indexOfIgnoreCase("xKa", "ka", 0));
+    Assertions.assertEquals(4, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 0));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 5));
+    Assertions.assertEquals(3, PatternUtils.indexOfIgnoreCase("abc-123", "-1", 0));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("\u212Aelvin", "kelvin", 0));
+    Assertions.assertEquals(1, PatternUtils.indexOfIgnoreCase("x\u00e9", "\u00e9", 0));
+    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("x\u00c9", "\u00e9", 0));
+  }
+
+  @Test
+  public void toOtherCase() {
+    // Only ASCII letters have another case, e.g. the Latin-1 letters that differ by the same
+    // bit are unchanged
+    for (char c = 0; c < 256; ++c) {
+      char expected = c;
+      if (c >= 'a' && c <= 'z') {
+        expected = Character.toUpperCase(c);
+      } else if (c >= 'A' && c <= 'Z') {
+        expected = Character.toLowerCase(c);
+      }
+      Assertions.assertEquals(expected, PatternUtils.toOtherCase(c), String.valueOf(c));
+    }
+  }
+
+  @Test
   public void escapeSpecial() {
     String input = "\t\n\r\f\\^$.|?*+[](){}";
     String expected = "\\t\\n\\r\\f\\\\\\^\\$\\.\\|\\?\\*\\+\\[\\]\\(\\)\\{\\}";
@@ -256,15 +311,14 @@ public class PatternUtilsTest {
     Assertions.assertEquals("[-\\./]", new CharClassMatcher(set).toString());
   }
 
-  private static boolean regionMatchesIgnoreCase(String a, String b) {
-    return a.regionMatches(true, 0, b, 0, b.length());
-  }
-
   @Test
   public void caseMattersAllChars() {
-    // Verify the assumptions used by indexOfIgnoreCase against regionMatches for every char.
-    // For an ASCII char where case does not matter, only the char itself can match. For an
-    // ASCII letter, only the char, the other case, or a non-ASCII char can match.
+    // Verify the assumptions used by indexOfIgnoreCase for every char. Case only matters for
+    // ASCII letters, and then only the other case of the letter can also match.
+    for (int i = 0; i <= Character.MAX_VALUE; ++i) {
+      char a = (char) i;
+      Assertions.assertEquals(PatternUtils.toOtherCase(a) != a, PatternUtils.caseMatters(a));
+    }
     String[] ascii = new String[128];
     for (char a = 0; a < 128; ++a) {
       ascii[a] = String.valueOf(a);
@@ -273,15 +327,9 @@ public class PatternUtilsTest {
       char c = (char) i;
       String cs = String.valueOf(c);
       for (char a = 0; a < 128; ++a) {
-        if (regionMatchesIgnoreCase(cs, ascii[a])) {
-          if (PatternUtils.caseMatters(a)) {
-            boolean expected = c == Character.toLowerCase(a)
-                || c == Character.toUpperCase(a)
-                || c >= 128;
-            Assertions.assertTrue(expected, "unexpected match: " + (int) c + " ~ " + (int) a);
-          } else {
-            Assertions.assertEquals(a, c, "unexpected match: " + (int) c + " ~ " + (int) a);
-          }
+        boolean expected = c == a || c == PatternUtils.toOtherCase(a);
+        if (expected != PatternUtils.regionMatchesIgnoreCase(cs, 0, ascii[a])) {
+          Assertions.fail("match: " + (int) c + " ~ " + (int) a);
         }
       }
     }
@@ -293,13 +341,13 @@ public class PatternUtilsTest {
     Assertions.assertFalse(PatternUtils.caseMatters("0123-456.789_[@]`{~}"));
     Assertions.assertTrue(PatternUtils.caseMatters("0123a"));
     Assertions.assertTrue(PatternUtils.caseMatters("Z"));
-    Assertions.assertTrue(PatternUtils.caseMatters("123\u00e9"));
+    Assertions.assertFalse(PatternUtils.caseMatters("123\u00e9"));
   }
 
   private static int referenceIndexOfIgnoreCase(String str, String pattern, int offset) {
     final int end = str.length() - pattern.length();
     for (int i = offset; i <= end; ++i) {
-      if (str.regionMatches(true, i, pattern, 0, pattern.length())) {
+      if (PatternUtils.regionMatchesIgnoreCase(str, i, pattern)) {
         return i;
       }
     }
@@ -307,19 +355,9 @@ public class PatternUtilsTest {
   }
 
   @Test
-  public void indexOfIgnoreCase() {
-    Assertions.assertEquals(4, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 0));
-    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("foo-BAR", "bar", 5));
-    Assertions.assertEquals(3, PatternUtils.indexOfIgnoreCase("abc-123", "-1", 0));
-    Assertions.assertEquals(0, PatternUtils.indexOfIgnoreCase("\u212Aelvin", "kelvin", 0));
-    Assertions.assertEquals(2, PatternUtils.indexOfIgnoreCase("ab", "", 2));
-    Assertions.assertEquals(-1, PatternUtils.indexOfIgnoreCase("ab", "", 3));
-  }
-
-  @Test
   public void indexOfIgnoreCaseMatchesReference() {
-    // Alphabet includes chars that match ASCII letters if the case is ignored: Kelvin sign,
-    // long s, and dotted capital I.
+    // Alphabet includes chars that match ASCII letters with Unicode case folding, but not
+    // with ASCII only folding: Kelvin sign, long s, and dotted capital I.
     char[] alphabet = "aAbBkKsSiI01-_.\u212A\u017F\u0130\u00e9\u00c9".toCharArray();
     java.util.Random r = new java.util.Random(42);
     for (int i = 0; i < 100_000; ++i) {
