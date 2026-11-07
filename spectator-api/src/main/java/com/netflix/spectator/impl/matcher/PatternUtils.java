@@ -828,7 +828,13 @@ public final class PatternUtils {
     while (i < str.length()) {
       char c = str.charAt(i);
       if (c != '\\' || i + 1 >= str.length()) {
-        builder.append(c);
+        if (isLoneSurrogate(str, i)) {
+          // Like java, a lone surrogate is not joined with a surrogate on the other side of
+          // an empty quotation, e.g. a high surrogate followed by \Q\E and a low surrogate
+          CodePointRanges.appendCodePoint(builder, c);
+        } else {
+          builder.append(c);
+        }
         addPositions(positions, builder, i);
         ++i;
       } else if (str.charAt(i + 1) != 'Q') {
@@ -844,7 +850,14 @@ public final class PatternUtils {
           end = str.length();
         }
         for (int j = i + 2; j < end; ++j) {
-          appendQuoted(builder, str.charAt(j), j == i + 2);
+          char q = str.charAt(j);
+          if (isLoneSurrogate(str, j)) {
+            // Like java, a lone surrogate in the quotation is not joined with a surrogate
+            // outside of it, e.g. a high surrogate before \Q, so it is written as an escape
+            CodePointRanges.appendCodePoint(builder, q);
+          } else {
+            appendQuoted(builder, q, j == i + 2);
+          }
           addPositions(positions, builder, j);
         }
         i = Math.min(end + 2, str.length());
@@ -887,12 +900,27 @@ public final class PatternUtils {
   }
 
   /**
+   * Returns true if the char at the position is a surrogate that is not part of a pair in
+   * the pattern as written. Like java, the code points are found before the quotations are
+   * removed, so a surrogate next to {@code \\Q} or {@code \\E} is not part of a pair.
+   */
+  private static boolean isLoneSurrogate(String str, int i) {
+    char c = str.charAt(i);
+    if (Character.isHighSurrogate(c)) {
+      return i + 1 >= str.length() || !Character.isLowSurrogate(str.charAt(i + 1));
+    } else if (Character.isLowSurrogate(c)) {
+      return i == 0 || !Character.isHighSurrogate(str.charAt(i - 1));
+    }
+    return false;
+  }
+
+  /**
    * Append a quoted character so it is a literal for the parser. ASCII letters and digits
    * are kept as is, since escaping them would change the meaning, e.g. {@code \\d}. Like
    * java, a digit at the start of the quotation is written as a hex escape so it cannot be
    * joined with an escape or repetition before the quotation, e.g. {@code \\07\\Q7\\E} is
-   * {@code \\07} followed by '7' rather than {@code \\077}. Surrogates are kept as is so
-   * that a pair stays together.
+   * {@code \\07} followed by '7' rather than {@code \\077}. Surrogates of a pair are kept
+   * as is so that the pair stays together.
    */
   private static void appendQuoted(StringBuilder builder, char c, boolean first) {
     if (Constants.DIGIT.contains(c)) {
@@ -1827,5 +1855,10 @@ public final class PatternUtils {
         && Character.isLowSurrogate(str.charAt(i + 1))
         ? i + 2
         : i + 1;
+  }
+
+  /** Returns true if the code point is a high or low surrogate. */
+  static boolean isSurrogate(int cp) {
+    return cp >= Character.MIN_SURROGATE && cp <= Character.MAX_SURROGATE;
   }
 }

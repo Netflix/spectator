@@ -146,6 +146,20 @@ public class PatternUtilsTest {
   }
 
   @Test
+  public void removeQuotationsLoneSurrogates() {
+    // A lone surrogate is written as an escape so it is not joined with another surrogate
+    // once the quotation is removed, a pair is kept as is
+    Assertions.assertEquals(
+        "\\x{d83d}\\x{de00}", PatternUtils.removeQuotations("\uD83D\\Q\uDE00\\E"));
+    Assertions.assertEquals(
+        "\\x{d83d}\\x{de00}", PatternUtils.removeQuotations("\\Q\uD83D\\E\uDE00"));
+    Assertions.assertEquals(
+        "\\x{d83d}\\x{de00}", PatternUtils.removeQuotations("\uD83D\\Q\\E\uDE00"));
+    Assertions.assertEquals(
+        "\uD83D\uDE00\uD83D\uDE00", PatternUtils.removeQuotations("\uD83D\uDE00\\Q\uD83D\uDE00"));
+  }
+
+  @Test
   public void regionMatchesIgnoreCase() {
     Assertions.assertTrue(PatternUtils.regionMatchesIgnoreCase("xAbC", 1, "abc"));
     Assertions.assertTrue(PatternUtils.regionMatchesIgnoreCase("x@[`{", 1, "@[`{"));

@@ -77,9 +77,10 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
 
   @Test
   public void repeatStepBackWithLoneSurrogate() {
-    // A lone surrogate in the pattern can match half of a pair in the input, so the position
-    // for fewer repetitions cannot be found by stepping back by code points. That previously
-    // went before the start of the repetitions or out of bounds.
+    // A lone surrogate in the pattern used to match half of a pair in the input, so the
+    // position for fewer repetitions could not be found by stepping back by code points. That
+    // went before the start of the repetitions or out of bounds. Like java, it now only
+    // matches a lone surrogate in the input, these are kept to check that is still the case.
     String e = "😀";
     String[][] cases = {
         {"^(?:\\uD83D.){0,2}\\uDE00", e + e},

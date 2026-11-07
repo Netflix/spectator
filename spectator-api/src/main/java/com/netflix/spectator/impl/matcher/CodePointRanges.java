@@ -240,7 +240,8 @@ final class CodePointRanges implements Serializable {
     return builder.toString();
   }
 
-  private static void appendCodePoint(StringBuilder builder, int cp) {
+  /** Append the code point as a hex escape, e.g. {@code \x{1f600}}. */
+  static void appendCodePoint(StringBuilder builder, int cp) {
     builder.append("\\x{").append(Integer.toHexString(cp)).append('}');
   }
 
