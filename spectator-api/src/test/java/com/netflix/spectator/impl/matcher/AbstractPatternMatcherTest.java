@@ -25,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
@@ -54,6 +55,9 @@ public abstract class AbstractPatternMatcherTest {
     //Pattern.compile(regex);
     intercept(IllegalArgumentException.class, message, () -> PatternMatcher.compile(regex));
   }
+
+  private static final String REPEAT_UNSUPPORTED =
+      "repetition or group of alternatives that can match different lengths followed by more of the pattern";
 
   private void testUnsupported(String regex, String message) {
     // Unsupported regex features are reported as IllegalArgumentException (the pattern is the
@@ -777,7 +781,7 @@ public abstract class AbstractPatternMatcherTest {
   @Test
   public void or() {
     testRE("(ab)c|abc", "abc");
-    testRE("(a|b)*c|(a|ab)*c", "abc");
+    testUnsupported("(a|b)*c|(a|bc)*c", REPEAT_UNSUPPORTED);
     testRE("^a(bc+|b[eh])g|.h$", "abh");
     testRE(".*abc.*|.*def.*|.*ghi.*", "ghi");
     testRE("[a-z]|\\p{Lower}", "ghi");
@@ -863,8 +867,19 @@ public abstract class AbstractPatternMatcherTest {
 
   @Test
   public void basic() throws Exception {
-    // Check against basic compatibility tests for re2j
-    loadTestFile("basic.dat").forEach(pair -> testRE(pair[0], pair[1]));
+    // Check against basic compatibility tests for re2j. Repetitions or groups of alternatives
+    // that can match different lengths, followed by more of the pattern, are not supported.
+    List<String> unsupported = Arrays.asList(
+        "(ab|a)(bc|c)",
+        "(a|b)*c|(a|ab)*c",
+        "(^|[ (,;])((([Ff]eb[^ ]* *|0*2/|\\* */?)0*[6-7]))([^0-9]|$)",
+        "M[ou]'?am+[ae]r .*([AEae]l[- ])?[GKQ]h?[aeu]+([dtz][dhz]?)+af[iy]");
+    for (String p : unsupported) {
+      testUnsupported(p, REPEAT_UNSUPPORTED);
+    }
+    loadTestFile("basic.dat").stream()
+        .filter(pair -> !unsupported.contains(pair[0]))
+        .forEach(pair -> testRE(pair[0], pair[1]));
   }
 
   @Test
@@ -969,7 +984,6 @@ public abstract class AbstractPatternMatcherTest {
     testRE("^(a+)?ab$", "aab");
     testRE("^(?:a*)?ab$", "aab");
     testRE("^(a+)*ab$", "aab");
-    testRE("^(a{2,}){0,2}$", "aaaa");
   }
 
   @Test
@@ -1158,6 +1172,53 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void variableLengthRepeatUnsupported() {
+    // A repetition does not backtrack into earlier repetitions, so the repeated portion must
+    // always match the same length unless nothing follows the repetition. Similarly, a group
+    // of alternatives does not backtrack once more of the pattern has matched.
+    String[] patterns = {
+        "^(a|ab){2}c$", "^(a|ab){1,3}c$", "^(a|ab)+c", "(a|ab)*c", "^(a|ab){2}", "^(a+b?){2}$",
+        "^(\\w+\\s?){1,20}$", "^([a-z]+[0-9]*){10}$", "^((a|b*){2}..){1,2}.",
+        "(x(a|ab){3}|y)+z", "^(a.*|b){2}c$", "^(([ab][^a]*){2})*$", "((b|.*){3}-){2,}",
+        "^((a|-|..){2,}){2}$", "^(?:q|z.*a(b|bc)(c|cd)){2}$", "(?i)^([a-z]+A){2}x",
+        "^(foo|foobar)+$", "(?=(a|ab){2}c)a", "^(a{2,}){0,2}$", "^(?:(?:a|bc){1,2}x?){2}$",
+        "foo-(|bar)+-baz", "^(?:(?:ab|a){0,1}x?){2}$", "^(\\d{1,3}\\.){3}\\d{1,3}$",
+        "^([a-z]+-){2}v\\d+$", "^(?:[^.]+\\.)+com$", "^(ods|postgres|aurora|crdb)*$",
+        "(a|ab)(c|bcd)(d*)",
+        // Optional portion followed by more of the pattern, found by fuzzing
+        "^(.{1,2}[ab])?b((bb*?)*|a+?(([ab]{2}.+?[ab]{1,2}){2,}(a+[ab]??a|[ab])*([ab]+|[ab]{2,})*?)+?.)?"
+    };
+    for (String p : patterns) {
+      testUnsupported(p, REPEAT_UNSUPPORTED);
+    }
+  }
+
+  @Test
+  public void variableLengthRepeatSupported() {
+    // The repeated portion always matches the same length, or nothing after the repetition
+    // depends on where it ends
+    String[] patterns = {
+        "^(\\d\\.){3}\\d{1,3}$", "^([a-z]{2}-){2}v\\d+$", "^(a|ab)*", "x(a|ab)+",
+        "^x(a|ab)?", "^(ods|postgres|aurora|crdb)*", "^(a|b)+c", "^(a|ab)?c", "^(?:a+)+b",
+        "(?:ab|cd){2,}x", "foo-(bar|)+-baz", "x(.*a$){1,2}$", "^b(?!(a|^b)*c)",
+        "^x(ab|cd)(e|fg)", "^(ab|cd)(e|fg)",
+        // An empty last alternative can be used for any of the repetitions, so the min
+        // does not matter
+        "^(a|){2}ab", "^(a|){2,3}ab", "x(ab|){1,2}abc$", "(c|){2,4}.{2,}c"
+    };
+    String[] values = {
+        "", "a", "ab", "aba", "abab", "ababc", "abc", "c", "bc", "xab", "x", "10.0.0.1",
+        "1.22.333.4", "1.2.3", "ab-cd-v1", "ab-v1", "odspostgres", "crdbaurora", "odsx", "abAcdAx",
+        "abAx", "aab", "foo.bar.com", "foo.com", "abcdx", "xabc", "xababc", "cac"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void possessiveUnsupported() {
     // Reluctant quantifiers are matched the same as greedy, so the first match java would
     // keep for each repetition cannot be determined
@@ -1178,47 +1239,54 @@ public abstract class AbstractPatternMatcherTest {
     }
   }
 
+  private static String repeat(String s, int n) {
+    StringBuilder builder = new StringBuilder();
+    for (int i = 0; i < n; ++i) {
+      builder.append(s);
+    }
+    return builder.toString();
+  }
+
+  /** Length of the optimized matcher, it is checked even if the pattern is not supported. */
+  private static int optimizedLength(String pattern) {
+    return Optimizer.optimize(Parser.parse(pattern, 0)).toString().length();
+  }
+
   @Test
   public void manySequentialOptionals() {
     // Each optional portion copies the rest of the pattern, which is limited so that the
-    // size does not grow exponentially
-    StringBuilder builder = new StringBuilder("^");
-    for (int i = 0; i < 30; ++i) {
-      builder.append("(a.*)?");
-    }
-    builder.append("b$");
-    PatternMatcher m = PatternMatcher.compile(builder.toString());
+    // size does not grow exponentially. Past the limit, the optional portion would not
+    // backtrack, so the pattern is not supported.
+    PatternMatcher m = PatternMatcher.compile("^" + repeat("(a.*)?", 3) + "b$");
     Assertions.assertTrue(m.matches("b"));
     Assertions.assertTrue(m.matches("axb"));
-    Assertions.assertTrue(m.toString().length() < 100_000, "pattern too large");
+    Assertions.assertTrue(m.matches("axaxaxb"));
+    Assertions.assertFalse(m.matches("axbx"));
+    testUnsupported("^" + repeat("(a.*)?", 30) + "b$", REPEAT_UNSUPPORTED);
+    Assertions.assertTrue(
+        optimizedLength("^" + repeat("(a.*)?", 30) + "b$") < 100_000, "pattern too large");
   }
 
   @Test
   public void manyGroupedOptionals() {
     // The rest of the pattern is merged into each optional portion before it is rewritten,
     // so the size limit applies to all of it. Otherwise, the rest would be copied into both
-    // alternatives for each group and the size would double for each one.
-    StringBuilder builder = new StringBuilder("^");
-    StringBuilder value = new StringBuilder();
-    for (int i = 0; i < 30; ++i) {
-      builder.append("(?:(a.*)?b)-");
-      value.append("b-");
-    }
-    PatternMatcher m = PatternMatcher.compile(builder.toString());
-    Assertions.assertTrue(m.matches(value.toString()));
-    Assertions.assertTrue(m.matches(value.substring(2) + "axb-"));
-    Assertions.assertFalse(m.matches(value.substring(2)));
-    Assertions.assertTrue(m.toString().length() < 100_000, "pattern too large");
+    // alternatives for each group and the size would double for each one. Past the limit,
+    // the pattern is not supported.
+    PatternMatcher m = PatternMatcher.compile("^" + repeat("(?:(a.*)?b)-", 3));
+    Assertions.assertTrue(m.matches("b-b-b-"));
+    Assertions.assertTrue(m.matches("b-b-axb-"));
+    Assertions.assertFalse(m.matches("b-b-"));
+    testUnsupported("^" + repeat("(?:(a.*)?b)-", 30), REPEAT_UNSUPPORTED);
+    Assertions.assertTrue(
+        optimizedLength("^" + repeat("(?:(a.*)?b)-", 30)) < 100_000, "pattern too large");
   }
 
   @Test
   public void nestedBacktrackingQuantifiers() {
-    // A greedy repetition tries the most repetitions first, like java, even if the repeated
-    // portion can match different lengths. That matters if the position is used by an
-    // enclosing repetition.
-    testRE("^(?:(?:a|bc){1,2}x?){2}$", "aaaa");
-    testRE("^(?:(?:a|bc){1,2}x?){2}$", "aaa");
-    testRE("^(?:(?:ab|a){0,1}x?){2}$", "abab");
+    // The inner repetition can match different lengths, so it is not supported within
+    // another repetition
+    testUnsupported("^(?:(?:a|bc){1,2}x){2}$", REPEAT_UNSUPPORTED);
 
     // {0,1} is the same as ?
     testRE("^(?:a.*){0,1}b$", "abab");

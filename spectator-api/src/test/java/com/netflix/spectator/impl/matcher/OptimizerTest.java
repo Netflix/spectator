@@ -144,6 +144,65 @@ public class OptimizerTest {
   }
 
   @Test
+  public void repeatFalse_Repeated() {
+    Matcher input = new RepeatMatcher(FalseMatcher.INSTANCE, 0, 2, AnyMatcher.INSTANCE, false);
+    Matcher expected = AnyMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void repeatFalse_RepeatedMin() {
+    Matcher input = new RepeatMatcher(FalseMatcher.INSTANCE, 1, 2, AnyMatcher.INSTANCE, false);
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void repeatFalse_Next() {
+    Matcher input = new RepeatMatcher(AnyMatcher.INSTANCE, 0, 2, FalseMatcher.INSTANCE, false);
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void repeatFalse_MaxZero() {
+    Matcher input = new RepeatMatcher(new CharSeqMatcher("a"), 0, 0, AnyMatcher.INSTANCE, false);
+    Matcher expected = AnyMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void repeatFalse_Possessive() {
+    Matcher input = new RepeatMatcher(FalseMatcher.INSTANCE, 1, 2, AnyMatcher.INSTANCE, true);
+    Matcher expected = FalseMatcher.INSTANCE;
+    Assertions.assertEquals(expected, Optimizer.zeroOrMoreFalse(input));
+  }
+
+  @Test
+  public void repeatEmptyLastAlternative() {
+    Matcher a = new CharSeqMatcher("a");
+    Matcher input = new RepeatMatcher(
+        OrMatcher.create(a, TrueMatcher.INSTANCE), 2, 3, AnyMatcher.INSTANCE, false);
+    Matcher expected = new RepeatMatcher(a, 0, 3, AnyMatcher.INSTANCE, false);
+    Assertions.assertEquals(expected, Optimizer.repeatEmptyLastAlternative(input));
+  }
+
+  @Test
+  public void repeatEmptyLastAlternative_EmptyFirst() {
+    Matcher input = new RepeatMatcher(
+        OrMatcher.create(TrueMatcher.INSTANCE, new CharSeqMatcher("a")), 2, 3);
+    Assertions.assertEquals(input, Optimizer.repeatEmptyLastAlternative(input));
+  }
+
+  @Test
+  public void repeatEmptyLastAlternative_Possessive() {
+    Matcher input = new RepeatMatcher(
+        OrMatcher.create(new CharSeqMatcher("a"), TrueMatcher.INSTANCE), 2, 3,
+        TrueMatcher.INSTANCE, true);
+    Assertions.assertEquals(input, Optimizer.repeatEmptyLastAlternative(input));
+  }
+
+  @Test
   public void indexOfFalse_Next() {
     Matcher input = new IndexOfMatcher("a", FalseMatcher.INSTANCE);
     Matcher expected = FalseMatcher.INSTANCE;
