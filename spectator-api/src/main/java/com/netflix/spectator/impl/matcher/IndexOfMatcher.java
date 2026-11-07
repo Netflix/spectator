@@ -33,6 +33,13 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
   private final boolean ignoreCase;
   private final int minLength;
 
+  /**
+   * True if only the first match of the sub-string needs to be checked, see
+   * {@link PatternUtils#failsAtLaterPositions(Matcher)}. It is derived from the next
+   * matcher, see {@link #readResolve()} for instances serialized by an older version.
+   */
+  private final boolean firstOnly;
+
   /** Create a new instance. */
   IndexOfMatcher(String pattern, Matcher next) {
     this(pattern, next, false);
@@ -48,6 +55,12 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     // already saturated (e.g. a RepeatMatcher with a huge count) cannot overflow to a negative
     // value that would corrupt the bounds arithmetic in this and enclosing matchers.
     this.minLength = (int) Math.min((long) pattern.length() + next.minLength(), Integer.MAX_VALUE);
+    this.firstOnly = PatternUtils.failsAtLaterPositions(next);
+  }
+
+  /** Instances serialized by an older version will not have the first only flag. */
+  private Object readResolve() {
+    return new IndexOfMatcher(pattern, next, ignoreCase);
   }
 
   /** Sub-string to look for within the string being checked. */
@@ -122,8 +135,9 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
         }
         int s = pos + pattern.length();
         int p = next.matches(str, s, end - s);
-        if (p >= 0) {
-          return p;
+        if (p >= 0 || firstOnly) {
+          // If next fails, it would also fail after any later match of the sub-string
+          return p >= 0 ? p : Constants.NO_MATCH;
         }
         ++pos;
       }
@@ -176,6 +190,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     IndexOfMatcher that = (IndexOfMatcher) o;
     return ignoreCase == that.ignoreCase
         && minLength == that.minLength
+        && firstOnly == that.firstOnly
         && Objects.equals(pattern, that.pattern)
         && Objects.equals(next, that.next);
   }
@@ -187,6 +202,7 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
     result = 31 * result + next.hashCode();
     result = 31 * result + Boolean.hashCode(ignoreCase);
     result = 31 * result + minLength;
+    result = 31 * result + Boolean.hashCode(firstOnly);
     return result;
   }
 }

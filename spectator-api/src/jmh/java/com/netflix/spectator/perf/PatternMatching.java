@@ -180,7 +180,10 @@ public class PatternMatching {
   // Example of really expensive case for java pattern matcher
   private final String list =
       "[1234567],[89023432],[124534543],[4564362],[1234543],[12234567],[124567],[1234567],[1234567]]";
-  private final String listPattern = "^\\[((\\d*\\]\\,\\[\\d*)*|\\d*)\\]$";
+  // Same as ^\[((\d*\],\[\d*)*|\d*)\]$, the repeated portion of that form is not
+  // supported since the digits at the end of one repetition can be followed by digits at the
+  // start of the next
+  private final String listPattern = "^\\[\\d*(\\],\\[\\d*)*\\]$";
   private final Pattern javaMatcherList = Pattern.compile(listPattern);
   private final com.google.re2j.Pattern re2jMatcherList =
       com.google.re2j.Pattern.compile(listPattern);

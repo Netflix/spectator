@@ -59,6 +59,9 @@ public abstract class AbstractPatternMatcherTest {
   private static final String REPEAT_UNSUPPORTED =
       "repetition or group of alternatives that can match different lengths followed by more of the pattern";
 
+  private static final String CHAIN_UNSUPPORTED =
+      "too many ways to match chained repetitions that can match the same chars";
+
   private void testUnsupported(String regex, String message) {
     // Unsupported regex features are reported as IllegalArgumentException (the pattern is the
     // problem) with the message prefixed by "unsupported:".
@@ -204,7 +207,9 @@ public abstract class AbstractPatternMatcherTest {
   @Test
   public void alwaysMatches() {
     Assertions.assertTrue(PatternMatcher.compile(".*").alwaysMatches());
-    Assertions.assertFalse(PatternMatcher.compile(".?").alwaysMatches());
+    // Optional, so it matches every string
+    Assertions.assertTrue(PatternMatcher.compile(".?").alwaysMatches());
+    Assertions.assertFalse(PatternMatcher.compile("^.?$").alwaysMatches());
     Assertions.assertFalse(PatternMatcher.compile("$.").alwaysMatches());
   }
 
@@ -1182,9 +1187,11 @@ public abstract class AbstractPatternMatcherTest {
         "(x(a|ab){3}|y)+z", "^(a.*|b){2}c$", "^(([ab][^a]*){2})*$", "((b|.*){3}-){2,}",
         "^((a|-|..){2,}){2}$", "^(?:q|z.*a(b|bc)(c|cd)){2}$", "(?i)^([a-z]+A){2}x",
         "^(foo|foobar)+$", "(?=(a|ab){2}c)a", "^(a{2,}){0,2}$", "^(?:(?:a|bc){1,2}x?){2}$",
-        "foo-(|bar)+-baz", "^(?:(?:ab|a){0,1}x?){2}$", "^(\\d{1,3}\\.){3}\\d{1,3}$",
-        "^([a-z]+-){2}v\\d+$", "^(?:[^.]+\\.)+com$", "^(ods|postgres|aurora|crdb)*$",
+        "foo-(|bar)+-baz", "^(?:(?:ab|a){0,1}x?){2}$", "^(ods|postgres|aurora|crdb)*$",
+        "^(\\d+,?)*$", "b(a(b+)?-?){2}", "^\\[((\\d*\\],\\[\\d*)*|\\d*)\\]$",
         "(a|ab)(c|bcd)(d*)",
+        // A lookahead after the repetition could pass for an earlier end of the repetition
+        "^(?:,\\d+)*(?=\\d)", "^(?:,\\d+){1,2}(?=\\d)", "^(?:,\\d+)*(?!,)",
         // Optional portion followed by more of the pattern, found by fuzzing
         "^(.{1,2}[ab])?b((bb*?)*|a+?(([ab]{2}.+?[ab]{1,2}){2,}(a+[ab]??a|[ab])*([ab]+|[ab]{2,})*?)+?.)?"
     };
@@ -1204,12 +1211,18 @@ public abstract class AbstractPatternMatcherTest {
         "^x(ab|cd)(e|fg)", "^(ab|cd)(e|fg)",
         // An empty last alternative can be used for any of the repetitions, so the min
         // does not matter
-        "^(a|){2}ab", "^(a|){2,3}ab", "x(ab|){1,2}abc$", "(c|){2,4}.{2,}c"
+        "^(a|){2}ab", "^(a|){2,3}ab", "x(ab|){1,2}abc$", "(c|){2,4}.{2,}c",
+        // Only fixed length parts and repetitions of chars that cannot be followed by a char
+        // they match
+        "^(\\d{1,3}\\.){3}\\d{1,3}$", "^([a-z]+-){2}v\\d+$", "^(?:[^.]+\\.)+com$",
+        "^\\d+(,\\d+)*$", "^[a-z]+(-[a-z]+)*$", "^(\\w+\\.)*com$", "^\\[\\d*(\\],\\[\\d*)*\\]$",
+        "^(\\d+,)*\\d$", "^(a-?b*,)+$"
     };
     String[] values = {
         "", "a", "ab", "aba", "abab", "ababc", "abc", "c", "bc", "xab", "x", "10.0.0.1",
         "1.22.333.4", "1.2.3", "ab-cd-v1", "ab-v1", "odspostgres", "crdbaurora", "odsx", "abAcdAx",
-        "abAx", "aab", "foo.bar.com", "foo.com", "abcdx", "xabc", "xababc", "cac"
+        "abAx", "aab", "foo.bar.com", "foo.com", "abcdx", "1,22,333", "1,", "ab-cd-ef", "ab--cd",
+        "[1],[22]", "[]", "[1]", "1,2", "ab,a-b,", "a-,", "xabc", "xababc", "cac"
     };
     for (String p : patterns) {
       for (String v : values) {
@@ -1250,6 +1263,77 @@ public abstract class AbstractPatternMatcherTest {
   /** Length of the optimized matcher, it is checked even if the pattern is not supported. */
   private static int optimizedLength(String pattern) {
     return Optimizer.optimize(Parser.parse(pattern, 0)).toString().length();
+  }
+
+  @Test
+  public void adjacentRepeatedChars() {
+    // Adjacent repetitions where one set of chars contains the other are reduced to one
+    // repetition, check that the answers are the same as java
+    String[] patterns = {
+        "^[a-z]*[a-z]*!", "^\\w+\\w+$", "^[a-z]*[a-z0-9]*[a-z]+\\w*!", "^a*a*a+$",
+        "[a-z]+[a-z]+", "^(?:a|b)*[ab]+c", "^\\w*[a-z]\\w*-", "^\\w+[a-z]*\\w+$", "^.*[a-z]*!",
+        "^[^a]*[b-z]*x", "^\\d+\\w+\\d+$", "^[a-c]*[b-d]*x"
+    };
+    String[] values = {
+        "", "!", "a!", "ab!", "abc", "a1!", "1a!", "aa", "aab", "ab", "abc", "a-", "1a1", "12",
+        "1", "a", "x", "bx", "dx", "\u00e9x", "\u00e9\u00e9!"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void chainedRepetitionsUnsupported() {
+    // Each repetition in a chain is tried at each position where the one before could stop,
+    // so the time grows with the length to the power of the number of repetitions
+    String[] patterns = {
+        "^\\w+-?\\w+-?\\w+$", "^[a-c]*[b-d]*[a-c]*!", "^\\w*:?\\w*:?\\w*$",
+        "(?i)^[a-z]+-?[A-Z]+-?[a-z]+$", "\\w+-?\\w+-?\\w+!", "^(?=\\w+-?\\w+-?\\w+!)",
+        "^x(?:[a-c]+[b-d]+|y)[a-c]+!", "^[a-c]*(?:ab)*[b-d]*!",
+        "^[a-c]{0,10}[b-d]{0,10}[a-c]{0,10}[b-d]{0,10}[a-c]{0,10}[b-d]{0,10}x",
+        // A required repetition can be in the chain with the repetitions on either side
+        "^\\w*-?a{1,2}b\\w*-?\\w*!", "^\\w*(?=\\w)a{1,2}b\\w*-?\\w*!",
+        // Only one way to match the last repetition, but it consumes the chars for each attempt,
+        // including a repetition at the end of a lookahead
+        "^\\w*-?\\w*-?\\w*+!", "^\\w*-?\\w*-?[a-z]*\\d!",
+        "(?=.{2,}[b-d](?!b+))-{0,10}[ab]{1,2}[^a]{0,3}$"
+    };
+    for (String p : patterns) {
+      testUnsupported(p, CHAIN_UNSUPPORTED);
+    }
+  }
+
+  @Test
+  public void chainedRepetitionsSupported() {
+    // At most two repetitions in a chain, or the repetitions are separated by chars that the
+    // repetition before cannot match
+    String[] patterns = {
+        "^\\w+-?\\w+$", "\\w+-?\\w+!", "^\\w+-\\w+-\\w+-\\w+$", "^[a-z]+[0-9]*[a-z]+$",
+        "^(\\d{1,3})\\.?(\\d{1,3})\\.?\\d{1,3}$", "^aws_.*_.*v\\d+", "^\\d+\\w+\\d+!",
+        "^.*a.*b.*c$", "^.*a.b.*c.d.*e", "^x.*ab.*cd", "^\\s*\\w+\\s*=\\s*\\w+\\s*$",
+        "^(?=\\w+\\w*-?\\w+)\\w", "^\\w+-?\\w+-?\\w+", "^\\w{1,5}\\w{1,5}\\w{1,5}!",
+        "^a.*-?.*-?\\w+!", "^a?a?a?a?a?a?a?a?a?a?b", "^[ab]{0,3}[ab]{1,3}[ab]+c", "^(?:a|b)?(?:a|b)?c",
+        "^\\w+[a-z]{1,3}c", "^a{1,3}a*b", "^a*a{1,3}b", "^[a-c]?[b-d]?[a-c]?[b-d]?\\w+-?\\w+!",
+        // The trailing optional always matches, so the repetition before it is not retried
+        "^\\w+-?\\w+-?\\w+-?",
+        // A lookahead after a repetition that always ends at the same position
+        "^(?:[a-z]+-)*(?=[a-z])",
+        // A repetition that can only stop before the separator is not counted as many ways
+        "^\\w+(?:-\\w+)*-\\w+$", "^\\d+(?:,\\d+)*,\\d+$", "^[a-z0-9]+(?:-[a-z0-9]+)*-v\\d+$"
+    };
+    String[] values = {
+        "", "a", "ab", "a-b", "a-b-c", "a-b-c-d", "ab12cd", "1.2.3", "123456789", "aws_x_v1",
+        "aws_x_y_v", "1a1!", "abc", "axbzcyd", "xabcd", "xcdab", " a = b ", "a=b", "zazbzc",
+        "aabbcc", "a-b!", "ab!", "1,2", "1,2,3", "a-b-v1", "a-b-c-v12", "a-v1"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
   }
 
   @Test

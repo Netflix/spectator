@@ -446,6 +446,115 @@ public class OptimizerTest {
     Assertions.assertEquals(expected, Optimizer.removeSequentialMatchAny(input));
   }
 
+  private static CharClassMatcher cls(String pattern) {
+    return new CharClassMatcher(AsciiSet.fromPattern(pattern));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_First() {
+    // [a-z]*\\w*x => \\w*x
+    Matcher input = new ZeroOrMoreMatcher(cls("a-z"),
+        new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), new CharSeqMatcher("x")));
+    Matcher expected = new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_Second() {
+    // \\w*[a-z]*x => \\w*x
+    Matcher input = new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"),
+        new ZeroOrMoreMatcher(cls("a-z"), new CharSeqMatcher("x")));
+    Matcher expected = new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_FixedBetween() {
+    // [a-z]*\\w\\w*x => \\w\\w*x
+    Matcher next = SeqMatcher.create(cls("a-zA-Z0-9_"),
+        new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), new CharSeqMatcher("x")));
+    Matcher input = new ZeroOrMoreMatcher(cls("a-z"), next);
+    Assertions.assertEquals(next, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_FixedBetweenSecond() {
+    // \\w*\\w[a-z]*x => \\w*\\wx
+    Matcher input = new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), SeqMatcher.create(
+        cls("a-zA-Z0-9_"), new ZeroOrMoreMatcher(cls("a-z"), new CharSeqMatcher("x"))));
+    Matcher expected = new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"),
+        SeqMatcher.create(cls("a-zA-Z0-9_"), new CharSeqMatcher("x")));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_FixedDifferent() {
+    // [a-z]*-\\w*x, the fixed char is not in the larger set
+    Matcher input = new ZeroOrMoreMatcher(cls("a-z"), SeqMatcher.create(
+        new CharSeqMatcher("-"), new ZeroOrMoreMatcher(cls("a-zA-Z0-9_"), new CharSeqMatcher("x"))));
+    Assertions.assertSame(input, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_Overlap() {
+    // [a-c]*[b-d]*x, neither set contains the other
+    Matcher input = new ZeroOrMoreMatcher(cls("a-c"),
+        new ZeroOrMoreMatcher(cls("b-d"), new CharSeqMatcher("x")));
+    Assertions.assertSame(input, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_NonAscii() {
+    // [^a]*[b-z]*x, the first also matches non-ASCII chars
+    Matcher negated = new CharClassMatcher(
+        AsciiSet.fromPattern("a").invert(), AsciiSet.fromPattern("aA").invert(), false, true);
+    Matcher input = new ZeroOrMoreMatcher(cls("b-z"),
+        new ZeroOrMoreMatcher(negated, new CharSeqMatcher("x")));
+    Matcher expected = new ZeroOrMoreMatcher(negated, new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+    Matcher reversed = new ZeroOrMoreMatcher(negated,
+        new ZeroOrMoreMatcher(cls("b-z"), new CharSeqMatcher("x")));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(reversed));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_Alternatives() {
+    // (?:a|b)*[a-c]*x => [a-c]*x
+    Matcher input = new ZeroOrMoreMatcher(
+        OrMatcher.create(new CharSeqMatcher("a"), new CharSeqMatcher("b")),
+        new ZeroOrMoreMatcher(cls("a-c"), new CharSeqMatcher("x")));
+    Matcher expected = new ZeroOrMoreMatcher(cls("a-c"), new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_IgnoreCase() {
+    // (?i)[a-z]*[A-Z]*x, the sets are the same once the case is ignored
+    Matcher input = new ZeroOrMoreMatcher(new CharClassMatcher(AsciiSet.fromPattern("a-z"), true),
+        new ZeroOrMoreMatcher(new CharClassMatcher(AsciiSet.fromPattern("A-Z"), true),
+            new CharSeqMatcher("x")));
+    Matcher expected = new ZeroOrMoreMatcher(
+        new CharClassMatcher(AsciiSet.fromPattern("A-Z"), true), new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_IndexOf() {
+    // .*aa*x => .*ax
+    Matcher input = new IndexOfMatcher("a",
+        new ZeroOrMoreMatcher(new CharSeqMatcher("a"), new CharSeqMatcher("x")));
+    Matcher expected = new IndexOfMatcher("a", new CharSeqMatcher("x"));
+    Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  @Test
+  public void removeRedundantRepeatedChars_IndexOfDifferentChars() {
+    // .*baa*x, the a* cannot be shifted before the b
+    Matcher input = new IndexOfMatcher("ba",
+        new ZeroOrMoreMatcher(new CharSeqMatcher("a"), new CharSeqMatcher("x")));
+    Assertions.assertSame(input, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
   @Test
   public void flattenNestedSequences() {
     Matcher input = SeqMatcher.create(

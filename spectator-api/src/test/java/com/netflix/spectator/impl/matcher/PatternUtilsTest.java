@@ -397,6 +397,18 @@ public class PatternUtilsTest {
   }
 
   @Test
+  public void failsAtLaterPositions() {
+    String[] yes = {".*a", ".*a.*b", ".*a$"};
+    for (String p : yes) {
+      Assertions.assertTrue(PatternUtils.failsAtLaterPositions(optimized(p)), p);
+    }
+    String[] no = {"a", "a.*", "$", "[a-z]*b", "^a.*b"};
+    for (String p : no) {
+      Assertions.assertFalse(PatternUtils.failsAtLaterPositions(optimized(p)), p);
+    }
+  }
+
+  @Test
   public void hasFixedEnd() {
     String[] fixed = {"abc", "(?:ab|ac)", "[ab]{3}", "x.*a$", "(?:a$|bc$)", "(?:ab|cd){2}"};
     for (String p : fixed) {

@@ -84,6 +84,25 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
 
   @Test
   @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  public void adjacentRepeatedCharsTerminate() {
+    // Each adjacent repetition would multiply the time for a string that does not match by
+    // the length, these took several seconds before they were reduced to one repetition
+    StringBuilder builder = new StringBuilder();
+    for (int i = 0; i < 400; ++i) {
+      builder.append('a');
+    }
+    String str = builder.toString();
+    String[] patterns = {
+        "^[a-z]*[a-z]*[a-z]*[a-z]*!", "^\\w+\\w+\\w+\\w+!", "^a*a*a*a*!",
+        "^[a-z]*[a-z0-9]*[a-z]+\\w*!", "^(?:a|b)*(?:a|b)*(?:a|b)*(?:a|b)*!"
+    };
+    for (String p : patterns) {
+      Assertions.assertFalse(PatternMatcher.compile(p).matches(str), p);
+    }
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
   public void repeatLargeBoundTerminates() {
     // A repetition with a huge count whose body can match the empty string must not loop up
     // to that count with no forward progress (previously a CPU-exhaustion vector). It must

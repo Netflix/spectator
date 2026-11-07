@@ -19,10 +19,14 @@ import com.netflix.spectator.impl.AsciiSet;
 import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -123,6 +127,7 @@ public final class PatternUtils {
     Matcher any = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, SeqMatcher.create(m, end));
     m = Optimizer.optimize(SeqMatcher.create(StartMatcher.INSTANCE, any));
     checkRepetitions(m, pattern);
+    checkChainedRepetitions(m, pattern);
     return ignoreCase ? new IgnoreCaseMatcher(m) : m;
   }
 
@@ -135,10 +140,13 @@ public final class PatternUtils {
    * supported:
    *
    * <ul>
-   *   <li>A repeated part must always match the same length, e.g. {@code (\d\.)+}, unless
-   *   nothing follows it and at most one repetition is required, e.g. a trailing
-   *   {@code (a|ab)*}, but not {@code (a|ab){2}}. A group with an empty last alternative,
-   *   e.g. {@code (a|)}, is the same as an optional part, {@code a?}.</li>
+   *   <li>A repeated or optional part must always match the same length, e.g.
+   *   {@code (\d\.)+}, or only have parts with a fixed length and repetitions of single
+   *   chars that cannot be followed by a char they match, e.g. {@code (\d{1,3}\.){3}} or
+   *   {@code \d+(,\d+)*$}. Otherwise, it is only supported if nothing follows it and at
+   *   most one repetition is required, e.g. a trailing {@code (a|ab)*}, but not
+   *   {@code (a|ab){2}}. A group with an empty last alternative, e.g. {@code (a|)}, is the
+   *   same as an optional part, {@code a?}.</li>
    *   <li>A group of alternatives followed by another group must have alternatives with
    *   the same length, e.g. {@code (a|b)(c|cd)}. The optimizer can usually rewrite the
    *   pattern so this doesn't apply, e.g. by merging the second group into each
@@ -195,7 +203,9 @@ public final class PatternUtils {
         return true;
       }
       Matcher r = withoutEmptyLast(m.repeated());
-      return hasFixedEnd(r) && sameAsJava(r, true) && sameAsJava(m.next(), endUsed);
+      return hasKnownEnd(r, m.next(), endUsed)
+          && sameAsJava(r, true)
+          && sameAsJava(m.next(), endUsed);
     } else if (matcher instanceof ZeroOrOneMatcher) {
       // Checks the next portion after the repeated portion and without it, but does not
       // backtrack into the repeated portion
@@ -204,7 +214,9 @@ public final class PatternUtils {
         return true;
       }
       Matcher r = withoutEmptyLast(m.repeated());
-      return hasFixedEnd(r) && sameAsJava(r, true) && sameAsJava(m.next(), endUsed);
+      return hasKnownEnd(r, m.next(), endUsed)
+          && sameAsJava(r, true)
+          && sameAsJava(m.next(), endUsed);
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
       if (!endUsed && m.min() <= 1 && m.next() instanceof TrueMatcher) {
@@ -216,7 +228,7 @@ public final class PatternUtils {
       // retried with the empty one, e.g. (a|){2}ab on "ab". Only with a min of 0 is that
       // the same as an optional part, see Optimizer.repeatEmptyLastAlternative.
       Matcher r = m.min() == 0 ? withoutEmptyLast(m.repeated()) : m.repeated();
-      return (m.isPossessive() || hasFixedEnd(r))
+      return (m.isPossessive() || hasKnownEnd(r, m.next(), endUsed))
           && sameAsJava(r, true)
           && sameAsJava(m.next(), endUsed);
     } else if (matcher instanceof IndexOfMatcher) {
@@ -228,6 +240,486 @@ public final class PatternUtils {
       return sameAsJava(matcher.<NegativeLookaheadMatcher>as().matcher(), false);
     }
     return true;
+  }
+
+  /**
+   * Returns true if the matcher fails at all positions after a position where it fails. For
+   * example, {@code .*a} checks all positions after the start, so if it fails, it would also
+   * fail starting from a later position. Then a portion before it that could end at several
+   * positions only needs to try the first one.
+   */
+  static boolean failsAtLaterPositions(Matcher matcher) {
+    if (matcher instanceof ZeroOrMoreMatcher) {
+      return matcher.<ZeroOrMoreMatcher>as().repeated() instanceof AnyMatcher;
+    } else if (matcher instanceof IndexOfSeqMatcher) {
+      return !matcher.<IndexOfSeqMatcher>as().startAnchored();
+    } else {
+      // An index of matcher checks each match of the sub-string after the start, or only
+      // the first if that is enough
+      return matcher instanceof IndexOfMatcher;
+    }
+  }
+
+  /**
+   * Length of string used to estimate the number of positions an unbounded repetition could
+   * stop at, see {@link #checkChainedRepetitions}.
+   */
+  private static final double TYPICAL_LENGTH = 256.0;
+
+  /**
+   * Max estimated number of ways to match the repetitions in a chain. It allows two unbounded
+   * repetitions, with a few optional or bounded repetitions mixed in, but not three.
+   */
+  private static final double MAX_CHAIN_COST = 16.0 * TYPICAL_LENGTH * TYPICAL_LENGTH;
+
+  /**
+   * Check that there are not too many ways to match chained repetitions. A chain is a
+   * sequence of repetitions where each one can match the same chars as the one before it,
+   * with only chars that both can match, or optional portions, between them, e.g.
+   * {@code \\w+-?\\w+}. The second repetition is tried at each position where the first could
+   * stop, so for a string that does not match, the time grows with the product of the number
+   * of positions where each repetition in the chain could stop. That is estimated as the
+   * number of possible counts for a bounded repetition, e.g. 3 for {@code \\d{1,3}} or 2 for
+   * {@code a?}, and {@link #TYPICAL_LENGTH} for an unbounded repetition. Each attempt also
+   * consumes the chars for the last repetition, so that is multiplied by the number of chars
+   * it could consume, even if it can only stop at one position. If the cost is more than
+   * {@link #MAX_CHAIN_COST}, then the pattern is not supported. That allows at most two
+   * unbounded repetitions in a chain.
+   *
+   * <p>A repetition of a single set of chars that cannot be followed by one of those chars,
+   * e.g. {@code \\w+-}, can only stop at one position, so the chain continues with the same
+   * number of ways. If the rest of the pattern always matches, e.g. a trailing {@code \\w*},
+   * then the first attempt to reach it is a match and it is not counted.
+   *
+   * <p>Adjacent repetitions where one set of chars contains the other are simplified by the
+   * optimizer, e.g. {@code \\w+\\w+} is a single repetition. A pattern that does not start
+   * with {@code ^} can match at any position, so it is the same as a pattern starting with
+   * {@code ^.*}.
+   *
+   * @param matcher
+   *     Optimized matcher for the complete pattern.
+   * @param pattern
+   *     Pattern to include in the error message.
+   */
+  static void checkChainedRepetitions(Matcher matcher, String pattern) {
+    double[] max = new double[1];
+    chains(matcher, Collections.emptyMap(), max, true);
+    if (max[0] > MAX_CHAIN_COST) {
+      throw new IllegalArgumentException("unsupported: too many ways to match chained "
+          + "repetitions that can match the same chars\n" + pattern);
+    }
+  }
+
+  /**
+   * Returns the chains that can continue after the matcher.
+   *
+   * @param matcher
+   *     Matcher to check.
+   * @param chains
+   *     Chains that can continue at the start of the matcher. The key is the set of chars for
+   *     the last repetition and the value is the estimated number of ways to match the chain.
+   * @param max
+   *     Updated with the max estimated number of ways to match a chain.
+   */
+  private static Map<CharSet, Double> chains(
+      Matcher matcher, Map<CharSet, Double> chains, double[] max, boolean last) {
+    // The elements of a sequence and the portion after a repetition are processed in a loop
+    // rather than recursively, otherwise a long pattern could overflow the stack. Each entry
+    // also tracks if the rest of the pattern after it always matches.
+    Deque<Matcher> pending = new ArrayDeque<>();
+    Deque<Boolean> pendingLast = new ArrayDeque<>();
+    pending.push(matcher);
+    pendingLast.push(last);
+    Map<CharSet, Double> result = chains;
+    while (!pending.isEmpty()) {
+      Matcher m = pending.pop();
+      boolean isLast = pendingLast.pop();
+      if (m instanceof SeqMatcher) {
+        List<Matcher> ms = m.<SeqMatcher>as().matchers();
+        boolean restLast = isLast;
+        for (int i = ms.size() - 1; i >= 0; --i) {
+          pending.push(ms.get(i));
+          pendingLast.push(restLast);
+          restLast = restLast && matchesAtAnyPosition(ms.get(i));
+        }
+      } else if (m instanceof ZeroOrOneMatcher) {
+        ZeroOrOneMatcher zm = m.as();
+        result = loopChains(zm.repeated(), 0, 1, zm.next(), isLast, result, max);
+        pending.push(zm.next());
+        pendingLast.push(isLast);
+      } else if (m instanceof ZeroOrMoreMatcher) {
+        ZeroOrMoreMatcher zm = m.as();
+        result = loopChains(zm.repeated(), 0, -1, zm.next(), isLast, result, max);
+        pending.push(zm.next());
+        pendingLast.push(isLast);
+      } else if (m instanceof RepeatMatcher) {
+        RepeatMatcher rm = m.as();
+        if (rm.isPossessive()) {
+          // Only one way to match, but it still consumes the chars for each attempt
+          double work = last(rm.next(), isLast)
+              ? 1.0
+              : Math.min((double) rm.max() - rm.min() + 1.0, TYPICAL_LENGTH);
+          result = repetitionChains(rm.repeated(), rm.min(), 1.0, work, result, max);
+        } else {
+          result = loopChains(rm.repeated(), rm.min(), rm.max(), rm.next(), isLast, result, max);
+        }
+        pending.push(rm.next());
+        pendingLast.push(isLast);
+      } else if (m instanceof IndexOfMatcher) {
+        // Same as .* followed by the substring, but it only tries the first match of the
+        // substring if that is enough, and a substring at the end is checked directly
+        IndexOfMatcher im = m.as();
+        Matcher next = im.next();
+        boolean done = last(next, isLast) || next instanceof EndMatcher;
+        boolean tries = !done && !failsAtLaterPositions(next);
+        double ways = tries ? TYPICAL_LENGTH : 1.0;
+        double work = done ? 1.0 : TYPICAL_LENGTH;
+        result = repetitionChains(AnyMatcher.INSTANCE, 0, ways, work, result, max);
+        result = filterChains(result, im.pattern(), im.isIgnoreCase());
+        pending.push(next);
+        pendingLast.push(isLast);
+      } else {
+        result = elementChains(m, result, max, isLast);
+      }
+    }
+    return result;
+  }
+
+  /** Returns true if the portion and everything after it always matches. */
+  private static boolean last(Matcher next, boolean isLast) {
+    return isLast && matchesAtAnyPosition(next);
+  }
+
+  /**
+   * Returns the chains that can continue after a repetition that is not possessive.
+   *
+   * @param repeated
+   *     Repeated portion.
+   * @param min
+   *     Min number of repetitions.
+   * @param max
+   *     Max number of repetitions, or -1 if unbounded.
+   * @param next
+   *     Portion after the repetition.
+   * @param isLast
+   *     True if the rest of the pattern after the next portion always matches.
+   * @param chains
+   *     Chains that can continue at the start of the repetition.
+   * @param maxCost
+   *     Updated with the max estimated cost of matching a chain.
+   */
+  private static Map<CharSet, Double> loopChains(
+      Matcher repeated,
+      int min,
+      int max,
+      Matcher next,
+      boolean isLast,
+      Map<CharSet, Double> chains,
+      double[] maxCost) {
+    double range = max < 0 ? TYPICAL_LENGTH : Math.min((double) max - min + 1.0, TYPICAL_LENGTH);
+    if (last(next, isLast)) {
+      // If the rest always matches, then the first attempt to reach it is a match, so the
+      // repetition is not tried again
+      return repetitionChains(repeated, min, 1.0, 1.0, chains, maxCost);
+    }
+    // A repetition of a single set of chars can only stop at one position if the next portion
+    // cannot start with one of those chars. Each attempt still consumes the chars.
+    CharSet set = CharSet.of(repeated);
+    boolean oneEnd = set != null && !firstChars(next, CharSet.ANY).overlaps(set);
+    double ways = oneEnd ? 1.0 : range;
+    return repetitionChains(repeated, min, ways, range, chains, maxCost);
+  }
+
+  /** Returns the chains that can continue after a matcher that is not a repetition. */
+  private static Map<CharSet, Double> elementChains(
+      Matcher matcher, Map<CharSet, Double> chains, double[] max, boolean isLast) {
+    CharSet single = CharSet.of(matcher);
+    if (single != null) {
+      return filterChains(chains, single);
+    } else if (matcher instanceof CharSeqMatcher) {
+      CharSeqMatcher m = matcher.as();
+      return filterChains(chains, m.pattern(), m.isIgnoreCase());
+    } else if (matcher instanceof StartsWithMatcher) {
+      StartsWithMatcher m = matcher.as();
+      return filterChains(chains, m.pattern(), m.isIgnoreCase());
+    } else if (matcher instanceof OrMatcher) {
+      Map<CharSet, Double> result = new HashMap<>();
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        mergeChains(result, chains(m, chains, max, isLast));
+      }
+      return result;
+    } else if (matcher instanceof IndexOfSeqMatcher) {
+      // Substrings separated by .*, each substring is only found once
+      return Collections.emptyMap();
+    } else if (matcher instanceof OrStartsWithMatcher) {
+      return chains(matcher.<OrStartsWithMatcher>as().delegate(), chains, max, isLast);
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      // Checked at the position, but does not consume any chars
+      chains(matcher.<PositiveLookaheadMatcher>as().matcher(), chains, max, false);
+      return chains;
+    } else if (matcher instanceof NegativeLookaheadMatcher) {
+      chains(matcher.<NegativeLookaheadMatcher>as().matcher(), chains, max, false);
+      return chains;
+    } else if (matcher instanceof TrueMatcher
+        || matcher instanceof StartMatcher
+        || matcher instanceof EndMatcher) {
+      return chains;
+    }
+    return Collections.emptyMap();
+  }
+
+  /**
+   * Returns true if the matcher always matches at the first position it is tried, e.g. a
+   * trailing {@code -?}. A repetition followed by it does not try any other positions.
+   */
+  private static boolean matchesAtAnyPosition(Matcher matcher) {
+    if (matcher instanceof TrueMatcher) {
+      return true;
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      return matchesAtAnyPosition(matcher.<ZeroOrOneMatcher>as().next());
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      return matchesAtAnyPosition(matcher.<ZeroOrMoreMatcher>as().next());
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      return m.min() == 0 && matchesAtAnyPosition(m.next());
+    }
+    return false;
+  }
+
+  /**
+   * Returns the chains that can continue after a repetition, but before the portion that
+   * follows it.
+   *
+   * @param repeated
+   *     Repeated portion.
+   * @param min
+   *     Min number of repetitions, if 0 the chains can also continue after skipping it.
+   * @param ways
+   *     Estimated number of positions where the repetition could stop.
+   * @param work
+   *     Estimated cost of each attempt to match the repetition, at least the number of
+   *     chars it could consume.
+   * @param chains
+   *     Chains that can continue at the start of the repetition.
+   * @param max
+   *     Updated with the max estimated cost of matching a chain.
+   */
+  private static Map<CharSet, Double> repetitionChains(
+      Matcher repeated,
+      int min,
+      double ways,
+      double work,
+      Map<CharSet, Double> chains,
+      double[] max) {
+    CharSet set = CharSet.of(repeated);
+    boolean single = set != null;
+    Map<CharSet, Double> inner = Collections.emptyMap();
+    if (!single) {
+      // Chains continue into the repeated portion, then use all chars it could consume. The
+      // repetitions consume different chars, so the ways to match within the repeated
+      // portion are not multiplied by the number of repetitions.
+      inner = chains(repeated, chains, max, false);
+      set = CharSet.consumed(repeated);
+    }
+    double prev = 1.0;
+    for (Map.Entry<CharSet, Double> entry : chains.entrySet()) {
+      if (entry.getKey().overlaps(set)) {
+        prev = Math.max(prev, entry.getValue());
+      }
+    }
+    double cost = prev * ways;
+    for (double value : inner.values()) {
+      cost = Math.max(cost, value);
+    }
+    max[0] = Math.max(max[0], Math.max(cost, prev * work));
+    Map<CharSet, Double> result = new HashMap<>(inner);
+    result.put(set, cost);
+    if (min == 0) {
+      mergeChains(result, chains);
+    } else if (single) {
+      // The required chars are the same as fixed chars, so the chains that can match them
+      // continue, e.g. for \w*a{1,2}b\w*, the first \w* could also consume the a and b.
+      // For a repeated portion with more than one char, the inner chains continue.
+      mergeChains(result, filterChains(chains, set));
+    }
+    return result;
+  }
+
+  /** Returns the chains that can continue after the string. */
+  private static Map<CharSet, Double> filterChains(
+      Map<CharSet, Double> chains, String str, boolean ignoreCase) {
+    Map<CharSet, Double> result = chains;
+    for (int i = 0; i < str.length() && !result.isEmpty(); i = str.offsetByCodePoints(i, 1)) {
+      result = filterChains(result, CharSet.of(str.codePointAt(i), ignoreCase));
+    }
+    return result;
+  }
+
+  /** Returns the chains that can continue after a char from the set. */
+  private static Map<CharSet, Double> filterChains(Map<CharSet, Double> chains, CharSet set) {
+    Map<CharSet, Double> result = new HashMap<>();
+    for (Map.Entry<CharSet, Double> entry : chains.entrySet()) {
+      if (entry.getKey().overlaps(set)) {
+        result.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return result;
+  }
+
+  /** Add the chains to the result, keeping the max cost for each set. */
+  private static void mergeChains(Map<CharSet, Double> result, Map<CharSet, Double> chains) {
+    for (Map.Entry<CharSet, Double> entry : chains.entrySet()) {
+      result.merge(entry.getKey(), entry.getValue(), Math::max);
+    }
+  }
+
+  /**
+   * Returns true if only one of the ways the repeated portion can match from a given
+   * position could let the rest of the pattern match. That is the case if it always ends at
+   * the same position, or if it only has parts with a fixed length and repetitions of single
+   * chars, where the char after each repetition cannot be one it matches. For example, with
+   * {@code (\d{1,3}\.){3}}, the digits can only be followed by a '.', so stopping before the
+   * last digit cannot help.
+   *
+   * @param repeated
+   *     Repeated portion.
+   * @param next
+   *     Portion after the repetition.
+   * @param endUsed
+   *     True if the position after the next portion is used by an enclosing matcher.
+   */
+  private static boolean hasKnownEnd(Matcher repeated, Matcher next, boolean endUsed) {
+    if (hasFixedEnd(repeated)) {
+      return true;
+    }
+    // Chars that can follow one repetition, the start of another or of the next portion
+    CharSet after = firstChars(next, endUsed ? CharSet.ANY : CharSet.NONE);
+    CharSet follow = firstChars(repeated, after).union(after);
+    return hasKnownEnd(repeated, follow);
+  }
+
+  /**
+   * Returns true if the matcher has parts with a fixed length and repetitions of single
+   * chars, where each repetition cannot be followed by a char it matches.
+   *
+   * @param matcher
+   *     Matcher to check.
+   * @param follow
+   *     Set of chars that could follow the matcher.
+   */
+  private static boolean hasKnownEnd(Matcher matcher, CharSet follow) {
+    if (hasFixedEnd(matcher)) {
+      return true;
+    } else if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      CharSet f = follow;
+      for (int i = ms.size() - 1; i >= 0; --i) {
+        Matcher m = ms.get(i);
+        if (!hasKnownEnd(m, f)) {
+          return false;
+        }
+        f = firstChars(m, f);
+      }
+      return true;
+    }
+
+    Matcher repeated;
+    Matcher next;
+    if (matcher instanceof ZeroOrMoreMatcher) {
+      repeated = matcher.<ZeroOrMoreMatcher>as().repeated();
+      next = matcher.<ZeroOrMoreMatcher>as().next();
+      // It stops at the first position where the next portion matches, so that is only the
+      // last position of the run of chars if the next portion cannot match before that.
+      // With nothing after it, it consumes as many as possible.
+      CharSet set = CharSet.of(repeated);
+      CharSet nextFirst = next instanceof TrueMatcher ? follow : firstChars(next, CharSet.ANY);
+      return set != null && !nextFirst.overlaps(set) && hasKnownEnd(next, follow);
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      repeated = matcher.<ZeroOrOneMatcher>as().repeated();
+      next = matcher.<ZeroOrOneMatcher>as().next();
+    } else if (matcher instanceof RepeatMatcher && !matcher.<RepeatMatcher>as().isPossessive()) {
+      repeated = matcher.<RepeatMatcher>as().repeated();
+      next = matcher.<RepeatMatcher>as().next();
+    } else {
+      return false;
+    }
+    // Tries the most repetitions first
+    CharSet set = CharSet.of(repeated);
+    return set != null
+        && !firstChars(next, follow).overlaps(set)
+        && hasKnownEnd(next, follow);
+  }
+
+  /**
+   * Returns a set that contains the first char that could be matched by the matcher.
+   *
+   * @param matcher
+   *     Matcher to check.
+   * @param follow
+   *     Set of chars that could follow the matcher, used if it can match the empty string.
+   */
+  private static CharSet firstChars(Matcher matcher, CharSet follow) {
+    CharSet single = CharSet.of(matcher);
+    if (single != null) {
+      return single;
+    } else if (matcher instanceof CharSeqMatcher) {
+      CharSeqMatcher m = matcher.as();
+      return firstChar(m.pattern(), m.isIgnoreCase(), follow);
+    } else if (matcher instanceof StartsWithMatcher) {
+      StartsWithMatcher m = matcher.as();
+      return firstChar(m.pattern(), m.isIgnoreCase(), follow);
+    } else if (matcher instanceof EndMatcher) {
+      return CharSet.NONE;
+    } else if (matcher instanceof TrueMatcher || matcher instanceof StartMatcher) {
+      return follow;
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      // Does not consume any chars, but the char at the position must be one the lookahead
+      // can match. The follow set can be empty if the rest of the pattern is not needed,
+      // e.g. for a trailing (?=\d), so it is not enough on its own.
+      Matcher m = matcher.<PositiveLookaheadMatcher>as().matcher();
+      return firstChars(m, CharSet.ANY).union(follow);
+    } else if (matcher instanceof NegativeLookaheadMatcher) {
+      // Can pass with any char at the position, even if the follow set is empty
+      return CharSet.ANY;
+    } else if (matcher instanceof SeqMatcher) {
+      // Stop at the first element that cannot match empty, otherwise checking each repetition
+      // in a long pattern would walk the rest of the pattern
+      CharSet set = CharSet.NONE;
+      for (Matcher m : matcher.<SeqMatcher>as().matchers()) {
+        if (m instanceof EndMatcher) {
+          return set;
+        }
+        set = set.union(firstChars(m, CharSet.NONE));
+        if (m.minLength() > 0) {
+          return set;
+        }
+      }
+      return set.union(follow);
+    } else if (matcher instanceof OrMatcher) {
+      CharSet set = CharSet.NONE;
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        set = set.union(firstChars(m, follow));
+      }
+      return set;
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      CharSet after = firstChars(m.next(), follow);
+      return firstChars(m.repeated(), after).union(after);
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      ZeroOrOneMatcher m = matcher.as();
+      CharSet after = firstChars(m.next(), follow);
+      return firstChars(m.repeated(), after).union(after);
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      CharSet after = firstChars(m.next(), follow);
+      CharSet first = firstChars(m.repeated(), after);
+      return m.min() > 0 ? first : first.union(after);
+    }
+    return CharSet.ANY;
+  }
+
+  private static CharSet firstChar(String str, boolean ignoreCase, CharSet follow) {
+    return str.isEmpty() ? follow : CharSet.of(str.codePointAt(0), ignoreCase);
   }
 
   /**
