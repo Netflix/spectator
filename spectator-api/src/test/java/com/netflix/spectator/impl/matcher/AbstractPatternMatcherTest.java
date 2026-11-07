@@ -785,7 +785,7 @@ public abstract class AbstractPatternMatcherTest {
     testBadExpression("(?=a", "unclosed group");
     testBadExpression("(?!a", "unclosed group");
     testBadExpression("(?", "unclosed group");
-    testBadExpression("(?<name", "unclosed name for capturing group");
+    testBadExpression("(?<name", "named capturing group is missing trailing '>'");
     testBadExpression("(?<name>a", "unclosed group");
     testBadExpression("[a\\]", "unclosed character class");
     testBadExpression("[&&", "unclosed character class");
@@ -871,6 +871,38 @@ public abstract class AbstractPatternMatcherTest {
   @Test
   public void namedCapturingGroup() {
     testRE("(?<foo>abc)", "abc");
+    testRE("(?<a1>x)(?<B>y)", "xy");
+    testRE("x(?<abc>(?<d>y))", "xy");
+    testRE("(?<a>)", "");
+  }
+
+  @Test
+  public void namedCapturingGroupInvalidName() {
+    // Like java, a name is an ASCII letter followed by ASCII letters or digits and can only
+    // be used once
+    String start = "capturing group name does not start with a Latin letter";
+    testBadExpression("(?<1a>x)", start);
+    testBadExpression("(?<>x)", start);
+    testBadExpression("(?<\u00E9>x)", start);
+    testBadExpression("(?<", start);
+    String trailing = "named capturing group is missing trailing '>'";
+    testBadExpression("(?<a-b>x)", trailing);
+    testBadExpression("(?<a_b>x)", trailing);
+    testBadExpression("(?<a b>x)", trailing);
+    testBadExpression("(?<a", trailing);
+    testBadExpression("(?<a>x)(?<a>y)", "named capturing group <a> is already defined");
+    testBadExpression("(?<a>x)|(?<a>y)", "named capturing group <a> is already defined");
+    // Like java, the error points to the '>' of the repeated name
+    assertErrorMessage("(?<a>x)(?<a>y)",
+        "named capturing group <a> is already defined\n(?<a>x)(?<a>y)\n           ^");
+  }
+
+  @Test
+  public void lookbehindUnsupported() {
+    testUnsupported("(?<=a)b", "lookbehind");
+    testUnsupported("(?<!a)b", "lookbehind");
+    // Not read as a group name up to the '>', java rejects it for the unmatched ')'
+    testUnsupported("(?<=a)>)", "lookbehind");
   }
 
   @Test
