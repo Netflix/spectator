@@ -42,6 +42,14 @@ public final class IpcLogEntry {
 
   private static final String CONTENT_LENGTH = "Content-Length";
 
+  /** Lookup table for methods that do not match the upper case fast path. */
+  private static final Map<String, IpcMethod> METHODS_BY_NAME = new HashMap<>();
+  static {
+    for (IpcMethod m : IpcMethod.values()) {
+      METHODS_BY_NAME.put(m.name(), m);
+    }
+  }
+
   private final Clock clock;
 
   private Registry registry;
@@ -480,14 +488,33 @@ public final class IpcLogEntry {
    * Set the HTTP method used for this request.
    */
   public IpcLogEntry withHttpMethod(String method) {
-    try {
-      IpcMethod m = IpcMethod.valueOf(method.toLowerCase(Locale.US));
-      withMethod(m);
-    } catch (Exception e) {
-      // Ignore invalid methods
-      withMethod(IpcMethod.unknown);
+    return withMethod(parseHttpMethod(method));
+  }
+
+  /**
+   * Map an HTTP method to the corresponding {@link IpcMethod}. Names are matched ignoring
+   * case. Methods without a corresponding enum value, such as HEAD, map to
+   * {@link IpcMethod#unknown}. Avoids
+   * {@link Enum#valueOf(Class, String)} since throwing an exception for each request that
+   * uses a method without a corresponding enum value is expensive.
+   */
+  static IpcMethod parseHttpMethod(String method) {
+    if (method == null) {
+      return IpcMethod.unknown;
     }
-    return this;
+
+    // Fast path for standard upper case names, avoids allocating a lower case copy
+    switch (method) {
+      case "GET":     return IpcMethod.get;
+      case "POST":    return IpcMethod.post;
+      case "PUT":     return IpcMethod.put;
+      case "PATCH":   return IpcMethod.patch;
+      case "DELETE":  return IpcMethod.delete;
+      case "OPTIONS": return IpcMethod.options;
+      default:
+        IpcMethod m = METHODS_BY_NAME.get(method.toLowerCase(Locale.US));
+        return m == null ? IpcMethod.unknown : m;
+    }
   }
 
   /**
