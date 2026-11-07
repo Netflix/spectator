@@ -20,19 +20,16 @@ import com.netflix.spectator.impl.AsciiSet;
 import java.util.List;
 
 /**
- * Set of code points used to analyze a pattern. Classes can only list ASCII chars, so the
- * set has the ASCII chars and a flag for whether it includes the non-ASCII code points.
+ * Set of code points used to analyze a pattern. Like {@link CharClassMatcher}, it has a
+ * set for the ASCII chars and the ranges for the non-ASCII code points.
  */
 final class CharSet {
 
   /** Set with all code points. */
-  static final CharSet ANY = new CharSet(AsciiSet.all(), true);
+  static final CharSet ANY = new CharSet(AsciiSet.all(), CodePointRanges.ALL);
 
   /** Empty set. */
-  static final CharSet NONE = new CharSet(AsciiSet.none(), false);
-
-  /** Set with only the non-ASCII code points. */
-  private static final CharSet NON_ASCII = new CharSet(AsciiSet.none(), true);
+  static final CharSet NONE = new CharSet(AsciiSet.none(), CodePointRanges.NONE);
 
   /**
    * Set for each ASCII char, see {@link #of(int, boolean)}. The first 128 are the char
@@ -44,8 +41,8 @@ final class CharSet {
     CharSet[] sets = new CharSet[256];
     for (char c = 0; c < 128; ++c) {
       AsciiSet set = AsciiSet.fromPattern(String.valueOf(c));
-      sets[c] = new CharSet(set, false);
-      sets[c + 128] = new CharSet(CharClassMatcher.withOtherCase(set), false);
+      sets[c] = new CharSet(set, CodePointRanges.NONE);
+      sets[c + 128] = new CharSet(CharClassMatcher.withOtherCase(set), CodePointRanges.NONE);
     }
     return sets;
   }
@@ -63,9 +60,8 @@ final class CharSet {
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       String pattern = m.pattern();
-      // A non-ASCII char is only approximated, so it is not exact for a single char
-      return pattern.length() == 1 && pattern.charAt(0) < 128
-          ? of(pattern.charAt(0), m.isIgnoreCase())
+      return !pattern.isEmpty() && pattern.offsetByCodePoints(0, 1) == pattern.length()
+          ? of(pattern.codePointAt(0), m.isIgnoreCase())
           : null;
     } else if (matcher instanceof OrMatcher) {
       // Alternatives of single chars, e.g. (?:a|b)
@@ -83,13 +79,12 @@ final class CharSet {
   }
 
   /**
-   * Returns a set that contains the code point. A non-ASCII code point is approximated by
-   * the set of all non-ASCII code points.
+   * Returns a set with the code point. If the case is ignored, then it also has the other
+   * case of an ASCII letter. Only ASCII letters are folded.
    */
   static CharSet of(int cp, boolean ignoreCase) {
     if (cp >= 128) {
-      // Only the ASCII chars are tracked individually
-      return NON_ASCII;
+      return new CharSet(AsciiSet.none(), CodePointRanges.of(cp));
     }
     return ASCII_CHARS[ignoreCase ? cp + 128 : cp];
   }
@@ -146,26 +141,26 @@ final class CharSet {
   }
 
   private final AsciiSet ascii;
-  private final boolean nonAscii;
+  private final CodePointRanges nonAscii;
 
-  private CharSet(AsciiSet ascii, boolean nonAscii) {
+  private CharSet(AsciiSet ascii, CodePointRanges nonAscii) {
     this.ascii = ascii;
     this.nonAscii = nonAscii;
   }
 
   /** Returns true if this set contains all of the chars in the other set. */
   boolean containsAll(CharSet other) {
-    return other.ascii.diff(ascii).isEmpty() && (nonAscii || !other.nonAscii);
+    return other.ascii.diff(ascii).isEmpty() && nonAscii.containsAll(other.nonAscii);
   }
 
   /** Returns true if there is a char in both sets. */
   boolean overlaps(CharSet other) {
-    return !ascii.intersection(other.ascii).isEmpty() || (nonAscii && other.nonAscii);
+    return !ascii.intersection(other.ascii).isEmpty() || nonAscii.overlaps(other.nonAscii);
   }
 
   /** Returns a set with the chars from both sets. */
   CharSet union(CharSet other) {
-    return new CharSet(ascii.union(other.ascii), nonAscii || other.nonAscii);
+    return new CharSet(ascii.union(other.ascii), nonAscii.union(other.nonAscii));
   }
 
   @Override
@@ -177,11 +172,11 @@ final class CharSet {
       return false;
     }
     CharSet other = (CharSet) obj;
-    return nonAscii == other.nonAscii && ascii.equals(other.ascii);
+    return nonAscii.equals(other.nonAscii) && ascii.equals(other.ascii);
   }
 
   @Override
   public int hashCode() {
-    return 31 * ascii.hashCode() + Boolean.hashCode(nonAscii);
+    return 31 * ascii.hashCode() + nonAscii.hashCode();
   }
 }

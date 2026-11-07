@@ -704,7 +704,9 @@ final class Optimizer {
   static Matcher convertMatchAllCharClassToAny(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
       CharClassMatcher m = matcher.as();
-      if (m.nonAscii() && m.set().invert().isEmpty() && m.foldedSet().invert().isEmpty()) {
+      if (m.nonAscii().isAll()
+          && m.set().invert().isEmpty()
+          && m.foldedSet().invert().isEmpty()) {
         return AnyMatcher.INSTANCE;
       }
     }
@@ -722,12 +724,25 @@ final class Optimizer {
       // differently, e.g. for [a&&[^A]], only 'a', which matches nothing if
       // the case is ignored.
       CharClassMatcher m = matcher.as();
-      Optional<Character> opt = m.set().character();
-      if (opt.isPresent() && m.isSimpleFold() && !m.nonAscii()) {
-        return new CharSeqMatcher(String.valueOf(opt.get()), m.isIgnoreCase());
+      if (m.isSimpleFold()) {
+        Optional<Character> opt = m.set().character();
+        int cp = m.nonAscii().single();
+        if (opt.isPresent() && m.nonAscii().isEmpty()) {
+          return new CharSeqMatcher(String.valueOf(opt.get()), m.isIgnoreCase());
+        } else if (cp >= 0 && m.set().isEmpty() && !isSurrogate(cp)) {
+          // Single non-ASCII code point, e.g. [é]. A lone surrogate is kept as a class. The
+          // class checks the whole code point, so like java [\x{d83d}] does not match the
+          // high surrogate of a pair, but the sequence would.
+          return new CharSeqMatcher(new String(Character.toChars(cp)), m.isIgnoreCase());
+        }
       }
     }
     return matcher;
+  }
+
+  /** Returns true if the code point is a high or low surrogate. */
+  private static boolean isSurrogate(int cp) {
+    return cp >= Character.MIN_SURROGATE && cp <= Character.MAX_SURROGATE;
   }
 
   /**

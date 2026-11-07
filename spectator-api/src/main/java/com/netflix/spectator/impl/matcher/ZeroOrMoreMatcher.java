@@ -76,7 +76,8 @@ final class ZeroOrMoreMatcher implements GreedyMatcher, Serializable {
         }
       }
       return Constants.NO_MATCH;
-    } else if (repeated instanceof CharClassMatcher) {
+    } else if (repeated instanceof CharClassMatcher
+        && ((CharClassMatcher) repeated).hasCharLookup()) {
       return matchesCharClass((CharClassMatcher) repeated, str, start, end);
     } else if (next != TrueMatcher.INSTANCE) {
       final int stop = end - next.minLength();

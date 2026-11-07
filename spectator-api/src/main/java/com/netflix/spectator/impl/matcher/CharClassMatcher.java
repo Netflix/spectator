@@ -25,9 +25,6 @@ final class CharClassMatcher implements Matcher, Serializable {
 
   private static final long serialVersionUID = 1L;
 
-  /** Range of all non-ASCII code points, used in the regex for a class. */
-  private static final String NON_ASCII_RANGE = "\\x{80}-\\x{10ffff}";
-
   private final AsciiSet set;
   private final boolean ignoreCase;
 
@@ -39,12 +36,16 @@ final class CharClassMatcher implements Matcher, Serializable {
   private final AsciiSet foldedSet;
 
   /**
-   * True if the class matches all non-ASCII code points. Classes can only list ASCII
-   * characters, so a class either matches all non-ASCII code points, e.g. {@code [^a]} or
-   * {@code \S}, or none of them. Ignoring the case only folds ASCII letters, so it is the
-   * same for both sets.
+   * Non-ASCII code points that match, e.g. all of them for {@code [^a]} or {@code \S}.
+   * Ignoring the case only folds ASCII letters, so it is the same for both sets.
    */
-  private final boolean nonAscii;
+  private final CodePointRanges nonAscii;
+
+  /**
+   * True if the non-ASCII code points either all match or none match, so each char can be
+   * checked on its own, see {@link #matches(char)}.
+   */
+  private final transient boolean charLookup;
 
   /** Create a new instance. */
   CharClassMatcher(AsciiSet set) {
@@ -68,7 +69,7 @@ final class CharClassMatcher implements Matcher, Serializable {
    *     If true, then the match will ignore the case.
    */
   CharClassMatcher(AsciiSet set, AsciiSet foldedSet, boolean ignoreCase) {
-    this(set, foldedSet, ignoreCase, false);
+    this(set, foldedSet, ignoreCase, CodePointRanges.NONE);
   }
 
   /**
@@ -82,13 +83,15 @@ final class CharClassMatcher implements Matcher, Serializable {
    * @param ignoreCase
    *     If true, then the match will ignore the case.
    * @param nonAscii
-   *     If true, then all non-ASCII code points will match.
+   *     Non-ASCII code points that will match.
    */
-  CharClassMatcher(AsciiSet set, AsciiSet foldedSet, boolean ignoreCase, boolean nonAscii) {
+  CharClassMatcher(
+      AsciiSet set, AsciiSet foldedSet, boolean ignoreCase, CodePointRanges nonAscii) {
     this.set = set;
     this.foldedSet = foldedSet;
     this.ignoreCase = ignoreCase;
     this.nonAscii = nonAscii;
+    this.charLookup = nonAscii.isEmpty() || nonAscii.isAll();
   }
 
   /** Returns the set with both cases of any letter in the set. */
@@ -113,19 +116,33 @@ final class CharClassMatcher implements Matcher, Serializable {
     return foldedSet;
   }
 
-  /** Returns true if the class matches all non-ASCII code points. */
-  boolean nonAscii() {
+  /** Non-ASCII code points that match. */
+  CodePointRanges nonAscii() {
     return nonAscii;
+  }
+
+  /**
+   * Returns true if each char can be checked with {@link #matches(char)}. That is the case
+   * if the class matches all non-ASCII code points or none of them.
+   */
+  boolean hasCharLookup() {
+    return charLookup;
   }
 
   /** Returns true if the class cannot match anything, even if the case is ignored. */
   boolean isEmpty() {
-    return set.isEmpty() && foldedSet.isEmpty() && !nonAscii;
+    return set.isEmpty() && foldedSet.isEmpty() && nonAscii.isEmpty();
   }
 
-  /** Instances serialized by an older version will not have the folded set. */
+  /**
+   * Instances serialized by an older version will not have the folded set or the
+   * non-ASCII code points. Those versions did not match non-ASCII code points. The
+   * lookup flag is derived, so it is always recomputed.
+   */
   private Object readResolve() {
-    return foldedSet == null ? new CharClassMatcher(set, ignoreCase) : this;
+    AsciiSet folded = foldedSet == null ? withOtherCase(set) : foldedSet;
+    CodePointRanges ranges = nonAscii == null ? CodePointRanges.NONE : nonAscii;
+    return new CharClassMatcher(set, folded, ignoreCase, ranges);
   }
 
   /**
@@ -150,14 +167,15 @@ final class CharClassMatcher implements Matcher, Serializable {
   /**
    * Returns true if the character is in the class. When ignoring case, the folded set
    * already includes the other case of each letter, so a single lookup is sufficient.
-   * Both halves of a surrogate pair are non-ASCII, so checking each char of a pair gives
-   * the same result as checking the code point.
+   * It can only be used if {@link #hasCharLookup()} is true. Then both halves of a
+   * surrogate pair are non-ASCII, so checking each char of a pair gives the same result
+   * as checking the code point.
    */
   boolean matches(char c) {
     if (c < 128) {
       return ignoreCase ? foldedSet.contains(c) : set.contains(c);
     }
-    return nonAscii;
+    return !nonAscii.isEmpty();
   }
 
   @Override
@@ -166,14 +184,19 @@ final class CharClassMatcher implements Matcher, Serializable {
       return Constants.NO_MATCH;
     }
     final char c = str.charAt(start);
-    if (!matches(c)) {
-      return Constants.NO_MATCH;
+    if (c < 128) {
+      boolean found = ignoreCase ? foldedSet.contains(c) : set.contains(c);
+      return found ? start + 1 : Constants.NO_MATCH;
     }
     // A surrogate pair is a single code point, so it is consumed as a whole. Only check
-    // for a high surrogate, so ASCII chars do not need to read the next char.
-    return Character.isHighSurrogate(c)
+    // for a high surrogate, so other chars do not need to read the next char.
+    final int next = Character.isHighSurrogate(c)
         ? PatternUtils.nextCodePoint(str, start, start + length)
         : start + 1;
+    final boolean found = charLookup
+        ? !nonAscii.isEmpty()
+        : nonAscii.contains(next - start == 2 ? str.codePointAt(start) : c);
+    return found ? next : Constants.NO_MATCH;
   }
 
   @Override
@@ -183,27 +206,29 @@ final class CharClassMatcher implements Matcher, Serializable {
 
   @Override
   public String toString() {
-    if (set.isEmpty() && !nonAscii) {
+    if (set.isEmpty() && nonAscii.isEmpty()) {
       // An empty class is not a valid regex. The set can be empty while the folded set
       // is not, e.g. [a&&A].
       return FalseMatcher.INSTANCE.toString();
     }
     AsciiSet inverted = set.invert();
-    if (nonAscii && inverted.isEmpty()) {
+    CodePointRanges invertedNonAscii = nonAscii.invert();
+    if (inverted.isEmpty() && invertedNonAscii.isEmpty()) {
       return "[\\s\\S]";
     }
     // AsciiSet.toString only puts the dash at the start or in the middle of a range, so
-    // it is a valid regex character class body once escaped. If the class matches the
-    // non-ASCII code points, then the negated form is used, e.g. [^a], otherwise the
-    // positive form, so that neither needs to list them.
-    String p = PatternUtils.escape(set.toString());
-    String n = PatternUtils.escape(inverted.toString());
-    boolean negated = nonAscii;
+    // it is a valid regex character class body once escaped. The form that lists fewer
+    // non-ASCII code points is used, e.g. [^a] if the class matches all of them, otherwise
+    // the positive form. Some engines, e.g. RE2J, are very slow to compile a large range
+    // when ignoring case.
+    String p = PatternUtils.escape(set.toString()) + nonAscii.toPattern();
+    String n = PatternUtils.escape(inverted.toString()) + invertedNonAscii.toPattern();
+    boolean negated = invertedNonAscii.count() < nonAscii.count();
     // When parsed, the case is folded before negation. If needed, use the other form so
     // that ignoring the case is the same after a round trip, e.g. [a&&[^A]] only has 'a'
     // and matches nothing when ignoring the case, but [a] would match 'a' and 'A'. The
-    // other form needs the range of non-ASCII code points. That is avoided if possible as
-    // some engines, e.g. RE2J, are very slow to compile a large range when ignoring case.
+    // other form may need a large range of non-ASCII code points. That is avoided if possible
+    // as some engines, e.g. RE2J, are very slow to compile a large range when ignoring case.
     boolean positiveKeepsFold = foldedSet.equals(withOtherCase(set));
     boolean negatedKeepsFold = foldedSet.equals(withOtherCase(inverted).invert());
     boolean keepsFold = negated ? negatedKeepsFold : positiveKeepsFold;
@@ -211,8 +236,7 @@ final class CharClassMatcher implements Matcher, Serializable {
     if (!keepsFold && otherKeepsFold) {
       negated = !negated;
     }
-    String range = (negated == nonAscii) ? "" : NON_ASCII_RANGE;
-    return "[" + (negated ? "^" + n : p) + range + "]";
+    return "[" + (negated ? "^" + n : p) + "]";
   }
 
   @Override
@@ -225,7 +249,7 @@ final class CharClassMatcher implements Matcher, Serializable {
     }
     CharClassMatcher that = (CharClassMatcher) o;
     return ignoreCase == that.ignoreCase
-        && nonAscii == that.nonAscii
+        && Objects.equals(nonAscii, that.nonAscii)
         && Objects.equals(set, that.set)
         && Objects.equals(foldedSet, that.foldedSet);
   }
@@ -236,7 +260,7 @@ final class CharClassMatcher implements Matcher, Serializable {
     result = 31 * result + set.hashCode();
     result = 31 * result + foldedSet.hashCode();
     result = 31 * result + Boolean.hashCode(ignoreCase);
-    result = 31 * result + Boolean.hashCode(nonAscii);
+    result = 31 * result + Objects.hashCode(nonAscii);
     return result;
   }
 }

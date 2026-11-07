@@ -71,16 +71,44 @@ public class MatcherSerializationTest {
     Field field = CharClassMatcher.class.getDeclaredField("foldedSet");
     field.setAccessible(true);
     field.set(matcher, null);
+    CharClassMatcher deserialized = roundTrip(matcher);
+    Assertions.assertEquals(new CharClassMatcher(AsciiSet.fromPattern("a"), true), deserialized);
+    Assertions.assertEquals(AsciiSet.fromPattern("aA"), deserialized.foldedSet());
+  }
 
+  @Test
+  public void charClassNonAscii() throws Exception {
+    checkSerde(PatternMatcher.compile("^[a\u00E9\uD83D\uDE00-\uD83D\uDE4F]+x"));
+    checkSerde(PatternMatcher.compile("^[^\u00E9]+x"));
+
+    // The lookup flag is derived, so it is recomputed after deserialization
+    CharClassMatcher matcher = new CharClassMatcher(
+        AsciiSet.none(), AsciiSet.none(), false, CodePointRanges.ALL);
+    CharClassMatcher deserialized = roundTrip(matcher);
+    Assertions.assertTrue(deserialized.hasCharLookup());
+    Assertions.assertEquals(1, deserialized.matches("\u00E9", 0, 1));
+  }
+
+  @Test
+  public void charClassWithoutNonAscii() throws Exception {
+    // Instances serialized by an older version will not have the non-ASCII code points
+    CharClassMatcher matcher = new CharClassMatcher(AsciiSet.fromPattern("a"), true);
+    Field field = CharClassMatcher.class.getDeclaredField("nonAscii");
+    field.setAccessible(true);
+    field.set(matcher, null);
+    CharClassMatcher deserialized = roundTrip(matcher);
+    Assertions.assertEquals(new CharClassMatcher(AsciiSet.fromPattern("a"), true), deserialized);
+    Assertions.assertEquals(CodePointRanges.NONE, deserialized.nonAscii());
+  }
+
+  private static CharClassMatcher roundTrip(CharClassMatcher matcher) throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try (ObjectOutputStream out = new ObjectOutputStream(baos)) {
       out.writeObject(matcher);
     }
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     try (ObjectInputStream in = new ObjectInputStream(bais)) {
-      CharClassMatcher deserialized = (CharClassMatcher) in.readObject();
-      Assertions.assertEquals(new CharClassMatcher(AsciiSet.fromPattern("a"), true), deserialized);
-      Assertions.assertEquals(AsciiSet.fromPattern("aA"), deserialized.foldedSet());
+      return (CharClassMatcher) in.readObject();
     }
   }
 

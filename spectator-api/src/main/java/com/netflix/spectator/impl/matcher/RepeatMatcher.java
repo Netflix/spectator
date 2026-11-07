@@ -141,7 +141,8 @@ final class RepeatMatcher implements GreedyMatcher, Serializable {
    * repetition is a single char.
    */
   private static boolean isSingleCharClass(Matcher matcher) {
-    return matcher instanceof CharClassMatcher && !matcher.<CharClassMatcher>as().nonAscii();
+    return matcher instanceof CharClassMatcher
+        && matcher.<CharClassMatcher>as().nonAscii().isEmpty();
   }
 
   /**

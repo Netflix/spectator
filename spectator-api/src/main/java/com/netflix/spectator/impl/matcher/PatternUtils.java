@@ -1166,7 +1166,7 @@ public final class PatternUtils {
         // The folded set is inverted as well so that if the case is ignored later, [^b]
         // will match neither 'b' nor 'B'.
         CharClassMatcher m = new CharClassMatcher(
-            cls.set().invert(), cls.foldedSet().invert(), false, !cls.nonAscii());
+            cls.set().invert(), cls.foldedSet().invert(), false, cls.nonAscii().invert());
         if (m.isEmpty()) {
           return null;
         }
