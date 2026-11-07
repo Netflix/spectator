@@ -53,6 +53,36 @@ public class CaseInsensitivePatternMatcherTest extends AbstractPatternMatcherTes
   }
 
   @Test
+  public void adjacentRepeatedCharsFoldedSet() {
+    // The sets for some classes are different once the case is ignored, e.g. [^a] has 'A',
+    // but [^a&&A] has any char other than 'a' or 'A'. Rewrites for adjacent repetitions must
+    // be valid for both, found by fuzzing. These are not in the shared tests as toString does
+    // not keep the folded set for these classes unless the case is ignored.
+    String[] patterns = {"^[^a]+A?$", "^[^a-z]*[A-Z]+$", "^\\w*[^B]+b+$", "^[^a]*A*[^a]*x"};
+    // Intersections are parsed differently by java 8
+    String[] intersections = {
+        "[^a&&A]{2}", "[^a]*[^a&&A]*[^a]+|Ab?$", "A{2}|[^a&&A]+.{0,3}$",
+        "[^a&&A]*[aA]{2}$", "^[a&&[^A]]?a?b$", "^a*[a&&[^A]]*$", ".*[^b&&B]b*$"
+    };
+    String[] values = {
+        "", "a", "A", "b", "B", "A1b", "bA", "a1a1", "A1", "abAA", "ab", "Ab", "aab", "AAb", "Bab",
+        "ax", "AAx"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+    if (JavaVersion.major() >= 9) {
+      for (String p : intersections) {
+        for (String v : values) {
+          testRE(p, v);
+        }
+      }
+    }
+  }
+
+  @Test
   public void flagOptimizedSameAsIgnoreCase() {
     // The (?i) flag rewrites the matcher before it is optimized. A class for a single letter
     // should still be merged with adjacent literals, and a class that is empty when ignoring
