@@ -51,12 +51,14 @@ final class NegativeLookaheadMatcher implements Matcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    return f.apply(new NegativeLookaheadMatcher(matcher.rewrite(f)));
+    Matcher m = matcher.rewrite(f);
+    return f.apply(m == matcher ? this : new NegativeLookaheadMatcher(m));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    return f.apply(new NegativeLookaheadMatcher(matcher.rewriteEnd(f)));
+    Matcher m = matcher.rewriteEnd(f);
+    return f.apply(m == matcher ? this : new NegativeLookaheadMatcher(m));
   }
 
   @Override

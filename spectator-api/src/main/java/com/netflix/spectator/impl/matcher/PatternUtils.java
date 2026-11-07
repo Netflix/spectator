@@ -975,6 +975,25 @@ public final class PatternUtils {
     return builder.toString();
   }
 
+  /**
+   * Apply the function to each of the matchers. If none of them change, then the original
+   * array is returned so the caller can reuse the matcher rather than creating a copy. The
+   * optimizer applies many rewrites that usually only change a few matchers.
+   */
+  static Matcher[] rewriteAll(Matcher[] matchers, Function<Matcher, Matcher> f) {
+    Matcher[] ms = matchers;
+    for (int i = 0; i < matchers.length; ++i) {
+      Matcher m = f.apply(matchers[i]);
+      if (m != matchers[i]) {
+        if (ms == matchers) {
+          ms = Arrays.copyOf(matchers, matchers.length);
+        }
+        ms[i] = m;
+      }
+    }
+    return ms;
+  }
+
   /** Convert to a matchers that ignores the case. */
   static Matcher ignoreCase(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {

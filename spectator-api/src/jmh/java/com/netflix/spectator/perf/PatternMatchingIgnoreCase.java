@@ -49,6 +49,17 @@ public class PatternMatchingIgnoreCase {
       "^(abc|bcd|cde|def|ef0|f01|012|123|234|456|567|678|789|890|90a|ab3)").ignoreCase();
   private final PatternMatcher seq = PatternMatcher.compile(
       "^" + example.substring(0, 8) + "-[0-9a-f]{4}-" + example.substring(14)).ignoreCase();
+  // Repeated class, uses the fast path that checks each char against the folded set
+  private final PatternMatcher repeatedClass = PatternMatcher.compile("^[0-9a-f-]+$").ignoreCase();
+  // Repeated group with a separator, each repetition can only end before the next '-'
+  private final PatternMatcher list = PatternMatcher.compile(
+      "^[0-9a-f]+(?:-[0-9a-f]+)*$").ignoreCase();
+  // Class where the folded set is different, e.g. [^g-z] does not match 'G' once the case is
+  // ignored, so the pattern is folded before it is optimized
+  private final PatternMatcher negatedClass = PatternMatcher.compile("^[^g-z]+$").ignoreCase();
+  // Class with a non-ASCII code point, each repetition checks the code point
+  private final PatternMatcher nonAsciiClass = PatternMatcher.compile(
+      "^[0-9a-f\\u00e9-]+$").ignoreCase();
 
   @Benchmark
   public void prefixSameCase(Blackhole bh) {
@@ -118,5 +129,45 @@ public class PatternMatchingIgnoreCase {
   @Benchmark
   public void seqOtherCase(Blackhole bh) {
     bh.consume(seq.matches(upper));
+  }
+
+  @Benchmark
+  public void repeatedClassSameCase(Blackhole bh) {
+    bh.consume(repeatedClass.matches(lower));
+  }
+
+  @Benchmark
+  public void repeatedClassOtherCase(Blackhole bh) {
+    bh.consume(repeatedClass.matches(upper));
+  }
+
+  @Benchmark
+  public void listSameCase(Blackhole bh) {
+    bh.consume(list.matches(lower));
+  }
+
+  @Benchmark
+  public void listOtherCase(Blackhole bh) {
+    bh.consume(list.matches(upper));
+  }
+
+  @Benchmark
+  public void negatedClassSameCase(Blackhole bh) {
+    bh.consume(negatedClass.matches(lower));
+  }
+
+  @Benchmark
+  public void negatedClassOtherCase(Blackhole bh) {
+    bh.consume(negatedClass.matches(upper));
+  }
+
+  @Benchmark
+  public void nonAsciiClassSameCase(Blackhole bh) {
+    bh.consume(nonAsciiClass.matches(lower));
+  }
+
+  @Benchmark
+  public void nonAsciiClassOtherCase(Blackhole bh) {
+    bh.consume(nonAsciiClass.matches(upper));
   }
 }

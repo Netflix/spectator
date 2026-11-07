@@ -44,9 +44,9 @@ final class Optimizer {
   }
 
   /**
-   * Return a new instance of the matcher that has been optimized. The matcher must be a
-   * complete pattern that is checked from the start of the string, some of the rewrites are
-   * only valid at the start. It should not be used to optimize a sub-matcher.
+   * Return the optimized matcher, unchanged portions of the input are reused. The matcher
+   * must be a complete pattern that is checked from the start of the string, some of the
+   * rewrites are only valid at the start. It should not be used to optimize a sub-matcher.
    */
   static Matcher optimize(Matcher matcher) {
     Matcher opt = optimizeFixpoint(matcher);
@@ -250,9 +250,26 @@ final class Optimizer {
           ms.add(m);
         }
       }
-      return SeqMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
     }
     return matcher;
+  }
+
+  /**
+   * Returns true if the lists have the same matcher instances. A rule can then return the
+   * original matcher rather than an equal copy, so the rewrite can reuse it and its parents,
+   * see {@link SeqMatcher#rewrite}.
+   */
+  private static boolean sameElements(List<Matcher> a, List<Matcher> b) {
+    if (a.size() != b.size()) {
+      return false;
+    }
+    for (int i = 0; i < a.size(); ++i) {
+      if (a.get(i) != b.get(i)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -281,7 +298,7 @@ final class Optimizer {
           ms.add(m);
         }
       }
-      return SeqMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
     }
     return matcher;
   }
@@ -764,11 +781,12 @@ final class Optimizer {
    */
   private static Matcher removeStartFollowedByMatchAny(Matcher matcher, boolean atStart) {
     if (matcher instanceof OrMatcher) {
+      List<Matcher> matchers = matcher.<OrMatcher>as().matchers();
       List<Matcher> ms = new ArrayList<>();
-      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+      for (Matcher m : matchers) {
         ms.add(removeStartFollowedByMatchAny(m, atStart));
       }
-      return OrMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : OrMatcher.create(ms);
     } else if (matcher instanceof StartMatcher) {
       // Start anchor by itself at the start of the pattern will always match
       return atStart ? TrueMatcher.INSTANCE : matcher;
@@ -776,12 +794,12 @@ final class Optimizer {
       // Optional portion is checked at the same position
       ZeroOrOneMatcher zm = matcher.as();
       Matcher repeated = removeStartFollowedByMatchAny(zm.repeated(), atStart);
-      return new ZeroOrOneMatcher(repeated, zm.next());
+      return repeated == zm.repeated() ? matcher : new ZeroOrOneMatcher(repeated, zm.next());
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher zm = matcher.as();
       if (zm.repeated() instanceof AnyMatcher) {
         Matcher next = removeStartFollowedByMatchAny(zm.next(), false);
-        return new ZeroOrMoreMatcher(zm.repeated(), next);
+        return next == zm.next() ? matcher : new ZeroOrMoreMatcher(zm.repeated(), next);
       }
       // Only the first repetition is at the start. For a repeated "^.*x", anything matched
       // by later repetitions could also be matched by the first, so the start anchor can
@@ -802,7 +820,7 @@ final class Optimizer {
       } else {
         ms.set(0, removeStartFollowedByMatchAny(matchers.get(0), atStart));
       }
-      return SeqMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
     }
     return matcher;
   }
@@ -914,7 +932,7 @@ final class Optimizer {
           ms.add(m);
         }
       }
-      return SeqMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
     }
     return matcher;
   }
@@ -934,7 +952,7 @@ final class Optimizer {
           ms.add(m);
         }
       }
-      return OrMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : OrMatcher.create(ms);
     }
     return matcher;
   }
@@ -944,9 +962,9 @@ final class Optimizer {
    */
   static Matcher dedupOr(Matcher matcher) {
     if (matcher instanceof OrMatcher) {
-      List<Matcher> ms = new ArrayList<>(
-          new LinkedHashSet<>(matcher.<OrMatcher>as().matchers()));
-      return OrMatcher.create(ms);
+      List<Matcher> matchers = matcher.<OrMatcher>as().matchers();
+      List<Matcher> ms = new ArrayList<>(new LinkedHashSet<>(matchers));
+      return sameElements(matchers, ms) ? matcher : OrMatcher.create(ms);
     }
     return matcher;
   }
@@ -956,12 +974,12 @@ final class Optimizer {
    */
   static Matcher removeFalseBranchesFromOr(Matcher matcher) {
     if (matcher instanceof OrMatcher) {
-      List<Matcher> ms = matcher.<OrMatcher>as()
-          .matchers()
+      List<Matcher> matchers = matcher.<OrMatcher>as().matchers();
+      List<Matcher> ms = matchers
           .stream()
           .filter(m -> !(m instanceof FalseMatcher))
           .collect(Collectors.toList());
-      return OrMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : OrMatcher.create(ms);
     }
     return matcher;
   }
@@ -1111,7 +1129,7 @@ final class Optimizer {
       if (cs1 != null) {
         ms.add(cs1);
       }
-      return SeqMatcher.create(ms);
+      return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
     }
     return matcher;
   }
@@ -1299,7 +1317,7 @@ final class Optimizer {
           }
         }
         ms.addAll(matchers.subList(pos, matchers.size()));
-        return SeqMatcher.create(ms);
+        return sameElements(matchers, ms) ? matcher : SeqMatcher.create(ms);
       }
     }
     return matcher;

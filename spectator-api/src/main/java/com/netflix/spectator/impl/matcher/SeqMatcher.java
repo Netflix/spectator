@@ -65,6 +65,15 @@ final class SeqMatcher implements Matcher, Serializable {
     return Arrays.asList(matchers);
   }
 
+  /**
+   * The min length is derived from the other fields. Instances serialized by an older version
+   * may not have it, so it is recomputed. A rewrite reuses matchers that do not change, so it
+   * would not otherwise be recomputed.
+   */
+  private Object readResolve() {
+    return new SeqMatcher(matchers);
+  }
+
   @Override
   public int matches(String str, int start, int length) {
     final int end = start + length;
@@ -130,20 +139,19 @@ final class SeqMatcher implements Matcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    int n = matchers.length;
-    Matcher[] ms = new Matcher[n];
-    for (int i = 0; i < n; ++i) {
-      ms[i] = matchers[i].rewrite(f);
-    }
-    return f.apply(create(ms));
+    Matcher[] ms = PatternUtils.rewriteAll(matchers, m -> m.rewrite(f));
+    return f.apply(ms == matchers ? this : create(ms));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
     int n = matchers.length;
-    Matcher[] ms = new Matcher[n];
-    System.arraycopy(matchers, 0, ms, 0, n - 1);
-    ms[n - 1] = matchers[n - 1].rewriteEnd(f);
+    Matcher last = matchers[n - 1].rewriteEnd(f);
+    if (last == matchers[n - 1]) {
+      return f.apply(this);
+    }
+    Matcher[] ms = Arrays.copyOf(matchers, n);
+    ms[n - 1] = last;
     return f.apply(create(ms));
   }
 

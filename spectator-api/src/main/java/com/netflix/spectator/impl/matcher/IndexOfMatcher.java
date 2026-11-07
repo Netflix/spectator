@@ -166,12 +166,14 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    return f.apply(new IndexOfMatcher(pattern, next.rewrite(f), ignoreCase));
+    Matcher n = next.rewrite(f);
+    return f.apply(n == next ? this : new IndexOfMatcher(pattern, n, ignoreCase));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    return f.apply(new IndexOfMatcher(pattern, next.rewriteEnd(f), ignoreCase));
+    Matcher n = next.rewriteEnd(f);
+    return f.apply(n == next ? this : new IndexOfMatcher(pattern, n, ignoreCase));
   }
 
   @Override

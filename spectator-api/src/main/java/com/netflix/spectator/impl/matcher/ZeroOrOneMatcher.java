@@ -52,6 +52,15 @@ final class ZeroOrOneMatcher implements GreedyMatcher, Serializable {
     return next;
   }
 
+  /**
+   * The min length is derived from the other fields. Instances serialized by an older version
+   * may not have it, so it is recomputed. A rewrite reuses matchers that do not change, so it
+   * would not otherwise be recomputed.
+   */
+  private Object readResolve() {
+    return new ZeroOrOneMatcher(repeated, next);
+  }
+
   @Override
   public String containedString() {
     return next.containedString();
@@ -100,12 +109,15 @@ final class ZeroOrOneMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    return f.apply(new ZeroOrOneMatcher(repeated.rewrite(f), next.rewrite(f)));
+    Matcher r = repeated.rewrite(f);
+    Matcher n = next.rewrite(f);
+    return f.apply(r == repeated && n == next ? this : new ZeroOrOneMatcher(r, n));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    return f.apply(new ZeroOrOneMatcher(repeated, next.rewriteEnd(f)));
+    Matcher n = next.rewriteEnd(f);
+    return f.apply(n == next ? this : new ZeroOrOneMatcher(repeated, n));
   }
 
   @Override
