@@ -233,7 +233,7 @@ public class OptimizerTest {
   @Test
   public void convertMatchAllCharClassToAny() {
     AsciiSet all = AsciiSet.all();
-    Matcher input = new CharClassMatcher(all, all, false, true);
+    Matcher input = new CharClassMatcher(all, all, false, CodePointRanges.ALL);
     Assertions.assertEquals(AnyMatcher.INSTANCE, Optimizer.convertMatchAllCharClassToAny(input));
   }
 
@@ -241,7 +241,7 @@ public class OptimizerTest {
   public void convertMatchAllCharClassToAnyAsciiOnly() {
     // Does not match non-ASCII code points, so it is not the same as '.'
     AsciiSet all = AsciiSet.all();
-    Matcher input = new CharClassMatcher(all, all, false, false);
+    Matcher input = new CharClassMatcher(all, all, false, CodePointRanges.NONE);
     Assertions.assertEquals(input, Optimizer.convertMatchAllCharClassToAny(input));
   }
 
@@ -507,7 +507,8 @@ public class OptimizerTest {
   public void removeRedundantRepeatedChars_NonAscii() {
     // [^a]*[b-z]*x, the first also matches non-ASCII chars
     Matcher negated = new CharClassMatcher(
-        AsciiSet.fromPattern("a").invert(), AsciiSet.fromPattern("aA").invert(), false, true);
+        AsciiSet.fromPattern("a").invert(), AsciiSet.fromPattern("aA").invert(), false,
+        CodePointRanges.ALL);
     Matcher input = new ZeroOrMoreMatcher(cls("b-z"),
         new ZeroOrMoreMatcher(negated, new CharSeqMatcher("x")));
     Matcher expected = new ZeroOrMoreMatcher(negated, new CharSeqMatcher("x"));

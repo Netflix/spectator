@@ -642,6 +642,45 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void nonAsciiClasses() {
+    // Like java, a class can list any code point and ranges of them. RE2J is very slow to
+    // compile a class with a large range when ignoring case, so both the class and the
+    // negated form having one, e.g. [^\x{1f600}-\x{10ffff}], is avoided.
+    String[] patterns = {
+        "^[\u00E9]$", "^[\u00E9a]+$", "^[^\u00E9]$", "^[\u00E0-\u00FF]+$", "^[a-z\u00E0-\u00FF]+$",
+        "^[\uD83D\uDE00]$", "^[\uD83D\uDE00-\uD83D\uDE02]+$", "^[^\uD83D\uDE00]$",
+        "^[\\x{1F600}-\\x{1F64F}]{2}$", "^[\\w\uD83D\uDE00]+$", "[\uD83D\uDE00\u00E9]",
+        "^[\uD83D\uDE00\uD83D\uDE01]$", "^[^\uD83D\uDE00-\uD83D\uDE4F]$", "^[\\x{d800}-\\x{dfff}]$",
+        "^[\u00E9-\\x{10ffff}]$", "^x[\u00E9\uD83D\uDE00]*y$", "^[\u00E9\u00C9]?a$",
+        "(?i)^[\u00E9a]+$", "(?i)^[^\u00E9a]$",
+        // A lone surrogate does not match half of a pair, so it is not a char sequence
+        "^[\\x{d83d}]", "^[\\x{d83d}]+", "^(?![\\x{d83d}]).*$"
+    };
+    String[] values = {
+        "", "a", "A", "\u00E9", "\u00C9", "\u00FF", "\u00E9a", "\uD83D\uDE00", "\uD83D\uDE01",
+        "\uD83D\uDE02", "\uD83D\uDE03", "\uD83D\uDE00\uD83D\uDE01", "\uD83D", "\uDE00",
+        "x\uD83D\uDE00\u00E9y", "xy", "\u00E9a", "\uDBFF\uDFFF", "\u0100"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+
+    // Nested classes and intersections are parsed differently by java 8
+    if (JavaVersion.major() >= 9) {
+      String[] nested = {
+          "^[\u00E0-\u00FF&&[^\u00E9]]$", "^[^\u00E9[\uD83D\uDE00]]$", "^[\\S&&[^\u00E9]]$"
+      };
+      for (String p : nested) {
+        for (String v : values) {
+          testRE(p, v);
+        }
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");
