@@ -52,6 +52,15 @@ public class MatcherEqualsTest {
   }
 
   @Test
+  public void caseSensitive() {
+    EqualsVerifier
+        .forClass(CaseSensitiveMatcher.class)
+        .withNonnullFields("matcher")
+        .withIgnoredFields("original")
+        .verify();
+  }
+
+  @Test
   public void ignoreCase() {
     EqualsVerifier
         .forClass(IgnoreCaseMatcher.class)

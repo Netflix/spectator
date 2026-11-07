@@ -125,10 +125,34 @@ public final class PatternUtils {
     // reduces the wrapper to a matcher that always matches.
     Matcher end = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, EndMatcher.INSTANCE);
     Matcher any = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, SeqMatcher.create(m, end));
-    m = Optimizer.optimize(SeqMatcher.create(StartMatcher.INSTANCE, any));
+    Matcher full = SeqMatcher.create(StartMatcher.INSTANCE, any);
+    m = Optimizer.optimize(full);
     checkRepetitions(m, pattern);
     checkChainedRepetitions(m, pattern);
-    return ignoreCase ? new IgnoreCaseMatcher(m) : m;
+    if (ignoreCase) {
+      return new IgnoreCaseMatcher(m);
+    }
+    // Some rewrites of the optimizer are only valid for the case as written if there is a
+    // class where the folded set is different, e.g. [^a]*A? => [^a]*, but once the case is
+    // ignored [^a] no longer matches 'A'. Keep the pattern before it was optimized so that
+    // ignoring the case can fold it first, the same as the (?i) flag.
+    return hasCaseSpecificClass(full) ? new CaseSensitiveMatcher(m, full) : m;
+  }
+
+  /**
+   * Returns true if the matcher has a case sensitive class where the folded set is not the
+   * set with the other case of each letter added, e.g. {@code [^a]}.
+   */
+  private static boolean hasCaseSpecificClass(Matcher matcher) {
+    boolean[] found = new boolean[1];
+    matcher.rewrite(m -> {
+      if (m instanceof CharClassMatcher) {
+        CharClassMatcher c = m.as();
+        found[0] |= !c.isIgnoreCase() && !c.isSimpleFold();
+      }
+      return m;
+    });
+    return found[0];
   }
 
   /**

@@ -36,9 +36,11 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
       Assertions.assertFalse(matcher.matches(value), regex + " shouldn't match " + value);
     }
 
-    // Check pattern can be recreated from toString
+    // Check pattern can be recreated from toString. A class such as [^a] may be optimized
+    // away, e.g. [^a]* is always true, so only one of them may keep the pattern before it was
+    // optimized for ignoring the case.
     PatternMatcher actual = PatternMatcher.compile(matcher.toString());
-    Assertions.assertEquals(matcher, actual);
+    Assertions.assertEquals(caseSensitive(matcher), caseSensitive(actual));
 
     // The strings are used with other regex engines, so they should not split a surrogate
     // pair unless the input already had a lone surrogate
@@ -52,6 +54,13 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
 
     // Check we can serialize and deserialize the matchers
     MatcherSerializationTest.checkSerde(matcher);
+  }
+
+  /** Returns the matcher used for checking strings when the case is not ignored. */
+  static PatternMatcher caseSensitive(PatternMatcher matcher) {
+    return matcher instanceof CaseSensitiveMatcher
+        ? ((CaseSensitiveMatcher) matcher).matcher()
+        : matcher;
   }
 
   static boolean hasLoneSurrogate(String str) {
@@ -98,6 +107,40 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     };
     for (String p : patterns) {
       Assertions.assertFalse(PatternMatcher.compile(p).matches(str), p);
+    }
+  }
+
+  @Test
+  public void caseSpecificClasses() {
+    // Classes such as [^a-z] have a different set once the case is ignored, so some rewrites
+    // of adjacent repetitions are only valid for the case as written. The case sensitive
+    // matcher still uses them, but ignoring the case folds the pattern before it is optimized,
+    // the same as the (?i) flag.
+    StringBuilder builder = new StringBuilder();
+    for (int i = 0; i < 20000; ++i) {
+      builder.append('A');
+    }
+    String str = builder.append('1').toString();
+    String[] patterns = {
+        "^\\w*[^B]+b+$", "^[^a-z]*[A-Z]+[^a-z]*[A-Z]+$", "^[^a]*A*[^a]*x", "^[^a-z]*[A-Z]+$"
+    };
+    for (String p : patterns) {
+      PatternMatcher m = PatternMatcher.compile(p);
+      Assertions.assertTrue(m instanceof CaseSensitiveMatcher, p);
+      Assertions.assertFalse(m.matches(str), p);
+      MatcherSerializationTest.checkSerde(m);
+    }
+
+    // [^a-z]*[A-Z]+ is reduced to [^a-z]*[A-Z], it would be wrong once the case is ignored
+    PatternMatcher m = PatternMatcher.compile("^[^a-z]*[A-Z]+$");
+    Assertions.assertEquals("(^([^a-z])*([A-Z]$))", m.toString());
+    Assertions.assertFalse(m.matches("AAb"));
+    Assertions.assertTrue(m.ignoreCase().matches("AAb"));
+    Assertions.assertEquals(PatternMatcher.compile("(?i)^[^a-z]*[A-Z]+$"), m.ignoreCase());
+
+    // Other patterns are not wrapped
+    for (String p : new String[] {"^[a-z]*[A-Z]+$", "^[^0-9]*[A-Z]+$", "(?i)^[^a-z]*[A-Z]+$"}) {
+      Assertions.assertFalse(PatternMatcher.compile(p) instanceof CaseSensitiveMatcher, p);
     }
   }
 
