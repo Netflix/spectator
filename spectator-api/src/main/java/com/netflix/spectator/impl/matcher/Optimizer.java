@@ -17,6 +17,7 @@ package com.netflix.spectator.impl.matcher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -191,6 +192,8 @@ final class Optimizer {
         .rewrite(Optimizer::startAfterContentIsFalse)
         .rewrite(Optimizer::zeroOrMoreFalse)
         .rewrite(Optimizer::repeatEmptyLastAlternative)
+        .rewrite(Optimizer::removeRedundantRepeatedChars)
+        .rewrite(Optimizer::mergeAdjacentRepeatedChars)
         .rewrite(Optimizer::convertEmptyCharClassToFalse)
         .rewrite(Optimizer::convertSingleCharClassToSeq)
         .rewrite(Optimizer::convertMatchAllCharClassToAny);
@@ -391,6 +394,219 @@ final class Optimizer {
       }
     }
     return matcher;
+  }
+
+  /**
+   * For adjacent repetitions of single chars where the set of chars for one contains the
+   * set for the other, the repetition of the smaller set can be removed, e.g.
+   * {@code [a-z]*\w* => \w*} or {@code \w+[a-z]* => \w+}. Any string matched by both can
+   * be split so that the larger set consumes all of the chars. Fixed chars can be between
+   * them if they are all from the same set and that set is between the other two, e.g.
+   * {@code \w+\w+ => \w\w+} or {@code .*\w\w* => .*\w}. Without the rewrite, the second
+   * repetition would be tried at each position where the first could stop, so for a string
+   * that does not match, the time would grow with the length to the power of the number of
+   * repetitions.
+   */
+  static Matcher removeRedundantRepeatedChars(Matcher matcher) {
+    Repetition r1 = Repetition.of(matcher);
+    if (r1 != null) {
+      CharSet first = CharSet.of(r1.repeated);
+      return first == null ? matcher : removeRedundantRepetition(matcher, r1, first);
+    } else if (matcher instanceof IndexOfMatcher) {
+      return removeRedundantRepetition(matcher.<IndexOfMatcher>as());
+    }
+    return matcher;
+  }
+
+  private static Matcher removeRedundantRepetition(Matcher matcher, Repetition r1, CharSet first) {
+    List<Matcher> ms = elements(r1.next);
+    int i = fixedCount(ms);
+    if (i < 0 || i >= ms.size()) {
+      return matcher;
+    }
+    CharSet fixed = i == 0 ? null : fixedCharSet(ms.get(0));
+    Repetition r2 = Repetition.of(ms.get(i));
+    CharSet second = r2 == null ? null : CharSet.of(r2.repeated);
+    if (second == null) {
+      return matcher;
+    } else if (r2.max == Repetition.UNBOUNDED && isBetween(first, fixed, second)) {
+      // Only keep the min for the first repetition, the other chars it consumed can be
+      // shifted to the fixed chars and the second repetition
+      return r1.fixedThen(r1.next);
+    } else if (r1.max == Repetition.UNBOUNDED && isBetween(second, fixed, first)) {
+      // Only keep the min for the second repetition, the other chars it consumed can be
+      // shifted to the fixed chars and the first repetition
+      return unbounded(r1.repeated, r1.min, replace(ms, i, r2.fixedThen(r2.next)));
+    }
+    return matcher;
+  }
+
+  /**
+   * Same as {@code .*} followed by the substring as fixed chars, e.g. {@code .*aa* => .*a}.
+   * The substring must have the same set for all chars.
+   */
+  private static Matcher removeRedundantRepetition(IndexOfMatcher matcher) {
+    CharSet fixed = sameCharSet(matcher.pattern(), matcher.isIgnoreCase());
+    if (fixed != null) {
+      List<Matcher> ms = elements(matcher.next());
+      int i = fixedCount(ms);
+      boolean sameFixed = i == 0 || (i > 0 && fixed.equals(fixedCharSet(ms.get(0))));
+      Repetition r2 = sameFixed && i < ms.size() ? Repetition.of(ms.get(i)) : null;
+      CharSet second = r2 == null ? null : CharSet.of(r2.repeated);
+      if (second != null && fixed.containsAll(second)) {
+        Matcher next = replace(ms, i, r2.fixedThen(r2.next));
+        return new IndexOfMatcher(matcher.pattern(), next, matcher.isIgnoreCase());
+      }
+    }
+    return matcher;
+  }
+
+  /** Returns the elements of a sequence, or a list with just the matcher. */
+  private static List<Matcher> elements(Matcher matcher) {
+    return matcher instanceof SeqMatcher
+        ? matcher.<SeqMatcher>as().matchers()
+        : Collections.singletonList(matcher);
+  }
+
+  /**
+   * Returns the number of single chars at the start of the list, or -1 if they do not all
+   * have the same set.
+   */
+  private static int fixedCount(List<Matcher> ms) {
+    CharSet fixed = null;
+    int i = 0;
+    for (; i < ms.size(); ++i) {
+      CharSet cs = fixedCharSet(ms.get(i));
+      if (cs == null) {
+        break;
+      } else if (fixed == null) {
+        fixed = cs;
+      } else if (!fixed.equals(cs)) {
+        return -1;
+      }
+    }
+    return i;
+  }
+
+  /**
+   * Returns the set for a matcher that matches a fixed number of chars from the same set,
+   * e.g. {@code a} or {@code [ab]{3}}, or null if it is something else.
+   */
+  private static CharSet fixedCharSet(Matcher matcher) {
+    if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      boolean fixed = m.min() == m.max() && m.min() > 0 && m.next() instanceof TrueMatcher;
+      return fixed ? CharSet.of(m.repeated()) : null;
+    }
+    return CharSet.of(matcher);
+  }
+
+  /** Returns a sequence with the element at the position replaced. */
+  private static Matcher replace(List<Matcher> ms, int i, Matcher matcher) {
+    List<Matcher> result = new ArrayList<>(ms.subList(0, i));
+    result.add(matcher);
+    result.addAll(ms.subList(i + 1, ms.size()));
+    return SeqMatcher.create(result);
+  }
+
+  /**
+   * Returns the set for the chars of the string if they are all ASCII and have the same
+   * set, e.g. "aa" or "aA" when ignoring the case. Otherwise, returns null.
+   */
+  private static CharSet sameCharSet(String str, boolean ignoreCase) {
+    CharSet set = null;
+    for (int i = 0; i < str.length(); ++i) {
+      char c = str.charAt(i);
+      if (c >= 128) {
+        return null;
+      }
+      CharSet cs = CharSet.of(c, ignoreCase);
+      if (set != null && !set.equals(cs)) {
+        return null;
+      }
+      set = cs;
+    }
+    return set;
+  }
+
+  /**
+   * Adjacent repetitions of the same set of chars can be combined by adding the counts, e.g.
+   * {@code a?a? => a{0,2}} or {@code [ab]{0,10}[ab]{1,10} => [ab]{1,20}}. Otherwise, each
+   * position where the first could stop would be tried with the second.
+   */
+  static Matcher mergeAdjacentRepeatedChars(Matcher matcher) {
+    Repetition r1 = Repetition.of(matcher);
+    if (r1 != null) {
+      Repetition r2 = Repetition.of(r1.next);
+      CharSet set = CharSet.of(r1.repeated);
+      if (r2 != null && set != null && set.equals(CharSet.of(r2.repeated))) {
+        long min = Math.min((long) r1.min + r2.min, Integer.MAX_VALUE);
+        if (r1.max == Repetition.UNBOUNDED || r2.max == Repetition.UNBOUNDED) {
+          // Fixed number of required chars followed by the unbounded repetition
+          return unbounded(r1.repeated, (int) min, r2.next);
+        }
+        long max = Math.min((long) r1.max + r2.max, Integer.MAX_VALUE);
+        return new RepeatMatcher(r1.repeated, (int) min, (int) max, r2.next, false);
+      }
+    }
+    return matcher;
+  }
+
+  /** View of a greedy repetition with a min and max count. */
+  private static final class Repetition {
+
+    /** Max value used for a repetition without an upper bound. */
+    static final int UNBOUNDED = -1;
+
+    /** Returns the repetition for the matcher or null if it is not a greedy repetition. */
+    static Repetition of(Matcher matcher) {
+      if (matcher instanceof ZeroOrOneMatcher) {
+        ZeroOrOneMatcher m = matcher.as();
+        return new Repetition(m.repeated(), 0, 1, m.next());
+      } else if (matcher instanceof ZeroOrMoreMatcher) {
+        ZeroOrMoreMatcher m = matcher.as();
+        return new Repetition(m.repeated(), 0, UNBOUNDED, m.next());
+      } else if (matcher instanceof RepeatMatcher) {
+        RepeatMatcher m = matcher.as();
+        return m.isPossessive() ? null : new Repetition(m.repeated(), m.min(), m.max(), m.next());
+      }
+      return null;
+    }
+
+    /** Repeated portion, see {@link #of(Matcher)}. */
+    private final Matcher repeated;
+
+    /** Min number of repetitions. */
+    private final int min;
+
+    /** Max number of repetitions or {@link #UNBOUNDED}. */
+    private final int max;
+
+    /** Portion after the repetition. */
+    private final Matcher next;
+
+    private Repetition(Matcher repeated, int min, int max, Matcher next) {
+      this.repeated = repeated;
+      this.min = min;
+      this.max = max;
+      this.next = next;
+    }
+
+    /** Returns a matcher for the min number of repetitions followed by the matcher. */
+    Matcher fixedThen(Matcher matcher) {
+      if (min == 0) {
+        return matcher;
+      }
+      Matcher fixed = (min == 1) ? repeated : new RepeatMatcher(repeated, min, min);
+      return SeqMatcher.create(fixed, matcher);
+    }
+  }
+
+  /** Returns true if small is a subset of middle, if not null, and middle of large. */
+  private static boolean isBetween(CharSet small, CharSet middle, CharSet large) {
+    return middle == null
+        ? large.containsAll(small)
+        : middle.containsAll(small) && large.containsAll(middle);
   }
 
   /**
