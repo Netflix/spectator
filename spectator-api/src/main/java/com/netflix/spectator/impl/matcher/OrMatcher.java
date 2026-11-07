@@ -18,7 +18,6 @@ package com.netflix.spectator.impl.matcher;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -58,6 +57,15 @@ final class OrMatcher implements GreedyMatcher, Serializable {
   /** Return the sub-matchers. */
   List<Matcher> matchers() {
     return Arrays.asList(matchers);
+  }
+
+  /**
+   * The min length is derived from the other fields. Instances serialized by an older version
+   * may not have it, so it is recomputed. A rewrite reuses matchers that do not change, so it
+   * would not otherwise be recomputed.
+   */
+  private Object readResolve() {
+    return new OrMatcher(matchers);
   }
 
   @Override
@@ -109,21 +117,14 @@ final class OrMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    int n = matchers.length;
-    Matcher[] ms = new Matcher[n];
-    for (int i = 0; i < n; ++i) {
-      ms[i] = matchers[i].rewrite(f);
-    }
-    return f.apply(create(ms));
+    Matcher[] ms = PatternUtils.rewriteAll(matchers, m -> m.rewrite(f));
+    return f.apply(ms == matchers ? this : create(ms));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
-    List<Matcher> ms = new ArrayList<>();
-    for (Matcher m : matchers) {
-      ms.add(m.rewriteEnd(f));
-    }
-    return f.apply(create(ms));
+    Matcher[] ms = PatternUtils.rewriteAll(matchers, m -> m.rewriteEnd(f));
+    return f.apply(ms == matchers ? this : create(ms));
   }
 
   @Override

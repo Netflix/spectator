@@ -99,9 +99,15 @@ final class RepeatMatcher implements GreedyMatcher, Serializable {
     return possessive;
   }
 
-  /** Instances serialized by an older version will not have the next matcher. */
+  /**
+   * Instances serialized by an older version will not have the next matcher or the min
+   * length. The min length is derived, so it is recomputed. A rewrite reuses matchers that
+   * do not change, so it would not otherwise be recomputed.
+   */
   private Object readResolve() {
-    return next == null ? new RepeatMatcher(repeated, min, max) : this;
+    return next == null
+        ? new RepeatMatcher(repeated, min, max)
+        : new RepeatMatcher(repeated, min, max, next, possessive);
   }
 
   @Override
@@ -298,16 +304,22 @@ final class RepeatMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public Matcher rewrite(Function<Matcher, Matcher> f) {
-    return f.apply(new RepeatMatcher(repeated.rewrite(f), min, max, next.rewrite(f), possessive));
+    Matcher r = repeated.rewrite(f);
+    Matcher n = next.rewrite(f);
+    return f.apply(r == repeated && n == next
+        ? this
+        : new RepeatMatcher(r, min, max, n, possessive));
   }
 
   @Override
   public Matcher rewriteEnd(Function<Matcher, Matcher> f) {
     // The repeated portion is not in the final position unless it is the last repetition,
     // so only apply to this matcher and the next matcher.
-    return next instanceof TrueMatcher
-        ? f.apply(this)
-        : f.apply(new RepeatMatcher(repeated, min, max, next.rewriteEnd(f), possessive));
+    if (next instanceof TrueMatcher) {
+      return f.apply(this);
+    }
+    Matcher n = next.rewriteEnd(f);
+    return f.apply(n == next ? this : new RepeatMatcher(repeated, min, max, n, possessive));
   }
 
   @Override

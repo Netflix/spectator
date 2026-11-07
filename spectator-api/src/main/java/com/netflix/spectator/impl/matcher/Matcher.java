@@ -92,15 +92,18 @@ interface Matcher extends PatternMatcher {
   }
 
   /**
-   * Return a new matcher by recursively applying the rewrite function to all sub-matchers.
+   * Return a matcher by recursively applying the rewrite function to all sub-matchers. If
+   * none of the sub-matchers change, then the function is applied to this instance rather
+   * than a copy, so a rewrite that does not change anything returns the same instance.
    */
   default Matcher rewrite(Function<Matcher, Matcher> f) {
     return f.apply(this);
   }
 
   /**
-   * Return a new matcher by recursively applying the rewrite function to all sub-matchers in
-   * the final position of the sequence.
+   * Return a matcher by recursively applying the rewrite function to all sub-matchers in
+   * the final position of the sequence. Like {@link #rewrite(Function)}, unchanged matchers
+   * are reused.
    */
   default Matcher rewriteEnd(Function<Matcher, Matcher> f) {
     return f.apply(this);

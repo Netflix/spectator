@@ -113,6 +113,34 @@ public class MatcherSerializationTest {
   }
 
   @Test
+  public void minLengthRecomputed() throws Exception {
+    // Instances serialized by an older version will not have the min length. A rewrite reuses
+    // matchers that do not change, so it is recomputed when the instance is read.
+    Matcher a = new CharSeqMatcher("abc");
+    Matcher[] matchers = {
+        SeqMatcher.create(a, a),
+        OrMatcher.create(a, new CharSeqMatcher("de")),
+        new ZeroOrMoreMatcher(a, a),
+        new ZeroOrOneMatcher(a, a),
+        new RepeatMatcher(a, 2, 3, a, false)
+    };
+    for (Matcher m : matchers) {
+      int expected = m.minLength();
+      Field field = m.getClass().getDeclaredField("minLength");
+      field.setAccessible(true);
+      field.set(m, 0);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (ObjectOutputStream out = new ObjectOutputStream(baos)) {
+        out.writeObject(m);
+      }
+      try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+        Matcher deserialized = (Matcher) in.readObject();
+        Assertions.assertEquals(expected, deserialized.minLength(), m.toString());
+      }
+    }
+  }
+
+  @Test
   public void charSeq() {
     checkSerde(new CharSeqMatcher("abc"));
   }

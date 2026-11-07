@@ -20,6 +20,10 @@ import com.netflix.spectator.impl.PatternMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
+
 public class OptimizerTest {
 
   @Test
@@ -537,6 +541,56 @@ public class OptimizerTest {
     Matcher expected = new ZeroOrMoreMatcher(
         new CharClassMatcher(AsciiSet.fromPattern("A-Z"), true), new CharSeqMatcher("x"));
     Assertions.assertEquals(expected, Optimizer.removeRedundantRepeatedChars(input));
+  }
+
+  private static final String[] REWRITE_PATTERNS = {
+      "^a(b|c)*d?e{1,3}(?=f)(?!g)[h-j]+.*k$", "^(?:x[0-9]+|y)+z", "foo.*bar", "(?i)^abc",
+      "^nccp-.*-(prod|test)$", "^(?:i-[0-9a-f]+|[a-z]+-\\d+)$", "^status_(2|3|4|5)xx$"
+  };
+
+  private static Matcher parseForRewrite(String p) {
+    // Same as compile for the (?i) flag, the pattern is rewritten to ignore the case
+    boolean ignoreCase = p.startsWith("(?i)");
+    Matcher m = Parser.parse(p, ignoreCase ? 4 : 0);
+    return ignoreCase ? m.rewrite(PatternUtils::ignoreCase) : m;
+  }
+
+  @Test
+  public void rewriteUnchangedReturnsSameInstance() {
+    // The optimizer applies many rewrites that usually change little, so the matchers that
+    // do not change are reused rather than copied
+    for (String p : REWRITE_PATTERNS) {
+      Matcher m = parseForRewrite(p);
+      Assertions.assertSame(m, m.rewrite(x -> x), p);
+      Assertions.assertSame(m, m.rewriteEnd(x -> x), p);
+      Matcher opt = Optimizer.optimize(m);
+      Assertions.assertSame(opt, opt.rewrite(x -> x), p);
+      Assertions.assertSame(opt, opt.rewriteEnd(x -> x), p);
+    }
+  }
+
+  @Test
+  public void rewriteRulesUnchangedReturnSameInstance() {
+    // Once optimized, the rules do not change anything. They should return the same instance
+    // so that the rewrite can reuse the parents rather than copying the whole tree.
+    List<Function<Matcher, Matcher>> rules = Arrays.asList(
+        Optimizer::mergeNext,
+        Optimizer::removeTrueInSequence,
+        Optimizer::flattenNestedSequences,
+        Optimizer::flattenNestedOr,
+        Optimizer::dedupOr,
+        Optimizer::removeFalseBranchesFromOr,
+        Optimizer::combineAdjacentCharSeqs,
+        Optimizer::combineAdjacentStart
+    );
+    for (String p : REWRITE_PATTERNS) {
+      Matcher opt = Optimizer.optimize(parseForRewrite(p));
+      for (Function<Matcher, Matcher> rule : rules) {
+        Assertions.assertSame(opt, opt.rewrite(rule), p);
+      }
+      Assertions.assertSame(opt, opt.rewriteEnd(Optimizer::removeTrailingMatchAny), p);
+      Assertions.assertSame(opt, Optimizer.removeStartFollowedByMatchAny(opt), p);
+    }
   }
 
   @Test
