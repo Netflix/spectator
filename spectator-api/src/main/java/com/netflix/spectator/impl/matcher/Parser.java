@@ -18,7 +18,9 @@ package com.netflix.spectator.impl.matcher;
 import com.netflix.spectator.impl.AsciiSet;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.IntPredicate;
 
 /**
@@ -35,6 +37,9 @@ final class Parser {
    * a possessive quantifier applies to has a reluctant quantifier, see {@link #possessive}.
    */
   private int reluctantCount;
+
+  /** Names of the capturing groups, like java a name can only be used once. */
+  private final Set<String> groupNames = new HashSet<>();
 
   /** Pattern as written, used for error messages. */
   private final String source;
@@ -362,11 +367,11 @@ final class Parser {
       }
       char c = advance();
       switch (c) {
-        case '<': // Named capturing group
-          advance(v -> v != '>');
-          if (previous() != '>') {
-            throw error("unclosed name for capturing group");
+        case '<':
+          if (peek() == '=' || peek() == '!') {
+            throw unsupported("lookbehind");
           }
+          groupName();
           return groupExpr();
         case ':': // Non-capturing group
           return groupExpr();
@@ -380,6 +385,30 @@ final class Parser {
     } else {
       return groupExpr();
     }
+  }
+
+  /**
+   * Parse the name of a capturing group up to and including the closing '>'. Like java, the
+   * name must start with an ASCII letter followed by ASCII letters or digits, and each name
+   * can only be used once.
+   */
+  private void groupName() {
+    int start = current;
+    if (isAtEnd() || !Constants.ALPHA.contains(peek())) {
+      throw error("capturing group name does not start with a Latin letter");
+    }
+    while (!isAtEnd() && Constants.ALNUM.contains(peek())) {
+      advance();
+    }
+    if (isAtEnd() || peek() != '>') {
+      throw error("named capturing group is missing trailing '>'");
+    }
+    // Checked before consuming the '>' so the error points to it, like java
+    String name = tokens.substring(start, current);
+    if (!groupNames.add(name)) {
+      throw error("named capturing group <" + name + "> is already defined");
+    }
+    advance();
   }
 
   @SuppressWarnings("PMD.ImplicitSwitchFallThrough")
