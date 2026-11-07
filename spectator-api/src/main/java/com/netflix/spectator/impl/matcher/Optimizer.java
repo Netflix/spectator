@@ -190,6 +190,7 @@ final class Optimizer {
         .rewrite(Optimizer::sequenceWithStuffAfterEndIsFalse)
         .rewrite(Optimizer::startAfterContentIsFalse)
         .rewrite(Optimizer::zeroOrMoreFalse)
+        .rewrite(Optimizer::repeatEmptyLastAlternative)
         .rewrite(Optimizer::convertEmptyCharClassToFalse)
         .rewrite(Optimizer::convertSingleCharClassToSeq)
         .rewrite(Optimizer::convertMatchAllCharClassToAny);
@@ -379,6 +380,36 @@ final class Optimizer {
       ZeroOrOneMatcher zm = matcher.as();
       if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
         return zm.next();
+      }
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher rm = matcher.as();
+      boolean repeatedFalse = rm.repeated() instanceof FalseMatcher;
+      if (rm.next() instanceof FalseMatcher || (repeatedFalse && rm.min() > 0)) {
+        return FalseMatcher.INSTANCE;
+      } else if (repeatedFalse || rm.max() == 0) {
+        return rm.next();
+      }
+    }
+    return matcher;
+  }
+
+  /**
+   * A repetition of alternatives where the last one is empty can use the empty match for
+   * any of the repetitions, so the min does not matter, e.g. {@code (a|){2,3}} is the same
+   * as {@code a{0,3}}. The repetition does not retry the empty alternative once another
+   * alternative has matched, so without the rewrite {@code (a|){2}ab} would not match "ab".
+   * A possessive repetition keeps the first match of each repetition, so it is left as is.
+   */
+  static Matcher repeatEmptyLastAlternative(Matcher matcher) {
+    if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher rm = matcher.as();
+      if (!rm.isPossessive() && rm.repeated() instanceof OrMatcher) {
+        List<Matcher> alts = rm.repeated().<OrMatcher>as().matchers();
+        int last = alts.size() - 1;
+        if (last > 0 && alts.get(last) instanceof TrueMatcher) {
+          Matcher r = OrMatcher.create(alts.subList(0, last));
+          return new RepeatMatcher(r, 0, rm.max(), rm.next(), false);
+        }
       }
     }
     return matcher;

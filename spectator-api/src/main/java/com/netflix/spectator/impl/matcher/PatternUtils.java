@@ -122,7 +122,139 @@ public final class PatternUtils {
     Matcher end = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, EndMatcher.INSTANCE);
     Matcher any = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, SeqMatcher.create(m, end));
     m = Optimizer.optimize(SeqMatcher.create(StartMatcher.INSTANCE, any));
+    checkRepetitions(m, pattern);
     return ignoreCase ? new IgnoreCaseMatcher(m) : m;
+  }
+
+  /**
+   * Check that the matcher will give the same answer as java. To keep the time to check a
+   * string linear rather than exponential, the matcher does not backtrack into a part that
+   * has already matched, e.g. an earlier repetition or a group of alternatives followed by
+   * another group. If that part can match different lengths, the first match may not let
+   * the rest of the pattern match, e.g. {@code (a|ab)+c} on "ababc". Those patterns are not
+   * supported:
+   *
+   * <ul>
+   *   <li>A repeated part must always match the same length, e.g. {@code (\d\.)+}, unless
+   *   nothing follows it and at most one repetition is required, e.g. a trailing
+   *   {@code (a|ab)*}, but not {@code (a|ab){2}}. A group with an empty last alternative,
+   *   e.g. {@code (a|)}, is the same as an optional part, {@code a?}.</li>
+   *   <li>A group of alternatives followed by another group must have alternatives with
+   *   the same length, e.g. {@code (a|b)(c|cd)}. The optimizer can usually rewrite the
+   *   pattern so this doesn't apply, e.g. by merging the second group into each
+   *   alternative of the first.</li>
+   * </ul>
+   *
+   * @param matcher
+   *     Optimized matcher for the complete pattern.
+   * @param pattern
+   *     Pattern to include in the error message.
+   */
+  static void checkRepetitions(Matcher matcher, String pattern) {
+    if (!sameAsJava(matcher, false)) {
+      throw new IllegalArgumentException("unsupported: repetition or group of alternatives "
+          + "that can match different lengths followed by more of the pattern\n" + pattern);
+    }
+  }
+
+  /**
+   * Returns true if the matcher will give the same answer as java, see
+   * {@link #checkRepetitions(Matcher, String)}.
+   *
+   * @param matcher
+   *     Matcher to check.
+   * @param endUsed
+   *     True if the position after the matcher is used, e.g. it is followed by more of the
+   *     pattern or is the repeated portion of a repetition.
+   */
+  private static boolean sameAsJava(Matcher matcher, boolean endUsed) {
+    if (matcher instanceof SeqMatcher) {
+      List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
+      int last = ms.size() - 1;
+      for (int i = 0; i <= last; ++i) {
+        if (!sameAsJava(ms.get(i), endUsed || i < last)) {
+          return false;
+        }
+      }
+      return true;
+    } else if (matcher instanceof OrMatcher) {
+      // The first alternative that matches is used
+      if (endUsed && !hasFixedEnd(matcher)) {
+        return false;
+      }
+      for (Matcher m : matcher.<OrMatcher>as().matchers()) {
+        if (!sameAsJava(m, endUsed)) {
+          return false;
+        }
+      }
+      return true;
+    } else if (matcher instanceof ZeroOrMoreMatcher) {
+      ZeroOrMoreMatcher m = matcher.as();
+      if (!endUsed && m.next() instanceof TrueMatcher) {
+        // Zero repetitions would match, so it always matches
+        return true;
+      }
+      Matcher r = withoutEmptyLast(m.repeated());
+      return hasFixedEnd(r) && sameAsJava(r, true) && sameAsJava(m.next(), endUsed);
+    } else if (matcher instanceof ZeroOrOneMatcher) {
+      // Checks the next portion after the repeated portion and without it, but does not
+      // backtrack into the repeated portion
+      ZeroOrOneMatcher m = matcher.as();
+      if (!endUsed && m.next() instanceof TrueMatcher) {
+        return true;
+      }
+      Matcher r = withoutEmptyLast(m.repeated());
+      return hasFixedEnd(r) && sameAsJava(r, true) && sameAsJava(m.next(), endUsed);
+    } else if (matcher instanceof RepeatMatcher) {
+      RepeatMatcher m = matcher.as();
+      if (!endUsed && m.min() <= 1 && m.next() instanceof TrueMatcher) {
+        // Only the first repetition needs to match
+        return m.min() == 0 || sameAsJava(m.repeated(), false);
+      }
+      // A possessive repetition is checked by the parser. The repetitions are only stepped
+      // back to the min, so a repetition that matched a non-empty alternative is never
+      // retried with the empty one, e.g. (a|){2}ab on "ab". Only with a min of 0 is that
+      // the same as an optional part, see Optimizer.repeatEmptyLastAlternative.
+      Matcher r = m.min() == 0 ? withoutEmptyLast(m.repeated()) : m.repeated();
+      return (m.isPossessive() || hasFixedEnd(r))
+          && sameAsJava(r, true)
+          && sameAsJava(m.next(), endUsed);
+    } else if (matcher instanceof IndexOfMatcher) {
+      return sameAsJava(matcher.<IndexOfMatcher>as().next(), endUsed);
+    } else if (matcher instanceof PositiveLookaheadMatcher) {
+      // Only checks if there is a match, the position after is not used
+      return sameAsJava(matcher.<PositiveLookaheadMatcher>as().matcher(), false);
+    } else if (matcher instanceof NegativeLookaheadMatcher) {
+      return sameAsJava(matcher.<NegativeLookaheadMatcher>as().matcher(), false);
+    }
+    return true;
+  }
+
+  /**
+   * Returns true if every match from a given position ends at the same position, either
+   * because it always matches the same length or because it must match to the end of the
+   * string, e.g. {@code (a$|bc$)}.
+   */
+  static boolean hasFixedEnd(Matcher matcher) {
+    return isFixedLength(matcher) || matcher.isEndAnchored();
+  }
+
+  /**
+   * Returns the repeated portion without an empty last alternative, e.g. {@code (a|)+} is
+   * the same as {@code a*}. The other alternatives are tried first, and a repetition stops
+   * once the repeated portion matches the empty string, since any remaining repetitions
+   * would match empty at the same position. That is not the case if the empty alternative
+   * is first, e.g. {@code (|a)+} would stop before trying {@code a}.
+   */
+  private static Matcher withoutEmptyLast(Matcher repeated) {
+    if (repeated instanceof OrMatcher) {
+      List<Matcher> alts = repeated.<OrMatcher>as().matchers();
+      int last = alts.size() - 1;
+      if (last > 0 && alts.get(last) instanceof TrueMatcher) {
+        return OrMatcher.create(alts.subList(0, last));
+      }
+    }
+    return repeated;
   }
 
   private static String context(String str, int pos) {
@@ -645,6 +777,9 @@ public final class PatternUtils {
   private static long fixedLength(Matcher matcher) {
     if (matcher instanceof CharSeqMatcher) {
       String pattern = matcher.<CharSeqMatcher>as().pattern();
+      return pattern.codePointCount(0, pattern.length());
+    } else if (matcher instanceof StartsWithMatcher) {
+      String pattern = matcher.<StartsWithMatcher>as().pattern();
       return pattern.codePointCount(0, pattern.length());
     } else if (matcher instanceof CharClassMatcher || matcher instanceof AnyMatcher) {
       return 1;

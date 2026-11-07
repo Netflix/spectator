@@ -391,4 +391,20 @@ public class PatternUtilsTest {
     }
     return builder.toString();
   }
+
+  private static Matcher optimized(String pattern) {
+    return Optimizer.optimize(Parser.parse(pattern, 0));
+  }
+
+  @Test
+  public void hasFixedEnd() {
+    String[] fixed = {"abc", "(?:ab|ac)", "[ab]{3}", "x.*a$", "(?:a$|bc$)", "(?:ab|cd){2}"};
+    for (String p : fixed) {
+      Assertions.assertTrue(PatternUtils.hasFixedEnd(optimized(p)), p);
+    }
+    String[] notFixed = {"a|ab", "a+", "a{1,3}", "\\d{1,3}\\.", "[a-z]+-", "a?b", "(?:ods|postgres)"};
+    for (String p : notFixed) {
+      Assertions.assertFalse(PatternUtils.hasFixedEnd(optimized(p)), p);
+    }
+  }
 }

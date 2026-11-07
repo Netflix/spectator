@@ -57,6 +57,7 @@ interface Matcher extends PatternMatcher {
     // simplifications, and the rewrite undoes the final folds of the optimizer. Like the
     // optimizer, this is only valid for a complete pattern, not a sub-matcher.
     Matcher m = Optimizer.optimize(rewrite(PatternUtils::ignoreCase));
+    PatternUtils.checkRepetitions(m, "(?i)" + this);
     return new IgnoreCaseMatcher(m);
   }
 
