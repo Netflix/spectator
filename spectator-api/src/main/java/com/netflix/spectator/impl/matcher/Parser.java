@@ -165,12 +165,25 @@ final class Parser {
   /**
    * Create a matcher for the literal character that was just consumed. If it is the high
    * surrogate of a pair, then the low surrogate is consumed as well so that a quantifier
-   * applies to the whole code point like java, e.g. for an emoji.
+   * applies to the whole code point like java, e.g. for an emoji. A lone surrogate is a
+   * class, see {@link #codePoint(int)}.
    */
   private Matcher literal() {
-    int start = current - 1;
-    current = tokens.offsetByCodePoints(start, 1);
-    return new CharSeqMatcher(tokens.substring(start, current));
+    int cp = tokens.codePointAt(current - 1);
+    current += Character.charCount(cp) - 1;
+    return codePoint(cp);
+  }
+
+  /**
+   * Create a matcher for a single code point. Like java, a lone surrogate only matches a
+   * surrogate that is not part of a pair in the input, e.g. {@code \x{d83d}} does not match
+   * the first char of an emoji. A sequence matches each char, so it would match half of a
+   * pair. A class checks the whole code point at the position, so it is used instead.
+   */
+  private static Matcher codePoint(int cp) {
+    return PatternUtils.isSurrogate(cp)
+        ? new CharClassMatcher(AsciiSet.none(), AsciiSet.none(), false, CodePointRanges.of(cp))
+        : new CharSeqMatcher(new String(Character.toChars(cp)));
   }
 
   private Matcher escape() {
@@ -197,7 +210,7 @@ final class Parser {
         break;
     }
     CharClassMatcher m = namedCharClass();
-    return m == null ? new CharSeqMatcher(new String(Character.toChars(escapedChar()))) : m;
+    return m == null ? codePoint(escapedChar()) : m;
   }
 
   /**

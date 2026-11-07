@@ -681,6 +681,34 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void loneSurrogates() {
+    // Like java, a lone surrogate in the pattern only matches a lone surrogate in the input,
+    // not half of a pair. A quoted lone surrogate is not joined with a surrogate outside of
+    // the quotation, nor are surrogates on either side of an empty quotation. Java does match
+    // an unanchored literal sequence that starts with a low surrogate at the second char of a
+    // pair, e.g. \x{de00}a on an emoji followed by 'a', but not \x{de00} or [\x{de00}]a, those
+    // are not included.
+    String[] patterns = {
+        "^\uD83D\\Q\uDE00\\E$", "^\uD83D\\Q\uDE00\\E*$", "^\\Q\uD83D\uDE00\\E$",
+        "^\\Q\uD83D\\E\uDE00", "^(?:\uD83D\\Q\uDE00\\E)*$",
+        "^\\x{d83d}", "\\x{de00}", "^\\uD83D", "\\uDE00$", "^\uD83D", "\uDE00",
+        "^\\x{d83d}\\x{de00}$", "^\\x{d83d}+", "^(?:\\x{d83d}|a)", "^.\\x{de00}", "\\x{d83d}x",
+        "x\\x{de00}", "^\\Q\uD83D\\E", "^\\x{d83d}?\\x{de00}", "^a\\x{d83d}", "\\x{d83d}$",
+        "^\uD83D\\Q\\E\uDE00$", "^[\uD83D\\Q\\E\uDE00]$", "^\\\uD83D\\Q\\E\uDE00"
+    };
+    String[] values = {
+        "\uD83D\uDE00", "\uD83D", "\uDE00", "\uDE00\uD83D", "x\uD83D", "\uD83Dx",
+        "a\uD83D\uDE00", "x\uDE00", "\uD83D\uD83D\uDE00", "\uD83D\uDE00\uDE00", "a\uD83D",
+        "\uD83D\uDE00x"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
   public void quotation() {
     testRE("(\\Q])(?\\${*\\E)", "])(?\\${*");
     testRE("\\Q])(?\\${*\\Ef(o)o", "])(?\\${*foo");
