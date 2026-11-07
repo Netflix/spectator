@@ -220,6 +220,38 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
   }
 
   @Test
+  public void groupNestingDepthIsBounded() {
+    // expr(), term(), and group() recurse once per '(' with no bound, so a deeply nested
+    // pattern blew the thread stack instead of failing cleanly. Covers capturing groups and
+    // lookaheads, since group() is the one place both of them pass through.
+    StringBuilder groups = new StringBuilder();
+    for (int i = 0; i < 2500; ++i) {
+      groups.append('(');
+    }
+    groups.append('a');
+    for (int i = 0; i < 2500; ++i) {
+      groups.append(')');
+    }
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> PatternMatcher.compile(groups.toString()));
+
+    StringBuilder lookaheads = new StringBuilder();
+    for (int i = 0; i < 2500; ++i) {
+      lookaheads.append("(?=");
+    }
+    lookaheads.append('a');
+    for (int i = 0; i < 2500; ++i) {
+      lookaheads.append(')');
+    }
+    Assertions.assertThrows(
+        IllegalArgumentException.class, () -> PatternMatcher.compile(lookaheads.toString()));
+
+    // Nesting well under the limit is unaffected
+    PatternMatcher m = PatternMatcher.compile("((((a))))");
+    Assertions.assertTrue(m.matches("a"));
+  }
+
+  @Test
   public void toStringKeepsSurrogatePairs() {
     // The string is used with other regex engines, so it should not have a lone surrogate
     PatternMatcher m = PatternMatcher.compile("^(\uD83D\uDE00|\uD83D\uDE01)+$");

@@ -27,8 +27,15 @@ import java.util.function.IntPredicate;
 final class Parser {
   private static final AsciiSet META = AsciiSet.fromPattern("?*+");
 
+  // expr(), term(), and group() are mutually recursive with one stack frame per '(' in the
+  // pattern and no other bound, so a pattern with enough nesting blows the thread stack
+  // instead of failing cleanly. Cap it and report it the same way other malformed patterns
+  // are reported.
+  private static final int MAX_GROUP_DEPTH = 250;
+
   private final String tokens;
   private int current;
+  private int groupDepth;
 
   /**
    * Number of reluctant quantifiers that have been parsed. It is used to check if the portion
@@ -342,30 +349,39 @@ final class Parser {
   }
 
   private Matcher group() {
-    if (peek() == '?') {
-      advance();
-      if (isAtEnd()) {
-        throw error("unclosed group");
+    // Every '(' passes through here exactly once, capturing groups, non-capturing groups,
+    // and lookaheads alike, so this is the one place a depth limit catches all of them.
+    if (++groupDepth > MAX_GROUP_DEPTH) {
+      throw error("exceeded max group nesting depth of " + MAX_GROUP_DEPTH);
+    }
+    try {
+      if (peek() == '?') {
+        advance();
+        if (isAtEnd()) {
+          throw error("unclosed group");
+        }
+        char c = advance();
+        switch (c) {
+          case '<': // Named capturing group
+            advance(v -> v != '>');
+            if (previous() != '>') {
+              throw error("unclosed name for capturing group");
+            }
+            return groupExpr();
+          case ':': // Non-capturing group
+            return groupExpr();
+          case '=':
+            return new PositiveLookaheadMatcher(groupExpr());
+          case '!':
+            return new NegativeLookaheadMatcher(groupExpr());
+          default:
+            throw unsupported("inline flags");
+        }
+      } else {
+        return groupExpr();
       }
-      char c = advance();
-      switch (c) {
-        case '<': // Named capturing group
-          advance(v -> v != '>');
-          if (previous() != '>') {
-            throw error("unclosed name for capturing group");
-          }
-          return groupExpr();
-        case ':': // Non-capturing group
-          return groupExpr();
-        case '=':
-          return new PositiveLookaheadMatcher(groupExpr());
-        case '!':
-          return new NegativeLookaheadMatcher(groupExpr());
-        default:
-          throw unsupported("inline flags");
-      }
-    } else {
-      return groupExpr();
+    } finally {
+      --groupDepth;
     }
   }
 
