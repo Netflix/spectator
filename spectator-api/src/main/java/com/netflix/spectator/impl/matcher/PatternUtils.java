@@ -108,6 +108,13 @@ public final class PatternUtils {
     boolean ignoreCase = pattern.startsWith("(?i)");
     int offset = ignoreCase ? 4 : 0;
     Matcher m = Parser.parse(pattern, offset);
+    if (ignoreCase) {
+      // Rewrite before optimizing so the pattern only needs to be optimized once. The
+      // optimizer rules keep the ignore case flag and see the folded classes, so the
+      // result is the same as compile(p).ignoreCase(), which optimizes again after the
+      // rewrite.
+      m = m.rewrite(PatternUtils::ignoreCase);
+    }
     // Match anywhere in the string, same as the pattern ^.*(p).*$. The matcher is wrapped
     // rather than the pattern string so the wrapper cannot mix with the syntax of the
     // pattern, e.g. for a)|(b or a trailing backslash. For an empty pattern, the optimizer
@@ -115,7 +122,7 @@ public final class PatternUtils {
     Matcher end = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, EndMatcher.INSTANCE);
     Matcher any = new ZeroOrMoreMatcher(AnyMatcher.INSTANCE, SeqMatcher.create(m, end));
     m = Optimizer.optimize(SeqMatcher.create(StartMatcher.INSTANCE, any));
-    return ignoreCase ? m.ignoreCase() : m;
+    return ignoreCase ? new IgnoreCaseMatcher(m) : m;
   }
 
   private static String context(String str, int pos) {
@@ -295,9 +302,18 @@ public final class PatternUtils {
   /** Convert to a matchers that ignores the case. */
   static Matcher ignoreCase(Matcher matcher) {
     if (matcher instanceof CharClassMatcher) {
-      // The folded set can be empty even if the set is not, e.g. [a&&[^A]].
-      CharClassMatcher m = matcher.<CharClassMatcher>as().withIgnoreCase();
-      return m.isEmpty() ? FalseMatcher.INSTANCE : m;
+      // A class for a single character, e.g. [a], is converted to a sequence first. Once
+      // folded it would have both cases, [Aa], and the optimizer could not merge it with
+      // adjacent literals. This matters for (?i) patterns that are rewritten before they
+      // are optimized.
+      Matcher seq = Optimizer.convertSingleCharClassToSeq(matcher);
+      if (seq instanceof CharSeqMatcher) {
+        return new CharSeqMatcher(seq.<CharSeqMatcher>as().pattern(), true);
+      }
+      // The folded set can be empty even if the set is not, e.g. [a&&[^A]]. The empty class
+      // is kept rather than replaced with false, so it still has a min length of 1 for rules
+      // such as content after the end anchor. The optimizer converts it to false.
+      return matcher.<CharClassMatcher>as().withIgnoreCase();
     } else if (matcher instanceof CharSeqMatcher) {
       CharSeqMatcher m = matcher.as();
       return new CharSeqMatcher(m.pattern(), true);
