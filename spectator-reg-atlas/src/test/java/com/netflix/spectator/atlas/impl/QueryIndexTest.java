@@ -915,6 +915,29 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void mergeIgnoreCaseFlagDoesNotMixCaseSensitivity() {
+    // A :re value with a leading (?i) ignores the case. When merged, the flag must not apply to
+    // the other values, and it must stay at the start of the pattern, in either order.
+    String[] exprs = {
+      "nf.cluster,(?i)foo,:re,:not,nf.cluster,bar,:re,:not,:and",
+      "nf.cluster,bar,:re,:not,nf.cluster,(?i)foo,:re,:not,:and",
+      "nf.cluster,bar,:reic,:not,nf.cluster,(?i)foo,:reic,:not,:and",
+      "nf.cluster,abc,:re,:not,nf.cluster,(?i)foo,:re,:not,:and,nf.cluster,bar,:reic,:not,:and"
+    };
+    for (String expr : exprs) {
+      Query q = Parser.parseQuery(expr);
+      QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+      for (String v : new String[] {"other", "FOO", "foo", "bar", "BAR", "abc", "ABC"}) {
+        Id id = id("m", "nf.cluster", v);
+        List<Query> expected = q.matches(id) ? list(q) : Collections.emptyList();
+        assertEquals(expected, idx, id);
+      }
+      Assertions.assertTrue(idx.remove(q, q), expr);
+      Assertions.assertTrue(idx.isEmpty(), expr);
+    }
+  }
+
+  @Test
   public void falseTermInOrDoesNotDropLaterTerms() {
     // A DNF of [FALSE, name==a]: the false disjunct must be skipped, not stop the loop, so the
     // later term is still indexed and matches. (The public or()/and()/simplify all fold FALSE, so

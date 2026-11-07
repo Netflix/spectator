@@ -131,9 +131,19 @@ final class CaseSensitiveMatcher implements PatternMatcher, Serializable {
     return matcher.expandOrClauses(max);
   }
 
+  /**
+   * The expression is built from the optimized matcher. Ignoring the case for each of the
+   * sub-expressions could give a different result than ignoring the case for the pattern,
+   * so ignoring the case uses the expression for the pattern that ignores the case, see
+   * {@link ExprLeafMatcher}.
+   */
   @Override
   public PatternExpr toPatternExpr(int max) {
-    return matcher.toPatternExpr(max);
+    PatternExpr expr = matcher.toPatternExpr(max);
+    if (expr == null) {
+      return null;
+    }
+    return ExprLeafMatcher.wrap(expr, new ExprLeafMatcher.Folded(this, max));
   }
 
   @Override

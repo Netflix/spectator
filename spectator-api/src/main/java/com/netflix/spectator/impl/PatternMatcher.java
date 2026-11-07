@@ -25,15 +25,64 @@ import java.util.SortedSet;
  * Efficient alternative to using {@link java.util.regex.Pattern} for use cases that just
  * require basic matching. Calling the matches method should be mostly equivalent to calling
  * {@link java.util.regex.Matcher#find()}. It supports most common capabilities of the normal
- * java regular expressions. Unsupported features are:
+ * java regular expressions, including character classes with negation, ranges, nested
+ * classes and intersections, POSIX classes such as {@code \p{Alpha}}, alternatives,
+ * repetitions, lookahead, named and non-capturing groups, and a leading {@code (?i)} flag.
+ * Like java, malformed patterns throw an {@link IllegalArgumentException}, though it is not
+ * a {@link java.util.regex.PatternSyntaxException}.
+ *
+ * <p>Differences from java:</p>
  *
  * <ul>
- *   <li>Boundary matchers other than {@code ^} and {@code $}</li>
- *   <li>Predefined horizontal and veritical whitespace classes</li>
- *   <li>java.lang.Character classes</li>
- *   <li>Unicode classes</li>
- *   <li>Back references</li>
- *   <li>Special constructs other than lookahead</li>
+ *   <li>{@code $} only matches at the end of the string, the same as RE2. For java it can
+ *       also match before a final line terminator, e.g. {@code a$} matches "a\n".</li>
+ *   <li>{@code .} matches any char including line terminators, the same as the java
+ *       {@code DOTALL} flag. For java, and RE2 for a newline, it only matches a line
+ *       terminator if that flag is used, e.g. without it {@code a.b} does not match
+ *       "a\nb".</li>
+ *   <li>Matching ignores capturing groups and only checks if there is a match, so a
+ *       reluctant quantifier, e.g. {@code a+?}, gives the same result as a greedy one.</li>
+ *   <li>{@code .} and classes match a code point, so a surrogate pair such as an emoji is
+ *       matched as a whole. A lone surrogate in the pattern, e.g. {@code \x{d83d}}, only
+ *       matches a surrogate that is not part of a pair. Java does match a literal sequence
+ *       that starts with a low surrogate at the second char of a pair if the pattern is not
+ *       anchored, e.g. {@code \x{de00}a} on an emoji followed by 'a'.</li>
+ *   <li>Classes are parsed the same as java 9 and later, where a negation applies to the
+ *       whole class. For java 8, it does not apply to nested classes or intersections, e.g.
+ *       {@code [^a[b]]} matches 'b'.</li>
+ *   <li>When ignoring the case, only ASCII letters are folded, the same as the java flag
+ *       without {@code UNICODE_CASE}. POSIX classes are folded the same as java 15 and
+ *       later, e.g. {@code (?i)\p{Lower}} matches 'A', but not for earlier versions.</li>
+ * </ul>
+ *
+ * <p>Unsupported features throw an {@link IllegalArgumentException} with a message that
+ * starts with "unsupported:":</p>
+ *
+ * <ul>
+ *   <li>Boundary matchers other than {@code ^} and {@code $}, e.g. {@code \b}</li>
+ *   <li>Predefined horizontal and vertical whitespace classes</li>
+ *   <li>Unicode classes and java.lang.Character classes, e.g. {@code \p{L}} or
+ *       {@code \p{javaLowerCase}}</li>
+ *   <li>Back references and lookbehind</li>
+ *   <li>The escapes {@code \R}, {@code \X} and {@code \N{...}}, and control characters
+ *       such as {@code \cA}</li>
+ *   <li>Inline flags other than a leading {@code (?i)}, and atomic groups</li>
+ *   <li>A possessive repetition of a portion that can match different lengths, e.g.
+ *       {@code (ab|a)++}, or with a reluctant quantifier inside it</li>
+ *   <li>A repetition or group of alternatives that can match different lengths followed by
+ *       more of the pattern, if the rest of the pattern could depend on where it stops. Each
+ *       repetition keeps the first match it finds rather than trying the others, so the
+ *       result could differ from java. For example, {@code ^(ab|a)*c} is not supported. It
+ *       is supported if each repetition can only end at one position, e.g. it consists of
+ *       parts with a fixed length and repetitions of chars that cannot be followed by one of
+ *       the same chars, such as {@code ^\d+(,\d+)*$}, {@code ^(\d{1,3}\.){3}\d{1,3}$} or
+ *       {@code ^(\w+\.)*com$}.</li>
+ *   <li>Too many ways to match chained repetitions that can match the same chars. Each
+ *       repetition is tried at each position where the one before it could stop, so the
+ *       time for a string that does not match grows with the length to the power of the
+ *       number of repetitions. Two unbounded repetitions in a chain are supported, e.g.
+ *       {@code ^\w+-?\w+$}, but not three, e.g. {@code ^\w+-?\w+-?\w+$}. Adjacent
+ *       repetitions of the same chars are combined, e.g. {@code \w+\w+} is supported.</li>
  * </ul>
  *
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
@@ -147,6 +196,24 @@ public interface PatternMatcher {
    * case of each element is folded before negation or intersection, so {@code [^a]} matches
    * neither 'a' nor 'A'. Like the Java flag without {@code UNICODE_CASE}, only ASCII letters
    * are folded, other characters must be equal, e.g. 'k' does not match the Kelvin sign.
+   *
+   * <p>The result is the same as compiling the pattern with a leading {@code (?i)}. Folding
+   * the case can make more of the pattern able to match the same chars, so it can throw an
+   * {@link IllegalArgumentException} for a pattern that is supported when the case is not
+   * ignored, see the unsupported features for {@link PatternMatcher}.</p>
+   *
+   * <p>The string from {@code toString()} and {@code equals} use the pattern as optimized
+   * for the case as written. If it has a class where only one case of a letter matches,
+   * e.g. {@code [^a]}, then the optimizer may simplify it in a way that is only valid when
+   * the case is not ignored. For example, {@code x[^a]*A?y} is simplified to
+   * {@code x[^a]*y}, which no longer matches "xAy" once the case is ignored. Similarly,
+   * {@code [^a&&A]} matches any char, but not 'a' or 'A' once the case is ignored, and it is
+   * written as {@code [\s\S]}. So compiling the string and then ignoring the case can give a
+   * different result than this method, and two matchers that are equal can differ once the
+   * case is ignored. For {@link #toPatternExpr(int)}, {@link PatternExpr#ignoreCase()} on
+   * the whole expression returns the expression for the pattern that ignores the case,
+   * which can have a different structure. Ignoring the case for part of the expression uses
+   * the same part of that expression, and throws if the structure is different.</p>
    */
   default PatternMatcher ignoreCase() {
     return this;

@@ -38,6 +38,9 @@ final class Parser {
    */
   private int reluctantCount;
 
+  /** First feature that is not supported, see {@link #unsupported(String)}. */
+  private IllegalArgumentException firstUnsupported;
+
   /** Names of the capturing groups, like java a name can only be used once. */
   private final Set<String> groupNames = new HashSet<>();
 
@@ -86,8 +89,27 @@ final class Parser {
     return PatternUtils.error(message, source, sourcePosition());
   }
 
-  private IllegalArgumentException unsupported(String message) {
+  private IllegalArgumentException unsupportedError(String message) {
     return PatternUtils.unsupported(message, source, sourcePosition());
+  }
+
+  /** Consume the current char and return the matcher. */
+  private Matcher skip(Matcher m) {
+    advance();
+    return m;
+  }
+
+  /**
+   * Record a feature that is not supported and return a placeholder so parsing can
+   * continue. Like java, a pattern that is malformed is an error even if it also uses a
+   * feature that is not supported, so the first unsupported feature is only thrown once the
+   * whole pattern has been parsed, see {@link #parse()}.
+   */
+  private Matcher unsupported(String message) {
+    if (firstUnsupported == null) {
+      firstUnsupported = unsupportedError(message);
+    }
+    return TrueMatcher.INSTANCE;
   }
 
   /** Return the matcher for the top level expression. */
@@ -95,6 +117,9 @@ final class Parser {
     Matcher m = expr();
     if (!isAtEnd()) {
       throw error("unmatched closing parenthesis");
+    }
+    if (firstUnsupported != null) {
+      throw firstUnsupported;
     }
     return m;
   }
@@ -192,25 +217,42 @@ final class Parser {
   }
 
   private Matcher escape() {
-    checkEscape();
+    if (unsupportedEscape() != SUPPORTED_ESCAPE) {
+      return TrueMatcher.INSTANCE;
+    }
     char c = peek();
     switch (c) {
       case 'b':
+        Matcher boundary = skip(unsupported("word boundary"));
+        // Like java 9 and later, \b{g} is a grapheme cluster boundary. Other braces are a
+        // repetition of the boundary, e.g. \b{2}.
+        if (tokens.startsWith("{g", current)) {
+          if (!tokens.startsWith("{g}", current)) {
+            throw error("illegal/unsupported escape sequence");
+          }
+          current += 3;
+        }
+        return boundary;
       case 'B':
-        throw unsupported("word boundary");
+        return skip(unsupported("word boundary"));
       case 'A':
       case 'G':
       case 'Z':
       case 'z':
-        throw unsupported("boundary matcher");
+        return skip(unsupported("boundary matcher"));
       case 'R':
       case 'X':
-        throw unsupported("escape sequence \\" + c);
+        return skip(unsupported("escape sequence \\" + c));
       case 'k':
-        throw unsupported("back references");
+        advance();
+        return namedBackReference();
       default:
         if (c != '0' && Constants.DIGIT.contains(c)) {
-          throw unsupported("back references");
+          Matcher m = unsupported("back references");
+          while (!isAtEnd() && Constants.DIGIT.contains(peek())) {
+            advance();
+          }
+          return m;
         }
         break;
     }
@@ -218,22 +260,50 @@ final class Parser {
     return m == null ? codePoint(escapedChar()) : m;
   }
 
+  /** Returned by {@link #unsupportedEscape()} if the escape is not one it checks. */
+  private static final int SUPPORTED_ESCAPE = -1;
+
+  /** Returned by {@link #unsupportedEscape()} if the code point is not known. */
+  private static final int UNKNOWN_CODE_POINT = -2;
+
   /**
    * Check the character after a backslash for escapes that are valid in any context, but
-   * are not supported. The backslash has already been consumed. Escapes that are only valid
-   * outside of a character class, e.g. boundary matchers, are checked by {@link #escape()}.
-   * Like java, they are illegal in a class and are rejected by {@link #escapedChar()}.
+   * are not supported. The backslash has already been consumed. If it is not supported, then
+   * it is consumed and the code point is returned, or {@link #UNKNOWN_CODE_POINT} if it is
+   * not known, e.g. for {@code \N{name}}. Otherwise {@link #SUPPORTED_ESCAPE} is returned.
+   * The code point is used to check a range in a class the same as java, e.g.
+   * {@code [\cA-\x00]} is an error. Escapes that are only valid outside of a character
+   * class, e.g. boundary matchers, are checked by {@link #escape()}. Like java, they are
+   * illegal in a class and are rejected by {@link #escapedChar()}.
    */
-  private void checkEscape() {
+  private int unsupportedEscape() {
     if (isAtEnd()) {
       throw error("dangling escape");
     }
     char c = peek();
+    // Like java, it is an error if they are malformed
     if (c == 'c') {
-      throw unsupported("control character");
+      if (current + 1 >= tokens.length()) {
+        throw error("illegal control escape sequence");
+      }
+      unsupported("control character");
+      // Like java, it is the code point after the 'c' with bit 6 flipped, e.g. \cA is 0x01
+      int cp = tokens.codePointAt(current + 1) ^ 64;
+      current = tokens.offsetByCodePoints(current + 1, 1);
+      return cp;
     } else if (c == 'N') {
-      throw unsupported("escape sequence \\N");
+      if (current + 1 >= tokens.length() || tokens.charAt(current + 1) != '{') {
+        throw error("illegal character name escape sequence");
+      }
+      int end = tokens.indexOf('}', current);
+      if (end < 0) {
+        throw error("unclosed character name escape sequence");
+      }
+      unsupported("escape sequence \\N");
+      current = end + 1;
+      return UNKNOWN_CODE_POINT;
     }
+    return SUPPORTED_ESCAPE;
   }
 
   /**
@@ -369,7 +439,10 @@ final class Parser {
       switch (c) {
         case '<':
           if (peek() == '=' || peek() == '!') {
-            throw unsupported("lookbehind");
+            Matcher m = unsupported("lookbehind");
+            advance();
+            groupExpr();
+            return m;
           }
           groupName();
           return groupExpr();
@@ -380,7 +453,7 @@ final class Parser {
         case '!':
           return new NegativeLookaheadMatcher(groupExpr());
         default:
-          throw unsupported("inline flags");
+          return inlineFlags(c);
       }
     } else {
       return groupExpr();
@@ -393,6 +466,16 @@ final class Parser {
    * can only be used once.
    */
   private void groupName() {
+    String name = readGroupName();
+    // Checked before consuming the '>' so the error points to it, like java
+    if (!groupNames.add(name)) {
+      throw error("named capturing group <" + name + "> is already defined");
+    }
+    advance();
+  }
+
+  /** Read a group name up to the closing '>', which is not consumed. */
+  private String readGroupName() {
     int start = current;
     if (isAtEnd() || !Constants.ALPHA.contains(peek())) {
       throw error("capturing group name does not start with a Latin letter");
@@ -403,12 +486,91 @@ final class Parser {
     if (isAtEnd() || peek() != '>') {
       throw error("named capturing group is missing trailing '>'");
     }
-    // Checked before consuming the '>' so the error points to it, like java
-    String name = tokens.substring(start, current);
-    if (!groupNames.add(name)) {
-      throw error("named capturing group <" + name + "> is already defined");
+    return tokens.substring(start, current);
+  }
+
+  /**
+   * Check a back reference to a named group, {@code \k<name>}, after the 'k'. Like java, it
+   * is an error if it is malformed or the group is not defined before it, otherwise it is
+   * not supported.
+   */
+  private Matcher namedBackReference() {
+    if (peek() != '<') {
+      throw error("\\k is not followed by '<' for named capturing group");
     }
     advance();
+    String name = readGroupName();
+    if (!groupNames.contains(name)) {
+      throw error("named capturing group <" + name + "> does not exist");
+    }
+    Matcher m = unsupported("back references");
+    advance();
+    return m;
+  }
+
+  /** Flags that java supports for an inline flag group, e.g. {@code (?i)} or {@code (?i:a)}. */
+  private static final String INLINE_FLAGS = "idmsuxUc";
+
+  /**
+   * Flags that change how java parses the rest of the pattern. For {@code x}, whitespace and
+   * comments are ignored, e.g. {@code (?x)a#(} is valid. For {@code U}, the POSIX property
+   * names ignore the case, e.g. {@code (?U)\p{alpha}} is valid.
+   */
+  private static final String SYNTAX_FLAGS = "xU";
+
+  /**
+   * Check an inline flag group after the '(?' and the first char. Like java, it is an error
+   * if it is not a valid flag group, otherwise it is not supported. Only a leading
+   * {@code (?i)} for the whole pattern is supported, it is removed before parsing.
+   */
+  private Matcher inlineFlags(char first) {
+    if (first == '>') {
+      Matcher m = unsupported("atomic groups");
+      groupExpr();
+      return m;
+    }
+    char c = first;
+    boolean negated = false;
+    // Bit for each of the syntax flags that is set. Like java, a flag that is set and then
+    // cleared, e.g. (?x-x), has no effect.
+    int syntaxFlags = 0;
+    while (INLINE_FLAGS.indexOf(c) >= 0 || (c == '-' && !negated)) {
+      negated |= c == '-';
+      int i = SYNTAX_FLAGS.indexOf(c);
+      if (i >= 0) {
+        syntaxFlags = negated ? syntaxFlags & ~(1 << i) : syntaxFlags | (1 << i);
+      }
+      if (isAtEnd()) {
+        break;
+      }
+      c = advance();
+    }
+    boolean changesSyntax = syntaxFlags != 0;
+    if (c == ')') {
+      // Like java, a flag group without a body cannot be repeated with *, + or ?
+      if (!isAtEnd() && (peek() == '*' || peek() == '+' || peek() == '?')) {
+        throw error("dangling meta character '" + peek() + "'");
+      }
+      return unsupportedFlags(changesSyntax);
+    } else if (c == ':') {
+      Matcher m = unsupportedFlags(changesSyntax);
+      groupExpr();
+      return m;
+    }
+    throw error("unknown inline modifier");
+  }
+
+  /**
+   * Record that the inline flags are not supported. If the flags change how java parses the
+   * rest of the pattern, then it cannot be checked for errors the same as java, so the first
+   * unsupported feature is thrown without parsing the rest.
+   */
+  private Matcher unsupportedFlags(boolean changesSyntax) {
+    Matcher m = unsupported("inline flags");
+    if (changesSyntax) {
+      throw firstUnsupported;
+    }
+    return m;
   }
 
   @SuppressWarnings("PMD.ImplicitSwitchFallThrough")
@@ -424,10 +586,12 @@ final class Parser {
       case 'W': return negated(Constants.WORD_CHARS);
       case 'h':
       case 'H':
-        throw unsupported("horizontal whitespace class");
+        unsupported("horizontal whitespace class");
+        return new CharClassMatcher(AsciiSet.none());
       case 'v':
       case 'V':
-        throw unsupported("vertical whitespace class");
+        unsupported("vertical whitespace class");
+        return new CharClassMatcher(AsciiSet.none());
       case 'P':
         invert = true;
       case 'p':
@@ -565,6 +729,8 @@ final class Parser {
   @SuppressWarnings("PMD")
   private CharClassMatcher charClass(boolean invert) {
     CharClassMatcher tmp;
+    // Result of unsupportedEscape() for an escape
+    int escaped;
     // Literal character that can be used as the start of a range, -1 if the previous
     // element cannot start a range.
     int rangeStart = -1;
@@ -615,7 +781,19 @@ final class Parser {
           }
           break;
         case '\\':
-          checkEscape();
+          escaped = unsupportedEscape();
+          if (escaped != SUPPORTED_ESCAPE) {
+            // Not supported, but it is still an element of the class so that the class is
+            // checked the same as java, e.g. [\cA&&] is valid and [\cA-\x00] is an error
+            if (escaped == UNKNOWN_CODE_POINT) {
+              builder.add(AsciiSet.none());
+              rangeStart = -1;
+            } else {
+              builder.addCodePoint(escaped);
+              rangeStart = escaped;
+            }
+            break;
+          }
           tmp = namedCharClass();
           if (tmp == null) {
             rangeStart = escapedChar();
@@ -633,11 +811,15 @@ final class Parser {
             int end;
             if (peek() == '\\') {
               advance();
-              checkEscape();
-              if (namedCharClass() != null) {
+              escaped = unsupportedEscape();
+              if (escaped == UNKNOWN_CODE_POINT) {
+                // Not supported and the end is not known, so the range cannot be checked
+                rangeStart = -1;
+                break;
+              } else if (escaped == SUPPORTED_ESCAPE && namedCharClass() != null) {
                 throw error("illegal character range");
               }
-              end = escapedChar();
+              end = escaped == SUPPORTED_ESCAPE ? escapedChar() : escaped;
             } else if (isAtEnd()) {
               end = advance();
             } else {
@@ -670,7 +852,13 @@ final class Parser {
   private CharClassMatcher newNamedCharSet(String name, boolean invert) {
     AsciiSet set = Constants.NAMED_CHAR_CLASSES.get(name);
     if (set == null) {
-      throw error("unknown character property name: " + name);
+      // Unicode and java.lang.Character classes, e.g. \\p{L} or \\p{javaLowerCase}, are valid
+      // for java, but not supported
+      if (!CharProperties.isValid(name)) {
+        throw error("unknown character property name: " + name);
+      }
+      unsupported("character property \\p{" + name + "}");
+      return new CharClassMatcher(AsciiSet.none());
     }
     return invert ? negated(set) : new CharClassMatcher(set);
   }
@@ -721,9 +909,11 @@ final class Parser {
    */
   private Matcher possessive(Matcher matcher, int min, int max, boolean hasReluctant) {
     if (hasReluctant) {
-      throw unsupported("reluctant quantifier within a possessive repetition");
+      unsupported("reluctant quantifier within a possessive repetition");
+      return new RepeatMatcher(matcher, min, max);
     } else if (!firstMatchSameAsJava(matcher)) {
-      throw unsupported("possessive repetition of a portion that can match different lengths");
+      unsupported("possessive repetition of a portion that can match different lengths");
+      return new RepeatMatcher(matcher, min, max);
     }
     // A trailing .* would consume the rest of the string, but ZeroOrMoreMatcher returns the
     // start position if nothing follows, so use a possessive repetition, e.g. for (a.*)++.

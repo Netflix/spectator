@@ -214,6 +214,22 @@ public class QueryTest {
   }
 
   @Test
+  public void reQueryWithIgnoreCaseFlag() {
+    // Like java, a leading (?i) flag ignores the case for the rest of the pattern. It is
+    // moved before the anchor that is added to the value.
+    Query q = parse("name,(?i)foO,:re");
+    Assertions.assertTrue(q.matches(registry.createId("fOo")));
+    Assertions.assertFalse(q.matches(registry.createId("abcFoo")));
+    Assertions.assertTrue(q.matches(registry.createId("Foobar")));
+    Assertions.assertTrue(parse("name,(?i)foO,:reic").matches(registry.createId("FOO")));
+    // Like java, the flag cannot be followed by a quantifier, it is not moved so that the
+    // quantifier does not apply to the anchor
+    Assertions.assertThrows(IllegalArgumentException.class, () -> parse("name,(?i)*,:re"));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> parse("name,(?i)+a,:re"));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> parse("name,(?i)?,:reic"));
+  }
+
+  @Test
   public void reEqualsContract() {
     EqualsVerifier
         .forClass(Query.Regex.class)
