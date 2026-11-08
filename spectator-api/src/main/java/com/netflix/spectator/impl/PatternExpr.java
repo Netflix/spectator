@@ -18,6 +18,7 @@ package com.netflix.spectator.impl;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,13 @@ public interface PatternExpr {
 
   /**
    * Returns a copy of the expression that will ignore the case when matching.
+   *
+   * <p>For an expression from {@link PatternMatcher#toPatternExpr(int)}, the result can be
+   * the expression for the pattern that ignores the case, see
+   * {@link PatternMatcher#ignoreCase()}. That can throw an {@link IllegalArgumentException},
+   * e.g. if ignoring the case for the pattern is not supported, or if it expands to more
+   * than the max number of clauses that was used for the expression. Use
+   * {@code matcher.ignoreCase().toPatternExpr(max)} to get null instead.</p>
    */
   PatternExpr ignoreCase();
 
@@ -153,12 +161,39 @@ public interface PatternExpr {
     return new Not(expr);
   }
 
+  /**
+   * Returns a copy of the expression where {@link #ignoreCase()} returns the expression
+   * from the supplier rather than ignoring the case for each sub-expression. It is used when
+   * ignoring the case for the pattern can result in an expression with a different
+   * structure. The sub-expressions are not changed. The supplier is used for equality, so it should
+   * implement equals.
+   */
+  static PatternExpr withIgnoreCase(PatternExpr expr, Supplier<PatternExpr> ignoreCase) {
+    Preconditions.checkNotNull(ignoreCase, "ignoreCase");
+    if (expr instanceof Regex) {
+      return new Regex(((Regex) expr).matcher(), ignoreCase);
+    } else if (expr instanceof And) {
+      return new And(((And) expr).exprs(), ignoreCase);
+    } else if (expr instanceof Or) {
+      return new Or(((Or) expr).exprs(), ignoreCase);
+    } else if (expr instanceof Not) {
+      return new Not(((Not) expr).expr(), ignoreCase);
+    }
+    throw new IllegalArgumentException("unknown expression type: " + expr.getClass());
+  }
+
   final class Regex implements PatternExpr {
 
     private final PatternMatcher matcher;
+    private final Supplier<PatternExpr> ignoreCase;
 
     Regex(PatternMatcher matcher) {
+      this(matcher, null);
+    }
+
+    Regex(PatternMatcher matcher, Supplier<PatternExpr> ignoreCase) {
       this.matcher = Preconditions.checkNotNull(matcher, "matcher");
+      this.ignoreCase = ignoreCase;
     }
 
     public PatternMatcher matcher() {
@@ -170,7 +205,7 @@ public interface PatternExpr {
     }
 
     @Override public PatternExpr ignoreCase() {
-      return new Regex(matcher.ignoreCase());
+      return ignoreCase != null ? ignoreCase.get() : new Regex(matcher.ignoreCase());
     }
 
     @Override public String toString() {
@@ -181,20 +216,26 @@ public interface PatternExpr {
       if (this == o) return true;
       if (!(o instanceof Regex)) return false;
       Regex regex = (Regex) o;
-      return matcher.equals(regex.matcher);
+      return matcher.equals(regex.matcher) && Objects.equals(ignoreCase, regex.ignoreCase);
     }
 
     @Override public int hashCode() {
-      return Objects.hash(matcher);
+      return Objects.hash(matcher, ignoreCase);
     }
   }
 
   final class And implements PatternExpr {
 
     private final List<PatternExpr> exprs;
+    private final Supplier<PatternExpr> ignoreCase;
 
     And(List<PatternExpr> exprs) {
+      this(exprs, null);
+    }
+
+    And(List<PatternExpr> exprs, Supplier<PatternExpr> ignoreCase) {
       this.exprs = Preconditions.checkNotNull(exprs, "exprs");
+      this.ignoreCase = ignoreCase;
     }
 
     public List<PatternExpr> exprs() {
@@ -211,6 +252,9 @@ public interface PatternExpr {
     }
 
     @Override public PatternExpr ignoreCase() {
+      if (ignoreCase != null) {
+        return ignoreCase.get();
+      }
       return new And(exprs.stream().map(PatternExpr::ignoreCase).collect(Collectors.toList()));
     }
 
@@ -224,20 +268,26 @@ public interface PatternExpr {
       if (this == o) return true;
       if (!(o instanceof And)) return false;
       And and = (And) o;
-      return exprs.equals(and.exprs);
+      return exprs.equals(and.exprs) && Objects.equals(ignoreCase, and.ignoreCase);
     }
 
     @Override public int hashCode() {
-      return Objects.hash(exprs);
+      return Objects.hash(exprs, ignoreCase);
     }
   }
 
   final class Or implements PatternExpr {
 
     private final List<PatternExpr> exprs;
+    private final Supplier<PatternExpr> ignoreCase;
 
     Or(List<PatternExpr> exprs) {
+      this(exprs, null);
+    }
+
+    Or(List<PatternExpr> exprs, Supplier<PatternExpr> ignoreCase) {
       this.exprs = Preconditions.checkNotNull(exprs, "exprs");
+      this.ignoreCase = ignoreCase;
     }
 
     public List<PatternExpr> exprs() {
@@ -254,6 +304,9 @@ public interface PatternExpr {
     }
 
     @Override public PatternExpr ignoreCase() {
+      if (ignoreCase != null) {
+        return ignoreCase.get();
+      }
       return new Or(exprs.stream().map(PatternExpr::ignoreCase).collect(Collectors.toList()));
     }
 
@@ -267,20 +320,26 @@ public interface PatternExpr {
       if (this == o) return true;
       if (!(o instanceof Or)) return false;
       Or or = (Or) o;
-      return exprs.equals(or.exprs);
+      return exprs.equals(or.exprs) && Objects.equals(ignoreCase, or.ignoreCase);
     }
 
     @Override public int hashCode() {
-      return Objects.hash(exprs);
+      return Objects.hash(exprs, ignoreCase);
     }
   }
 
   final class Not implements PatternExpr {
 
     private final PatternExpr expr;
+    private final Supplier<PatternExpr> ignoreCase;
 
     Not(PatternExpr expr) {
+      this(expr, null);
+    }
+
+    Not(PatternExpr expr, Supplier<PatternExpr> ignoreCase) {
       this.expr = Preconditions.checkNotNull(expr, "expr");
+      this.ignoreCase = ignoreCase;
     }
 
     public PatternExpr expr() {
@@ -292,7 +351,7 @@ public interface PatternExpr {
     }
 
     @Override public PatternExpr ignoreCase() {
-      return new Not(expr.ignoreCase());
+      return ignoreCase != null ? ignoreCase.get() : new Not(expr.ignoreCase());
     }
 
     @Override public String toString() {
@@ -303,11 +362,11 @@ public interface PatternExpr {
       if (this == o) return true;
       if (!(o instanceof Not)) return false;
       Not not = (Not) o;
-      return expr.equals(not.expr);
+      return expr.equals(not.expr) && Objects.equals(ignoreCase, not.ignoreCase);
     }
 
     @Override public int hashCode() {
-      return Objects.hash(expr);
+      return Objects.hash(expr, ignoreCase);
     }
   }
 }

@@ -363,7 +363,17 @@ public final class QueryIndex<T> {
     Query inner = (kq instanceof Query.InvertedKeyQuery) ? kq.not() : null;
     if (inner instanceof Query.Regex) {
       Query.Regex re = (Query.Regex) inner;
-      negRegex.computeIfAbsent(re.name(), k -> new LinkedHashMap<>()).putIfAbsent(re.value(), kq);
+      String name = re.name();
+      String value = re.value();
+      // A leading (?i) flag ignores the case the same as :reic. The flag is only supported at
+      // the start of the pattern, so it is removed and the clause is merged with the :reic
+      // clauses rather than joined into an alternation where it would either apply to the
+      // other alternatives or not be at the start.
+      if (Query.Regex.hasIgnoreCaseFlag(value)) {
+        name = ":reic";
+        value = value.substring(4);
+      }
+      negRegex.computeIfAbsent(name, k -> new LinkedHashMap<>()).putIfAbsent(value, kq);
     } else if (inner instanceof Query.Equal || inner instanceof Query.In) {
       negEqIn.add(kq);
     } else {

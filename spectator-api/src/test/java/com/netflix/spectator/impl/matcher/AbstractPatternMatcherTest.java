@@ -472,7 +472,8 @@ public abstract class AbstractPatternMatcherTest {
   @Test
   public void posixAbbreviations() {
     testBadExpression("\\pabc", "unknown character property name: a");
-    testBadExpression("\\pLbc", "unknown character property name: L");
+    // Valid for java, but not supported
+    testUnsupported("\\pLbc", "character property \\p{L}");
   }
 
   @Test
@@ -738,7 +739,8 @@ public abstract class AbstractPatternMatcherTest {
   public void escapesDecodedByParser() {
     // Escaped characters are always literals, so they cannot act as syntax
     testBadExpression("a{2\\x2c3}", "illegal repetition");
-    testUnsupported("(?\\x3aa)", "inline flags");
+    // Like java, an escape is not part of the group syntax
+    testBadExpression("(?\\x3aa)", "unknown inline modifier");
     // Like java, a code point can be written as \x{h...h} and an escaped surrogate pair is
     // a single code point
     testRE("^\\x{1F600}+$", "\uD83D\uDE00\uD83D\uDE00");
@@ -821,7 +823,7 @@ public abstract class AbstractPatternMatcherTest {
     testUnsupported("\\V", "vertical whitespace class");
     testUnsupported("\\1", "back references");
     testUnsupported("\\99", "back references");
-    testUnsupported("\\k<foo>", "back references");
+    testUnsupported("(?<foo>a)\\k<foo>", "back references");
     testUnsupported("\\cA", "control character");
     testUnsupported("[\\cA]", "control character");
     testUnsupported("a\\b", "word boundary");
@@ -898,11 +900,87 @@ public abstract class AbstractPatternMatcherTest {
   }
 
   @Test
+  public void malformedOrUnsupportedLikeJava() {
+    // Like java, a malformed pattern is an error and a valid one that uses a feature that is
+    // not supported throws unsupported, even if the error comes after the unsupported feature
+    testBadExpression("(?<=a)b(", "unclosed group");
+    testBadExpression("\\cA[", "unclosed character class");
+    testBadExpression("(?i", "unknown inline modifier");
+    testBadExpression("(?q)", "unknown inline modifier");
+    testBadExpression("(?i-", "unknown inline modifier");
+    testUnsupported("(?i:a)", "inline flags");
+    testUnsupported("(?is-m:a)b", "inline flags");
+    testUnsupported("(?>ab)", "atomic groups");
+    testBadExpression("\\k", "\\k is not followed by '<' for named capturing group");
+    testBadExpression("\\kx", "\\k is not followed by '<' for named capturing group");
+    testBadExpression("\\k<a>", "named capturing group <a> does not exist");
+    testUnsupported("(?<a>x)\\k<a>", "back references");
+    testBadExpression("\\c", "illegal control escape sequence");
+    testUnsupported("\\cA", "control character");
+    testBadExpression("\\N", "illegal character name escape sequence");
+    testBadExpression("\\Nx", "illegal character name escape sequence");
+    // The name is not checked, it is unsupported either way
+    testUnsupported("\\N{LATIN SMALL LETTER A}", "escape sequence \\N");
+    testUnsupported("\\N{}", "escape sequence \\N");
+    testUnsupported("\\p{L}", "character property \\p{L}");
+    testUnsupported("[\\P{Lu}]", "character property \\p{Lu}");
+    testUnsupported("\\p{IsLatin}", "character property \\p{IsLatin}");
+    testUnsupported("\\p{javaLowerCase}", "character property \\p{javaLowerCase}");
+    testBadExpression("\\p{Foo}", "unknown character property name: Foo");
+    testBadExpression("a(?i)*", "dangling meta character '*'");
+    testBadExpression("\\px", "unknown character property name: x");
+    // An escape that is not supported is still an element of a class, and like java, a
+    // control character can be used for a range
+    testUnsupported("[\\cA&&]", "control character");
+    testUnsupported("[\\N{LATIN SMALL LETTER A}&&]", "escape sequence \\N");
+    testUnsupported("[\\cA-z]", "control character");
+    testUnsupported("[\\x00-\\cA]", "control character");
+    testBadExpression("[\\cA-\\x00]", "illegal character range");
+    testBadExpression("[a-\\cA]", "illegal character range");
+  }
+
+  @Test
+  public void validForJavaIsUnsupported() {
+    // CANON_EQ is a valid inline flag for java
+    testUnsupported("a(?c)b", "inline flags");
+    testUnsupported("a(?ic-c:b)", "inline flags");
+    // With comments, java ignores the rest of the line after a '#', and with the U flag the
+    // POSIX names ignore the case, so the rest of the pattern is not checked
+    testUnsupported("a(?x)#(", "inline flags");
+    testUnsupported("a(?x:b #[\n)", "inline flags");
+    testUnsupported("a(?U)\\p{alpha}", "inline flags");
+    testBadExpression("a(?-x)#(", "unclosed group");
+    // A flag that is set and then cleared has no effect
+    testBadExpression("a(?x-x)#(", "unclosed group");
+    testUnsupported("a(?U-u)\\p{alpha}", "inline flags");
+    // Grapheme cluster boundary
+    testUnsupported("\\b{g}", "word boundary");
+    testUnsupported("a\\b{g}+", "word boundary");
+    testUnsupported("\\b{2}", "word boundary");
+    testBadExpression("\\b{g", "illegal/unsupported escape sequence");
+    testBadExpression("\\B{g}", "illegal repetition");
+    // Like java, the case is ignored for the key of a property
+    testUnsupported("\\p{Script=Latin}", "character property \\p{Script=Latin}");
+    testUnsupported("\\p{SC=Latin}", "character property \\p{SC=Latin}");
+    testUnsupported("\\p{Block=BasicLatin}", "character property \\p{Block=BasicLatin}");
+    testUnsupported("\\p{GC=Lu}", "character property \\p{GC=Lu}");
+    testBadExpression("\\p{gc=lu}", "unknown character property name: gc=lu");
+    // Binary properties and POSIX names ignore the case with the Is prefix, java properties
+    // can be used with the Is prefix or as a general category
+    testUnsupported("\\p{IsWord}", "character property \\p{IsWord}");
+    testUnsupported("\\p{IsALNUM}", "character property \\p{IsALNUM}");
+    testUnsupported("\\p{Isalpha}", "character property \\p{Isalpha}");
+    testUnsupported("\\p{IsjavaLowerCase}", "character property \\p{IsjavaLowerCase}");
+    testUnsupported("\\p{gc=javaDigit}", "character property \\p{gc=javaDigit}");
+    testBadExpression("\\p{Isjavalowercase}", "unknown character property name: Isjavalowercase");
+  }
+
+  @Test
   public void lookbehindUnsupported() {
     testUnsupported("(?<=a)b", "lookbehind");
     testUnsupported("(?<!a)b", "lookbehind");
-    // Not read as a group name up to the '>', java rejects it for the unmatched ')'
-    testUnsupported("(?<=a)>)", "lookbehind");
+    // Not read as a group name up to the '>', like java it is an error for the unmatched ')'
+    testBadExpression("(?<=a)>)", "unmatched closing parenthesis");
   }
 
   @Test

@@ -801,9 +801,22 @@ public interface Query {
       this.k = Preconditions.checkNotNull(k, "k");
       this.v = Preconditions.checkNotNull(v, "v");
       // The (?i) flag is cheaper than calling ignoreCase() on the compiled matcher, the
-      // pattern only needs to be optimized once
-      this.pattern = PatternMatcher.compile((ignoreCase ? "(?i)^" : "^") + v);
+      // pattern only needs to be optimized once. A value can also start with the flag, it is
+      // only supported at the start of the pattern so it is moved before the anchor.
+      boolean flag = hasIgnoreCaseFlag(v);
+      String p = flag ? v.substring(4) : v;
+      this.pattern = PatternMatcher.compile((ignoreCase || flag ? "(?i)^" : "^") + p);
       this.name = Preconditions.checkNotNull(name, "name");
+    }
+
+    /**
+     * Returns true if the value starts with a {@code (?i)} flag that can be moved before the
+     * anchor that is added to the value. Like java, the flag cannot be followed by a
+     * quantifier, e.g. {@code ^(?i)*} is an error, so then it is not moved. Otherwise it would
+     * apply to the anchor, {@code (?i)^*}, and match any value.
+     */
+    static boolean hasIgnoreCaseFlag(String v) {
+      return v.startsWith("(?i)") && (v.length() == 4 || "*+?".indexOf(v.charAt(4)) < 0);
     }
 
     @Override public String key() {

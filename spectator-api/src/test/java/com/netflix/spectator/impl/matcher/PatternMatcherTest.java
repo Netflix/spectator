@@ -139,6 +139,45 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     Assertions.assertTrue(m.ignoreCase().matches("AAb"));
     Assertions.assertEquals(PatternMatcher.compile("(?i)^[^a-z]*[A-Z]+$"), m.ignoreCase());
 
+    // An expression from toPatternExpr uses the expression for the pattern that ignores the
+    // case, rather than ignoring the case for each of the sub-expressions
+    for (String p : new String[] {"x[^a]*A?y", "^[^a]*A?y", "(?:[^a&&A]+[^B]?|zz)q"}) {
+      PatternMatcher pm = PatternMatcher.compile(p);
+      PatternExpr expr = pm.toPatternExpr(100);
+      Assertions.assertNotNull(expr, p);
+      Assertions.assertEquals(pm.ignoreCase().toPatternExpr(100).toString(),
+          expr.ignoreCase().toString(), p);
+    }
+    Assertions.assertTrue(PatternMatcher.compile("x[^a]*A?y").toPatternExpr(100)
+        .ignoreCase().matches("xAy"));
+
+    // The expression for a part also uses the expression for the pattern that ignores the case
+    PatternExpr alt = ((PatternExpr.Or) PatternMatcher.compile("x[^a]*A?y|zz").toPatternExpr(100))
+        .exprs().get(0);
+    PatternMatcher leaf = ((PatternExpr.Regex) alt).matcher();
+    Assertions.assertTrue(leaf.ignoreCase().matches("xAy"));
+    Assertions.assertTrue(leaf.toPatternExpr(100).ignoreCase().matches("xAy"));
+
+    // If the expression for the pattern that ignores the case has more clauses than the max,
+    // then ignoring the case for the expression throws
+    PatternExpr small = PatternMatcher.compile("x[^a]*(?:A|B)?y").toPatternExpr(2);
+    Assertions.assertNotNull(small);
+    Assertions.assertThrows(IllegalArgumentException.class, small::ignoreCase);
+
+    // The expression is equal for the same pattern
+    Assertions.assertEquals(PatternMatcher.compile("x[^a]*A?y|zz").toPatternExpr(100),
+        PatternMatcher.compile("x[^a]*A?y|zz").toPatternExpr(100));
+
+    // If the expression for the pattern that ignores the case has a different structure,
+    // e.g. separate alternatives for A? that the case-sensitive pattern drops, then the
+    // whole expression uses it, but there is no matching part for a sub-expression
+    PatternMatcher pm = PatternMatcher.compile("x[^a]*(?:A|B)?y|foo");
+    PatternExpr mismatch = pm.toPatternExpr(100);
+    Assertions.assertEquals(pm.ignoreCase().toPatternExpr(100), mismatch.ignoreCase());
+    Assertions.assertTrue(mismatch.ignoreCase().matches("xAy"));
+    PatternExpr part = ((PatternExpr.Or) mismatch).exprs().get(0);
+    Assertions.assertThrows(IllegalArgumentException.class, part::ignoreCase);
+
     // Other patterns are not wrapped
     for (String p : new String[] {"^[a-z]*[A-Z]+$", "^[^0-9]*[A-Z]+$", "(?i)^[^a-z]*[A-Z]+$"}) {
       Assertions.assertFalse(PatternMatcher.compile(p) instanceof CaseSensitiveMatcher, p);
