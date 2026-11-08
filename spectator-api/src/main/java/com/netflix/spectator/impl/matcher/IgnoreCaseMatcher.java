@@ -19,6 +19,8 @@ import com.netflix.spectator.impl.PatternExpr;
 import com.netflix.spectator.impl.PatternMatcher;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /** Matcher that ignores the case when checking against the input string. */
@@ -74,6 +76,26 @@ final class IgnoreCaseMatcher implements PatternMatcher, Serializable {
   @Override
   public boolean neverMatches() {
     return matcher.neverMatches();
+  }
+
+  /**
+   * Returns the clauses of the matcher, each of them ignores the case, or null if there are
+   * more than the max. The matcher has already been rewritten to ignore the case, so
+   * expanding it gives the clauses for the pattern with the case ignored. It is used to
+   * ignore the case for the clauses of a {@link CaseSensitiveMatcher}, the public
+   * {@link #expandOrClauses(int)} returns this matcher as a single clause.
+   */
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
+  List<PatternMatcher> clauses(int max) {
+    List<PatternMatcher> clauses = matcher.expandOrClauses(max);
+    if (clauses == null) {
+      return null;
+    }
+    List<PatternMatcher> results = new ArrayList<>(clauses.size());
+    for (PatternMatcher c : clauses) {
+      results.add(new IgnoreCaseMatcher((Matcher) c));
+    }
+    return results;
   }
 
   @Override

@@ -126,9 +126,18 @@ final class CaseSensitiveMatcher implements PatternMatcher, Serializable {
     return new IgnoreCaseMatcher(m);
   }
 
+  /**
+   * The clauses are built from the optimized matcher. Like {@link #toPatternExpr(int)},
+   * ignoring the case for a clause uses the clause at the same position for the pattern
+   * that ignores the case, see {@link ExprLeafMatcher}.
+   */
+  @SuppressWarnings("PMD.ReturnEmptyCollectionRatherThanNull")
   @Override
   public List<PatternMatcher> expandOrClauses(int max) {
-    return matcher.expandOrClauses(max);
+    List<PatternMatcher> clauses = matcher.expandOrClauses(max);
+    return clauses == null
+        ? null
+        : ExprLeafMatcher.wrap(clauses, ExprLeafMatcher.Folded.forClauses(this, max));
   }
 
   /**
@@ -143,7 +152,7 @@ final class CaseSensitiveMatcher implements PatternMatcher, Serializable {
     if (expr == null) {
       return null;
     }
-    return ExprLeafMatcher.wrap(expr, new ExprLeafMatcher.Folded(this, max));
+    return ExprLeafMatcher.wrap(expr, ExprLeafMatcher.Folded.forExpr(this, max));
   }
 
   @Override

@@ -21,6 +21,7 @@ import com.netflix.spectator.impl.PatternMatcher;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.SortedSet;
@@ -134,7 +135,12 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
 
   @Override
   public List<PatternMatcher> expandOrClauses(int max) {
-    return matcher.expandOrClauses(max);
+    // Same as toPatternExpr, if the clause is just the leaf, then use this matcher for it
+    List<PatternMatcher> clauses = matcher.expandOrClauses(max);
+    if (clauses != null && clauses.size() == 1 && clauses.get(0).equals(matcher)) {
+      return Collections.singletonList(this);
+    }
+    return clauses;
   }
 
   @Override
@@ -171,6 +177,24 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
    */
   static PatternExpr wrap(PatternExpr expr, Folded folded) {
     return PatternExpr.withIgnoreCase(wrap(expr, folded, new int[0]), folded);
+  }
+
+  /**
+   * Wrap the clauses as optimized for the case as written so that ignoring the case uses
+   * the clause at the same position for the pattern that ignores the case.
+   *
+   * @param clauses
+   *     Clauses for the pattern as optimized for the case as written.
+   * @param folded
+   *     Clauses for the pattern that ignores the case.
+   */
+  static List<PatternMatcher> wrap(List<PatternMatcher> clauses, Folded folded) {
+    int n = clauses.size();
+    List<PatternMatcher> results = new ArrayList<>(n);
+    for (int i = 0; i < n; ++i) {
+      results.add(new ExprLeafMatcher(clauses.get(i), folded, new int[] {i, n}));
+    }
+    return results;
   }
 
   private static PatternExpr wrap(PatternExpr expr, Folded folded, int[] path) {
@@ -221,9 +245,9 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
   }
 
   /**
-   * Expression for the pattern that ignores the case. It is computed the first time it is
-   * needed. If ignoring the case for the pattern throws, then that error is used for the
-   * sub-expressions.
+   * Expression or clauses for the pattern that ignores the case. It is computed the first
+   * time it is needed. If ignoring the case for the pattern throws, then that error is used
+   * for the sub-expressions.
    */
   static final class Folded implements Supplier<PatternExpr>, Serializable {
 
@@ -232,30 +256,65 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
     private final CaseSensitiveMatcher source;
     private final int max;
 
+    /** True for the clauses from expandOrClauses, false for the toPatternExpr expression. */
+    private final boolean clauses;
+
     private transient volatile PatternExpr expr;
+    private transient volatile List<PatternMatcher> clauseList;
     private transient volatile IllegalArgumentException error;
     private transient int hash;
 
-    Folded(CaseSensitiveMatcher source, int max) {
+    private Folded(CaseSensitiveMatcher source, int max, boolean clauses) {
       this.source = source;
       this.max = max;
+      this.clauses = clauses;
+    }
+
+    /** For the expression from {@link PatternMatcher#toPatternExpr(int)}. */
+    static Folded forExpr(CaseSensitiveMatcher source, int max) {
+      return new Folded(source, max, false);
+    }
+
+    /** For the clauses from {@link PatternMatcher#expandOrClauses(int)}. */
+    static Folded forClauses(CaseSensitiveMatcher source, int max) {
+      return new Folded(source, max, true);
+    }
+
+    private String method() {
+      return clauses ? "expandOrClauses" : "toPatternExpr";
+    }
+
+    /** Ensure the result has been computed. */
+    private void compute() {
+      if (expr == null && clauseList == null && error == null) {
+        Object result;
+        try {
+          PatternMatcher m = source.ignoreCase();
+          if (clauses) {
+            List<PatternMatcher> cs = m instanceof IgnoreCaseMatcher
+                ? ((IgnoreCaseMatcher) m).clauses(max)
+                : m.expandOrClauses(max);
+            clauseList = cs;
+            result = cs;
+          } else {
+            PatternExpr e = m.toPatternExpr(max);
+            expr = e;
+            result = e;
+          }
+        } catch (IllegalArgumentException ex) {
+          error = ex;
+          return;
+        }
+        if (result == null) {
+          error = new IllegalArgumentException("unsupported: " + method() + "(" + max
+              + ") is null when the case is ignored\n" + source);
+        }
+      }
     }
 
     /** Ensure the expression has been computed, returns null if it is not available. */
     private PatternExpr expr() {
-      if (expr == null && error == null) {
-        PatternExpr e = null;
-        try {
-          e = source.ignoreCase().toPatternExpr(max);
-        } catch (IllegalArgumentException ex) {
-          error = ex;
-        }
-        expr = e;
-        if (e == null && error == null) {
-          error = new IllegalArgumentException("unsupported: toPatternExpr(" + max
-              + ") is null when the case is ignored\n" + source);
-        }
-      }
+      compute();
       return expr;
     }
 
@@ -274,6 +333,11 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
      * structure is different.
      */
     PatternMatcher find(int[] path) {
+      if (clauses) {
+        compute();
+        List<PatternMatcher> cs = clauseList;
+        return cs != null && cs.size() == path[1] ? cs.get(path[0]) : null;
+      }
       PatternExpr e = expr();
       for (int i = 0; e != null && i < path.length; i += 2) {
         e = child(e, path[i], path[i + 1]);
@@ -304,11 +368,14 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
       // A new exception each time rather than throwing the shared instance from several
       // places and threads, the cause is the error from ignoring the case for the pattern
       IllegalArgumentException e = error;
-      return e != null
-          ? new IllegalArgumentException(e.getMessage(), e)
-          : new IllegalArgumentException("unsupported: ignoring the case for part of the "
-              + "expression from toPatternExpr, ignore the case for the whole expression "
-              + "instead\n" + source);
+      if (e != null) {
+        return new IllegalArgumentException(e.getMessage(), e);
+      }
+      String alternative = clauses
+          ? "use ignoreCase().expandOrClauses(max)"
+          : "ignore the case for the whole expression";
+      return new IllegalArgumentException("unsupported: ignoring the case for part of the "
+          + "result from " + method() + ", " + alternative + " instead\n" + source);
     }
 
     @Override
@@ -320,7 +387,7 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
         return false;
       }
       Folded that = (Folded) o;
-      return max == that.max && source.equals(that.source);
+      return max == that.max && clauses == that.clauses && source.equals(that.source);
     }
 
     @Override
@@ -329,7 +396,7 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
       // computed from the whole pattern
       int h = hash;
       if (h == 0) {
-        h = 31 * source.hashCode() + max;
+        h = 31 * (31 * source.hashCode() + max) + (clauses ? 1 : 0);
         hash = h;
       }
       return h;
