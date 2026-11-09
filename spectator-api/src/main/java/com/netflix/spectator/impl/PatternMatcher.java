@@ -213,7 +213,10 @@ public interface PatternMatcher {
    * case is ignored. For {@link #toPatternExpr(int)}, {@link PatternExpr#ignoreCase()} on
    * the whole expression returns the expression for the pattern that ignores the case,
    * which can have a different structure. Ignoring the case for part of the expression uses
-   * the same part of that expression, and throws if the structure is different.</p>
+   * the same part of that expression, and throws if the structure is different. The clauses
+   * from {@link #expandOrClauses(int)} are the same, ignoring the case for a clause uses the
+   * clause at the same position for the pattern that ignores the case, and throws if the
+   * clauses are different.</p>
    */
   default PatternMatcher ignoreCase() {
     return this;

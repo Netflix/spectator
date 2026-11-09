@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
@@ -177,6 +178,35 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
     Assertions.assertTrue(mismatch.ignoreCase().matches("xAy"));
     PatternExpr part = ((PatternExpr.Or) mismatch).exprs().get(0);
     Assertions.assertThrows(IllegalArgumentException.class, part::ignoreCase);
+
+    // Clauses from expandOrClauses ignore the case using the clause at the same position
+    // for the pattern that ignores the case
+    for (String p : new String[] {"x[^a]*A?y|zz", "(?:[^a&&A]+[^B]?|zz)q"}) {
+      PatternMatcher cm = PatternMatcher.compile(p);
+      PatternMatcher ic = cm.ignoreCase();
+      List<PatternMatcher> clauses = cm.expandOrClauses(10);
+      Assertions.assertEquals(2, clauses.size(), p);
+      for (String s : new String[] {"xAy", "xay", "xBy", "ZZQ", "aq", "Aq", "bq"}) {
+        boolean cs = false;
+        boolean folded = false;
+        for (PatternMatcher c : clauses) {
+          cs |= c.matches(s);
+          folded |= c.ignoreCase().matches(s);
+        }
+        Assertions.assertEquals(cm.matches(s), cs, p + " " + s);
+        Assertions.assertEquals(ic.matches(s), folded, p + " " + s);
+      }
+    }
+    Assertions.assertTrue(PatternMatcher.compile("x[^a]*A?y|zz").expandOrClauses(5).get(0)
+        .ignoreCase().matches("xAy"));
+
+    // If the clauses are different once the case is ignored, then it throws
+    PatternMatcher different = PatternMatcher.compile("x[^a]*(?:A|B)?y|foo");
+    PatternMatcher first = different.expandOrClauses(10).get(0);
+    Assertions.assertThrows(IllegalArgumentException.class, first::ignoreCase);
+
+    // Clauses for a part of the expression also ignore the case the same as the pattern
+    Assertions.assertTrue(leaf.expandOrClauses(5).get(0).ignoreCase().matches("xAy"));
 
     // Other patterns are not wrapped
     for (String p : new String[] {"^[a-z]*[A-Z]+$", "^[^0-9]*[A-Z]+$", "(?i)^[^a-z]*[A-Z]+$"}) {
