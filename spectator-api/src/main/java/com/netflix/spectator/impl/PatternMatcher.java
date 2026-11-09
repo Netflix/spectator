@@ -59,6 +59,9 @@ import java.util.SortedSet;
  * starts with "unsupported:":</p>
  *
  * <ul>
+ *   <li>Patterns longer than 1536 chars, not counting a leading {@code (?i)}. The parser
+ *       uses a stack frame for each nested group or repetition, so a longer pattern could
+ *       overflow the stack.</li>
  *   <li>Boundary matchers other than {@code ^} and {@code $}, e.g. {@code \b}</li>
  *   <li>Predefined horizontal and vertical whitespace classes</li>
  *   <li>Unicode classes and java.lang.Character classes, e.g. {@code \p{L}} or

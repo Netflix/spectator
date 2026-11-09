@@ -310,7 +310,7 @@ public class PatternExprTest {
   public void negativeLookaheadTooLongToInline() {
     // Each character adds a level of nesting, so long lookaheads are not inlined
     StringBuilder builder = new StringBuilder();
-    for (int i = 0; i < 10_000; ++i) {
+    for (int i = 0; i < 1_000; ++i) {
       builder.append((char) ('a' + i % 26));
     }
     String lookahead = builder.toString();

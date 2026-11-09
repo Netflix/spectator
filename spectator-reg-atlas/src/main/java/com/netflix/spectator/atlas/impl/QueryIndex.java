@@ -388,7 +388,9 @@ public final class QueryIndex<T> {
    * alternation. A group of one is emitted unchanged (the original clause, so its pattern is not
    * recompiled). The case-sensitivity of a rebuilt alternation is taken from the operator name:
    * {@code :reic} is the only ignore-case regex operator, so a new ignore-case operator with a
-   * different name would need updating here.
+   * different name would need updating here. If the alternation cannot be compiled even though
+   * each value can, e.g. it is longer than the max pattern length, then the original clauses are
+   * kept. The merge is deterministic, so {@code add} and {@code remove} make the same choice.
    */
   private static void emitMergedRegex(
       String key, Map<String, Map<String, Query.KeyQuery>> negRegex, List<Query.KeyQuery> out) {
@@ -399,7 +401,14 @@ public final class QueryIndex<T> {
       } else {
         String name = e.getKey();
         String value = String.join("|^", byValue.keySet());
-        out.add(new Query.InvertedKeyQuery(new Query.Regex(key, value, ":reic".equals(name), name)));
+        Query.Regex merged;
+        try {
+          merged = new Query.Regex(key, value, ":reic".equals(name), name);
+        } catch (IllegalArgumentException ex) {
+          out.addAll(byValue.values());
+          continue;
+        }
+        out.add(new Query.InvertedKeyQuery(merged));
       }
     }
   }
