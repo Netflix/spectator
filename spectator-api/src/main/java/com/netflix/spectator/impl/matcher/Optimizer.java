@@ -217,6 +217,7 @@ final class Optimizer {
         .rewrite(Optimizer::combineAdjacentStart)
         .rewrite(Optimizer::convertRepeatedAnyCharSeqToIndexOf)
         .rewrite(Optimizer::flattenRepeatedUnbounded)
+        .rewrite(Optimizer::expandSmallMinOrMore)
         .rewrite(Optimizer::flattenNestedRepeat)
         .rewriteEnd(Optimizer::removeTrailingMatchAny);
   }
@@ -396,6 +397,12 @@ final class Optimizer {
       if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
         return zm.next();
       }
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      // At least one repetition is required, so it is false if either portion is false
+      MinOrMoreMatcher mm = matcher.as();
+      if (mm.repeated() instanceof FalseMatcher || mm.next() instanceof FalseMatcher) {
+        return FalseMatcher.INSTANCE;
+      }
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher zm = matcher.as();
       if (zm.repeated() instanceof FalseMatcher || zm.next() instanceof FalseMatcher) {
@@ -453,7 +460,7 @@ final class Optimizer {
     } else if (r1.max == Repetition.UNBOUNDED && isBetween(second, fixed, first)) {
       // Only keep the min for the second repetition, the other chars it consumed can be
       // shifted to the fixed chars and the first repetition
-      return unbounded(r1.repeated, r1.min, replace(ms, i, r2.fixedThen(r2.next)));
+      return MinOrMoreMatcher.create(r1.repeated, r1.min, replace(ms, i, r2.fixedThen(r2.next)));
     }
     return matcher;
   }
@@ -560,7 +567,7 @@ final class Optimizer {
         long min = Math.min((long) r1.min + r2.min, Integer.MAX_VALUE);
         if (r1.max == Repetition.UNBOUNDED || r2.max == Repetition.UNBOUNDED) {
           // Fixed number of required chars followed by the unbounded repetition
-          return unbounded(r1.repeated, (int) min, r2.next);
+          return MinOrMoreMatcher.create(r1.repeated, (int) min, r2.next);
         }
         long max = Math.min((long) r1.max + r2.max, Integer.MAX_VALUE);
         return new RepeatMatcher(r1.repeated, (int) min, (int) max, r2.next, false);
@@ -632,17 +639,20 @@ final class Optimizer {
    * as {@code a{0,3}}. The repetition does not retry the empty alternative once another
    * alternative has matched, so without the rewrite {@code (a|){2}ab} would not match "ab".
    * A possessive repetition keeps the first match of each repetition, so it is left as is.
+   * An unbounded repetition, e.g. {@code (a|){2,}}, is the same as {@code a*}.
    */
   static Matcher repeatEmptyLastAlternative(Matcher matcher) {
     if (matcher instanceof RepeatMatcher) {
       RepeatMatcher rm = matcher.as();
-      if (!rm.isPossessive() && rm.repeated() instanceof OrMatcher) {
-        List<Matcher> alts = rm.repeated().<OrMatcher>as().matchers();
-        int last = alts.size() - 1;
-        if (last > 0 && alts.get(last) instanceof TrueMatcher) {
-          Matcher r = OrMatcher.create(alts.subList(0, last));
-          return new RepeatMatcher(r, 0, rm.max(), rm.next(), false);
-        }
+      Matcher r = PatternUtils.withoutEmptyLast(rm.repeated());
+      if (!rm.isPossessive() && r != rm.repeated()) {
+        return new RepeatMatcher(r, 0, rm.max(), rm.next(), false);
+      }
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher mm = matcher.as();
+      Matcher r = PatternUtils.withoutEmptyLast(mm.repeated());
+      if (r != mm.repeated()) {
+        return new ZeroOrMoreMatcher(r, mm.next());
       }
     }
     return matcher;
@@ -688,8 +698,11 @@ final class Optimizer {
     return matcher;
   }
 
-  /** Returns the number of matchers in the tree. */
-  private static int size(Matcher matcher) {
+  /**
+   * Returns the number of matchers in the tree. A matcher that is used more than once, e.g.
+   * the repeated portion of {@code x{n}x*}, is counted each time.
+   */
+  static int size(Matcher matcher) {
     int[] count = {0};
     matcher.rewrite(m -> {
       ++count[0];
@@ -888,7 +901,10 @@ final class Optimizer {
   }
 
   /**
-   * Remove match any pattern at the end, e.g., ({@code "foo.*$" => "foo"}).
+   * Remove match any pattern at the end, e.g., ({@code "foo.*$" => "foo"}). Similarly, the
+   * position after the end is not used, so only the min repetitions are needed for an
+   * unbounded repetition at the end, e.g. {@code "foo(ab|c)+" => "foo(ab|c)"}. Otherwise,
+   * it would consume all repetitions at each position where it is tried.
    */
   static Matcher removeTrailingMatchAny(Matcher matcher) {
     if (matcher instanceof ZeroOrMoreMatcher) {
@@ -896,6 +912,11 @@ final class Optimizer {
       boolean atEnd = zm.next() instanceof TrueMatcher || zm.next() instanceof EndMatcher;
       if (atEnd && zm.repeated() instanceof AnyMatcher) {
         return TrueMatcher.INSTANCE;
+      }
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher mm = matcher.as();
+      if (mm.next() instanceof TrueMatcher) {
+        return mm.min() == 1 ? mm.repeated() : new RepeatMatcher(mm.repeated(), mm.min(), mm.min());
       }
     }
     return matcher;
@@ -1179,7 +1200,15 @@ final class Optimizer {
       // With a min of 0, it can only be flattened if a single repetition can match a single
       // x, e.g. (a{2,}){0,1} does not match "a", but a* would match it.
       if (m.min() > 0 || k <= 1) {
-        return unbounded(x, min, m.next());
+        return MinOrMoreMatcher.create(x, min, m.next());
+      }
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      Matcher x = unboundedRepeated(m.repeated());
+      if (x != null) {
+        int k = unboundedMin(m.repeated());
+        int min = (int) Math.min((long) k * m.min(), Integer.MAX_VALUE);
+        return MinOrMoreMatcher.create(x, min, m.next());
       }
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
@@ -1239,6 +1268,9 @@ final class Optimizer {
     if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher zm = matcher.as();
       return zm.next() instanceof TrueMatcher ? zm.repeated() : null;
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher mm = matcher.as();
+      return mm.next() instanceof TrueMatcher ? mm.repeated() : null;
     } else if (matcher instanceof SeqMatcher) {
       List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
       if (ms.size() == 2) {
@@ -1253,7 +1285,9 @@ final class Optimizer {
 
   /** Returns the minimum number of repetitions for an unbounded repetition. */
   private static int unboundedMin(Matcher matcher) {
-    if (matcher instanceof SeqMatcher) {
+    if (matcher instanceof MinOrMoreMatcher) {
+      return matcher.<MinOrMoreMatcher>as().min();
+    } else if (matcher instanceof SeqMatcher) {
       List<Matcher> ms = matcher.<SeqMatcher>as().matchers();
       return prefixCount(ms.get(0), ms.get(1).<ZeroOrMoreMatcher>as().repeated());
     }
@@ -1276,14 +1310,19 @@ final class Optimizer {
     return -1;
   }
 
-  /** Create a matcher for an unbounded repetition, {@code x{min,}}. */
-  private static Matcher unbounded(Matcher x, int min, Matcher next) {
-    Matcher zeroOrMore = new ZeroOrMoreMatcher(x, next);
-    if (min == 0) {
-      return zeroOrMore;
+  /**
+   * The size of the repeated portion is checked when parsing, but it can get smaller once
+   * optimized, e.g. a literal is parsed as a sequence of chars. If it is small by then, see
+   * {@link MinOrMoreMatcher#create}, use {@code x{n}x*} so the other rules apply, e.g.
+   * {@code ^(?:abcdefghijklmnopq)+} has the prefix {@code abcdefghijklmnopq}.
+   */
+  static Matcher expandSmallMinOrMore(Matcher matcher) {
+    if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      Matcher expanded = MinOrMoreMatcher.create(m.repeated(), m.min(), m.next());
+      return expanded instanceof MinOrMoreMatcher ? matcher : expanded;
     }
-    Matcher prefix = (min == 1) ? x : new RepeatMatcher(x, min, min);
-    return SeqMatcher.create(prefix, zeroOrMore);
+    return matcher;
   }
 
   /**

@@ -113,6 +113,9 @@ final class CharSet {
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       return consumed(m.repeated()).union(consumed(m.next()));
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      return consumed(m.repeated()).union(consumed(m.next()));
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
       return consumed(m.repeated()).union(consumed(m.next()));

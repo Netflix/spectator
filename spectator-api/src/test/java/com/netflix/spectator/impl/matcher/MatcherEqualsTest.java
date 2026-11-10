@@ -98,6 +98,14 @@ public class MatcherEqualsTest {
   }
 
   @Test
+  public void minOrMore() {
+    EqualsVerifier
+        .forClass(MinOrMoreMatcher.class)
+        .withNonnullFields("repeated", "next")
+        .verify();
+  }
+
+  @Test
   public void repeat() {
     EqualsVerifier
         .forClass(RepeatMatcher.class)

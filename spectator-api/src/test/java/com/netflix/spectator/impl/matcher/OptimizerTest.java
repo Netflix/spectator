@@ -441,6 +441,18 @@ public class OptimizerTest {
   }
 
   @Test
+  public void removeTrailingMatchAny_MinOrMore() {
+    // Only the min repetitions are needed at the end: x+ => x, x{3,} => x{3}
+    Matcher x = new CharSeqMatcher("ab");
+    Matcher plus = new MinOrMoreMatcher(x, 1, TrueMatcher.INSTANCE);
+    Assertions.assertEquals(x, Optimizer.removeTrailingMatchAny(plus));
+    Matcher three = new MinOrMoreMatcher(x, 3, TrueMatcher.INSTANCE);
+    Assertions.assertEquals(new RepeatMatcher(x, 3, 3), Optimizer.removeTrailingMatchAny(three));
+    Matcher end = new MinOrMoreMatcher(x, 1, EndMatcher.INSTANCE);
+    Assertions.assertSame(end, Optimizer.removeTrailingMatchAny(end));
+  }
+
+  @Test
   public void removeSequentialMatchAny() {
     Matcher input = new ZeroOrMoreMatcher(
         AnyMatcher.INSTANCE,
