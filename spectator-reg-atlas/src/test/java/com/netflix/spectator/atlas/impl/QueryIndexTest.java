@@ -835,6 +835,28 @@ public class QueryIndexTest {
   }
 
   @Test
+  public void mergeNegatedRegexTooLongKeepsClauses() {
+    // Each value is supported, but the merged alternation is longer than the max pattern
+    // length, so the clauses are kept separate rather than failing to add the query.
+    List<String> values = new ArrayList<>();
+    StringBuilder expr = new StringBuilder("name,cpu,:eq");
+    for (int i = 0; i < 25; ++i) {
+      StringBuilder v = new StringBuilder("host-" + i + "-");
+      while (v.length() < 90) {
+        v.append('x');
+      }
+      values.add(v.toString());
+      expr.append(",nf.node,").append(v).append(",:re,:not,:and");
+    }
+    Query q = Parser.parseQuery(expr.toString());
+    QueryIndex<Query> idx = QueryIndex.newInstance(cacheSupplier).add(q, q);
+    assertEquals(list(q), idx, id("cpu", "nf.node", "host-7"));
+    assertEquals(Collections.emptyList(), idx, id("cpu", "nf.node", values.get(7) + "-suffix"));
+    Assertions.assertTrue(idx.remove(q, q));
+    Assertions.assertTrue(idx.isEmpty());
+  }
+
+  @Test
   public void mergeNegatedRegexTopLevelAlternation() {
     // A value with a top-level '|' must keep its own anchoring after merging (joined via "|^").
     Query q = Parser.parseQuery("nf.cluster,a|b,:re,:not,nf.cluster,foo,:re,:not,:and");

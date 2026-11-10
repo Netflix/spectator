@@ -321,15 +321,54 @@ public class PatternMatcherTest extends AbstractPatternMatcherTest {
 
   @Test
   public void charClassLongIntersectionChain() {
-    // Each intersection with a nested class should not need another stack frame
-    StringBuilder builder = new StringBuilder("^[a-c");
-    for (int i = 0; i < 20_000; ++i) {
-      builder.append("&&[ab]");
-    }
-    builder.append("]$");
-    PatternMatcher m = PatternMatcher.compile(builder.toString());
+    // Each intersection with a nested class should not need another stack frame. The
+    // number for compile is limited by the max pattern length, so the parser is checked
+    // directly with a chain that would overflow the stack if each one used a frame.
+    PatternMatcher m = PatternMatcher.compile("^[a-c" + repeat("&&[ab]", 200) + "]$");
     Assertions.assertTrue(m.matches("a"));
     Assertions.assertFalse(m.matches("c"));
+    Assertions.assertNotNull(Parser.parse("[a-c" + repeat("&&[ab]", 20_000) + "]", 0));
+  }
+
+  @Test
+  public void maxPatternLength() {
+    int max = PatternUtils.MAX_PATTERN_LENGTH;
+    Assertions.assertTrue(PatternMatcher.compile(repeat("a", max)).matches(repeat("a", max)));
+    IllegalArgumentException e = Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile(repeat("a", max + 1)));
+    Assertions.assertEquals(
+        "unsupported: pattern length 1537 is more than the max of 1536", e.getMessage());
+
+    // A leading (?i) is not counted, so the flag is the same as calling ignoreCase()
+    String p = repeat("a", max);
+    Assertions.assertEquals(PatternMatcher.compile(p).ignoreCase(),
+        PatternMatcher.compile("(?i)" + p));
+    Assertions.assertTrue(PatternMatcher.compile("(?i)" + p).matches(repeat("A", max)));
+    Assertions.assertThrows(IllegalArgumentException.class,
+        () -> PatternMatcher.compile("(?i)" + repeat("a", max + 1)));
+
+    // Patterns that would use a stack frame for each nested group or repetition throw
+    // rather than overflowing the stack
+    String[] patterns = {
+        repeat("(", 2500) + "a" + repeat(")", 2500),
+        repeat("(?=", 2500) + "a" + repeat(")", 2500),
+        repeat("[", 2500) + "a" + repeat("]", 2500),
+        repeat("a+b", 2500),
+        repeat("[ab]*c", 2500)
+    };
+    for (String pattern : patterns) {
+      Assertions.assertThrows(IllegalArgumentException.class,
+          () -> PatternMatcher.compile(pattern));
+    }
+
+    // Up to the max, the nested groups and repetitions work
+    int n = (max - 1) / 2;
+    PatternMatcher nested = PatternMatcher.compile(repeat("(", n) + "a" + repeat(")", n));
+    Assertions.assertTrue(nested.matches("a"));
+    Assertions.assertNotNull(nested.toPatternExpr(50));
+    PatternMatcher reps = PatternMatcher.compile(repeat("a+b", max / 3));
+    Assertions.assertTrue(reps.matches(repeat("ab", max / 3)));
+    Assertions.assertNotNull(reps.toString());
   }
 
   @Test

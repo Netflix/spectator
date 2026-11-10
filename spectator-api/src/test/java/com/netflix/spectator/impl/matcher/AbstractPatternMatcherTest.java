@@ -1429,7 +1429,7 @@ public abstract class AbstractPatternMatcherTest {
     }
   }
 
-  private static String repeat(String s, int n) {
+  protected static String repeat(String s, int n) {
     StringBuilder builder = new StringBuilder();
     for (int i = 0; i < n; ++i) {
       builder.append(s);

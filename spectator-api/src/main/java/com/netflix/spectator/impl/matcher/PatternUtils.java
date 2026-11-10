@@ -105,12 +105,29 @@ public final class PatternUtils {
   }
 
   /**
+   * Max length of a pattern. The parser and some operations on the matcher, e.g.
+   * {@link PatternMatcher#toPatternExpr(int)}, use a stack frame for each nested group or
+   * repetition, so a long pattern could fail with a {@link StackOverflowError}. The limit
+   * makes that unlikely rather than impossible, as the stack used depends on the JVM, the JIT
+   * and the depth of the caller. Real patterns are usually much shorter. A leading
+   * {@code (?i)} flag is not counted, so the limit is the same as for
+   * {@link PatternMatcher#ignoreCase()}, which does the same work on the compiled matcher.
+   */
+  static final int MAX_PATTERN_LENGTH = 1536;
+
+  /**
    * Compile a pattern string and return a matcher that can be used to check if string values
    * match the pattern. Pattern matchers are can be reused many times and are thread safe.
    */
   public static PatternMatcher compile(String pattern) {
     boolean ignoreCase = pattern.startsWith("(?i)");
     int offset = ignoreCase ? 4 : 0;
+    int length = pattern.length() - offset;
+    if (length > MAX_PATTERN_LENGTH) {
+      // The pattern is not included in the message as it is long
+      throw new IllegalArgumentException("unsupported: pattern length " + length
+          + " is more than the max of " + MAX_PATTERN_LENGTH);
+    }
     Matcher m = Parser.parse(pattern, offset);
     if (ignoreCase) {
       // Rewrite before optimizing so the pattern only needs to be optimized once. The
