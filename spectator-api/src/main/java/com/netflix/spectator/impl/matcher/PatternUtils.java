@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
@@ -332,6 +333,12 @@ public final class PatternUtils {
    * number of ways. If the rest of the pattern always matches, e.g. a trailing {@code \\w*},
    * then the first attempt to reach it is a match and it is not counted.
    *
+   * <p>A chain within a repeated portion that is not a single set of chars is tried again for
+   * each repetition, and a repetition within it can scan past the chars it ends up consuming,
+   * e.g. {@code ((.+b++)?b)*}. So the cost of a chain within one repetition is also multiplied
+   * by the max number of repetitions. That allows at most one unbounded repetition in a chain
+   * within a repeated portion, e.g. {@code ^(\\w+-?\\w+,)+} is not supported.
+   *
    * <p>Adjacent repetitions where one set of chars contains the other are simplified by the
    * optimizer, e.g. {@code \\w+\\w+} is a single repetition. A pattern that does not start
    * with {@code ^} can match at any position, so it is the same as a pattern starting with
@@ -343,9 +350,9 @@ public final class PatternUtils {
    *     Pattern to include in the error message.
    */
   static void checkChainedRepetitions(Matcher matcher, String pattern) {
-    double[] max = new double[1];
+    ChainCost max = new ChainCost();
     chains(matcher, Collections.emptyMap(), max, true);
-    if (max[0] > MAX_CHAIN_COST) {
+    if (Math.max(max.max, max.loops) > MAX_CHAIN_COST) {
       throw new IllegalArgumentException("unsupported: too many ways to match chained "
           + "repetitions that can match the same chars\n" + pattern);
     }
@@ -363,7 +370,7 @@ public final class PatternUtils {
    *     Updated with the max estimated number of ways to match a chain.
    */
   private static Map<CharSet, Double> chains(
-      Matcher matcher, Map<CharSet, Double> chains, double[] max, boolean last) {
+      Matcher matcher, Map<CharSet, Double> chains, ChainCost max, boolean last) {
     // The elements of a sequence and the portion after a repetition are processed in a loop
     // rather than recursively, otherwise a long pattern could overflow the stack. Each entry
     // also tracks if the rest of the pattern after it always matches.
@@ -400,7 +407,8 @@ public final class PatternUtils {
           double work = last(rm.next(), isLast)
               ? 1.0
               : Math.min((double) rm.max() - rm.min() + 1.0, TYPICAL_LENGTH);
-          result = repetitionChains(rm.repeated(), rm.min(), 1.0, work, result, max);
+          double repeats = Math.min((double) rm.max(), TYPICAL_LENGTH);
+          result = repetitionChains(rm.repeated(), rm.min(), 1.0, work, repeats, result, max);
         } else {
           result = loopChains(rm.repeated(), rm.min(), rm.max(), rm.next(), isLast, result, max);
         }
@@ -415,7 +423,7 @@ public final class PatternUtils {
         boolean tries = !done && !failsAtLaterPositions(next);
         double ways = tries ? TYPICAL_LENGTH : 1.0;
         double work = done ? 1.0 : TYPICAL_LENGTH;
-        result = repetitionChains(AnyMatcher.INSTANCE, 0, ways, work, result, max);
+        result = repetitionChains(AnyMatcher.INSTANCE, 0, ways, work, 1.0, result, max);
         result = filterChains(result, im.pattern(), im.isIgnoreCase());
         pending.push(next);
         pendingLast.push(isLast);
@@ -456,24 +464,25 @@ public final class PatternUtils {
       Matcher next,
       boolean isLast,
       Map<CharSet, Double> chains,
-      double[] maxCost) {
+      ChainCost maxCost) {
     double range = max < 0 ? TYPICAL_LENGTH : Math.min((double) max - min + 1.0, TYPICAL_LENGTH);
+    double repeats = max < 0 ? TYPICAL_LENGTH : Math.min((double) max, TYPICAL_LENGTH);
     if (last(next, isLast)) {
       // If the rest always matches, then the first attempt to reach it is a match, so the
       // repetition is not tried again
-      return repetitionChains(repeated, min, 1.0, 1.0, chains, maxCost);
+      return repetitionChains(repeated, min, 1.0, 1.0, repeats, chains, maxCost);
     }
     // A repetition of a single set of chars can only stop at one position if the next portion
     // cannot start with one of those chars. Each attempt still consumes the chars.
     CharSet set = CharSet.of(repeated);
     boolean oneEnd = set != null && !firstChars(next, CharSet.ANY).overlaps(set);
     double ways = oneEnd ? 1.0 : range;
-    return repetitionChains(repeated, min, ways, range, chains, maxCost);
+    return repetitionChains(repeated, min, ways, range, repeats, chains, maxCost);
   }
 
   /** Returns the chains that can continue after a matcher that is not a repetition. */
   private static Map<CharSet, Double> elementChains(
-      Matcher matcher, Map<CharSet, Double> chains, double[] max, boolean isLast) {
+      Matcher matcher, Map<CharSet, Double> chains, ChainCost max, boolean isLast) {
     CharSet single = CharSet.of(matcher);
     if (single != null) {
       return filterChains(chains, single);
@@ -540,6 +549,8 @@ public final class PatternUtils {
    * @param work
    *     Estimated cost of each attempt to match the repetition, at least the number of
    *     chars it could consume.
+   * @param repeats
+   *     Estimated max number of repetitions.
    * @param chains
    *     Chains that can continue at the start of the repetition.
    * @param max
@@ -550,15 +561,17 @@ public final class PatternUtils {
       int min,
       double ways,
       double work,
+      double repeats,
       Map<CharSet, Double> chains,
-      double[] max) {
+      ChainCost max) {
     CharSet set = CharSet.of(repeated);
     boolean single = set != null;
     Map<CharSet, Double> inner = Collections.emptyMap();
     if (!single) {
       // Chains continue into the repeated portion, then use all chars it could consume. The
-      // repetitions consume different chars, so the ways to match within the repeated
-      // portion are not multiplied by the number of repetitions.
+      // repetitions consume different chars, so the ways to match a chain that continues
+      // through the repeated portion are not multiplied by the number of repetitions. A
+      // chain within one repetition is checked separately, see bodyCost.
       inner = chains(repeated, chains, max, false);
       set = CharSet.consumed(repeated);
     }
@@ -572,7 +585,14 @@ public final class PatternUtils {
     for (double value : inner.values()) {
       cost = Math.max(cost, value);
     }
-    max[0] = Math.max(max[0], Math.max(cost, prev * work));
+    max.max = Math.max(max.max, Math.max(cost, prev * work));
+    if (!single && repeats > 1.0) {
+      // Each repetition is tried after the ones before it, and a repetition within it can
+      // scan past the chars it ends up consuming, e.g. the .+ in ((.+b++)?b)*. So the cost
+      // of one repetition on its own is multiplied by the number of repetitions. Nested
+      // repetitions consume the same chars, so it is not multiplied again for an outer one.
+      max.loops = Math.max(max.loops, repeats * bodyCost(repeated, max));
+    }
     Map<CharSet, Double> result = new HashMap<>(inner);
     result.put(set, cost);
     if (min == 0) {
@@ -584,6 +604,45 @@ public final class PatternUtils {
       mergeChains(result, filterChains(chains, set));
     }
     return result;
+  }
+
+  /**
+   * Returns the max estimated cost of matching a chain within one repetition of the
+   * repeated portion, without chains from before it. The cost for repetitions of nested
+   * repetitions is not included, it is checked when they are visited. It only depends on the
+   * repeated portion, so it is computed once for each and nested repetitions are not checked
+   * again.
+   */
+  private static double bodyCost(Matcher repeated, ChainCost max) {
+    Double cost = max.bodies.get(repeated);
+    if (cost == null) {
+      ChainCost body = new ChainCost(max.bodies);
+      chains(repeated, Collections.emptyMap(), body, false);
+      cost = body.max;
+      max.bodies.put(repeated, cost);
+    }
+    return cost;
+  }
+
+  /** Max estimated cost of matching a chain, see {@link #checkChainedRepetitions}. */
+  private static final class ChainCost {
+
+    /** Repeated portions that have been checked, see {@link #bodyCost}. */
+    private final Map<Matcher, Double> bodies;
+
+    /** Max estimated cost of matching a chain so far. */
+    private double max;
+
+    /** Max estimated cost of a repetition of a portion with a chain, see {@link #bodyCost}. */
+    private double loops;
+
+    ChainCost() {
+      this(new IdentityHashMap<>());
+    }
+
+    ChainCost(Map<Matcher, Double> bodies) {
+      this.bodies = bodies;
+    }
   }
 
   /** Returns the chains that can continue after the string. */

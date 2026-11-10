@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Timeout;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -1476,7 +1477,16 @@ public abstract class AbstractPatternMatcherTest {
         // Only one way to match the last repetition, but it consumes the chars for each attempt,
         // including a repetition at the end of a lookahead
         "^\\w*-?\\w*-?\\w*+!", "^\\w*-?\\w*-?[a-z]*\\d!",
-        "(?=.{2,}[b-d](?!b+))-{0,10}[ab]{1,2}[^a]{0,3}$"
+        "(?=.{2,}[b-d](?!b+))-{0,10}[ab]{1,2}[^a]{0,3}$",
+        // A repetition of a portion with a chain, each repetition can scan past the chars it
+        // consumes, e.g. for ((.+b++)?b)* on "bbb...", so the cost of the chain is multiplied
+        // by the number of repetitions. Found by fuzzing.
+        "((.+b++)?b)*", "((.+b++)?b){0,300}", "^(b*?(([ab][ab]b|[ab]+?)*.*+a|(b){1,3})*)",
+        "^(a*?((b{1,3})++a{0,2}a{2,}+|a+)b{1,2}|[ab]{0,2})*?.*?$",
+        "^(a{2}+((.+?a*+)[ab]a{0,2}+)*?(b[ab]?)*?|((.+b++)?[ab]{1,2}|[ab]{2}+([ab]+){1,3})*?)??",
+        // The same for a chain in a lookahead within a repetition that is followed by more of
+        // the pattern, including a possessive repetition
+        "^(?:(?!\\w+-?\\w+!)a)*b", "^(?:(?!\\w+-?\\w+!)a)*+b"
     };
     for (String p : patterns) {
       testUnsupported(p, CHAIN_UNSUPPORTED);
@@ -1499,7 +1509,10 @@ public abstract class AbstractPatternMatcherTest {
         // A lookahead after a repetition that always ends at the same position
         "^(?:[a-z]+-)*(?=[a-z])",
         // A repetition that can only stop before the separator is not counted as many ways
-        "^\\w+(?:-\\w+)*-\\w+$", "^\\d+(?:,\\d+)*,\\d+$", "^[a-z0-9]+(?:-[a-z0-9]+)*-v\\d+$"
+        "^\\w+(?:-\\w+)*-\\w+$", "^\\d+(?:,\\d+)*,\\d+$", "^[a-z0-9]+(?:-[a-z0-9]+)*-v\\d+$",
+        // A repetition of a portion with a single repetition, or nested repetitions, each
+        // repetition consumes the chars it scans
+        "^(?:\\w+\\.)*\\w+$", "^(?:.+b)*", "(?:a|(?:a|(?:a|(?:a|)*)*)*)*"
     };
     String[] values = {
         "", "a", "ab", "a-b", "a-b-c", "a-b-c-d", "ab12cd", "1.2.3", "123456789", "aws_x_v1",
@@ -1511,6 +1524,16 @@ public abstract class AbstractPatternMatcherTest {
         testRE(p, v);
       }
     }
+  }
+
+  @Test
+  public void chainedRepetitionsNested() {
+    // The cost of a chain within a repeated portion is computed once for each portion,
+    // otherwise the check would be exponential for nested repetitions
+    String pattern = "^" + repeat("(?:x|", 40) + "a.b" + repeat(")*", 40);
+    Assertions.assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+      PatternMatcher.compile(pattern);
+    });
   }
 
   @Test

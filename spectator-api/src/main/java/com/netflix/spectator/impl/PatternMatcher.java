@@ -85,7 +85,10 @@ import java.util.SortedSet;
  *       time for a string that does not match grows with the length to the power of the
  *       number of repetitions. Two unbounded repetitions in a chain are supported, e.g.
  *       {@code ^\w+-?\w+$}, but not three, e.g. {@code ^\w+-?\w+-?\w+$}. Adjacent
- *       repetitions of the same chars are combined, e.g. {@code \w+\w+} is supported.</li>
+ *       repetitions of the same chars are combined, e.g. {@code \w+\w+} is supported. A
+ *       chain within a repeated group is tried again for each repetition, so only one
+ *       unbounded repetition is supported in that chain, e.g. {@code ^(\w+-?\w+,)+} is not
+ *       supported.</li>
  * </ul>
  *
  * <p><b>This class is an internal implementation detail only intended for use within spectator.
