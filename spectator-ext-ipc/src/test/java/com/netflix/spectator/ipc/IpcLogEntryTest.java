@@ -265,6 +265,32 @@ public class IpcLogEntryTest {
   }
 
   @Test
+  public void parseHttpMethod() {
+    Assertions.assertEquals(IpcMethod.get, IpcLogEntry.parseHttpMethod("GET"));
+    Assertions.assertEquals(IpcMethod.get, IpcLogEntry.parseHttpMethod("get"));
+    Assertions.assertEquals(IpcMethod.get, IpcLogEntry.parseHttpMethod("Get"));
+    Assertions.assertEquals(IpcMethod.post, IpcLogEntry.parseHttpMethod("POST"));
+    Assertions.assertEquals(IpcMethod.put, IpcLogEntry.parseHttpMethod("PUT"));
+    Assertions.assertEquals(IpcMethod.patch, IpcLogEntry.parseHttpMethod("PATCH"));
+    Assertions.assertEquals(IpcMethod.delete, IpcLogEntry.parseHttpMethod("DELETE"));
+    Assertions.assertEquals(IpcMethod.options, IpcLogEntry.parseHttpMethod("OPTIONS"));
+    Assertions.assertEquals(IpcMethod.query, IpcLogEntry.parseHttpMethod("QUERY"));
+    Assertions.assertEquals(IpcMethod.unknown, IpcLogEntry.parseHttpMethod("HEAD"));
+    Assertions.assertEquals(IpcMethod.unknown, IpcLogEntry.parseHttpMethod("TRACE"));
+    Assertions.assertEquals(IpcMethod.unknown, IpcLogEntry.parseHttpMethod("CONNECT"));
+    Assertions.assertEquals(IpcMethod.unknown, IpcLogEntry.parseHttpMethod(""));
+    Assertions.assertEquals(IpcMethod.unknown, IpcLogEntry.parseHttpMethod(null));
+  }
+
+  @Test
+  public void parseHttpMethodAllValues() {
+    for (IpcMethod m : IpcMethod.values()) {
+      Assertions.assertEquals(m, IpcLogEntry.parseHttpMethod(m.name()));
+      Assertions.assertEquals(m, IpcLogEntry.parseHttpMethod(m.name().toUpperCase(Locale.US)));
+    }
+  }
+
+  @Test
   public void clientNode() {
     String expected = "i-12345";
     String actual = (String) entry
