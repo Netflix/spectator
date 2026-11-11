@@ -1371,7 +1371,7 @@ public abstract class AbstractPatternMatcherTest {
         // A lookahead after the repetition could pass for an earlier end of the repetition
         "^(?:,\\d+)*(?=\\d)", "^(?:,\\d+){1,2}(?=\\d)", "^(?:,\\d+)*(?!,)",
         // Optional portion followed by more of the pattern, found by fuzzing
-        "^(.{1,2}[ab])?b((bb*?)*|a+?(([ab]{2}.+?[ab]{1,2}){2,}(a+[ab]??a|[ab])*([ab]+|[ab]{2,})*?)+?.)?"
+        "^(.{1,2}[ab])?b((bb*?)*|a+?(([ab]{2}.+?[ab]{1,2}){2,}(a+[ab]??a|[ab])*([ab]+|[ab]{2,})*?)+?.)?$"
     };
     for (String p : patterns) {
       testUnsupported(p, REPEAT_UNSUPPORTED);
@@ -1486,7 +1486,9 @@ public abstract class AbstractPatternMatcherTest {
         "^(a{2}+((.+?a*+)[ab]a{0,2}+)*?(b[ab]?)*?|((.+b++)?[ab]{1,2}|[ab]{2}+([ab]+){1,3})*?)??",
         // The same for a chain in a lookahead within a repetition that is followed by more of
         // the pattern, including a possessive repetition
-        "^(?:(?!\\w+-?\\w+!)a)*b", "^(?:(?!\\w+-?\\w+!)a)*+b"
+        "^(?:(?!\\w+-?\\w+!)a)*b", "^(?:(?!\\w+-?\\w+!)a)*+b",
+        // Optional portion followed by more of the pattern, found by fuzzing
+        "^(.{1,2}[ab])?b((bb*?)*|a+?(([ab]{2}.+?[ab]{1,2}){2,}(a+[ab]??a|[ab])*([ab]+|[ab]{2,})*?)+?.)?"
     };
     for (String p : patterns) {
       testUnsupported(p, CHAIN_UNSUPPORTED);
@@ -1534,6 +1536,97 @@ public abstract class AbstractPatternMatcherTest {
     Assertions.assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
       PatternMatcher.compile(pattern);
     });
+  }
+
+  /** Alternatives that are still large once optimized, so x+ is not copied as x{n}x*. */
+  private static final String LARGE_ALTS =
+      "abc|def|ghi|jkl|mno|pqr|stu|vwx|yza|bcd|efg|hij|klm|nop|qrs|tuv|wxy";
+
+  @Test
+  public void minOrMoreLargeRepeatedPortion() {
+    // A large repeated portion is only referenced once rather than copied for x{n}x*
+    String x = "(?:" + LARGE_ALTS + ")";
+    String[] patterns = {
+        "^(?:" + x + "-)+x$", "^(?:" + x + "-){2,}x$", "(?:" + x + "-)+x", "^(?:" + x + "-){3,}",
+        "^(?:(?:" + x + "-)+)++x", "^(?:(?:" + x + "-){2,})++x",
+        // Large count, it cannot be used with RE2
+        "^(?:" + x + "-){1001,}x",
+        // Nothing can follow the end
+        "^(?:" + x + "-)+$x"
+    };
+    String[] values = {
+        "", "x", "abc-x", "abc-def-x", "abc-def-ghi-x", "abc-def-ghi-jkl-", "abc-de-x",
+        "_abc-mno-x_", "abc-def"
+    };
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void minOrMoreTrailing() {
+    // Only the first repetition is needed at the end, see Optimizer.removeTrailingMatchAny.
+    // Trying all of them at each position took time growing with the cube of the length.
+    // Found by fuzzing.
+    String p = "((a*?b{1,2}.?)b{1,2}((.[ab]++|b*+b{0,2})*?)?|a+?a+b{1,3})+?";
+    String[] values = {"", "a", "b", "ab", "bb", "aab", "abba", "babb", "ccaabcc"};
+    for (String v : values) {
+      testRE(p, v);
+    }
+  }
+
+  @Test
+  public void minOrMoreEmptyLastAlternative() {
+    // The empty alternative can be used for all of the required repetitions, so it is the
+    // same as x*, e.g. (a|){2,} is the same as a*
+    String[] patterns = {"^(?:" + LARGE_ALTS + "|)+abc", "^(?:" + LARGE_ALTS + "|){2,}abc"};
+    String[] values = {"", "abc", "defabc", "defghiabc", "deabc", "xabc", "abcabc", "def"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void minOrMoreSingleCharAlternatives() {
+    // Large group of single chars is the same as a class, so the rules for single chars
+    // apply. The redundant repetition is removed, and for the nested repetition, the chars
+    // cannot be followed by one of them, so the end is known.
+    String x = "(?:a|b|c|d|e|f|g|h|i|j|k|l|m|n|o|p|q)";
+    String[] patterns = {"^" + x + "+[a-z]*x", "^(?:" + x + "{2,}-)+x", "^(?:" + x + "{2,}-){2,}x"};
+    String[] values = {"", "x", "ax", "abx", "ab-x", "ab-cd-x", "a-x", "ab-c-x", "ab-cd-", "zzx"};
+    for (String p : patterns) {
+      for (String v : values) {
+        testRE(p, v);
+      }
+    }
+  }
+
+  @Test
+  public void minOrMoreLiteral() {
+    // Large when parsed as a sequence of chars, but a single literal once optimized
+    String pattern = "^(?:abcdefghijklmnopq)+";
+    Assertions.assertEquals("abcdefghijklmnopq", PatternMatcher.compile(pattern).prefix());
+    String[] values = {"", "abcdefghijklmnopq", "abcdefghijklmnopqabc", "abcdefghijklmnop"};
+    for (String v : values) {
+      testRE(pattern, v);
+    }
+  }
+
+  @Test
+  public void minOrMoreNested() {
+    // Each nested x+ or x{n,} would double the size of the matcher if the repeated portion
+    // was copied, making the compile time exponential
+    String[] quantifiers = {"b)+", "b){2,}"};
+    for (String q : quantifiers) {
+      String pattern = "^" + repeat("(?:a", 40) + "x" + repeat(q, 40);
+      Assertions.assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+        testUnsupported(pattern, REPEAT_UNSUPPORTED);
+      });
+    }
   }
 
   @Test

@@ -884,14 +884,8 @@ final class Parser {
     if (possessive) {
       return possessive(matcher, min, max, hasReluctant);
     } else if (unbounded) {
-      // No upper bound, treat as min repetitions followed by zero or more. This is
-      // consistent with how * and + are handled.
-      Matcher zeroOrMore = new ZeroOrMoreMatcher(matcher, term());
-      if (min == 0) {
-        return zeroOrMore;
-      }
-      Matcher prefix = (min == 1) ? matcher : new RepeatMatcher(matcher, min, min);
-      return SeqMatcher.create(prefix, zeroOrMore);
+      // No upper bound, consistent with how * and + are handled
+      return MinOrMoreMatcher.create(matcher, min, term());
     }
 
     // The rest of the term is merged in by the optimizer so that it is checked after each
@@ -957,6 +951,9 @@ final class Parser {
       return true;
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
+      return m.next() instanceof TrueMatcher && PatternUtils.isFixedLength(m.repeated());
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
       return m.next() instanceof TrueMatcher && PatternUtils.isFixedLength(m.repeated());
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
@@ -1087,7 +1084,7 @@ final class Parser {
         return possessive(matcher, 0, Integer.MAX_VALUE, hasReluctant);
       case "+":
       case "+?":
-        return SeqMatcher.create(matcher, new ZeroOrMoreMatcher(matcher, term()));
+        return MinOrMoreMatcher.create(matcher, 1, term());
       case "++":
         return possessive(matcher, 1, Integer.MAX_VALUE, hasReluctant);
       default:

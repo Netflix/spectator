@@ -248,6 +248,18 @@ public final class PatternUtils {
       return hasKnownEnd(r, m.next(), endUsed)
           && sameAsJava(r, true)
           && sameAsJava(m.next(), endUsed);
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      if (!endUsed && m.min() == 1 && m.next() instanceof TrueMatcher) {
+        // Only the first repetition needs to match
+        return sameAsJava(m.repeated(), false);
+      }
+      // Like a repetition with a min, a repetition that matched a non-empty alternative is
+      // never retried with the empty one, so the empty alternative is kept
+      Matcher r = m.repeated();
+      return hasKnownEnd(r, m.next(), endUsed)
+          && sameAsJava(r, true)
+          && sameAsJava(m.next(), endUsed);
     } else if (matcher instanceof ZeroOrOneMatcher) {
       // Checks the next portion after the repeated portion and without it, but does not
       // backtrack into the repeated portion
@@ -382,6 +394,7 @@ public final class PatternUtils {
     while (!pending.isEmpty()) {
       Matcher m = pending.pop();
       boolean isLast = pendingLast.pop();
+      Matcher next = null;
       if (m instanceof SeqMatcher) {
         List<Matcher> ms = m.<SeqMatcher>as().matchers();
         boolean restLast = isLast;
@@ -393,13 +406,15 @@ public final class PatternUtils {
       } else if (m instanceof ZeroOrOneMatcher) {
         ZeroOrOneMatcher zm = m.as();
         result = loopChains(zm.repeated(), 0, 1, zm.next(), isLast, result, max);
-        pending.push(zm.next());
-        pendingLast.push(isLast);
+        next = zm.next();
       } else if (m instanceof ZeroOrMoreMatcher) {
         ZeroOrMoreMatcher zm = m.as();
         result = loopChains(zm.repeated(), 0, -1, zm.next(), isLast, result, max);
-        pending.push(zm.next());
-        pendingLast.push(isLast);
+        next = zm.next();
+      } else if (m instanceof MinOrMoreMatcher) {
+        MinOrMoreMatcher mm = m.as();
+        result = loopChains(mm.repeated(), mm.min(), -1, mm.next(), isLast, result, max);
+        next = mm.next();
       } else if (m instanceof RepeatMatcher) {
         RepeatMatcher rm = m.as();
         if (rm.isPossessive()) {
@@ -412,23 +427,25 @@ public final class PatternUtils {
         } else {
           result = loopChains(rm.repeated(), rm.min(), rm.max(), rm.next(), isLast, result, max);
         }
-        pending.push(rm.next());
-        pendingLast.push(isLast);
+        next = rm.next();
       } else if (m instanceof IndexOfMatcher) {
         // Same as .* followed by the substring, but it only tries the first match of the
         // substring if that is enough, and a substring at the end is checked directly
         IndexOfMatcher im = m.as();
-        Matcher next = im.next();
+        next = im.next();
         boolean done = last(next, isLast) || next instanceof EndMatcher;
         boolean tries = !done && !failsAtLaterPositions(next);
         double ways = tries ? TYPICAL_LENGTH : 1.0;
         double work = done ? 1.0 : TYPICAL_LENGTH;
         result = repetitionChains(AnyMatcher.INSTANCE, 0, ways, work, 1.0, result, max);
         result = filterChains(result, im.pattern(), im.isIgnoreCase());
-        pending.push(next);
-        pendingLast.push(isLast);
       } else {
         result = elementChains(m, result, max, isLast);
+      }
+      if (next != null) {
+        // The portion after a repetition is visited next, the chains continue into it
+        pending.push(next);
+        pendingLast.push(isLast);
       }
     }
     return result;
@@ -803,19 +820,25 @@ public final class PatternUtils {
       return set;
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
-      CharSet after = firstChars(m.next(), follow);
-      return firstChars(m.repeated(), after).union(after);
+      return firstChars(m.repeated(), 0, m.next(), follow);
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      return firstChars(m.repeated(), m.min(), m.next(), follow);
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
-      CharSet after = firstChars(m.next(), follow);
-      return firstChars(m.repeated(), after).union(after);
+      return firstChars(m.repeated(), 0, m.next(), follow);
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
-      CharSet after = firstChars(m.next(), follow);
-      CharSet first = firstChars(m.repeated(), after);
-      return m.min() > 0 ? first : first.union(after);
+      return firstChars(m.repeated(), m.min(), m.next(), follow);
     }
     return CharSet.ANY;
+  }
+
+  /** Returns the first chars for a repetition with a min count followed by the next portion. */
+  private static CharSet firstChars(Matcher repeated, int min, Matcher next, CharSet follow) {
+    CharSet after = firstChars(next, follow);
+    CharSet first = firstChars(repeated, after);
+    return min > 0 ? first : first.union(after);
   }
 
   private static CharSet firstChar(String str, boolean ignoreCase, CharSet follow) {
@@ -838,7 +861,7 @@ public final class PatternUtils {
    * would match empty at the same position. That is not the case if the empty alternative
    * is first, e.g. {@code (|a)+} would stop before trying {@code a}.
    */
-  private static Matcher withoutEmptyLast(Matcher repeated) {
+  static Matcher withoutEmptyLast(Matcher repeated) {
     if (repeated instanceof OrMatcher) {
       List<Matcher> alts = repeated.<OrMatcher>as().matchers();
       int last = alts.size() - 1;
@@ -1117,6 +1140,12 @@ public final class PatternUtils {
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       return map(expandOrClauses(m.next(), max), n -> new ZeroOrMoreMatcher(m.repeated(), n), max);
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      return map(
+          expandOrClauses(m.next(), max),
+          n -> new MinOrMoreMatcher(m.repeated(), m.min(), n),
+          max);
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
       return map(
@@ -1261,6 +1290,10 @@ public final class PatternUtils {
       ZeroOrMoreMatcher m = matcher.as();
       Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
       return next == m.next() ? m : new ZeroOrMoreMatcher(m.repeated(), next);
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
+      return next == m.next() ? m : new MinOrMoreMatcher(m.repeated(), m.min(), next);
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
       Matcher next = inlineNegativeLookahead(m.next(), false, restAny);
@@ -1561,33 +1594,28 @@ public final class PatternUtils {
         return;
       }
       clearAndRewriteNextLookahead(m.next(), results, false, restAny);
-      for (int i = 0; i < results.length; ++i) {
-        if (results[i] != null) {
-          results[i] = new ZeroOrMoreMatcher(m.repeated(), results[i]);
-        }
+      wrapResults(results, r -> new ZeroOrMoreMatcher(m.repeated(), r));
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      if (m.min() > 1000 || containsUnsupported(m.repeated())) {
+        return;
       }
+      clearAndRewriteNextLookahead(m.next(), results, false, restAny);
+      wrapResults(results, r -> new MinOrMoreMatcher(m.repeated(), m.min(), r));
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
       if (containsUnsupported(m.repeated())) {
         return;
       }
       clearAndRewriteNextLookahead(m.next(), results, false, restAny);
-      for (int i = 0; i < results.length; ++i) {
-        if (results[i] != null) {
-          results[i] = new ZeroOrOneMatcher(m.repeated(), results[i]);
-        }
-      }
+      wrapResults(results, r -> new ZeroOrOneMatcher(m.repeated(), r));
     } else if (matcher instanceof RepeatMatcher) {
       RepeatMatcher m = matcher.as();
       if (m.isPossessive() || m.max() > 1000 || containsUnsupported(m.repeated())) {
         return;
       }
       clearAndRewriteNextLookahead(m.next(), results, false, restAny);
-      for (int i = 0; i < results.length; ++i) {
-        if (results[i] != null) {
-          results[i] = new RepeatMatcher(m.repeated(), m.min(), m.max(), results[i], false);
-        }
-      }
+      wrapResults(results, r -> new RepeatMatcher(m.repeated(), m.min(), m.max(), r, false));
     } else if (matcher instanceof PositiveLookaheadMatcher) {
       // X(?=Y)Z is split into XY AND XZ. If the position is not fixed, this is only valid
       // when Z will match anything, e.g. foo-(?=bar).
@@ -1608,6 +1636,15 @@ public final class PatternUtils {
       results[2] = TrueMatcher.INSTANCE;
     } else if (!containsUnsupported(matcher)) {
       results[0] = matcher;
+    }
+  }
+
+  /** Replace each result that is not null with the matcher from the function. */
+  private static void wrapResults(Matcher[] results, Function<Matcher, Matcher> f) {
+    for (int i = 0; i < results.length; ++i) {
+      if (results[i] != null) {
+        results[i] = f.apply(results[i]);
+      }
     }
   }
 
@@ -1648,6 +1685,9 @@ public final class PatternUtils {
     } else if (matcher instanceof ZeroOrMoreMatcher) {
       ZeroOrMoreMatcher m = matcher.as();
       return containsUnsupported(m.repeated()) || containsUnsupported(m.next());
+    } else if (matcher instanceof MinOrMoreMatcher) {
+      MinOrMoreMatcher m = matcher.as();
+      return m.min() > 1000 || containsUnsupported(m.repeated()) || containsUnsupported(m.next());
     } else if (matcher instanceof ZeroOrOneMatcher) {
       ZeroOrOneMatcher m = matcher.as();
       return containsUnsupported(m.repeated()) || containsUnsupported(m.next());

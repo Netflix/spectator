@@ -176,6 +176,11 @@ public class MatcherSerializationTest {
   }
 
   @Test
+  public void minOrMore() {
+    checkSerde(new MinOrMoreMatcher(AnyMatcher.INSTANCE, 2, EndMatcher.INSTANCE));
+  }
+
+  @Test
   public void positiveLookahead() {
     checkSerde(new PositiveLookaheadMatcher(AnyMatcher.INSTANCE));
   }
