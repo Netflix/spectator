@@ -85,7 +85,12 @@ final class IndexOfMatcher implements GreedyMatcher, Serializable {
 
   @Override
   public boolean isContainsMatcher() {
-    return next == TrueMatcher.INSTANCE;
+    return next == TrueMatcher.INSTANCE || next == EndMatcher.INSTANCE;
+  }
+
+  @Override
+  public boolean isSuffixMatcher() {
+    return next == EndMatcher.INSTANCE;
   }
 
   @Override

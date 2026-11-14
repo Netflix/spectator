@@ -117,6 +117,11 @@ final class ExprLeafMatcher implements PatternMatcher, Serializable {
   }
 
   @Override
+  public boolean isSuffixMatcher() {
+    return matcher.isSuffixMatcher();
+  }
+
+  @Override
   public SortedSet<String> trigrams() {
     return matcher.trigrams();
   }

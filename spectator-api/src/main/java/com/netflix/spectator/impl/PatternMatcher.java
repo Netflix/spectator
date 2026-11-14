@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,11 +178,24 @@ public interface PatternMatcher {
   }
 
   /**
-   * Returns true if this matcher is equivalent to checking if a string contains a string.
-   * This can be useful when mapping to storage that may have optimized contains matching
-   * operators.
+   * Returns true if this matcher is equivalent to checking if a string contains the
+   * {@link #containedString()}, possibly anchored to the start or end of the string. This
+   * can be useful when mapping to storage that may have optimized contains matching
+   * operators. Prefix and suffix matchers are also contains matchers, use
+   * {@link #isPrefixMatcher()} and {@link #isSuffixMatcher()} to check for those cases
+   * first if the distinction matters.
    */
   default boolean isContainsMatcher() {
+    return false;
+  }
+
+  /**
+   * Returns true if this matcher is equivalent to checking if a string ends with the
+   * {@link #containedString()}. This can be useful when mapping to storage that may have
+   * optimized suffix matching operators. A suffix matcher is also a contains matcher, so
+   * check this method first if the distinction matters.
+   */
+  default boolean isSuffixMatcher() {
     return false;
   }
 
