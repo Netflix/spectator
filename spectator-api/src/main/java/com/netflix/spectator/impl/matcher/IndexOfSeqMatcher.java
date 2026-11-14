@@ -196,6 +196,11 @@ final class IndexOfSeqMatcher implements Matcher, Serializable {
   }
 
   @Override
+  public boolean isSuffixMatcher() {
+    return delegate.isSuffixMatcher();
+  }
+
+  @Override
   public boolean alwaysMatches() {
     return delegate.alwaysMatches();
   }

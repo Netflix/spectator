@@ -1,0 +1,34 @@
+/*
+ * Copyright 2014-2026 Netflix, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.netflix.spectator.impl.matcher;
+
+import com.netflix.spectator.impl.PatternMatcher;
+import org.junit.jupiter.api.Assertions;
+
+public class SuffixPatternMatcherTest extends AbstractPatternMatcherTest {
+
+  @Override
+  protected void testRE(String regex, String value) {
+    PatternMatcher matcher = PatternMatcher.compile(regex);
+
+    // If it is a suffix matcher, then it must be equivalent to an ends with check.
+    if (matcher.isSuffixMatcher()) {
+      String suffix = matcher.containedString();
+      Assertions.assertNotNull(suffix, regex);
+      Assertions.assertEquals(value.endsWith(suffix), matcher.matches(value), regex);
+    }
+  }
+}

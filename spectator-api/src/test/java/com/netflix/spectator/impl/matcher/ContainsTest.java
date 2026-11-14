@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,41 @@ public class ContainsTest {
   public void notContains() {
     Assertions.assertFalse(re("ab[cd]").isContainsMatcher());
     Assertions.assertFalse(re("abc.def").isContainsMatcher());
+  }
+
+  @Test
+  public void suffix() {
+    assertSuffix(".*abc$", "abc");
+    assertSuffix("^.*abc$", "abc");
+    assertSuffix(".*abc\\.def$", "abc.def");
+    assertSuffix(".*abc[.]def$", "abc.def");
+    assertSuffix("(?:.*abc$)", "abc");
+    assertSuffix("abc$", "abc");
+  }
+
+  private void assertSuffix(String pattern, String suffix) {
+    PatternMatcher m = re(pattern);
+    Assertions.assertTrue(m.isSuffixMatcher(), pattern);
+    Assertions.assertFalse(m.isPrefixMatcher(), pattern);
+    Assertions.assertTrue(m.isContainsMatcher(), pattern);
+    Assertions.assertEquals(suffix, m.containedString(), pattern);
+  }
+
+  @Test
+  public void notSuffix() {
+    Assertions.assertFalse(re("abc").isSuffixMatcher());
+    Assertions.assertFalse(re("^abc").isSuffixMatcher());
+    Assertions.assertFalse(re(".*abc").isSuffixMatcher());
+    Assertions.assertFalse(re("^abc$").isSuffixMatcher());
+    Assertions.assertFalse(re(".*abc.def$").isSuffixMatcher());
+    Assertions.assertFalse(re(".*ab[cd]$").isSuffixMatcher());
+    Assertions.assertFalse(re(".*(abc|def)$").isSuffixMatcher());
+    Assertions.assertFalse(re(".*abc.*$").isSuffixMatcher());
+  }
+
+  @Test
+  public void suffixIgnoreCase() {
+    Assertions.assertFalse(re(".*abc$").ignoreCase().isSuffixMatcher());
   }
 
   @Test
