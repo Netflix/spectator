@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -224,7 +224,7 @@ public class PatternUtilsTest {
   @Test
   public void escapePrintable() {
     String special = "\t\n\r\f\\^$.|?*+[](){}";
-    for (char i = '!'; i <= '~'; ++i) {
+    for (char i = ' '; i <= '~'; ++i) {
       if (special.indexOf(i) != -1) {
         continue;
       }
@@ -236,7 +236,7 @@ public class PatternUtilsTest {
   @Test
   public void escapeControl() {
     String special = "\t\n\r\f";
-    for (int i = 0; i < '!'; ++i) {
+    for (int i = 0; i < ' '; ++i) {
       if (special.indexOf(i) != -1) {
         continue;
       }
@@ -253,7 +253,14 @@ public class PatternUtilsTest {
 
   @Test
   public void escapeNonAscii() {
-    Assertions.assertEquals("\\x20\\xe9\u0101", PatternUtils.escape(" \u00e9\u0101"));
+    Assertions.assertEquals(" \\xe9\u0101", PatternUtils.escape(" \u00e9\u0101"));
+  }
+
+  @Test
+  public void escapeSpace() {
+    String escaped = PatternUtils.escape("a b  c");
+    Assertions.assertEquals("a b  c", escaped);
+    Assertions.assertTrue(PatternMatcher.compile("^" + escaped + "$").matches("a b  c"));
   }
 
   @Test

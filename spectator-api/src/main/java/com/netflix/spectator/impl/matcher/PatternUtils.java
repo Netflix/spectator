@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 Netflix, Inc.
+ * Copyright 2014-2026 Netflix, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1061,9 +1061,10 @@ public final class PatternUtils {
         case '{':  builder.append("\\{"); break;
         case '}':  builder.append("\\}"); break;
         default:
-          if (c <= ' ' || (c > '~' && c <= 0xFF)) {
+          if (c < ' ' || (c > '~' && c <= 0xFF)) {
             // Use the hex escape, RE2 doesn't support the unicode escape. Characters
-            // above 0xFF are not special, so they are kept as is.
+            // above 0xFF are not special, so they are kept as is. Space is kept as is
+            // since it is not special and escaping makes the pattern harder to read.
             builder.append(String.format("\\x%02x", (int) c));
           } else {
             builder.append(c);
